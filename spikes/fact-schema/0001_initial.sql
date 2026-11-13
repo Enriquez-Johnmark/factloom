@@ -44,7 +44,7 @@ CREATE TABLE fact (
   CHECK (superseded_by_fact_id IS NULL OR invalidated_at IS NOT NULL)
 ) STRICT;
 
--- Conflict candidates and fact history: live facts for one subject and predicate.
+-- Conflict candidates and fact history: the facts for one subject and predicate.
 CREATE INDEX fact_subject_predicate ON fact (namespace, subject_entity_id, predicate);
 -- Graph lane: facts that point at an entity.
 CREATE INDEX fact_object_entity ON fact (namespace, object_entity_id) WHERE object_entity_id IS NOT NULL;
