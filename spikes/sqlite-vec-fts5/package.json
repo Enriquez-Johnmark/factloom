@@ -9,7 +9,8 @@
   },
   "scripts": {
     "spike": "node spike.mjs",
-    "spike:node-sqlite": "node spike-node-sqlite.mjs"
+    "spike:node-sqlite": "node spike-node-sqlite.mjs",
+    "spike:plain-table-knn": "node spike-plain-table-knn.mjs"
   },
   "dependencies": {
     "better-sqlite3": "13.1.1",

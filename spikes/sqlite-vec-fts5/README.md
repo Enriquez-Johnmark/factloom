@@ -261,6 +261,33 @@ NODE:SQLITE SPIKE OK
 (Use `node --trace-warnings ...` to show where the warning was created)
 ```
 
+## Recorded output: `node spike-plain-table-knn.mjs`
+
+Question: can exact, time-filtered nearest-neighbour search run on an ordinary table with
+sqlite-vec's `vec_distance_cosine()` function, with no `vec0` virtual table? If so, the vector
+search can use the same SQL time filter as the other queries, with no integer copies of the time
+columns and no sentinel values.
+
+The script stores random unit vectors both ways, checks that the two methods return the same ten
+nearest rows, and times each (mean of five runs after one warm-up). Arguments are the row count
+and the vector size. Run on 2026-11-13 on Linux x64, Node.js v22.23.4, in memory.
+
+| Rows | Dimensions | Plain table, no filter | `vec0`, no filter | Plain table, bi-temporal filter | Same top ten |
+|---|---|---|---|---|---|
+| 2,000 | 768 | 2.6 ms | 2.5 ms | 1.8 ms | yes |
+| 10,000 | 768 | 11.6 ms | 11.1 ms | 10.1 ms | yes |
+| 100,000 | 768 | 129.8 ms | 106.6 ms | 121.3 ms | yes |
+| 100,000 | 384 | 87.8 ms | 43.7 ms | 82.0 ms | yes |
+
+```sh
+node spike-plain-table-knn.mjs 10000 768
+```
+
+What this does and does not show: on this machine the plain table returns identical results and
+is within about 20% of `vec0` at 768 dimensions and about twice as slow at 384 dimensions with
+100,000 rows. Every row returned with the filter passed the filter. Timings on other hardware,
+on-disk databases and realistic (non-random) vectors were not measured.
+
 ## What to expect on macOS (Apple Silicon)
 
 Not run on a Mac. Expected from the package contents: `better-sqlite3@13.1.1` contains
