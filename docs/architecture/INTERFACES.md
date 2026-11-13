@@ -294,6 +294,7 @@ These functions live in `@factloom/core`, one per file. Each validates its input
 export type OperationDeps = {
   readonly store: MemoryStore;
   readonly embedder: Embedder;
+  readonly domain: Domain;
   readonly now: () => Timestamp;
   readonly newId: () => string;
 };
@@ -321,7 +322,7 @@ export type NewFact = {
 | `recordFacts` | 1 | Records new entities, a source and facts in one commit |
 | `invalidateFact` | 1 | **Retraction**, or **correction** when a replacement is given |
 | `endFact` | 1 | **Revision** that ends a fact, or **succession** when a successor is given |
-| `findConflictCandidates` | 2 | Lists the current facts a new fact could conflict with |
+| `findConflictCandidates` | 1 | Lists the current facts a new fact could conflict with |
 | `adjustConfidence` | 2 | **Revision** that changes a fact's confidence |
 | `recordFeedback` | 2 | Records a feedback signal against a fact |
 | `mergeEntities` | 3 | Records that two entities are the same |
@@ -359,12 +360,11 @@ export declare function endFact(
   },
 ): Promise<Result<{ readonly endedFactId: FactId; readonly successorFactId: FactId | null }>>;
 
-/** Phase 2. Current facts with the same subject and predicate. Empty for a multi-valued predicate. */
+/** Phase 1. Current facts with the same subject and predicate. Empty for a multi-valued predicate. */
 export declare function findConflictCandidates(
-  deps: Pick<OperationDeps, 'store' | 'now'>,
+  deps: Pick<OperationDeps, 'store' | 'domain' | 'now'>,
   input: {
     readonly namespace: Namespace;
-    readonly domain: Domain;
     readonly subjectEntityId: EntityId;
     readonly predicate: string;
     readonly limit: number;
@@ -386,6 +386,7 @@ export declare function mergeEntities(
 
 Notes:
 
+- **One current value per single-valued predicate.** `recordFacts`, and the replacement or successor in `invalidateFact` and `endFact`, return `conflict` when a new fact would be a second current value for a single-valued predicate of the domain. This check is deterministic and is in place from phase 1; deciding what to do about the conflict is phase 2.
 - **Three verbs cover every change to a fact.** `recordFacts` adds, `invalidateFact` says "this was wrong", `endFact` says "this stopped being true". The difference between the last two is the difference between the two time axes, which is why they are separate operations and not one with a flag.
 - **`findConflictCandidates` does not judge.** It returns the facts worth comparing, chosen by subject and predicate with a fixed upper bound, before any LLM is involved. Product 2 judges each candidate as a duplicate, a succession, a correction, or unrelated, and then calls `attach_source`, `endFact`, or `invalidateFact`. Whether to act or to ask a person is the domain's **correction policy**.
 - **The audit log is written by `commit`**, so there is no separate "write to the audit log" operation to forget. Outcomes that change no fact, such as a verification that passed, are recorded by `recordVerification` in phase 3.
@@ -396,7 +397,7 @@ Notes:
 The use cases in `@factloom/graph-rag`, one per file. Phase 1.
 
 ```ts
-export type RememberDeps = OperationDeps & { readonly llm: LlmClient; readonly domain: Domain };
+export type RememberDeps = OperationDeps & { readonly llm: LlmClient };
 
 /** Extracts entities and facts from text, resolves the entities, and records the facts. */
 export declare function remember(
@@ -407,11 +408,14 @@ export declare function remember(
     readonly source: { readonly kind: string; readonly locator: string | null; readonly version: string | null };
     readonly trigger: Trigger;
   },
-): Promise<Result<{ readonly facts: readonly FactWithSources[] }>>;
+): Promise<Result<{ readonly facts: readonly FactWithSources[]; readonly skipped: readonly SkippedFact[] }>>;
+
+/** An extracted fact that was not recorded because a current fact already holds that single value. */
+export type SkippedFact = { readonly statement: string; readonly reason: string; readonly conflictingFactId: FactId };
 
 /** Records facts that are already structured. Makes no LLM call. */
 export declare function recordStructuredFacts(
-  deps: OperationDeps & { readonly domain: Domain },
+  deps: OperationDeps,
   input: {
     readonly namespace: Namespace;
     readonly facts: readonly StructuredFactInput[];
