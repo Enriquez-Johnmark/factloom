@@ -23,7 +23,7 @@ under Open questions only).
 | Node requirement | "Node.js 20 LTS or later (non-EOL) versions"; also Deno >= 1.28, Bun >= 1.0. The package has no `engines` field, so npm does not enforce this | https://github.com/anthropics/anthropic-sdk-typescript README, "Requirements"; `npm view @anthropic-ai/sdk engines` (empty) | confirmed |
 | Zod peer dependency | `zod: ^3.25.0 \|\| ^4.0.0` | `npm view @anthropic-ai/sdk peerDependencies` | confirmed |
 | Runtime dependencies | `standardwebhooks`, `json-schema-to-ts`, `@opentelemetry/api` | `npm view @anthropic-ai/sdk dependencies` | confirmed |
-| API key | The client reads `ANTHROPIC_API_KEY` by default; a key can be passed as `new Anthropic({ apiKey })` | SDK README; run here with `apiKey: process.env.OWNER_ANTHROPIC_API_KEY` | confirmed |
+| API key | The client reads `ANTHROPIC_API_KEY` by default; a key can be passed as `new Anthropic({ apiKey })` | SDK README; run here with the key passed explicitly from an environment variable | confirmed |
 
 Basic call shape (confirmed by running it, section 4):
 
@@ -161,8 +161,9 @@ forced tool choice.
 
 ### 4. Test: Zod-validated extraction with the cheapest current model
 
-Script: `/tmp/claude-0/-home-user-factloom/00a9e33c-b521-5829-9c94-4c686af925cc/scratchpad/c2/llm/extract.mjs`
-(throwaway, not in the repository). Node v22.23.4, `@anthropic-ai/sdk` 1.8.0, `zod` 4.6.7,
+The script below was run from a throwaway directory outside the repository and is reproduced in
+full, except that the environment variable holding the key is shown under the SDK's default name
+(`ANTHROPIC_API_KEY`; the run read the key from a differently named variable). Node v22.23.4, `@anthropic-ai/sdk` 1.8.0, `zod` 4.6.7,
 model `claude-haiku-5-5`. **Confirmed** by running on 2026-11-13.
 
 ```js
@@ -189,7 +190,7 @@ const Extraction = z.object({
   ),
 });
 
-const client = new Anthropic({ apiKey: process.env.OWNER_ANTHROPIC_API_KEY });
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const text =
   "The Atlas project switched its test runner from Jest to Vitest in March 2026. " +
   "Its auth module, maintained by Priya Nair, uses JWT with refresh tokens.";
@@ -226,7 +227,7 @@ Observations from the run:
 
 - Cost of this call: 898 x $0.10/MTok + 400 x $0.50/MTok = $0.00029.
 - 898 input tokens for a two-sentence text: most of the input is the schema and the injected format
-  instructions, not the text. A second script (`cache.mjs`, same directory) used the free
+  instructions, not the text. A second throwaway script (`cache.mjs`, not kept) used the free
   `count_tokens` endpoint: a 23-token user message plus an 1,818-token system prompt counted 1,841
   tokens, and adding this schema raised it to 2,438 (about 600 tokens for the schema).
 - "March 2026" became `2026-03-01`. The model picked a day the text did not state. The fact schema
