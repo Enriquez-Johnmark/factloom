@@ -162,13 +162,18 @@ Read from `getzep/graphiti` at commit `ebef986a` (2026-11-11), package version 0
 
 ## What it means for Factloom
 
-Recommended schema rules (depth is justified here; this is the part that is expensive to change):
+Recommended schema rules (depth is justified here; this is the part that is expensive to change).
+Other research documents take different positions on several of these rules. The rules below are
+this document's recommendation, not a decision; the open points are listed in
+`../OPEN-QUESTIONS.md` (D-1, D-3, D-4, D-5, D-10) and referenced per rule.
 
 1. **Four columns, exactly the settled names.** `valid_from`, `valid_to` (nullable both),
    `created_at` (NOT NULL), `invalidated_at` (nullable). Half-open intervals on both axes.
 2. **NULL means unbounded or unknown.** `valid_to IS NULL`: no known end. `valid_from IS NULL`: start
    not known. Do not try to distinguish "still true" from "end unknown" yet; no reviewed system does.
-   No sentinel dates.
+   No sentinel dates. `sqlite.md` found that the `vec0` vector table rejects NULL in metadata
+   columns and used integer copies with a sentinel there, and the spike declares `valid_from` NOT
+   NULL. See `../OPEN-QUESTIONS.md`, D-3.
 3. **Store timestamps as TEXT, UTC, fixed width: `YYYY-MM-DDTHH:MM:SS.sssZ`.** Produce them only with
    `toISOString()` in one helper in `@factloom/core`; add the `CHECK` constraint from finding 6 to
    every timestamp column; never call `datetime('now')` in SQL. This keeps the database readable and
@@ -177,7 +182,9 @@ Recommended schema rules (depth is justified here; this is the part that is expe
 4. **Rows are immutable except for one transition.** The only permitted update to a fact row is
    setting `invalidated_at` from NULL to a timestamp (once). Any other change, including closing
    `valid_to`, is "invalidate the old row, insert a new row". This is what made finding 8 work with a
-   single uniform predicate.
+   single uniform predicate. Other documents update derived index rows (`sqlite.md`) and ask for a
+   purge of content (`../industries/other-industries.md`); a one-time `valid_to` close is a
+   simpler alternative raised in review. See `../OPEN-QUESTIONS.md`, D-5 and D-10.
 5. **Keep `invalidated_at` strictly transaction-time.** A fact with a closed `valid_to` and
    `invalidated_at IS NULL` is a current belief about the past. Do not copy Graphiti's shortcut
    (finding 12); "what is true now" is expressed by the valid-time clause instead.
@@ -185,7 +192,8 @@ Recommended schema rules (depth is justified here; this is the part that is expe
    `fact_supersession(old_fact_id, new_fact_id, kind, reason, created_at)` with `kind` in
    `('correction', 'succession', 'refinement', 'duplicate')`. One new fact can replace several old
    ones, and a row replaced for bookkeeping (alice open-ended to alice closed) has a different cause
-   (the bob fact) from its replacement; a single `superseded_by` column cannot say both.
+   (the bob fact) from its replacement; a single `superseded_by` column cannot say both. The spike
+   and `sqlite.md` use a `superseded_by` column. See `../OPEN-QUESTIONS.md`, D-4.
 7. **Record `observed_at` (source/reference time) separately** from both axes: when the source said
    it. It is the anchor for resolving relative dates and the default `valid_from` when nothing better
    is known (finding 13).
@@ -193,7 +201,8 @@ Recommended schema rules (depth is justified here; this is the part that is expe
    Nothing more until measurements say otherwise.
 9. **Overlap rule:** enforce "no two live rows for the same subject and functional predicate overlap
    in valid time" in the write path (a query like the overlap check in the test script), not with
-   triggers.
+   triggers. Rules 8 and 9 key on (subject, predicate); the industry documents ask for a qualifier
+   in the key. See `../OPEN-QUESTIONS.md`, D-1.
 
 Do not build yet:
 
