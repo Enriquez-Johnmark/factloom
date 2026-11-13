@@ -63,8 +63,8 @@ secondary evidence only.
 ### Retrieval
 
 - `search_nodes` is a case-insensitive substring test of the whole query string against entity
-  name, entity type and each observation (`index.ts` lines 786-797, commented "Very basic search
-  function"). No tokenization, ranking, vectors or full-text index. Results come back in stored
+  name, entity type and each observation (`index.ts`, the block that starts at line 778 with the
+  comment "Very basic search function"). No tokenization, ranking, vectors or full-text index. Results come back in stored
   order. **confirmed**
 - Consequence observed: the query `postgresql` matched; the natural-language query
   `which database does payments use` returned nothing. **confirmed** (run)
@@ -229,14 +229,21 @@ Where it is ahead of what a new project can offer today:
 - Copy the engineering habits, not the data model: per-property input descriptions, tool
   annotations, a `skipped`-style report instead of silent drops, atomic writes, a test for every
   reported failure mode.
-- The run shows a concrete demo script for Factloom: the same three writes should leave the
-  PostgreSQL fact invalidated with `valid_to` set and linked to the MySQL fact, and a query "which
-  database on 2026-11-12" should still return PostgreSQL.
+- The run shows a concrete demo script for Factloom. The third write ("uses MySQL 8, not
+  PostgreSQL") says the earlier statement was never true, so it is a correction, not a
+  succession: it should leave the PostgreSQL fact with `invalidated_at` set (and `valid_to`
+  untouched) and linked to the MySQL fact. "Which database now" should then return MySQL only;
+  "which database, as known on 2026-11-12" should still return PostgreSQL. A succession variant
+  ("migrated to MySQL in June") would instead close `valid_to` and leave `invalidated_at` empty.
+  The two cases are defined in `../technical/bi-temporal-modelling.md` (rule 5) and
+  `../technical/contradiction-detection.md` (outcome table).
 - Version facts that affect Factloom's stack: the reference servers now depend on
-  `@modelcontextprotocol/server` 2.x (the split v2 SDK packages) with `zod` 4, and declare Node 24
-  or later. The settled decision says "the MCP TypeScript SDK" without a version; phase 0 should
-  name the v2 packages and check the Node floor they imply. This refines the decision, it does not
-  conflict with it.
+  `@modelcontextprotocol/server` 2.x (the split v2 SDK packages) with `zod` 4. This reference
+  server package declares `engines.node >= 24`; the SDK packages themselves declare `>= 20`
+  (`npm view @modelcontextprotocol/server engines`, 2026-11-13; see `../technical/mcp.md`), so the
+  SDK does not raise Factloom's Node floor. The settled decision says "the MCP TypeScript SDK"
+  without a version; phase 0 should name the v2 packages. This refines the decision, it does not
+  conflict with it. The Node floor itself is an open decision: see `../OPEN-QUESTIONS.md`, D-9.
 
 ## Open questions
 
