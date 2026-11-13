@@ -212,7 +212,7 @@ Where it is ahead of what a new project can offer today (**confirmed** in source
   not available through MCP and is ignored by the default vector lane. **confirmed**
 - One free-text record with at most one entity; no first-class facts or relations with their own
   validity. No re-verification against sources, no entity merge. **confirmed**
-- Fast churn: rename, license change, backend replacement and "no migration path" within three
+- Rapid change: rename, license change, backend replacement and "no migration path" within three
   months; four commits since May 2026. The README now says "Attestor is no longer 'memory for
   your coding assistant'" and lists a single coding assistant under "Not designed for".
   **confirmed**
@@ -224,17 +224,19 @@ Where it is ahead of what a new project can offer today (**confirmed** in source
 
 - The 2.0.6 run supports a design rule: "same entity, different text" is not a conflict. A conflict
   needs the same subject and the same predicate. Factloom's fact schema should make the predicate
-  explicit so that conflict candidates are found by key before any LLM is asked.
+  explicit so that conflict candidates are found by key before any LLM is asked. Whether that
+  key also needs a qualifier is open: see `../OPEN-QUESTIONS.md`, D-1.
 - The 4.x rule-based path shows the opposite failure: safe rules are narrow. The project ended up
   where Factloom plans to start: an LLM deciding `ADD`, `UPDATE`, `INVALIDATE` or `NOOP`, with an
   evidence pointer and `ADD` as the default on a parse failure. Worth adopting.
 - Attestor uses the same four time columns Factloom plans. Its vector lane ignoring `as_of`, and
   the MCP tools not exposing it, are a warning: the time filter must be applied in every retrieval
   lane (or after fusion) and offered in the MCP tool, or the feature does not reach the agent.
+  Which of the two placements Factloom uses is open: see `../OPEN-QUESTIONS.md`, D-2.
 - "Flag contradictions for human review, do not auto-resolve" as a mode matches Factloom's
   per-adapter correction policy.
-- Scope caution: an embedded SQLite memory for coding agents became a three-database governance
-  product within weeks. Staying on SQLite through the early phases avoids that.
+- Scope caution: the project moved from embedded SQLite to Postgres + Pinecone + Neo4j between
+  April and May 2026. Staying on SQLite through the early phases avoids that kind of change.
 
 ### Conflicts with settled decisions
 
