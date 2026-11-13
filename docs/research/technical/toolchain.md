@@ -30,7 +30,9 @@ simplest setup that makes a forbidden cross-package import fail automatically?
   namespaces and parameter properties are not supported, imports must spell the `.ts` extension,
   `tsconfig.json` is not read, and files under `node_modules` are refused. **confirmed.** Source:
   https://nodejs.org/docs/latest-v22.x/api/typescript.html. Ran it: `process.features.typescript`
-  is `"strip"` on v22.23.4.
+  is `"strip"` on v22.23.4. The refusal applies to the file's real path: a pnpm workspace package
+  is a symlink in `node_modules` whose real path is outside it, so its `.ts` files do run (ran it;
+  see "Build setup").
 - Corepack is no longer distributed with Node.js from v25 on. **confirmed.** Source:
   https://nodejs.org/docs/latest-v24.x/api/corepack.html ("Corepack will no longer be distributed
   starting with Node.js v25"); the same page for v26 returns HTTP 404.
@@ -125,18 +127,100 @@ Compiler flags, in `tsconfig.base.json` (ran it with TypeScript 7.0.2):
 
 | Option | What it is | Result |
 | --- | --- | --- |
-| (a) `tsc -b` with project references | One compiler, one `dist` per package | Ran it. 0.26 s clean. Emits `.js`, `.d.ts`, maps. Detects reference cycles. **Recommended.** |
+| (a) `tsc -b` with project references | One compiler, one `dist` per package | Ran it. 0.26 s clean. Emits `.js`, `.d.ts`, maps. Detects reference cycles. |
 | (b) tsdown 0.23.7 / tsup 9.0.0 | Bundlers on top of the compiler | Not tested. Both require Node `^22.18.0 \|\| ^24.11.0 \|\| >=26`. tsdown is still 0.x. They solve dual CJS/ESM publishing and bundling, which a private ESM-only workspace does not need. |
-| (c) No build: run TypeScript directly | Node type stripping, or tsx 4.23.15 | Ran it with Node alone (no tsx): works for development, but only when imports use `.ts` extensions and package `exports` offer a source entry. It cannot be the only path: Node refuses `.ts` under `node_modules`, and the MCP server is started as `node apps/mcp-server/dist/main.js`. |
+| (c) No build: run TypeScript directly | Node type stripping, or tsx 4.23.15 | Ran it with Node alone (no tsx), no flag and no `dist`: works when imports use `.ts` extensions and package `exports` point at a source file. Node refuses `.ts` only in installed (copied) dependencies; workspace packages are symlinks and run. Details below. |
 
-Recommendation: **(a) for the build, plus one custom export condition so tests and development
-never read a stale `dist`.** **confirmed**, ran it.
+Correction (2026-11-13). An earlier version of this section rejected (c) with the reason "Node
+refuses `.ts` under `node_modules`". An independent review ran a no-build setup and reported that
+it works; the run was repeated for this document (below) and the review is right. This document's
+first recommendation was (a) plus a custom export condition. Both setups work. They are presented
+here as two options; the choice is left to the architecture stage (see
+`../OPEN-QUESTIONS.md`, D-7).
 
-The reason for the extra condition: with `exports` pointing only at `dist`, Vitest fails before
-the first build (`Failed to resolve entry for package "@factloom/core"`), and after a build it
-silently tests the last compiled copy of a dependency rather than its current source.
+#### What was run for the no-build setup
 
-`package.json` of each library package (the exact shape that was run):
+Throwaway workspace in a directory outside the repository. Linux x64, Node.js v22.23.4 with no
+flags, pnpm 12.18.0 (selected through `packageManager`), TypeScript 7.0.2, Vitest 5.1.0, Zod 4.6.7.
+Two packages: `packages/core` (exports a Zod schema) and `packages/storage` (imports
+`@factloom/core` by name, declared as `workspace:*`). Each `package.json` has
+`"exports": { ".": "./src/index.ts" }` and nothing else: no `dist` entry, no custom condition.
+`vitest.config.ts` has only an `include` list.
+
+```text
+$ node packages/storage/src/main.ts            # plain node, no flag, no dist directory exists
+stored f1: pnpm is the package manager         # exit 0, no warning printed
+
+$ ls -l packages/storage/node_modules/@factloom/
+core -> ../../../core                          # a symlink; its real path is packages/core
+
+$ pnpm exec vitest run                         # no ssr.resolve.conditions
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+
+$ pnpm exec tsc -b                             # project references as in option (a)
+exit 0                                         # type-checks, and writes dist/ per package
+
+$ pnpm exec tsc -b --noEmit
+error TS6310: Referenced project '.../packages/core' may not disable emit.
+
+$ pnpm exec tsc -p tsconfig.check.json         # one flat config: noEmit, allowImportingTsExtensions,
+exit 0                                         # include packages/*/src, no references; writes nothing
+
+$ node --preserve-symlinks --preserve-symlinks-main packages/storage/src/main.ts
+Error [ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING]: Stripping types is currently unsupported
+for files under node_modules, for ".../packages/storage/node_modules/@factloom/core/src/index.ts"
+
+$ node use.mjs     # a second directory with packages/core COPIED (not linked) into node_modules
+Error [ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING]: ...
+```
+
+An undeclared cross-package import still fails in this setup: with
+`import { store } from "@factloom/storage"` added to `packages/core/src/index.ts`, plain `node`
+gave `ERR_MODULE_NOT_FOUND` and both type-check forms gave `TS2307`. The flat type-check also
+reported a deliberate type error across the package boundary (`TS2339`).
+
+What works (**confirmed**, ran it on Node v22.23.4 only):
+
+- Running workspace packages from source with plain `node`, through pnpm's symlinks.
+- Vitest against source with no custom condition, before any build.
+- Type-checking either with `tsc -b` (which emits `dist` as a side effect) or with one flat
+  `noEmit` config (which emits nothing).
+
+What does not work (**confirmed**, ran it):
+
+- The same package once it is a real copy under `node_modules` (a published or packed install),
+  or with `--preserve-symlinks`. A published package still needs compiled `.js`.
+- `tsc -b --noEmit` with project references (`TS6310`).
+
+Not run: Node 24 and 26, macOS, pnpm's `nodeLinker: hoisted` and injected workspace dependencies
+(both could change whether the dependency is a symlink), the Biome import rule in this second
+workspace, and the editor experience. These are listed under Open questions.
+
+#### The two options
+
+| | Option 1: no build step in development; build only for publishing | Option 2: `tsc -b` project references with `dist` |
+| --- | --- | --- |
+| `exports` | `"./src/index.ts"` | Three entries: custom source condition, `types`, `default` (shown below) |
+| Start the MCP server | `node apps/mcp-server/src/main.ts` | `node apps/mcp-server/dist/main.js` after `pnpm build` |
+| Vitest | Plain config | Needs `ssr.resolve.conditions` so tests read source, not `dist` |
+| Type-check | One flat `noEmit` tsconfig, or `tsc -b` | `tsc -b` |
+| Stale-`dist` risk | None: there is no `dist` | Present when something reads `dist` without a rebuild; the custom condition exists to avoid it in tests |
+| Depends on | Node type stripping (stability "1.2, Release candidate" on Node 22) and on workspace packages being symlinks | The TypeScript compiler only; runs on any supported Node |
+| Reference-cycle detection | Not tested with the flat config (it has no project references); `tsc -b` can still be kept as the type-check | `error TS6202` from `tsc -b` (ran it) |
+| Publishing a package | A build and a second `exports` map must be added at that point | Already in place |
+| Moving parts | Fewer. **This is the simpler option.** | More: `dist`, `outDir`/`rootDir`, three-entry `exports`, custom condition, Vitest `ssr` setting, `rewriteRelativeImportExtensions` |
+
+Both were run end to end in this session. Option 1 is simpler while every package is private.
+Option 2 is the setup the rest of this section documents in detail, and it is the one whose
+configuration files were exercised most (boundary checks, Biome, cycle cases). The files below
+are Option 2's.
+
+The reason for Option 2's extra condition: with `exports` pointing only at `dist`, Vitest fails
+before the first build (`Failed to resolve entry for package "@factloom/core"`), and after a build
+it silently tests the last compiled copy of a dependency rather than its current source.
+
+`package.json` of each library package under Option 2 (the exact shape that was run):
 
 ```json
 {
@@ -285,7 +369,8 @@ Recommendation: **Biome for both linting and formatting.** It is one dependency 
 file, it took about 10 ms on the test workspace, and it works with TypeScript 7 because it does not
 depend on the compiler API. ESLint with typescript-eslint would add type-aware rules, at the price
 of a second TypeScript installation (6.x) while 7.0 has no API. Prettier is not needed if Biome
-formats.
+formats. The lint tool is recorded as an open decision because it depends on the TypeScript
+version chosen: see `../OPEN-QUESTIONS.md`, D-8.
 
 Package boundaries, compared:
 
@@ -437,7 +522,7 @@ file because the rule reads only the nearest `package.json`, so it is left off.
 | Node.js | 26.13.1 Active LTS; 24.22.3 and 22.23.5 Maintenance LTS | nodejs/Release schedule.json, nodejs.org/dist/index.json | Runtime |
 | pnpm | 12.18.0 | npm registry, pnpm.io | Package manager and workspace |
 | typescript | 7.0.2 | npm registry, TypeScript blog | Type-check and build (`tsc -b`) |
-| @types/node | 22.19.0 used (latest is 26.6.6) | npm registry | Node types; keep the major equal to the lowest supported Node line |
+| @types/node | 22.19.0 used (latest 22.x is 22.20.5; latest overall is 26.6.6) | npm registry | Node types; keep the major equal to the lowest supported Node line |
 | @biomejs/biome | 2.6.7 | npm registry, biomejs.dev | Lint, format, import restriction |
 | zod | 4.6.7 | npm registry, zod.dev | Schemas (settled decision) |
 | vitest | 5.1.0 | npm registry, vitest.dev | Tests (settled decision) |
@@ -458,21 +543,29 @@ file because the rule reads only the nearest `package.json`, so it is left off.
 
 - Set `"engines": { "node": ">=22.18.0" }`. That is the lowest version where everything above was
   run and where Node executes `.ts` without a flag. Node 22 reaches end of life on 2027-04-30, so
-  the minimum will need to move to 24 before then.
+  the minimum will need to move to 24 before then. Note that `>=22.18.0` also admits Node 23 and
+  25, which Vitest 5.1.0's `engines` (`^22.12.0 || ^24.0.0 || >=26.0.0`) does not list; a range
+  such as `^22.18.0 || >=24`, or simply `>=24`, avoids that. The floor is an open decision: see
+  `../OPEN-QUESTIONS.md`, D-9.
 - For the Mac, install Node 24 or Node 26. Both are LTS lines. Only Node 22.23.4 was exercised in
   this session; the packages' `engines` fields allow 24 and 26 (**likely**, not run).
 - Use pnpm 12.18.0 pinned through `packageManager`, a `catalog:` for shared versions, and no
   Corepack. No `allowBuilds` entry is needed today.
-- Use TypeScript 7.0.2 with `tsc -b` and project references. Write relative imports with `.ts`
-  extensions. Do not use enums or parameter properties (`erasableSyntaxOnly` enforces this).
-- Give each package the three-entry `exports` map shown above. Tests and `node --conditions=
-  @factloom/source` read source; everything else reads `dist`.
+- Use TypeScript 7.0.2. Write relative imports with `.ts` extensions. Do not use enums or
+  parameter properties (`erasableSyntaxOnly` enforces this). These hold for both build options.
+- Build setup: choose between Option 1 (no build step in development, `exports` pointing at
+  `src`, build only when a package is published; the simpler one) and Option 2 (`tsc -b` project
+  references, `dist`, the three-entry `exports` map shown above, where tests and
+  `node --conditions=@factloom/source` read source and everything else reads `dist`). Both ran.
+  The choice is recorded in `../OPEN-QUESTIONS.md`, D-7; it also decides the server start command
+  used in `mcp.md`.
 - Use Biome 2.6.7 for lint and format. Do not add ESLint until typescript-eslint supports the
   TypeScript 7 API, and only if a type-aware rule is actually wanted.
 - Enforce boundaries with `package.json` dependencies and project references; add the one Biome
   override for `packages/core`. Add a similar override per package only if a real violation shows
   the need.
-- Use one root `vitest.config.ts`. Do not use glob `projects`.
+- Use one root `vitest.config.ts`. Do not use glob `projects`. The `ssr.resolve.conditions`
+  setting is needed only under Option 2.
 - If a tool later needs the TypeScript API (for example a documentation generator), the fallback
   is TypeScript 6.0.3 for that tool only, through `@typescript/typescript6`.
 
@@ -488,6 +581,12 @@ file because the rule reads only the nearest `package.json`, so it is left off.
 - **unverified:** whether declaration maps make "go to definition" land in `src` rather than
   `dist` in the editor. `declarationMap` is enabled for that purpose but was not checked in an
   editor.
+- **unverified:** the no-build setup (Option 1) on Node 24 and 26 and on macOS; with pnpm's
+  `nodeLinker: hoisted` or injected workspace dependencies, which may replace the symlink by a
+  copy; and whether Node's type stripping, at stability 1.2 on Node 22, changes behaviour in a
+  later 22.x release.
+- **unverified:** the Biome `noRestrictedImports` guard was run only in the Option 2 workspace. It
+  reads source files, so the same result is expected under Option 1, but it was not run there.
 - The custom export condition name `@factloom/source` is a convention copied from the shape Zod
   itself publishes (`"@zod/source"` in `npm view zod exports`). It is ignored by any consumer that
   does not ask for it. If the packages are ever published, the `src` entry should be reviewed.
