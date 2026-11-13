@@ -28,6 +28,13 @@
       "skillPath": "skills/typescript-mcp-server-generator/SKILL.md",
       "computedHash": "9f3955478a4c380c77c6758c3ffd1908d9deae1b971477fed847b722570be39f",
       "installMode": "copy"
+    },
+    "vitest": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vitest/SKILL.md",
+      "computedHash": "bd95e41d66d76da9008893c9bc48c30f0a68f352cd2b00017767f5e4c129501d",
+      "installMode": "copy"
     }
   }
 }
