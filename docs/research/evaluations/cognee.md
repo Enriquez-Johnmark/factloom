@@ -102,7 +102,9 @@ support; unverified items are only in "Open questions".
   `CLAUDE.md` line 268. There is a separate schedule for connector syncs
   (`docs/integration-sync-schedule.md`). **confirmed**
 - Entity deduplication is by deterministic id: `Entity` declares `identity_fields: ["name"]`, so
-  the id is a UUIDv5 of the class and name and the same name always maps to the same node.
+  the id is a UUIDv5 over the class name and the entity name (`Entity:<name>`), so within the
+  `Entity` type the same name always maps to the same node (the same mechanism is described in
+  `../technical/entity-resolution.md`, finding 9).
   `cognee/modules/engine/models/Entity.py`;
   `cognee/infrastructure/engine/models/DataPoint.py` lines 41-44. Entities whose names differ
   ("Postgres" and "PostgreSQL") are different nodes unless an ontology maps them. **confirmed**
@@ -203,8 +205,8 @@ reports. <https://github.com/topoteretes/cognee/issues> **confirmed**
 
 ### Observed by running
 
-Environment: Linux, Python 3.13, `uv`. Scripts are in the session scratchpad (`a1/run-cognee/`).
-All items **confirmed** by observation on 2026-11-13.
+Environment: Linux, Python 3.13, `uv`. The scripts were throwaway files in a directory outside
+the repository and are not kept. All items **confirmed** by observation on 2026-11-13.
 
 1. `uv pip install "cognee[anthropic]==1.6.8"`: 171 packages, 1.3 GB, about 9 seconds with a
    warm cache.
@@ -241,8 +243,8 @@ All items **confirmed** by observation on 2026-11-13.
 
 Where Cognee is ahead of what a new project could offer today:
 
-- The most complete local, zero-service stack of the four systems studied: embedded relational,
-  vector and graph stores, and a mode that runs with no API key at all. **confirmed** (run)
+- A complete local, zero-service stack: embedded relational, vector and graph stores, and a mode
+  that runs with no API key at all. **confirmed** (run)
 - Provenance depth: per-edge evidence back to the source chunk, source references that make
   precise deletion possible, and an optional hash-chained audit ledger. **confirmed**
 - Conflict review that keeps competing facts, distinguishes time-varying from fixed attributes,
@@ -271,24 +273,25 @@ Where Cognee is ahead of what a new project could offer today:
   with dates and sources. **confirmed**
 - Install weight: 1.3 GB before models, 2.3 GB after the no-key path installed `torch`.
   **confirmed** (run)
-- Complexity: a 1,067-line architecture reference, about 40 API modules, nine improve stages
+- Surface area: a 1,067-line architecture reference, about 40 API modules, nine improve stages
   and five provenance mechanisms controlled by "three unrelated flags" (`CLAUDE.md` line 984).
-  This is a cost for a new user and for anyone debugging behaviour. **confirmed**
+  **confirmed** (counts)
 - Open defect reports include "Embedding-model guard ... blocks DELETE and forget() operations
   on mismatched datasets" (<https://github.com/topoteretes/cognee/issues/6092>) and
   "GraphCompletionRetriever drops global context index and bypasses
   skip_completion_on_empty_context during batch retrieval"
-  (<https://github.com/topoteretes/cognee/issues/6077>). **confirmed** (issues open; not
-  reproduced)
+  (<https://github.com/topoteretes/cognee/issues/6077>). Reported (issues open when read on
+  2026-11-13; not reproduced)
 - The audit ledger is off by default and records data items, not individual fact changes.
   **confirmed**
 - Python only for the engine. **confirmed**
 
 ## What it means for Factloom
 
-- Cognee is the closest of the four to Factloom's combined scope (graph, hybrid retrieval,
-  conflict handling, provenance, self-improvement, local storage, MCP). Factloom will not match
-  its breadth. The specific gap Factloom can own is the one Cognee does not fill: explicit
+- Cognee's scope overlaps Factloom's planned scope on most points (graph, hybrid retrieval,
+  conflict handling, provenance, self-improvement, local storage, MCP). Assessment (an opinion,
+  not a finding): Cognee covers far more than Factloom plans to, and Factloom should not try to
+  match that breadth. A specific gap that Cognee does not fill: explicit
   bi-temporal facts with "invalidate and link to the replacement", and a retrieval result that
   is a list of current facts with dates and sources rather than generated prose.
 - Cognee's `FactConflict` record is a good reference for Factloom's phase 2 design: keep both
@@ -303,10 +306,13 @@ Where Cognee is ahead of what a new project could offer today:
   and show it is practical at scale. The note that a per-node audit row costs about ten times
   the source text is a useful warning: Factloom's audit log should record changes (create,
   invalidate, merge), not a row per read or per unchanged fact.
-- Cognee shows the cost of breadth. Factloom should keep the MCP surface small and resist adding
-  retrieval modes; one hybrid search with a time parameter covers the stated goal.
-- A no-key mode is attractive but expensive in install size. For Factloom, a no-LLM write path
-  for already-structured facts is a cheaper way to allow use without a key.
+- Cognee covers far more than Factloom plans to (more than twenty search types, about 40 API
+  modules). Factloom should keep the MCP surface small and resist adding retrieval modes; one
+  hybrid search with a time parameter covers the stated goal.
+- Cognee's no-key mode grew the environment from 1.3 GB to 2.3 GB in the run above. For Factloom,
+  a no-LLM write path for already-structured facts is a lighter way to allow use without a key.
+  `../technical/embeddings.md` leads with a local embedding runtime that also adds install
+  weight; see `../OPEN-QUESTIONS.md`, D-6.
 
 ## Open questions
 
