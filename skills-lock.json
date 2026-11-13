@@ -8,6 +8,13 @@
       "computedHash": "835538f784c0c5b1cb64b84489148b926c55934bdd92229a424df6d4069d7765",
       "installMode": "copy"
     },
+    "sqlite": {
+      "source": "fatih-developer/fth-skills",
+      "sourceType": "github",
+      "skillPath": "skills/sqlite/SKILL.md",
+      "computedHash": "95675ce993aec3bbb145290c05be8a9f7b0e70cbf63ced89e8196c20c8dccbfb",
+      "installMode": "copy"
+    },
     "typescript-advanced-types": {
       "source": "wshobson/agents",
       "sourceType": "github",
