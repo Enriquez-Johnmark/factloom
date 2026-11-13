@@ -21,6 +21,13 @@
       "skillPath": "harness/pstack/claude-code/skills/typescript-best-practices/SKILL.md",
       "computedHash": "fb35e49d1b6a48fa42d81fff0e4e9834b8f98e0ebcf188203680f1f4265df690",
       "installMode": "copy"
+    },
+    "typescript-mcp-server-generator": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/typescript-mcp-server-generator/SKILL.md",
+      "computedHash": "9f3955478a4c380c77c6758c3ffd1908d9deae1b971477fed847b722570be39f",
+      "installMode": "copy"
     }
   }
 }
