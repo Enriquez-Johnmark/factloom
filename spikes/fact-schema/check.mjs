@@ -28,8 +28,8 @@ const insertFact = db.prepare(`INSERT INTO fact (id, namespace, subject_entity_i
 const linkSource = db.prepare('INSERT INTO fact_source VALUES (?, ?)');
 const insertEmbedding = db.prepare("INSERT INTO fact_embedding VALUES (?, 'toy', 4, ?)");
 const invalidate = db.prepare('UPDATE fact SET invalidated_at = ?, superseded_by_fact_id = ? WHERE id = ?');
-const audit = db.prepare(`INSERT INTO audit_log (namespace, operation_id, operation, action, target_kind, target_id, trigger, reason, occurred_at)
-  VALUES ('${NS}', ?, ?, ?, 'fact', ?, 'agent', ?, ?)`);
+const audit = db.prepare(`INSERT INTO audit_log (namespace, operation_id, operation, action, target_kind, target_id, trigger, reason_code, source_id, occurred_at)
+  VALUES ('${NS}', ?, ?, ?, 'fact', ?, 'agent', ?, ?, ?)`);
 
 const record = (fact, sourceId, embedding) => { insertFact.run(fact); linkSource.run(fact.id, sourceId); insertEmbedding.run(fact.id, embedding); };
 
@@ -43,9 +43,10 @@ record({ id: 'node20', subject: 'e-repo', predicate: 'ci_node_version', value: '
 insertSource.run('s-2', NS, 'We upgraded to PostgreSQL 16 on 15 March.', at('2026-04-02'), at('2026-04-02'));
 db.transaction(() => {
   record({ id: 'pg14-ended', subject: 'e-repo', predicate: 'uses_database_version', value: 'PostgreSQL 14', statement: 'The example repository uses PostgreSQL 14', validFrom: at('2025-06-01'), validTo: at('2026-03-15'), createdAt: at('2026-04-02') }, 's-1', vector(1, 0, 0, 0));
+  linkSource.run('pg14-ended', 's-2'); // the source that reported the end
   invalidate.run(at('2026-04-02'), 'pg14-ended', 'pg14');
   record({ id: 'pg16', subject: 'e-repo', predicate: 'uses_database_version', value: 'PostgreSQL 16', statement: 'The example repository uses PostgreSQL 16', validFrom: at('2026-03-15'), validTo: null, createdAt: at('2026-04-02') }, 's-2', vector(0.9, 0.1, 0, 0));
-  for (const [action, id] of [['fact.recorded', 'pg14-ended'], ['fact.invalidated', 'pg14'], ['fact.recorded', 'pg16']]) audit.run('op-2', 'succession', action, id, 'upgrade reported', at('2026-04-02'));
+  for (const [action, id] of [['fact.recorded', 'pg14-ended'], ['fact.invalidated', 'pg14'], ['fact.recorded', 'pg16']]) audit.run('op-2', 'succession', action, id, 'reported_ended', 's-2', at('2026-04-02'));
 })();
 
 // --- 2026-05-01: correction. The old fact was wrong; it is invalidated and superseded.
@@ -53,7 +54,7 @@ insertSource.run('s-3', NS, 'CI has always been on Node 22, not 20.', at('2026-0
 db.transaction(() => {
   record({ id: 'node22', subject: 'e-repo', predicate: 'ci_node_version', value: 'Node 22', statement: 'CI for the example repository runs on Node 22', validFrom: null, validTo: null, createdAt: at('2026-05-01') }, 's-3', vector(0, 0.9, 0.1, 0));
   invalidate.run(at('2026-05-01'), 'node22', 'node20');
-  for (const [action, id] of [['fact.recorded', 'node22'], ['fact.invalidated', 'node20']]) audit.run('op-3', 'correction', action, id, 'agent reported the earlier fact was wrong', at('2026-05-01'));
+  for (const [action, id] of [['fact.recorded', 'node22'], ['fact.invalidated', 'node20']]) audit.run('op-3', 'correction', action, id, 'reported_wrong', 's-3', at('2026-05-01'));
 })();
 
 // One predicate answers every time question. validAt is the as-of date, knownAt the known-at date.
@@ -113,9 +114,53 @@ check('a fact has exactly one kind of object', () => {
 check('a fact must refer to an existing entity', () => rejects(() => insertFact.run({ id: 'bad', subject: 'e-missing', predicate: 'p', value: 'v', statement: 's', validFrom: null, validTo: null, createdAt: at(NOW) }), /FOREIGN KEY/));
 check('the same entity cannot be created twice in a namespace', () => rejects(() => insertEntity.run('e-repo-2', NS, 'repository', 'Example', 'example', at(NOW)), /UNIQUE/));
 check('audit entries cannot be changed or deleted', () => {
-  rejects(() => db.prepare("UPDATE audit_log SET reason = 'x'").run(), /never changed/);
+  rejects(() => db.prepare("UPDATE audit_log SET reason_code = 'x'").run(), /never changed/);
   rejects(() => db.prepare('DELETE FROM audit_log').run(), /never deleted/);
 });
-check('no operation reduced the number of fact rows', () => assert.equal(db.prepare('SELECT count(*) AS n FROM fact').get().n, 5));
+check('a fact cannot supersede itself or be superseded from another namespace', () => {
+  insertEntity.run('e-other', 'repo:other', 'repository', 'other', 'other', at(NOW));
+  db.prepare(`INSERT INTO fact (id, namespace, subject_entity_id, predicate, object_value, statement, confidence, created_at) VALUES ('other-1', 'repo:other', 'e-other', 'p', 'v', 's', 1, ?)`).run(at(NOW));
+  rejects(() => invalidate.run(at(NOW), 'other-1', 'pg16'), /own namespace/);
+  rejects(() => invalidate.run(at(NOW), 'pg16', 'pg16'), /CHECK/);
+});
+check('the row number that keyword search relies on cannot be changed', () => rejects(() => db.prepare("UPDATE fact SET rowid = rowid + 1000, invalidated_at = ? WHERE id = 'pg16'").run(at(NOW)), /only by being invalidated once/));
+check('entities, sources and source links cannot be changed or deleted', () => {
+  rejects(() => db.prepare("UPDATE entity SET name = 'x' WHERE id = 'e-repo'").run(), /never changed/);
+  rejects(() => db.prepare("DELETE FROM entity WHERE id = 'e-other'").run(), /never deleted/);
+  rejects(() => db.prepare("UPDATE source SET content = 'x' WHERE id = 's-1'").run(), /never changed/);
+  rejects(() => db.prepare("DELETE FROM source WHERE id = 's-3'").run(), /never deleted/);
+  rejects(() => db.prepare("DELETE FROM fact_source WHERE fact_id = 'pg16'").run(), /keeps its sources/);
+});
+
+// The single-value rule. A commit that records a fact for a single-valued predicate runs this
+// query inside its transaction, after applying its changes, and fails if it returns a row.
+// Two periods overlap unless one ends at or before the other starts; a missing bound is open.
+const overlapping = db.prepare(`SELECT o.id FROM fact o WHERE o.namespace = '${NS}' AND o.subject_entity_id = @subject AND o.predicate = @predicate
+  AND o.invalidated_at IS NULL AND o.id <> @id
+  AND (o.valid_from IS NULL OR @validTo IS NULL OR o.valid_from < @validTo)
+  AND (@validFrom IS NULL OR o.valid_to IS NULL OR @validFrom < o.valid_to) ORDER BY o.id`);
+const overlaps = (validFrom, validTo) => overlapping.all({ id: 'candidate', subject: 'e-repo', predicate: 'uses_database_version', validFrom: validFrom && at(validFrom), validTo: validTo && at(validTo) }).map((r) => r.id);
+
+check('single-value rule: a second open-ended value overlaps the current one', () => assert.deepEqual(overlaps('2026-06-01', null), ['pg16']));
+check('single-value rule: an older fact arriving late overlaps the ended fact it would contradict', () => assert.deepEqual(overlaps('2024-01-01', '2025-09-01'), ['pg14-ended']));
+check('single-value rule: an older fact that ends where the next begins does not overlap', () => assert.deepEqual(overlaps('2024-01-01', '2025-06-01'), []));
+check('single-value rule: a fact dated in the future still overlaps the open-ended current one', () => assert.deepEqual(overlaps('2027-01-01', null), ['pg16']));
+check('single-value rule: an unknown start overlaps everything before its end', () => assert.deepEqual(overlaps(null, '2025-07-01'), ['pg14-ended']));
+check('correcting the date of a succession replaces both facts in one transaction and leaves no overlap or gap', () => {
+  // The upgrade was on 2026-03-20, not 2026-03-15. Both neighbours are replaced together.
+  db.transaction(() => {
+    record({ id: 'pg14-ended-2', subject: 'e-repo', predicate: 'uses_database_version', value: 'PostgreSQL 14', statement: 'The example repository uses PostgreSQL 14', validFrom: at('2025-06-01'), validTo: at('2026-03-20'), createdAt: at('2026-06-01') }, 's-1', vector(1, 0, 0, 0));
+    record({ id: 'pg16-2', subject: 'e-repo', predicate: 'uses_database_version', value: 'PostgreSQL 16', statement: 'The example repository uses PostgreSQL 16', validFrom: at('2026-03-20'), validTo: null, createdAt: at('2026-06-01') }, 's-2', vector(0.9, 0.1, 0, 0));
+    invalidate.run(at('2026-06-01'), 'pg14-ended-2', 'pg14-ended');
+    invalidate.run(at('2026-06-01'), 'pg16-2', 'pg16');
+    for (const f of [{ id: 'pg14-ended-2', validFrom: at('2025-06-01'), validTo: at('2026-03-20') }, { id: 'pg16-2', validFrom: at('2026-03-20'), validTo: null }]) {
+      assert.deepEqual(overlapping.all({ ...f, subject: 'e-repo', predicate: 'uses_database_version' }), []);
+    }
+  })();
+  assert.deepEqual(ids('2026-03-17', NOW), ['node22', 'pg14-ended-2']);
+  assert.deepEqual(ids('2026-03-17', '2026-05-15'), ['node22', 'pg16']); // what was believed before the date was corrected
+});
+
+check('no operation reduced the number of fact rows', () => assert.equal(db.prepare('SELECT count(*) AS n FROM fact').get().n, 8));
 
 console.log(`\n${passed} checks passed on SQLite ${db.prepare('SELECT sqlite_version() AS v').get().v}, sqlite-vec ${db.prepare('SELECT vec_version() AS v').get().v}, Node ${process.version}`);
