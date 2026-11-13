@@ -77,8 +77,12 @@ the Platform (it needs an account), so Platform findings are from documentation 
   `mem0/memory/main.py` lines 925-956. **confirmed**
 - Platform only: "Dream" has a "Supersede" action that "marks an older fact as outdated when a
   newer one contradicts it", described as always on for all plans.
-  `docs/platform/features/dream.mdx`. How superseded memories are stored or queried is not
-  documented on that page. **confirmed** (documentation)
+  The same page states that the older memory is marked superseded and linked to the newer fact
+  that replaced it, is "not deleted and not hidden by default" (a normal `search` or `get` still
+  returns it with a superseded badge), and is excluded when the caller passes `latest_only=true`.
+  Merged duplicates are hidden by default and returned with `include_merged=true`. The page
+  describes no query for a past date. `docs/platform/features/dream.mdx` lines 26, 60, 66, 80-88.
+  **confirmed** (read in the documentation; Platform only; not run)
 - Platform only: a feedback call (`POSITIVE`, `NEGATIVE`, `VERY_NEGATIVE` with a reason) per
   memory. The page says feedback is "used to improve the accuracy of the memories and search
   results" without stating the mechanism. `docs/platform/features/feedback-mechanism.mdx`.
@@ -162,7 +166,9 @@ All **confirmed**.
   site; a reader has to check each page for availability. Open issues report stale examples:
   "Skill examples and LLM.md call search()/get_all() with top-level user_id, which raises
   ValueError" (<https://github.com/mem0ai/mem0/issues/7202>) and "AGENTS.md files still reference
-  removed mem0/graphs package" (<https://github.com/mem0ai/mem0/issues/7704>). **confirmed**
+  removed mem0/graphs package" (<https://github.com/mem0ai/mem0/issues/7704>). The first
+  sentence is **confirmed** (documentation read); the two issues are reported (open when read on
+  2026-11-13; not reproduced).
 
 ### MCP and coding-agent use
 
@@ -180,8 +186,8 @@ All **confirmed**.
 
 ### Observed by running
 
-Environment: Linux, Python 3.13, `uv`. Scripts are in the session scratchpad (`a1/run-mem0/`).
-All items **confirmed** by observation on 2026-11-13.
+Environment: Linux, Python 3.13, `uv`. The scripts were throwaway files in a directory outside
+the repository and are not kept. All items **confirmed** by observation on 2026-11-13.
 
 1. `uv pip install mem0ai==2.2.1 anthropic fastembed`: 55 packages, 271 MB, about 9 seconds.
 2. `Memory()` with default configuration and no `OPENAI_API_KEY` raised
@@ -211,15 +217,16 @@ Where Mem0 is ahead of what a new project could offer today:
 - Adoption and ecosystem: 68.9k stars, 25 vector stores, 18 LLM provider modules, Python and TypeScript
   SDKs, a CLI, a self-hosted server with dashboard, and ready-made plugins for at least ten
   coding agents and frameworks. **confirmed**
-- The simplest working local setup of the four systems studied: one `pip install`, embedded
-  storage, and a no-LLM write path (`infer=False`). **confirmed** (run)
+- A local setup that worked with one `pip install`, embedded storage, and a no-LLM write path
+  (`infer=False`). **confirmed** (run)
 - Published benchmark claims for the current algorithm: 91.6 on LoCoMo and 93.4 on LongMemEval,
   with extraction latency "roughly in half". These are the project's own figures.
   `docs/migration/oss-v2-to-v3.mdx` line 24. **confirmed** (as reported claims)
 - One LLM call per write, which keeps ingestion cheap and fast. **confirmed**
 - The coding-agent plugin already does automatic capture and recall through hooks, which is more
   than an MCP tool alone provides. **confirmed** (documentation)
-- On the Platform: supersede, merge, synthesis, decay and temporal ranking exist as managed
+- On the Platform: supersede (with a link from the superseded memory to its replacement and a
+  `latest_only` read flag), merge, synthesis, decay and temporal ranking exist as managed
   features. **confirmed** (documentation)
 
 ### Weaknesses and gaps
@@ -232,38 +239,45 @@ Where Mem0 is ahead of what a new project could offer today:
   the library. **confirmed**
 - No typed relationships anywhere: "Flat entity model: no relationship types, no
   entity-to-entity edges, no semantic type hierarchy"
-  (<https://github.com/mem0ai/mem0/issues/5440>). **confirmed** (issue open; matches source)
-- Keyword search and entity extraction are English-only: "BM25 keyword search and entity
-  extraction are hardcoded to English" (<https://github.com/mem0ai/mem0/issues/4884>).
-  **confirmed** (issue open)
+  (<https://github.com/mem0ai/mem0/issues/5440>). **confirmed** in source; also reported (issue
+  open when read on 2026-11-13)
+- Keyword search and entity extraction are reported as English-only: "BM25 keyword search and
+  entity extraction are hardcoded to English" (<https://github.com/mem0ai/mem0/issues/4884>).
+  Reported (issue open when read on 2026-11-13; not reproduced)
 - A memory does not point to its source message. **confirmed**
 - MCP and the Claude Code plugin require the hosted Platform, so memories leave the machine.
   **confirmed**
 - Robustness reports: "`add()` accepts a non-string `created_at` in metadata, after which every
   read and delete for that user fails" (<https://github.com/mem0ai/mem0/issues/7810>);
   self-hosted image publishing lags releases (<https://github.com/mem0ai/mem0/issues/5090>).
-  **confirmed** (issues open; not reproduced)
+  Reported (issues open when read on 2026-11-13; not reproduced)
 - Provider drift: the Anthropic path failed with both the current SDK and the current Haiku
-  model in my run. A similar report exists for OpenAI reasoning models
-  (<https://github.com/mem0ai/mem0/issues/7523>). **confirmed**
+  model in my run (**confirmed**, run). A similar report exists for OpenAI reasoning models
+  (<https://github.com/mem0ai/mem0/issues/7523>; reported, not reproduced).
 
 ## What it means for Factloom
 
 - Mem0's library and Factloom now solve different problems. Mem0 open source is a fast
   add-only store of statements with hybrid ranking; Factloom is a temporal fact graph with
-  correction. The comparison a user will make is "Mem0 is easier to start with"; Factloom's
-  answer must be "Factloom keeps one current answer and its history", shown with an example like
-  the Postgres 14 to 16 test above.
-- Mem0's move to add-only is evidence that LLM-decided UPDATE and DELETE at write time was
-  costly or unreliable enough to remove. Factloom's self-correction should therefore invalidate
-  and link, never rewrite or delete, and should keep the decision cheap (few candidates, one
-  call).
+  correction. Assessment (an opinion, not a finding): a user comparing the two is likely to find
+  Mem0 easier to start with; what Factloom can show in return is one current answer plus its
+  history, with an example like the Postgres 14 to 16 test above.
+- The gap "no link from an old statement to its replacement" applies to Mem0's open-source
+  library only. The hosted Platform documents supersede-and-link and a current-only read flag
+  (`latest_only=true`), so that combination is not unique to Factloom. What the Platform page
+  does not describe is validity time or a query for a past date.
+- Mem0 attributes higher benchmark scores and about half the extraction latency to the redesign
+  that removed UPDATE and DELETE from the write path (vendor claim,
+  `docs/migration/oss-v2-to-v3.mdx` line 23). The guide does not say the old step was
+  unreliable; that reading is an inference (**likely**). Either way, Factloom's self-correction
+  should invalidate and link, never rewrite or delete, and should keep the decision cheap (few
+  candidates, one call).
 - Worth copying: a no-LLM write path; exact-hash duplicate suppression before any LLM call; an
   `explain` option that returns score components; the `expiration_date` idea as a caller-set
   `valid_to`.
 - Worth avoiding: score addition across signals with fixed weights depends on score scales;
-  rank fusion is simpler to reason about. Features that exist only in a hosted product create
-  confusion about what the open-source package does.
+  rank fusion is simpler to reason about. Several Mem0 features are Platform-only; each finding
+  above says which form it applies to.
 - For coding agents, hooks-based capture and recall (as in Mem0's plugin) is a stronger
   integration than MCP tools alone. Factloom's phase 1 is MCP only; consider hooks later.
 - The local-first, private default (SQLite, nothing leaves the machine) is a real
@@ -271,9 +285,10 @@ Where Mem0 is ahead of what a new project could offer today:
 
 ## Open questions
 
-- How does the Platform store a superseded memory (hidden, flagged, linked to its replacement),
-  and can a caller list superseded memories or query a past state? Not documented on the pages
-  read; not tested.
+- The Platform's supersede behaviour (marked, linked to the replacement, returned by default
+  with a badge, excluded with `latest_only=true`) was read in the documentation, not run; the
+  Platform needs an account. Whether a past state can be queried by date is not described on the
+  pages read. Unverified.
 - What the Platform feedback call changes in practice. Unverified.
 - The current status of OpenMemory (the earlier local MCP server): the docs paths redirect and
   the directory is not in the repository at the commit read. Unverified.
