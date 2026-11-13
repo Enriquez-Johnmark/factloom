@@ -106,8 +106,12 @@ is the modelling error that bi-temporal storage exists to prevent (see bi-tempor
     preference, follow-up event"). The older `DEFAULT_UPDATE_MEMORY_PROMPT` (ADD / UPDATE / DELETE /
     NONE) is still defined in `mem0/configs/prompts.py`, but `mem0/memory/main.py` does not reference
     it and contains no UPDATE or DELETE event handling in the add path. **Confirmed** by reading and
-    searching those files. Why the project moved to an additive design was not researched;
-    **unverified**.
+    searching those files. The project's migration guide attributes benchmark gains and about half
+    the extraction latency to the redesign as a whole: "These changes produce a +20 point
+    improvement on LoCoMo (71.4 → 91.6) and +26 point improvement on LongMemEval (67.8 → 93.4),
+    while cutting extraction latency roughly in half" (`docs/migration/oss-v2-to-v3.mdx` line 23;
+    a vendor claim, not reproduced). **Confirmed** that the guide says this. It does not say the
+    old update step was unreliable.
 
 ### Functional versus multi-valued predicates
 
@@ -149,7 +153,8 @@ the step loosely at best. The honest summary: nobody has published how often thi
 Design for phase 2 (self-correction at write time):
 
 1. **Candidate selection, in order.** (a) Live facts with the same subject entity and the same
-   predicate: one indexed query, no model call. (b) If Factloom's predicates are free text rather
+   predicate: one indexed query, no model call. (The industry documents ask for a qualifier in
+   this key; see `../OPEN-QUESTIONS.md`, D-1.) (b) If Factloom's predicates are free text rather
    than a fixed vocabulary, add the top-k hybrid-search neighbours restricted to the same subject
    entity. Do not search the whole graph for contradictions; a fact about another subject is almost
    never a contradiction, and Graphiti's long list of prompt prohibitions (finding 7) shows what the
@@ -159,14 +164,15 @@ Design for phase 2 (self-correction at write time):
 3. **One LLM call per new fact, all candidates together, structured output.** Ask for exactly one
    label per candidate from: `duplicate`, `refines`, `succeeds`, `contradicts`, `unrelated`, plus a
    short reason. Validate with Zod; an invalid response is treated as `unrelated` and logged. Use
-   integer indexes for candidates.
+   integer indexes for candidates. (Whether phase 2 starts with five labels or fewer is open; see
+   `../OPEN-QUESTIONS.md`, D-12.)
 4. **Code, not the model, applies the outcome**, using the bi-temporal rules:
 
    | Label | Effect |
    |---|---|
    | `duplicate` | No new fact; add a source link to the stored fact |
    | `refines` | Insert N; link `kind = 'refinement'`; O stays live unless N strictly contains O's content |
-   | `succeeds` | Insert N; replace O by a copy with `valid_to = N.valid_from`; link `kind = 'succession'` |
+   | `succeeds` | Insert N; replace O by a copy with `valid_to = N.valid_from`; link `kind = 'succession'` (how `valid_to` is closed is open; see `../OPEN-QUESTIONS.md`, D-5) |
    | `contradicts` | Insert N; set `O.invalidated_at`; link `kind = 'correction'` |
    | `unrelated` | Insert N |
 
@@ -199,8 +205,11 @@ Do not build yet:
 - **Unverified:** the accuracy of a five-label verdict from Claude on Factloom's kind of facts. This
   is the first thing the evaluation set must measure (see evaluation.md), including the rate of false
   `contradicts`.
-- **Unverified:** why Mem0 replaced its update step with additive extraction and linking, and how
-  stale memories are handled at read time in that design beyond an `expiration_date` payload check.
+- **Unverified:** whether Mem0 removed its update step because it was unreliable. The migration
+  guide gives only benchmark and latency gains for the whole redesign (finding 11). In the
+  open-source library, stale memories are handled at read time only by ranking and an
+  `expiration_date` check; the hosted Platform documents a supersede step (see
+  `../evaluations/mem0.md`).
 - Should `refines` invalidate the less specific fact? Keeping both is safer but adds near-duplicates
   to retrieval. Decide with retrieval evaluation.
 - Free-text predicates versus a controlled vocabulary: the candidate query in step 1(a) only works
