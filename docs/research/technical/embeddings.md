@@ -116,7 +116,7 @@ relevant as code-retrieval scores. Which matters more for real coding-agent memo
 
 | Item | Finding | Source | Label |
 |---|---|---|---|
-| Version | 4.3.2 (2026-10-30), Apache-2.0 | `npm view @huggingface/transformers` | confirmed |
+| Version | 4.3.2 (published 2026-10-27), Apache-2.0 | `npm view @huggingface/transformers` | confirmed |
 | Native runtime | Depends on `onnxruntime-node` 1.30.0 (and `onnxruntime-web`, `sharp`) | `npm view … dependencies` | confirmed |
 | Platform binaries | The installed `onnxruntime-node` package contains `bin/napi-v6/darwin/arm64`, `linux/x64`, `linux/arm64`, `win32/x64`, `win32/arm64`. There is no `darwin/x64` directory | Listing of `node_modules/onnxruntime-node/bin/napi-v6/` after install | confirmed |
 | Works on plain Node, linux-x64 | Yes: ran on Node v22.23.4 in this session | section 3 test | confirmed |
@@ -168,10 +168,8 @@ Model download sizes (ONNX file only, from the Hugging Face file listings; **con
 
 ### 4. Local test in this session
 
-Scripts (throwaway, not in the repository):
-`/tmp/claude-0/-home-user-factloom/00a9e33c-b521-5829-9c94-4c686af925cc/scratchpad/c2/emb/embed.mjs`
-and
-`/tmp/claude-0/-home-user-factloom/00a9e33c-b521-5829-9c94-4c686af925cc/scratchpad/c2/emb/gemma.mjs`.
+Two throwaway scripts were used, in a directory outside the repository. They are not kept; the
+method below is complete enough to repeat the test.
 
 Environment: Linux x64 VM, 4 vCPUs, "Intel(R) Xeon(R) Processor @ 2.10GHz" (AVX2 and AVX-512
 available), 15 GB RAM, Node v22.23.4, `@huggingface/transformers` 4.3.2, CPU execution only.
@@ -234,7 +232,7 @@ inside the embedding adapter.
 
 | Constraint | Finding | Source | Label |
 |---|---|---|---|
-| Dimension is fixed per vector table | The sqlite-vec table definition carries the vector dimension, so a model with a different dimension needs a new table and a full re-embed | Stated in the task brief; to be verified in the storage research, not checked here | likely |
+| Dimension is fixed per vector table | The sqlite-vec table definition carries the vector dimension (`float[N]`, at most 8192 per column), so a model with a different dimension needs a new table and a full re-embed | `sqlite.md` ("`vec0` virtual table features", ran with sqlite-vec 0.1.9) | confirmed |
 | Different models are not comparable | Vectors from two models (or two dimensions of one model) cannot be mixed in one search; the similarity distributions in section 4 differ per model | section 4 | confirmed |
 | Query / document prefixes | nomic v1.5: `search_document: ` and `search_query: `. bge v1.5: `Represent this sentence for searching relevant passages: ` on queries only, nothing on passages. arctic-embed v2: `query: ` on queries only. EmbeddingGemma: `task: search result \| query: ` and `title: none \| text: `. CodeRankEmbed: `Represent this query for searching relevant code: ` on queries. Voyage: `input_type` `query` / `document`. Gemini 001: `task_type` such as `RETRIEVAL_QUERY`, `RETRIEVAL_DOCUMENT`, `CODE_RETRIEVAL_QUERY`. all-MiniLM: none | each model card; Anthropic embeddings guide; Gemini embeddings page | confirmed |
 | Matryoshka truncation | Truncate, then re-normalise. nomic v1.5 additionally applies `layer_norm` before truncating (its card's Transformers.js example does this) | nomic and EmbeddingGemma cards | confirmed |
@@ -261,6 +259,12 @@ dimensions.**
 - The same model is in Ollama as `nomic-embed-text`, so a second runtime is available without
   changing the stored vectors' model family (identical output across runtimes was not verified).
 - Cost of the choice: it requires the two prefixes, and its vendor-reported quality is mid-table.
+- Not reconciled here: the Transformers.js runtime weighed 745 MB in `node_modules` on linux-x64
+  (section 3; macOS size not measured), while `../evaluations/mnemograph.md` and
+  `../evaluations/cognee.md` advise against heavy ML dependencies by default; and `sqlite.md`
+  advises a smaller dimension because query time grows with it. Whether the local model is a
+  default, an optional adapter package, or replaced by a hosted default, and whether to store 256
+  or 768 dimensions from the start, is an owner decision: see `../OPEN-QUESTIONS.md`, D-6.
 
 Other local options:
 
@@ -321,8 +325,9 @@ reversible choice, at the cost of a re-embed.
 - Whether `onnxruntime-node` on macOS uses CoreML or only CPU by default was not checked.
 - Whether Ollama's `nomic-embed-text` produces vectors interchangeable with the Transformers.js
   ONNX build of nomic-embed-text-v1.5 (same weights version, same pooling) is **unverified**.
-- sqlite-vec's handling of dimensions and distance metrics was taken from the task brief and not
-  verified here; the storage research should confirm it.
+- Answered by the storage research (no longer open): sqlite-vec fixes the dimension per vector
+  column (`float[N]`, maximum 8192) and the distance metric per column (`cosine`, `L2`, `L1`).
+  **Confirmed** by running; see `sqlite.md`.
 - Cohere `embed-v4.0` per-token price: not found on `cohere.com/pricing` or the Cohere docs pages
   fetched. **Unverified.**
 - Jina API per-token price and the size of the free-token grant: not stated on
