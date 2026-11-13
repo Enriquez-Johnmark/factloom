@@ -46,6 +46,27 @@ with code 0. Any exception means the check failed.
 9. Invalidates a fact without deleting it and checks the indexes.
 10. Records the limits this build enforces.
 
+Notes for reading the output:
+
+- Section 8 shows the post-filter variant: the two lists are fused first and the time filter is
+  applied afterwards on the `facts` table. Section 4 shows the other variant, where the filter
+  runs inside the vector search. Which one Factloom uses is an open decision
+  (`docs/research/OPEN-QUESTIONS.md`, D-2).
+- Section 8 uses a different keyword query from section 5: `package OR manager OR pnpm` instead of
+  `package manager`. That is why fact 3 has `fts_rank` 3 in section 8 although section 5 lists
+  only two hits.
+- Section 9 sets `invalidated_at` and the vector table's `is_live` flag; it does not change the
+  fact's text. The FTS integrity check therefore has nothing to detect and its `ok` is weak
+  evidence. The section shows that the row stays and leaves filtered KNN results, nothing more.
+- Section 10 records the integer rule for the primary key only. The same rule holds for INTEGER
+  and BOOLEAN metadata columns (a JavaScript number is rejected with `Expected integer for INTEGER
+  metadata column ..., received FLOAT` and `Expected 0 or 1 for BOOLEAN metadata column ...`;
+  `BigInt` values are accepted). That was run separately and is not part of the recorded output.
+- The table layout is an illustration for the queries, not a schema proposal: the
+  `superseded_by` column, `valid_from text not null` and the sentinel for an open `valid_to` in
+  the vector table differ from what `docs/research/technical/bi-temporal-modelling.md`
+  recommends (`docs/research/OPEN-QUESTIONS.md`, D-3 and D-4).
+
 ## Recorded output: `node spike.mjs`
 
 Linux x64, Node.js v22.23.4, 2026-11-13, after a clean `npm ci`.
