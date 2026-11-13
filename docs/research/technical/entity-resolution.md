@@ -83,7 +83,11 @@ that stays correctable when it merges wrongly?
    `uuid5(NAMESPACE_OID, node_id.lower().replace(" ", "_").replace("'", ""))`
    (`cognee/infrastructure/engine/utils/generate_node_id.py`), and
    `expand_with_nodes_and_edges.py` groups extracted nodes by a name-based entity id
-   (`Entity.id_for(node.name)`). An optional ontology resolver uses `difflib.get_close_matches` with a
+   (`Entity.id_for(node.name)`). For `Entity` nodes the id is namespaced by the class: `id_for`
+   computes a UUIDv5 over the class name and the name (`Entity:<name>`;
+   `cognee/infrastructure/engine/models/DataPoint.py`, `cognee/modules/engine/models/Entity.py`),
+   so two node types cannot collide on the same string. Within one type the name alone decides
+   identity. An optional ontology resolver uses `difflib.get_close_matches` with a
    cutoff described in the code as "80%" and "tuned for single names"
    (`cognee/modules/ontology/`). **Confirmed.** Consequence: "Java" the island and "Java" the
    language share a node unless types or an ontology separate them; "Postgres" and "PostgreSQL" do
@@ -141,7 +145,9 @@ Phase 3 (self-healing, scheduled) adds:
 | 4. Candidates | Top-k embedding neighbours on "name + type + short description" above a loose threshold, within scope | Candidate pairs only, never an automatic merge |
 | 5. LLM adjudication | Claude sees both entities with types, descriptions and a few facts each; answers same / different / unsure | Merge only on "same"; policy per adapter may require human approval |
 
-Data model rules (needed from day one, even though merging comes later):
+Data model rules (needed from day one, even though merging comes later). An independent review
+questioned whether all of these are needed before phase 3; that is recorded as open in
+`../OPEN-QUESTIONS.md`, section C.
 
 1. **Mentions are first-class.** Every fact endpoint references an `entity_id`, and every extraction
    stores the surface form it saw (`entity_mention(entity_id, surface_form, source_id, created_at)`).
