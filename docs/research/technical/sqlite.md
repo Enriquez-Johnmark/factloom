@@ -109,7 +109,10 @@ Limitations found by running (all **confirmed**, in the spike's section 10):
   received NULL`. An open-ended `valid_to` therefore needs a sentinel value in the vector table.
 - Integer primary keys and INTEGER or BOOLEAN metadata values must arrive as SQLite integers. Both
   drivers bind a JavaScript number as REAL, which is rejected (`Only integers are allows for
-  primary key values`; the wording is the library's). Passing `BigInt` values works.
+  primary key values`; the wording is the library's). Passing `BigInt` values works. The spike's
+  recorded section 10 shows only the primary-key case; the metadata cases were run separately
+  with a throwaway script (`Expected integer for INTEGER metadata column m, received FLOAT`;
+  `Expected 0 or 1 for BOOLEAN metadata column b`).
 - Metadata filters cannot use `IS NULL`, `LIKE` or functions (documentation).
 - Deletes: the v0.1.7 note describes "proper DELETE support, which clears space once roughly 1024
   vectors are deleted", and v0.1.9 fixes a DELETE error for long text metadata. Factloom never
@@ -195,7 +198,12 @@ order by depth, e.name;
 `max_depth = 1` only direct neighbours return; "as of" March 2026 the walk reaches `npm` where "as
 of" November 2026 it reaches `pnpm`; with both times set to 2026-02-05 it reaches `Jest`, a fact
 that was retracted five days later. The path column is the cycle guard; it grows with depth, which
-is acceptable for the small depths a memory query uses.
+is acceptable for the small depths a memory query uses. This walk follows edges from subject to
+object only; `hybrid-retrieval.md` tested an undirected walk with `UNION` as the cycle guard.
+Which form phase 1 uses is open: see `../OPEN-QUESTIONS.md`, D-11. The predicate
+`f.valid_from <= :as_of` relies on the spike declaring `valid_from` NOT NULL; with a nullable
+`valid_from` (as `bi-temporal-modelling.md` recommends) it would silently drop facts whose start
+is unknown (D-3).
 
 ### The spike
 
@@ -226,6 +234,10 @@ Two ways to apply the time filter to vector search were both run, and they diffe
   when a fact is invalidated.
 - After the search, by joining to `facts`. Needs no copies, but must fetch more than `k` candidates
   and can still return fewer than wanted when many near neighbours are filtered out.
+
+The spike's hybrid statement (its section 8) uses the second form: it fuses first and filters by
+time afterwards. `hybrid-retrieval.md` recommends filtering inside every retriever. See
+`../OPEN-QUESTIONS.md`, D-2.
 
 ### macOS on Apple Silicon
 
@@ -313,21 +325,31 @@ result lists keeps those differences inside the storage package.
 - Use better-sqlite3 13.1.1 and sqlite-vec 0.1.9, pinned exactly. Keep both behind the storage
   interface. No part of `core` or `graph-rag` should import either.
 - One SQLite file can do all three retrieval methods with a bi-temporal filter. The spike is a
-  working reference for the SQL.
+  working reference for the SQL queries. Its table layout is illustrative only: the
+  `superseded_by` column, the NOT NULL `valid_from` and the text time format are not schema
+  decisions (`bi-temporal-modelling.md` recommends a link table and nullable bounds; see
+  `../OPEN-QUESTIONS.md`, D-3 and D-4).
 - Make the storage interface asynchronous (return promises) even though the first implementation
-  is synchronous. Postgres will need it, and it costs nothing now.
+  is synchronous. Postgres will need it. The cost is that each atomic write must be a single
+  storage method, because a better-sqlite3 transaction cannot stay open across an `await` (see
+  "Driver" above): callers cannot compose several storage calls into one transaction. See
+  `../OPEN-QUESTIONS.md`, section C.
 - Brute-force vector search is enough for phase 1. At 100,000 facts with 768-dimension embeddings
   a query took about 130 ms on this machine. Embedding dimension is a direct cost: prefer a smaller
-  embedding size if the model offers one. Revisit when a single store approaches a few hundred
-  thousand facts.
+  embedding size if the model offers one. `embeddings.md` leads with a 768-dimension model; see
+  `../OPEN-QUESTIONS.md`, D-6. Revisit when a single store approaches a few hundred thousand
+  facts.
 - Treat the vector table as a rebuildable index, not as a source of truth. Keep the embedding (or
   the means to recompute it) outside `vec0`, so a breaking sqlite-vec release or a move to another
   engine means re-indexing, not data loss.
 - Decide how the time filter reaches vector search: copies of the time fields as `vec0` metadata
   columns (complete results, more bookkeeping) or post-filtering with over-fetch (simpler, can
-  under-return). The spike shows both. The fact-schema design should record the choice.
+  under-return). The spike shows both. The fact-schema design should record the choice
+  (`../OPEN-QUESTIONS.md`, D-2).
 - Open-ended validity needs a sentinel integer in `vec0`, because metadata columns reject NULL.
-  Pass integers to `vec0` as `BigInt`.
+  Pass integers to `vec0` as `BigInt`. `bi-temporal-modelling.md` recommends no sentinels and one
+  time format in the fact table; whether the derived vector index is an accepted exception is
+  open (`../OPEN-QUESTIONS.md`, D-3).
 - For keyword search over code, start with the default `unicode61` tokenizer. Add a second
   `trigram` index only if substring search inside identifiers turns out to matter.
 - Set the five PRAGMAs above on every connection and run `PRAGMA optimize` before closing.
