@@ -179,8 +179,8 @@ All **confirmed**. Contributions require signing a contributor licence agreement
 
 ### Observed by running
 
-Environment: Linux, Python 3.13, `uv`. Commands and scripts are in the session scratchpad
-(`a1/run-graphiti/`), not in this repository. All items **confirmed** by observation on
+Environment: Linux, Python 3.13, `uv`. Commands and scripts were run from a throwaway directory
+outside the repository and are not kept. All items **confirmed** by observation on
 2026-11-13.
 
 1. `uv pip install "graphiti-core[kuzu,anthropic,falkordblite]==0.31.2"`: 42 packages, 239 MB.
@@ -236,38 +236,46 @@ Where Graphiti and Zep are ahead of what a new project could offer today:
   and failed in my run; issue "Kuzu is archived"
   (<https://github.com/getzep/graphiti/issues/1132>). An embedded FalkorDB request is open
   (<https://github.com/getzep/graphiti/issues/1240>), and FalkorDB Lite did not persist in my
-  run. **confirmed**
-- An LLM is mandatory for every write. Open question from a user: "Option to have add_episode
-  without LLM extraction" (<https://github.com/getzep/graphiti/issues/1299>). **confirmed**
+  run. **confirmed** (README and run; the issues are as read on 2026-11-13)
+- An LLM is mandatory for every write (**confirmed**, source and run). A user has asked for an
+  "Option to have add_episode without LLM extraction"
+  (<https://github.com/getzep/graphiti/issues/1299>; reported, open when read on 2026-11-13).
 - Ingestion cost and latency at scale are reported by users: "resolve_extracted_nodes sends all
   graph nodes to LLM — O(n) context growth causes max_tokens failures at scale"
   (<https://github.com/getzep/graphiti/issues/1275>) and "add_episode_bulk ingestion latency: 100
   records taking ~1 hour in v0.28.1" (<https://github.com/getzep/graphiti/issues/1262>).
-  **confirmed** (issues exist and are open; I did not reproduce them)
-- Non-OpenAI providers have a history of breakage: Ollama
+  Reported (issues open when read on 2026-11-13; not reproduced)
+- Open issues report problems with non-OpenAI providers: Ollama
   (<https://github.com/getzep/graphiti/issues/868>), `api_base` ignored
   (<https://github.com/getzep/graphiti/issues/1116>), Azure
-  (<https://github.com/getzep/graphiti/issues/1496>). My run hit two dependency-compatibility
-  failures (items 2 and 5 above). **confirmed**
+  (<https://github.com/getzep/graphiti/issues/1496>). Reported (open when read on 2026-11-13; not
+  reproduced). Separately, my run hit two dependency-compatibility failures (items 2 and 5
+  above). **confirmed** (run)
 - No audit log, no fact confidence, no "superseded by" link, no feedback-driven correction, no
   scheduled maintenance, no re-verification against sources. **confirmed** (source)
 - Default search returns expired facts mixed with current ones; "what is true now" is the
   caller's job. **confirmed** (run)
-- The MCP server is explicitly not for production and has open reliability issues, for example
-  "queue worker silently garbage-collected under streamable-http — add_memory queues but never
-  processes" (<https://github.com/getzep/graphiti/issues/1574>). **confirmed**
+- The MCP server's own README describes it as experimental and a reference implementation
+  (**confirmed**, quoted above). An open issue reports a reliability problem: "queue worker
+  silently garbage-collected under streamable-http — add_memory queues but never processes"
+  (<https://github.com/getzep/graphiti/issues/1574>; reported, open when read on 2026-11-13; not
+  reproduced).
 - `update_communities` is reported broken since 2025
-  (<https://github.com/getzep/graphiti/issues/836>). **confirmed** (issue open)
+  (<https://github.com/getzep/graphiti/issues/836>). Reported (issue open when read on
+  2026-11-13; not reproduced)
 - Python only. There is no TypeScript library; TypeScript users must call the Zep service or run
   the Python server. **confirmed**
 
 ## What it means for Factloom
 
-- Graphiti validates the bi-temporal fact design. Its four fields map directly onto Factloom's:
-  `valid_at` = `valid_from`, `invalid_at` = `valid_to`, `created_at` = `created_at`,
-  `expired_at` = `invalidated_at`. Factloom's names are clearer; keep them.
-- Factloom should not expect to beat Graphiti on extraction quality or entity resolution early.
-  The gaps Factloom can fill are the ones Graphiti leaves open: a local, zero-service store
+- Graphiti uses the same bi-temporal fact design Factloom plans. Its four fields map onto
+  Factloom's: `valid_at` = `valid_from`, `invalid_at` = `valid_to`, `created_at` = `created_at`,
+  and `expired_at` is approximately `invalidated_at` (Graphiti also sets `expired_at` on facts
+  that merely ended; see `../technical/bi-temporal-modelling.md`, finding 12). Factloom keeps its
+  own names.
+- Assessment (an opinion, not a finding): Graphiti's entity resolution and extraction have had
+  more development than a new project's will have early on, so Factloom is unlikely to do better
+  on those soon. The gaps Factloom can fill are the ones Graphiti leaves open: a local, zero-service store
   (SQLite), an audit log, a link from an invalidated fact to its replacement, a single
   "as of date" query parameter, a default search that returns only current facts, feedback-driven
   correction, and scheduled healing.
