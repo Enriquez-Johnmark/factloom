@@ -225,7 +225,7 @@ Where it is ahead of what a new project can offer today:
 - No full-text index and no rank fusion; one embedding per entity, so an entity with many
   observations is retrieved as a block. **confirmed** (source)
 - 31 listed tools; heavy install (PyTorch) and a model download on first use. **confirmed**
-- No activity for nine months (2 stars, single author, last commit 2026-02-14). **confirmed**
+- No commit or release since 2026-02-14 (see the activity table). **confirmed**
 
 ## What it means for Factloom
 
@@ -235,8 +235,9 @@ Where it is ahead of what a new project can offer today:
   link from an invalidated fact to its replacement are what is new relative to it.
 - Worth reusing: the duplicate-warning payload; one `remember` call for entity, facts and
   relations; tiered recall with a token budget; a per-entity history tool.
-- Worth avoiding: a large tool list; embedding whole entities; heavy ML dependencies by default;
-  an unpinned MCP SDK major version. Both small Python projects in this evaluation set broke on
+- Worth avoiding: a large tool list; embedding whole entities; heavy ML dependencies by default
+  (`../technical/embeddings.md` leads with a local runtime that measured 745 MB on Linux; see
+  `../OPEN-QUESTIONS.md`, D-6); an unpinned MCP SDK major version. Both small Python projects in this evaluation set broke on
   `mcp` 2.0. Factloom should pin the SDK major version and smoke-test start-up in CI.
 - Docs drift (tool names, launch command) is cheap to prevent with a test that compares the README
   tool table to `tools/list`.
