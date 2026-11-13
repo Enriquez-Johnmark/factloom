@@ -1,0 +1,18 @@
+{
+  "name": "factloom-spike-sqlite-vec-fts5",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Standalone spike: better-sqlite3 + sqlite-vec + FTS5 + recursive CTE with bi-temporal filters. Not part of the workspace.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "spike": "node spike.mjs",
+    "spike:node-sqlite": "node spike-node-sqlite.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "13.1.1",
+    "sqlite-vec": "0.1.9"
+  }
+}
