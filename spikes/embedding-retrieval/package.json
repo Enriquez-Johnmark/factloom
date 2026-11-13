@@ -1,0 +1,16 @@
+{
+  "name": "factloom-spike-embedding-retrieval",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Standalone spike: retrieval quality of two local embedding models on 60 code-memory statements, alone and fused with BM25. Not part of the workspace.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "compare": "node compare.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "4.3.2"
+  }
+}

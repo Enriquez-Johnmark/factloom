@@ -1,0 +1,300 @@
+Node v22.23.4, linux-x64, 4 x Intel(R) Xeon(R) Processor @ 2.30GHz
+@huggingface/transformers 4.3.2
+60 statements, 40 queries
+
+## Models
+
+| Model repo | dtype | Pooling | ONNX file | Size on disk | Load (cached?) | Mean embed time per text |
+|---|---|---|---|---|---|---|
+| nomic-ai/nomic-embed-text-v1.5 | q8 | mean | model_quantized.onnx | 130.9 MB | 0.45 s (cached) | 12.7 ms over 100 texts |
+| Xenova/bge-small-en-v1.5 | fp32 | cls | model.onnx | 126.9 MB | 0.24 s (cached) | 7.0 ms over 140 texts |
+| Xenova/bge-small-en-v1.5 | q8 | cls | model_quantized.onnx | 32.4 MB | 0.13 s (cached) | 4.4 ms over 140 texts |
+| Xenova/all-MiniLM-L6-v2 | fp32 | mean | model.onnx | 86.2 MB | 0.16 s (cached) | 3.9 ms over 100 texts |
+
+Model cache total: 378.5 MB
+
+## Results
+
+A difference of 0.025 in recall@1 or recall@5 is one query out of 40.
+
+### All 40 queries: keyword baseline and embedding only
+
+| Configuration | recall@1 | recall@5 | MRR@10 |
+|---|---|---|---|
+| BM25 only (keyword baseline) | 0.525 | 0.650 | 0.598 |
+| BM25 only, ignoring stop words | 0.575 | 0.637 | 0.602 |
+| nomic-v1.5 q8, 768d | 0.775 | 0.887 | 0.835 |
+| nomic-v1.5 q8, 256d (Matryoshka) | 0.750 | 0.912 | 0.826 |
+| bge-small-v1.5 fp32, query instruction | 0.800 | 0.900 | 0.834 |
+| bge-small-v1.5 fp32, no instruction | 0.775 | 0.863 | 0.824 |
+| bge-small-v1.5 q8, query instruction | 0.800 | 0.887 | 0.834 |
+| bge-small-v1.5 q8, no instruction | 0.775 | 0.863 | 0.813 |
+| all-MiniLM-L6-v2 fp32 (floor) | 0.850 | 0.950 | 0.887 |
+
+### All 40 queries: hybrid recipe A: RRF over full lists (all 60 embedding ranks; every BM25 match) (k = 60)
+
+| Configuration | recall@1 | recall@5 | MRR@10 |
+|---|---|---|---|
+| nomic-v1.5 q8, 768d + BM25 [A] | 0.675 | 0.787 | 0.720 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [A] | 0.675 | 0.738 | 0.714 |
+| bge-small-v1.5 fp32, query instruction + BM25 [A] | 0.675 | 0.762 | 0.713 |
+| bge-small-v1.5 fp32, no instruction + BM25 [A] | 0.675 | 0.738 | 0.705 |
+| bge-small-v1.5 q8, query instruction + BM25 [A] | 0.675 | 0.738 | 0.709 |
+| bge-small-v1.5 q8, no instruction + BM25 [A] | 0.625 | 0.738 | 0.683 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [A] | 0.675 | 0.787 | 0.725 |
+
+### All 40 queries: hybrid recipe B: RRF over the top 10 of each list (k = 60)
+
+| Configuration | recall@1 | recall@5 | MRR@10 |
+|---|---|---|---|
+| nomic-v1.5 q8, 768d + BM25 [B] | 0.675 | 0.838 | 0.751 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [B] | 0.675 | 0.838 | 0.746 |
+| bge-small-v1.5 fp32, query instruction + BM25 [B] | 0.675 | 0.813 | 0.748 |
+| bge-small-v1.5 fp32, no instruction + BM25 [B] | 0.675 | 0.813 | 0.743 |
+| bge-small-v1.5 q8, query instruction + BM25 [B] | 0.675 | 0.813 | 0.749 |
+| bge-small-v1.5 q8, no instruction + BM25 [B] | 0.625 | 0.787 | 0.718 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [B] | 0.675 | 0.863 | 0.764 |
+
+### All 40 queries: hybrid recipe C: RRF over the top 10 of each list, BM25 ignoring stop words (k = 60)
+
+| Configuration | recall@1 | recall@5 | MRR@10 |
+|---|---|---|---|
+| nomic-v1.5 q8, 768d + BM25 [C] | 0.700 | 0.887 | 0.782 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [C] | 0.700 | 0.887 | 0.766 |
+| bge-small-v1.5 fp32, query instruction + BM25 [C] | 0.650 | 0.887 | 0.747 |
+| bge-small-v1.5 fp32, no instruction + BM25 [C] | 0.625 | 0.863 | 0.728 |
+| bge-small-v1.5 q8, query instruction + BM25 [C] | 0.600 | 0.887 | 0.722 |
+| bge-small-v1.5 q8, no instruction + BM25 [C] | 0.625 | 0.838 | 0.722 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [C] | 0.675 | 0.900 | 0.764 |
+
+### Group "paraphrase" (15 queries)
+
+| Configuration | recall@1 | recall@5 | MRR@10 |
+|---|---|---|---|
+| BM25 only (keyword baseline) | 0.200 | 0.400 | 0.306 |
+| BM25 only, ignoring stop words | 0.200 | 0.300 | 0.250 |
+| nomic-v1.5 q8, 768d | 0.600 | 0.767 | 0.693 |
+| nomic-v1.5 q8, 256d (Matryoshka) | 0.533 | 0.833 | 0.669 |
+| bge-small-v1.5 fp32, query instruction | 0.667 | 0.800 | 0.711 |
+| bge-small-v1.5 fp32, no instruction | 0.600 | 0.767 | 0.689 |
+| bge-small-v1.5 q8, query instruction | 0.667 | 0.767 | 0.711 |
+| bge-small-v1.5 q8, no instruction | 0.600 | 0.767 | 0.678 |
+| all-MiniLM-L6-v2 fp32 (floor) | 0.667 | 0.867 | 0.733 |
+| nomic-v1.5 q8, 768d + BM25 [A] | 0.467 | 0.567 | 0.511 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [A] | 0.467 | 0.567 | 0.529 |
+| bge-small-v1.5 fp32, query instruction + BM25 [A] | 0.467 | 0.567 | 0.513 |
+| bge-small-v1.5 fp32, no instruction + BM25 [A] | 0.467 | 0.500 | 0.511 |
+| bge-small-v1.5 q8, query instruction + BM25 [A] | 0.467 | 0.500 | 0.510 |
+| bge-small-v1.5 q8, no instruction + BM25 [A] | 0.333 | 0.500 | 0.442 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [A] | 0.467 | 0.567 | 0.533 |
+| nomic-v1.5 q8, 768d + BM25 [B] | 0.467 | 0.700 | 0.567 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [B] | 0.467 | 0.700 | 0.577 |
+| bge-small-v1.5 fp32, query instruction + BM25 [B] | 0.467 | 0.633 | 0.575 |
+| bge-small-v1.5 fp32, no instruction + BM25 [B] | 0.467 | 0.633 | 0.581 |
+| bge-small-v1.5 q8, query instruction + BM25 [B] | 0.467 | 0.633 | 0.577 |
+| bge-small-v1.5 q8, no instruction + BM25 [B] | 0.333 | 0.567 | 0.508 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [B] | 0.467 | 0.700 | 0.618 |
+| nomic-v1.5 q8, 768d + BM25 [C] | 0.467 | 0.700 | 0.592 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [C] | 0.467 | 0.700 | 0.562 |
+| bge-small-v1.5 fp32, query instruction + BM25 [C] | 0.400 | 0.700 | 0.560 |
+| bge-small-v1.5 fp32, no instruction + BM25 [C] | 0.333 | 0.767 | 0.517 |
+| bge-small-v1.5 q8, query instruction + BM25 [C] | 0.267 | 0.700 | 0.494 |
+| bge-small-v1.5 q8, no instruction + BM25 [C] | 0.333 | 0.700 | 0.508 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [C] | 0.400 | 0.733 | 0.540 |
+
+### Group "keyword" (10 queries)
+
+| Configuration | recall@1 | recall@5 | MRR@10 |
+|---|---|---|---|
+| BM25 only (keyword baseline) | 0.900 | 1.000 | 0.950 |
+| BM25 only, ignoring stop words | 1.000 | 1.000 | 1.000 |
+| nomic-v1.5 q8, 768d | 1.000 | 1.000 | 1.000 |
+| nomic-v1.5 q8, 256d (Matryoshka) | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 fp32, query instruction | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 fp32, no instruction | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 q8, query instruction | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 q8, no instruction | 1.000 | 1.000 | 1.000 |
+| all-MiniLM-L6-v2 fp32 (floor) | 1.000 | 1.000 | 1.000 |
+| nomic-v1.5 q8, 768d + BM25 [A] | 1.000 | 1.000 | 1.000 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [A] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 fp32, query instruction + BM25 [A] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 fp32, no instruction + BM25 [A] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 q8, query instruction + BM25 [A] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 q8, no instruction + BM25 [A] | 1.000 | 1.000 | 1.000 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [A] | 1.000 | 1.000 | 1.000 |
+| nomic-v1.5 q8, 768d + BM25 [B] | 1.000 | 1.000 | 1.000 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [B] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 fp32, query instruction + BM25 [B] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 fp32, no instruction + BM25 [B] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 q8, query instruction + BM25 [B] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 q8, no instruction + BM25 [B] | 1.000 | 1.000 | 1.000 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [B] | 1.000 | 1.000 | 1.000 |
+| nomic-v1.5 q8, 768d + BM25 [C] | 1.000 | 1.000 | 1.000 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [C] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 fp32, query instruction + BM25 [C] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 fp32, no instruction + BM25 [C] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 q8, query instruction + BM25 [C] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 q8, no instruction + BM25 [C] | 1.000 | 1.000 | 1.000 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [C] | 1.000 | 1.000 | 1.000 |
+
+### Group "why" (10 queries)
+
+| Configuration | recall@1 | recall@5 | MRR@10 |
+|---|---|---|---|
+| BM25 only (keyword baseline) | 0.800 | 0.900 | 0.850 |
+| BM25 only, ignoring stop words | 0.900 | 0.900 | 0.900 |
+| nomic-v1.5 q8, 768d | 1.000 | 1.000 | 1.000 |
+| nomic-v1.5 q8, 256d (Matryoshka) | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 fp32, query instruction | 0.900 | 1.000 | 0.920 |
+| bge-small-v1.5 fp32, no instruction | 0.900 | 0.900 | 0.911 |
+| bge-small-v1.5 q8, query instruction | 0.800 | 1.000 | 0.870 |
+| bge-small-v1.5 q8, no instruction | 0.800 | 0.900 | 0.833 |
+| all-MiniLM-L6-v2 fp32 (floor) | 1.000 | 1.000 | 1.000 |
+| nomic-v1.5 q8, 768d + BM25 [A] | 0.900 | 1.000 | 0.925 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [A] | 0.900 | 0.900 | 0.917 |
+| bge-small-v1.5 fp32, query instruction + BM25 [A] | 0.900 | 0.900 | 0.910 |
+| bge-small-v1.5 fp32, no instruction + BM25 [A] | 0.900 | 0.900 | 0.900 |
+| bge-small-v1.5 q8, query instruction + BM25 [A] | 0.900 | 0.900 | 0.900 |
+| bge-small-v1.5 q8, no instruction + BM25 [A] | 0.900 | 0.900 | 0.900 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [A] | 0.900 | 1.000 | 0.920 |
+| nomic-v1.5 q8, 768d + BM25 [B] | 0.900 | 1.000 | 0.925 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [B] | 0.900 | 1.000 | 0.925 |
+| bge-small-v1.5 fp32, query instruction + BM25 [B] | 0.900 | 0.900 | 0.911 |
+| bge-small-v1.5 fp32, no instruction + BM25 [B] | 0.900 | 0.900 | 0.900 |
+| bge-small-v1.5 q8, query instruction + BM25 [B] | 0.900 | 0.900 | 0.911 |
+| bge-small-v1.5 q8, no instruction + BM25 [B] | 0.900 | 0.900 | 0.900 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [B] | 0.900 | 1.000 | 0.920 |
+| nomic-v1.5 q8, 768d + BM25 [C] | 1.000 | 1.000 | 1.000 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [C] | 1.000 | 1.000 | 1.000 |
+| bge-small-v1.5 fp32, query instruction + BM25 [C] | 0.900 | 1.000 | 0.920 |
+| bge-small-v1.5 fp32, no instruction + BM25 [C] | 0.900 | 0.900 | 0.911 |
+| bge-small-v1.5 q8, query instruction + BM25 [C] | 0.900 | 1.000 | 0.920 |
+| bge-small-v1.5 q8, no instruction + BM25 [C] | 0.900 | 0.900 | 0.900 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [C] | 1.000 | 1.000 | 1.000 |
+
+### Group "hard" (5 queries)
+
+| Configuration | recall@1 | recall@5 | MRR@10 |
+|---|---|---|---|
+| BM25 only (keyword baseline) | 0.200 | 0.200 | 0.267 |
+| BM25 only, ignoring stop words | 0.200 | 0.400 | 0.267 |
+| nomic-v1.5 q8, 768d | 0.400 | 0.800 | 0.600 |
+| nomic-v1.5 q8, 256d (Matryoshka) | 0.400 | 0.800 | 0.600 |
+| bge-small-v1.5 fp32, query instruction | 0.600 | 0.800 | 0.700 |
+| bge-small-v1.5 fp32, no instruction | 0.600 | 0.800 | 0.700 |
+| bge-small-v1.5 q8, query instruction | 0.800 | 0.800 | 0.800 |
+| bge-small-v1.5 q8, no instruction | 0.800 | 0.800 | 0.800 |
+| all-MiniLM-L6-v2 fp32 (floor) | 0.800 | 1.000 | 0.900 |
+| nomic-v1.5 q8, 768d + BM25 [A] | 0.200 | 0.600 | 0.373 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [A] | 0.200 | 0.400 | 0.295 |
+| bge-small-v1.5 fp32, query instruction + BM25 [A] | 0.200 | 0.600 | 0.340 |
+| bge-small-v1.5 fp32, no instruction + BM25 [A] | 0.200 | 0.600 | 0.307 |
+| bge-small-v1.5 q8, query instruction + BM25 [A] | 0.200 | 0.600 | 0.340 |
+| bge-small-v1.5 q8, no instruction + BM25 [A] | 0.200 | 0.600 | 0.340 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [A] | 0.200 | 0.600 | 0.362 |
+| nomic-v1.5 q8, 768d + BM25 [B] | 0.200 | 0.600 | 0.453 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [B] | 0.200 | 0.600 | 0.389 |
+| bge-small-v1.5 fp32, query instruction + BM25 [B] | 0.200 | 0.800 | 0.437 |
+| bge-small-v1.5 fp32, no instruction + BM25 [B] | 0.200 | 0.800 | 0.403 |
+| bge-small-v1.5 q8, query instruction + BM25 [B] | 0.200 | 0.800 | 0.437 |
+| bge-small-v1.5 q8, no instruction + BM25 [B] | 0.200 | 0.800 | 0.417 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [B] | 0.200 | 0.800 | 0.417 |
+| nomic-v1.5 q8, 768d + BM25 [C] | 0.200 | 1.000 | 0.480 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [C] | 0.200 | 1.000 | 0.447 |
+| bge-small-v1.5 fp32, query instruction + BM25 [C] | 0.200 | 1.000 | 0.457 |
+| bge-small-v1.5 fp32, no instruction + BM25 [C] | 0.200 | 0.800 | 0.450 |
+| bge-small-v1.5 q8, query instruction + BM25 [C] | 0.200 | 1.000 | 0.457 |
+| bge-small-v1.5 q8, no instruction + BM25 [C] | 0.200 | 0.800 | 0.450 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [C] | 0.200 | 1.000 | 0.490 |
+
+## Rank of the first relevant statement per query (- = not in top 10)
+
+| Configuration | p01 | p02 | p03 | p04 | p05 | p06 | p07 | p08 | p09 | p10 | p11 | p12 | p13 | p14 | p15 | k01 | k02 | k03 | k04 | k05 | k06 | k07 | k08 | k09 | k10 | w01 | w02 | w03 | w04 | w05 | w06 | w07 | w08 | w09 | w10 | h01 | h02 | h03 | h04 | h05 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| BM25 only (keyword baseline) | - | 8 | 1 | - | - | 2 | 8 | 1 | 4 | 1 | 3 | - | - | - | 4 | 1 | 1 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 2 | 1 | 1 | 1 | 1 | 1 | 1 | - | - | 6 | 6 | 1 |
+| BM25 only, ignoring stop words | - | - | 2 | - | - | 1 | - | 1 | 4 | 1 | - | - | - | - | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | - | - | 3 | 1 |
+| nomic-v1.5 q8, 768d | 4 | 2 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 7 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 2 | 1 | 2 | - | 1 |
+| nomic-v1.5 q8, 256d (Matryoshka) | 5 | 2 | 2 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 2 | - | 3 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 2 | 1 | 2 | - | 1 |
+| bge-small-v1.5 fp32, query instruction | 3 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | - | 3 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 2 | - | 1 |
+| bge-small-v1.5 fp32, no instruction | 3 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 2 | - | - | 2 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 9 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 2 | - | 1 |
+| bge-small-v1.5 q8, query instruction | 3 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | - | 3 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 5 | 1 | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 1 | 1 | - | 1 |
+| bge-small-v1.5 q8, no instruction | 3 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 2 | - | - | 3 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 1 | 1 | 1 | 1 | 1 | 3 | 1 | 1 | 1 | 1 | - | 1 |
+| all-MiniLM-L6-v2 fp32 (floor) | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 4 | - | 3 | 4 | 6 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 2 | 1 |
+| nomic-v1.5 q8, 768d + BM25 [A] | - | 3 | 1 | - | - | 1 | 3 | 1 | 1 | 1 | 1 | - | - | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 4 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 6 | 2 | 5 | 1 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [A] | - | 3 | 1 | - | - | 1 | 2 | 1 | 1 | 1 | 1 | - | 10 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 6 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 7 | 3 | - | 1 |
+| bge-small-v1.5 fp32, query instruction + BM25 [A] | - | 2 | 1 | - | - | 1 | 1 | 1 | 1 | 1 | 1 | - | - | - | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 10 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 5 | 2 | - | 1 |
+| bge-small-v1.5 fp32, no instruction + BM25 [A] | - | 2 | 1 | - | - | 1 | 1 | 1 | 1 | 1 | 1 | - | - | - | 6 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 5 | 3 | - | 1 |
+| bge-small-v1.5 q8, query instruction + BM25 [A] | - | 2 | 1 | - | - | 1 | 1 | 1 | 1 | 1 | 1 | - | - | - | 7 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 5 | 2 | - | 1 |
+| bge-small-v1.5 q8, no instruction + BM25 [A] | - | 2 | 1 | - | - | 2 | 2 | 1 | 1 | 1 | 1 | - | - | - | 8 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 5 | 2 | - | 1 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [A] | - | 2 | 1 | - | - | 1 | 1 | 1 | 1 | 1 | 2 | - | - | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 7 | 3 | 3 | 1 |
+| nomic-v1.5 q8, 768d + BM25 [B] | 7 | 3 | 1 | 2 | 5 | 1 | 3 | 1 | 1 | 1 | 1 | - | - | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 4 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 2 | 6 | 2 | 10 | 1 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [B] | 8 | 3 | 1 | 3 | 5 | 1 | 2 | 1 | 1 | 1 | 1 | - | 6 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 4 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 6 | 3 | 9 | 1 |
+| bge-small-v1.5 fp32, query instruction + BM25 [B] | 5 | 2 | 1 | 2 | 6 | 1 | 1 | 1 | 1 | 1 | 1 | - | - | 7 | 9 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 9 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 4 | 2 | 10 | 1 |
+| bge-small-v1.5 fp32, no instruction + BM25 [B] | 6 | 2 | 1 | 2 | 6 | 1 | 1 | 1 | 1 | 1 | 1 | - | - | 4 | 8 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 4 | 3 | 10 | 1 |
+| bge-small-v1.5 q8, query instruction + BM25 [B] | 5 | 2 | 1 | 2 | 6 | 1 | 1 | 1 | 1 | 1 | 1 | - | - | 6 | 8 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 9 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 4 | 2 | 10 | 1 |
+| bge-small-v1.5 q8, no instruction + BM25 [B] | 6 | 2 | 1 | 2 | 6 | 2 | 2 | 1 | 1 | 1 | 1 | - | - | 6 | 8 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 4 | 2 | - | 1 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [B] | 2 | 2 | 1 | 3 | 6 | 1 | 1 | 1 | 1 | 1 | 2 | - | 7 | 8 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 4 | 6 | 3 | 3 | 1 |
+| nomic-v1.5 q8, 768d + BM25 [C] | 4 | 6 | 1 | 2 | 1 | 1 | 3 | 1 | 1 | 1 | 2 | - | 8 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 2 | 5 | 2 | 5 | 1 |
+| nomic-v1.5 q8, 256d (Matryoshka) + BM25 [C] | 5 | 7 | 1 | 3 | 1 | 1 | 3 | 1 | 1 | 1 | 4 | - | 6 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 5 | 2 | 5 | 1 |
+| bge-small-v1.5 fp32, query instruction + BM25 [C] | 4 | 2 | 1 | 2 | 2 | 1 | 2 | 1 | 1 | 1 | 1 | - | - | 7 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 4 | 2 | 5 | 1 |
+| bge-small-v1.5 fp32, no instruction + BM25 [C] | 4 | 2 | 1 | 2 | 2 | 1 | 2 | 1 | 1 | 1 | 4 | - | - | 4 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 9 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 4 | 2 | 6 | 1 |
+| bge-small-v1.5 q8, query instruction + BM25 [C] | 4 | 2 | 2 | 2 | 2 | 1 | 2 | 1 | 1 | 1 | 2 | - | - | 6 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 5 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 4 | 2 | 5 | 1 |
+| bge-small-v1.5 q8, no instruction + BM25 [C] | 4 | 2 | 1 | 2 | 2 | 1 | 2 | 1 | 1 | 1 | 5 | - | - | 6 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | - | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 3 | 4 | 2 | 6 | 1 |
+| all-MiniLM-L6-v2 fp32 (floor) + BM25 [C] | 2 | 3 | 1 | 3 | 1 | 1 | 3 | 1 | 1 | 1 | 9 | - | 5 | 8 | 6 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 4 | 5 | 2 | 2 | 1 |
+
+## Paired comparisons (rank of first relevant statement, lower is better; 11 = not in top 10)
+
+"nomic-v1.5 q8, 768d" vs "bge-small-v1.5 fp32, query instruction"
+  same rank of first relevant statement: 32 of 40
+  first is better on 3: p13 (7 vs 11), p15 (1 vs 11), w03 (1 vs 5)
+  second is better on 5: p01 (3 vs 4), p02 (1 vs 2), p03 (1 vs 2), p14 (3 vs 11), h01 (1 vs 2)
+
+"nomic-v1.5 q8, 768d" vs "bge-small-v1.5 q8, query instruction"
+  same rank of first relevant statement: 30 of 40
+  first is better on 4: p13 (7 vs 11), p15 (1 vs 11), w03 (1 vs 5), w09 (1 vs 2)
+  second is better on 6: p01 (3 vs 4), p02 (1 vs 2), p03 (1 vs 2), p14 (3 vs 11), h01 (1 vs 2), h03 (1 vs 2)
+
+"nomic-v1.5 q8, 768d + BM25 [A]" vs "bge-small-v1.5 fp32, query instruction + BM25 [A]"
+  same rank of first relevant statement: 34 of 40
+  first is better on 3: p15 (1 vs 5), w03 (4 vs 10), h04 (5 vs 11)
+  second is better on 3: p02 (2 vs 3), p07 (1 vs 3), h02 (5 vs 6)
+
+"nomic-v1.5 q8, 768d + BM25 [A]" vs "bge-small-v1.5 q8, query instruction + BM25 [A]"
+  same rank of first relevant statement: 34 of 40
+  first is better on 3: p15 (1 vs 7), w03 (4 vs 11), h04 (5 vs 11)
+  second is better on 3: p02 (2 vs 3), p07 (1 vs 3), h02 (5 vs 6)
+
+"nomic-v1.5 q8, 768d + BM25 [A]" vs "nomic-v1.5 q8, 256d (Matryoshka) + BM25 [A]"
+  same rank of first relevant statement: 34 of 40
+  first is better on 4: w03 (4 vs 6), h02 (6 vs 7), h03 (2 vs 3), h04 (5 vs 11)
+  second is better on 2: p07 (2 vs 3), p13 (10 vs 11)
+
+"nomic-v1.5 q8, 768d + BM25 [B]" vs "bge-small-v1.5 fp32, query instruction + BM25 [B]"
+  same rank of first relevant statement: 31 of 40
+  first is better on 4: p05 (5 vs 6), p15 (1 vs 9), w03 (4 vs 9), h01 (2 vs 3)
+  second is better on 5: p01 (5 vs 7), p02 (2 vs 3), p07 (1 vs 3), p14 (7 vs 11), h02 (4 vs 6)
+
+"nomic-v1.5 q8, 768d + BM25 [B]" vs "bge-small-v1.5 q8, query instruction + BM25 [B]"
+  same rank of first relevant statement: 31 of 40
+  first is better on 4: p05 (5 vs 6), p15 (1 vs 8), w03 (4 vs 9), h01 (2 vs 3)
+  second is better on 5: p01 (5 vs 7), p02 (2 vs 3), p07 (1 vs 3), p14 (6 vs 11), h02 (4 vs 6)
+
+"nomic-v1.5 q8, 768d + BM25 [B]" vs "nomic-v1.5 q8, 256d (Matryoshka) + BM25 [B]"
+  same rank of first relevant statement: 33 of 40
+  first is better on 4: p01 (7 vs 8), p04 (2 vs 3), h01 (2 vs 3), h03 (2 vs 3)
+  second is better on 3: p07 (2 vs 3), p13 (6 vs 11), h04 (9 vs 10)
+
+"nomic-v1.5 q8, 768d + BM25 [C]" vs "bge-small-v1.5 fp32, query instruction + BM25 [C]"
+  same rank of first relevant statement: 30 of 40
+  first is better on 5: p05 (1 vs 2), p13 (8 vs 11), p15 (1 vs 11), w03 (1 vs 5), h01 (2 vs 3)
+  second is better on 5: p02 (2 vs 6), p07 (2 vs 3), p11 (1 vs 2), p14 (7 vs 11), h02 (4 vs 5)
+
+"nomic-v1.5 q8, 768d + BM25 [C]" vs "bge-small-v1.5 q8, query instruction + BM25 [C]"
+  same rank of first relevant statement: 30 of 40
+  first is better on 6: p03 (1 vs 2), p05 (1 vs 2), p13 (8 vs 11), p15 (1 vs 11), w03 (1 vs 5), h01 (2 vs 3)
+  second is better on 4: p02 (2 vs 6), p07 (2 vs 3), p14 (6 vs 11), h02 (4 vs 5)
+
+"nomic-v1.5 q8, 768d + BM25 [C]" vs "nomic-v1.5 q8, 256d (Matryoshka) + BM25 [C]"
+  same rank of first relevant statement: 34 of 40
+  first is better on 5: p01 (4 vs 5), p02 (6 vs 7), p04 (2 vs 3), p11 (2 vs 4), h01 (2 vs 3)
+  second is better on 1: p13 (6 vs 8)
