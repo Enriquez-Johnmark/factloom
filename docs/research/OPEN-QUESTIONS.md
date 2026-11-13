@@ -102,7 +102,10 @@ Silicon); all research ran on Linux x64 with Node.js v22.23.4.
 ## B. Decisions left to the architecture stage
 
 Each entry gives the decision, the positions the research documents take, and the evidence that
-exists. None is decided here.
+exists. None is decided here. The architecture stage has since settled all twelve; the outcome of
+each is listed in [`../architecture/DECISIONS.md`](../architecture/DECISIONS.md), under "How the
+research questions were settled". The entries below are kept as the record of what the research
+found.
 
 **D-1. Supersession key: (subject, predicate) or (subject, predicate, qualifier).**
 Positions: [bi-temporal-modelling.md](technical/bi-temporal-modelling.md) (rules 8 and 9),
