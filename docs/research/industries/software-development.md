@@ -95,7 +95,7 @@ What file-based memory does well, which Factloom must not make worse:
 
 ### 4. Repository checks, run here
 
-Throwaway repository under the scratchpad (git 2.43.0, ripgrep 14.1.0): one file created, renamed
+Throwaway repository in a directory outside this repository (git 2.43.0, ripgrep 14.1.0): one file created, renamed
 (`src/util.ts` to `src/dates.ts`), then a function renamed inside it.
 
 | # | Check | Command | Result | Confidence |
@@ -170,7 +170,7 @@ Consequences for the adapter:
 | Decision | A choice with a reason, possibly from an ADR | "No ORM; hand-written SQL" |
 | Convention | A rule about how code or process is done here | "Named exports only" |
 | WorkItem | A bug, incident or unit of in-progress work | "Flaky retrieval test on CI" |
-| Person | A user, teammate or team | "Johnmark" |
+| Person | A user, teammate or team | "Alice" |
 
 ### C. Proposed relation (predicate) types (14)
 
@@ -185,7 +185,7 @@ automatically. The key is given per row. Several rows need a key that includes a
 | `runs_with` | Repository or Path to Command, `slot` = purpose | "Tests run with `pnpm test`" (`slot=test`); `build`, `lint`, `dev`, `release` | Yes (subject, slot) |
 | `located_at` | Symbol to Path | "`parseIsoDate` lives in `src/dates.ts`" | Yes (subject) |
 | `follows` | Repository or Path to Convention | "`apps/` follows 'no default exports'" | No |
-| `prefers` | Person to Convention | "Johnmark prefers small PRs" | No |
+| `prefers` | Person to Convention | "Alice prefers small PRs" | No |
 | `supersedes` | Decision to Decision, Convention to Convention | "ADR-0007 supersedes ADR-0003" | No |
 | `motivated_by` | Decision or Convention to WorkItem, Dependency or Decision | "Switch to Vitest was motivated by ESM issues in Jest" | No |
 | `affects` | Decision, Convention or WorkItem to Path, Symbol or Dependency | "'No ORM' affects `packages/storage`" | No |
@@ -208,7 +208,11 @@ Notes:
 - **Core requirement to check against the fact schema:** functional predicates need a key that can
   include a qualifier, not only (subject, predicate). Without it, "uses Vitest as test framework" and
   "uses pnpm as package manager" either collide or require a separate predicate per role. This is the
-  one schema-level request from this adapter.
+  one schema-level request from this adapter. The technical documents key supersession on
+  (subject, predicate) only; see `../OPEN-QUESTIONS.md`, D-1.
+- An independent review questioned starting with 9 entity types and 14 predicates before any data
+  exists, and noted that `Symbol` and `located_at` sit close to the code structure this document
+  says not to index. Recorded as open in `../OPEN-QUESTIONS.md`, section C.
 
 ### D. What makes a code memory stale, and the signal
 
@@ -247,7 +251,9 @@ independent, and were run above. Add rung 6 later and only if false matches show
 is the only rung that adds a dependency per language. Most facts should stop at rung 3, because most
 files do not change between checks.
 
-What belongs to which phase:
+What belongs to which phase (an independent review questioned whether blob id, line span and span
+hash are needed in phase 1, when only explicit "remember" calls are ingested; recorded as open in
+`../OPEN-QUESTIONS.md`, section C):
 
 | Phase | Needed |
 |---|---|
@@ -288,7 +294,7 @@ commit and issue history is valuable, which supports adding source 3 before sour
 
 Secrets detail: Factloom's "invalidate, never delete" rule makes a stored secret permanent, so the
 filter has to run before the first write. A purge path for the rare miss is a core question, covered
-in `other-industries.md` (hard deletion).
+in `other-industries.md` (hard deletion) and listed as `../OPEN-QUESTIONS.md`, D-10.
 
 ### H. Getting the agent to save and recall
 
