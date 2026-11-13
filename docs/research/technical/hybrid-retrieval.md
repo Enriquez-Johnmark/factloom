@@ -145,9 +145,9 @@ Recommended phase 1 pipeline:
 
 | Step | What | Notes |
 |---|---|---|
-| 1. Filter | Build one SQL predicate from namespace, `invalidated_at IS NULL` (or `knownAt`), and the valid-time clause (now, or `validAt`) | Applied inside every retriever, never afterwards |
+| 1. Filter | Build one SQL predicate from namespace, `invalidated_at IS NULL` (or `knownAt`), and the valid-time clause (now, or `validAt`) | Applied inside every retriever, never afterwards. The spike's hybrid query filters after fusion instead; see `../OPEN-QUESTIONS.md`, D-2 |
 | 2a. Keyword | FTS5 `MATCH`, `ORDER BY rank`, top N | Join to the fact table for step 1 |
-| 2b. Vector | Vector top N over fact text | If the vector index cannot pre-filter, over-fetch (for example 5x) and filter, and log when fewer than N survive |
+| 2b. Vector | Vector top N over fact text | sqlite-vec can pre-filter through `vec0` metadata columns (ran it: `sqlite.md`, spike section 4), with limits: integer copies of the time fields, no NULL, comparison operators only. The alternative is to over-fetch (for example 5x), filter, and log when fewer than N survive |
 | 2c. Graph | Entities mentioned in the query (exact/alias lookup) plus subject entities of the top hits from 2a/2b become seeds; 1-hop facts around the seeds, ranked by hop count then recency | Recursive CTE; depth 1 by default, 2 as an option |
 | 3. Fuse | RRF over the lists that are present | `score = sum 1 / (k + rank)`, rank starting at 1 |
 | 4. Return | Top `limit` (default 10), each with its per-list ranks | Keeping per-list ranks makes results explainable and tunable |
@@ -165,6 +165,8 @@ Specific choices:
    pass `validAt` and/or `knownAt`. Invalidated facts are never ranked unless asked for.
 5. **Graph expansion is a retriever, not a post-processing step.** Treating its output as a third
    ranked list keeps fusion uniform and makes it trivial to switch off when measuring its value.
+   Whether it is on by default in phase 1, and whether the walk is directed, is open: see
+   `../OPEN-QUESTIONS.md`, D-11.
 6. **One retrieval interface in `packages/graph-rag`**, with each retriever returning
    `{ factId, rank }[]`, so that Postgres (tsvector or pg_search, pgvector, recursive CTE) can replace
    the internals later without changing fusion.
@@ -188,8 +190,11 @@ Do not build yet:
   Measure with it on and off.
 - **Unverified:** recursive CTE cost on hub entities (for example a repository entity linked to
   every fact). A per-seed fan-out cap is probably needed; pick the number from measurements.
-- **Unverified:** whether the chosen SQLite vector extension can apply the step 1 predicate during
-  the nearest-neighbour search. This belongs to the storage research; the pipeline above works either
-  way but over-fetch factors depend on it.
+- Answered by the storage research (no longer open): sqlite-vec 0.1.9 can apply a time predicate
+  during the nearest-neighbour search through `vec0` metadata columns, and returns a full `k`
+  filtered rows. **Confirmed** by running: `sqlite.md` and `spikes/sqlite-vec-fts5/` section 4.
+  Limits: the time fields must be copied into the vector table as integers, NULL is rejected, and
+  only comparison operators are available. Whether Factloom uses this or post-filtering is
+  decision D-2 in `../OPEN-QUESTIONS.md`.
 - Should recency be a fourth ranked list or a tie-breaker? See memory-decay-and-consolidation.md;
   the recommendation there is tie-breaker only at first.
