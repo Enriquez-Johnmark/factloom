@@ -52,7 +52,7 @@ stated maintenance horizon.
 
 ### Proof: a minimal stdio server and two clients
 
-Run in the scratchpad with `@modelcontextprotocol/server@2.4.0`, `@modelcontextprotocol/client@2.4.0`
+Run in a throwaway directory outside the repository with `@modelcontextprotocol/server@2.4.0`, `@modelcontextprotocol/client@2.4.0`
 and `zod@4.6.7`, executed by Node.js directly from `.ts` files. Both files also type-check with
 TypeScript 7.0.2 under `strict`, `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`.
 
@@ -251,7 +251,9 @@ in.
 - Tools appear to the model as `mcp__<server>__<tool>`. A tool whose full name exceeds 128
   characters is left out.
 
-Command for Factloom (project scope, run from the repository root):
+Command for Factloom (project scope, run from the repository root). The examples in this document
+start the compiled file `apps/mcp-server/dist/main.js`; if the no-build setup is chosen the path
+becomes `apps/mcp-server/src/main.ts` (see `toolchain.md` and `../OPEN-QUESTIONS.md`, D-7):
 
 ```sh
 claude mcp add --transport stdio --scope project factloom -- node apps/mcp-server/dist/main.js
@@ -349,7 +351,7 @@ not confirmed; `cwd` or an absolute path removes the doubt.
   search for them, with key words near the start. A server entry can set `"alwaysLoad": true` to
   keep its tools in context on every turn. **confirmed.**
 - **Tool count.** Claude Code states no fixed per-server cap; the limit is context budget.
-  **confirmed.** No Codex guidance on tool count was found today (**unverified**).
+  **confirmed.** Codex's handling of tool count is listed under Open questions.
 - **In other hosts** the model chooses from each tool's name, description and input schema
   (typescript-sdk docs/get-started/real-host.md). **confirmed.** Nothing forces an agent to
   consult memory. Names and descriptions that state when to use the tool, plus a line in the
@@ -392,8 +394,9 @@ not confirmed; `cwd` or an absolute path removes the doubt.
 - **unverified:** the default working directory of a stdio server started from a project
   `.codex/config.toml`, and from `.mcp.json` when `args` is relative. Use absolute paths or
   `${CLAUDE_PROJECT_DIR:-.}` until checked.
-- **unverified:** whether Codex truncates tool descriptions or defers tool loading. No statement
-  was found in the pages read today.
+- **unverified:** whether Codex truncates tool descriptions, defers tool loading, or gives any
+  guidance or limit on the number of tools per server. No statement was found in the pages read
+  today.
 - **unverified:** how reliably agents call memory tools without being told to. This needs an
   experiment with a real agent once the server exists; it cannot be settled from documentation.
 - The v1 line's support window ("at least six months after the v2 release") is a minimum. It is not
