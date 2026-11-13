@@ -163,7 +163,8 @@ code base has 3.8k.
 
 ### Install and documentation
 
-- `npm install -g @letta-ai/letta-code` (Node 22.23.4 or later), or `uv tool install letta`.
+- `npm install -g @letta-ai/letta-code` (`engines.node` is `^22.23.4 || ^24.22.1 || ^26.12.1`,
+  which excludes Node 23, Node 25 and Node 24 below 24.22.1), or `uv tool install letta`.
   `letta-code/README.md`; `letta-code/package.json` `engines`. **confirmed**
 - On first launch the user chooses Letta Cloud (default) or local. For local use an LLM
   provider key is needed (`/connect`, or an environment variable). **confirmed** (README, run)
@@ -183,8 +184,8 @@ code base has 3.8k.
 
 ### Observed by running
 
-Environment: Linux, Node 22.23.4. Files are in the session scratchpad (`a1/run-letta/`), with
-`HOME` pointed at a scratch directory. All items **confirmed** by observation on 2026-11-13.
+Environment: Linux, Node 22.23.4. The run used a throwaway directory outside the repository,
+with `HOME` pointed at a scratch directory; the files are not kept. All items **confirmed** by observation on 2026-11-13.
 Only current Letta Code was run; the retired V1 server was not.
 
 1. `npm install --prefix . @letta-ai/letta-code@0.34.59`: 333 packages, 401 MB, 18 seconds.
@@ -232,15 +233,16 @@ Where Letta is ahead of what a new project could offer today:
   deterministic checks for contradiction or duplication. **confirmed**
 - Memory blocks consume context on every turn, so their size is limited by design ("Keep blocks
   lean"). `letta_local_memfs.md` line 33. **confirmed**
-- Local search is lexical only, and an open issue reports "Local conversation search limits by
-  recency before relevance" (<https://github.com/letta-ai/letta-code/issues/5493>).
-  **confirmed** (issue open)
+- Local search is lexical only (**confirmed**, source), and an open issue reports "Local
+  conversation search limits by recency before relevance"
+  (<https://github.com/letta-ai/letta-code/issues/5493>; reported, open when read on 2026-11-13;
+  not reproduced).
 - Open memory-related issues: "Memory not working and /init gives errors"
   (<https://github.com/letta-ai/letta-code/issues/3042>); "Local backend: preflight compaction
   ignores mid-conversation memory update"
   (<https://github.com/letta-ai/letta-code/issues/4893>); "`letta memory resolve` advertised but
-  not implemented" (<https://github.com/letta-ai/letta-code/issues/4040>). **confirmed** (issues
-  open; not reproduced)
+  not implemented" (<https://github.com/letta-ai/letta-code/issues/4040>). Reported (issues open
+  when read on 2026-11-13; not reproduced)
 - It is not usable as a memory layer for another agent. To get Letta's memory a user must adopt
   Letta's harness. **confirmed** (no MCP server found)
 - Discontinuity: the V1 server, its Python packages, its Docker image and its REST-based
