@@ -1,0 +1,17 @@
+{
+  "name": "factloom-spike-fact-schema",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Standalone spike: runs the draft first migration and checks the bi-temporal rules it must enforce. Not part of the workspace.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "check": "node check.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "13.1.1",
+    "sqlite-vec": "0.1.9"
+  }
+}
