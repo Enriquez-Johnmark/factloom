@@ -42,6 +42,13 @@
       "skillPath": "skills/vitest/SKILL.md",
       "computedHash": "bd95e41d66d76da9008893c9bc48c30f0a68f352cd2b00017767f5e4c129501d",
       "installMode": "copy"
+    },
+    "zod-4": {
+      "source": "prowler-cloud/prowler",
+      "sourceType": "github",
+      "skillPath": "skills/zod-4/SKILL.md",
+      "computedHash": "6dd25d97ce3590e44bde22ee1281f0d9efcc92717d0d4a2b304d1979fcf64f1e",
+      "installMode": "copy"
     }
   }
 }
