@@ -60,7 +60,11 @@ ones.
    last-accessed field (fields listed in bi-temporal-modelling.md). **Confirmed.** Staleness is
    handled by invalidation, that is, by evidence rather than by age.
 
-7. **Mem0 supports explicit expiry, not decay.** A memory payload may carry an `expiration_date`;
+7. **Mem0's open-source library supports explicit expiry, not decay; the hosted Platform has an
+   opt-in retrieval-based decay factor.** The Platform's "Memory Decay" multiplies search scores
+   by 0.3x to 1.5x from how recently and how often a memory was retrieved, is off by default and
+   never filters (`docs/platform/features/memory-decay.mdx`; **confirmed** in documentation, not
+   run; see `../evaluations/mem0.md`). In the library, a memory payload may carry an `expiration_date`;
    search skips expired memories unless `show_expired` is set. Source: `mem0/memory/main.py`
    (`_payload_is_expired`, `_search_vector_store`) at commit `f1791daa` (2026-11-06, version 2.2.1).
    **Confirmed.** No recency term appears in its scoring function (`mem0/utils/scoring.py`:
@@ -107,7 +111,7 @@ ones.
 
 | Risk | Why it matters | Basis |
 |---|---|---|
-| A true but rarely used fact is demoted or archived | Rare facts are often the valuable ones (a one-off decision, an incident cause, a licence constraint); usage frequency is not truth | Reasoning; no reviewed system claims decay improves factual accuracy (findings 3, 5). **Likely** |
+| A true but rarely used fact is demoted or archived | Rare facts are often the valuable ones (a one-off decision, an incident cause, a licence constraint); usage frequency is not truth | Reasoning; no reviewed paper claims decay improves factual accuracy (findings 3, 5), and the Mem0 Platform page describes its decay as a ranking bias without an accuracy figure (finding 7). **Likely** |
 | Decay hides the correct answer to a historical question | "What was true in 2024" needs old facts at full strength | Follows from Factloom's own requirements. **Likely** |
 | Consolidation destroys provenance | A summary has many sources; a wrong summary cannot be traced to one | Finding 11; Letta's backup step in finding 9. **Likely** |
 | Feedback loop | Facts that rank high get accessed, which makes them rank higher | Follows from findings 2 and 4. **Likely** |
@@ -136,7 +140,9 @@ Archiving is a state on a side table, not a change to the fact row and not an in
 `invalidated_at` means "we no longer believe this"; `archived_at` means "we still believe this but
 stopped offering it by default". Mixing the two would corrupt "as known at" queries.
 
-Signals to record from day one (cheap now, impossible to reconstruct later):
+Signals to record from day one (cheap now, impossible to reconstruct later). An independent
+review questioned whether anything other than access history needs recording before phase 3; that
+is recorded as open in `../OPEN-QUESTIONS.md`, section C.
 
 | Signal | Where | Why |
 |---|---|---|
@@ -176,6 +182,7 @@ Do not build yet:
 - What is a sensible archiving period for code memory, where a repository may be untouched for a
   year and then revived? 180 days is a placeholder, not a finding.
 - Retention and deletion obligations in regulated adapters (legal, healthcare) may conflict with
-  "invalidate, never delete". That is a policy question for phase 6 and is not answered here.
+  "invalidate, never delete". That is a policy question for phase 6 and is not answered here; the
+  related purge question is `../OPEN-QUESTIONS.md`, D-10.
 - Should archived facts be removed from the vector and full-text indexes to keep them small, or only
   filtered at query time? Decide from index size measurements.
