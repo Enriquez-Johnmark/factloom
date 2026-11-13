@@ -35,7 +35,7 @@ descriptions by the vendor, not assessments.
 | R2 | GDPR Art. 17 | Erasure on grounds (1)(a) to (f), for example data no longer necessary, consent withdrawn, unlawful processing. Art. 17(3) exceptions include (b) compliance with a legal obligation, (c) public health, (d) archiving and research where erasure would seriously impair the purpose, (e) establishment, exercise or defence of legal claims. | https://gdpr-info.eu/art-17-gdpr/ | confirmed (mirror) |
 | R3 | EDPB Guidelines 02/2025 v2.0 (adopted 7 July 2026) | Written for blockchains, the closest regulator text on append-only stores: "technical impossibility cannot be invoked to justify non-compliance with GDPR requirements"; erasure and objection "must be complied with by design"; where deletion is impracticable, data must be capable of being "effectively rendered anonymous", which presupposes erasing off-chain data that allows identification; the EDPB "recommends looking at other tools if the strong integrity property ... is not needed". | https://www.edpb.europa.eu/system/files/2026-07/edpb_guidelines_202502_blockchain_v2_en.pdf (paras. 50, 102-104) | confirmed |
 | R4 | ICO guidance on erasure (UK) | For backups, "the key issue is to put the backup data 'beyond use', even if it cannot be immediately overwritten". The page is marked as under review following the Data (Use and Access) Act. | https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/individual-rights/individual-rights/right-to-erasure/ | confirmed |
-| R5 | HIPAA Privacy Rule, 45 CFR 164.526 | Right to request amendment of PHI in a designated record set. The entity must act within 60 days (one 30-day extension). It may deny if the record is accurate and complete or it did not create it. On acceptance it must identify the affected records and "append or otherwise provide a link" to the amendment, and inform others. On denial the individual may file a statement of disagreement, which must be appended and included in future disclosures. | https://www.law.cornell.edu/cfr/text/45/164.526 | confirmed (mirror) |
+| R5 | HIPAA Privacy Rule, 45 CFR 164.526 | Right to request amendment of PHI in a designated record set. The entity must act within 60 days (one 30-day extension). It may deny if the record is accurate and complete or it did not create it. On acceptance it must make the amendment by "appending or otherwise providing a link to the location of the amendment" ((c)(1)), and inform others. On denial the individual may file a statement of disagreement, which the entity must "append or otherwise link" to the record ((d)(4)) and include in future disclosures. | https://www.law.cornell.edu/cfr/text/45/164.526 | confirmed (mirror) |
 | R6 | HIPAA Security Rule, 45 CFR 164.312 | Technical safeguards: (a)(1) access control limited to persons or programs granted access, (b) audit controls that record and examine activity, (c)(1) integrity against improper alteration or destruction, (d) person or entity authentication, (e)(1) transmission security. | https://www.law.cornell.edu/cfr/text/45/164.312 | confirmed (mirror) |
 | R7 | 45 CFR 164.316(b)(2)(i) | Required documentation is retained "for 6 years from the date of its creation or the date when it last was in effect, whichever is later". | https://www.law.cornell.edu/cfr/text/45/164.316 | confirmed (mirror) |
 | R8 | 21 CFR 11.10(e) and 11.50 | Electronic records under FDA rules need "secure, computer-generated, time-stamped audit trails" of create, modify and delete actions; "Record changes shall not obscure previously recorded information"; trails are kept at least as long as the records. A signed record must show the signer's printed name, date and time, and the meaning of the signature (review, approval, responsibility, authorship). 11.10(a) requires system validation; (d) and (g) limit access and actions to authorised individuals. | https://www.law.cornell.edu/cfr/text/21/11.10 ; https://www.law.cornell.edu/cfr/text/21/11.50 | confirmed (mirror) |
@@ -54,7 +54,7 @@ Three observations that recur below:
 
 - Most record-keeping rules (R5, R8, R10, R12) require the opposite of deletion: keep the old value,
   show who changed what and when. Factloom's "invalidate, never delete" plus an audit log is the same
-  shape. HIPAA amendment is literally "append or link" (R5).
+  shape. HIPAA amendment is made by "appending or otherwise providing a link" (R5).
 - GDPR erasure (R2, R3) is the exception and it applies in every industry that stores facts about
   people. An append-only design is not accepted as a reason not to erase (R3).
 - FHIR already separates "when it was true" (`onset`, `effective`) from "when it was recorded"
@@ -297,7 +297,7 @@ One businessperson keeps their own deals, agreements and commitments, captured b
 | Relations | `works_at` (F), `agreed` (Person or Company to Agreement, with terms as literals), `promised` (Person to Commitment), `due_on` (Commitment to date, F), `has_status` (Commitment or Deal, F), `met_at`. |
 | Time | Heavy use of relative dates ("by next Friday"), which must be resolved against the capture time. Capture time is `created_at`; the resolved date is a literal value. Commitments need a "due soon / overdue" query, which is a date filter on literals. |
 | Correction | The user is the only approver, so the approval queue degenerates to a confirmation prompt. Automatic correction is acceptable for the user's own statements. |
-| Privacy | Single-user and local fits the SQLite phase with no access control. The notes contain personal data about third parties who do not know they are recorded. GDPR's household exemption does not cover business activity, so the user is likely a controller (**unverified** as a legal conclusion; professional advice needed). Recording calls is separately regulated in many places. Audio sent to a cloud transcription service leaves the device. |
+| Privacy | Single-user and local fits the SQLite phase with no access control. The notes contain personal data about third parties who do not know they are recorded. Whether GDPR's household exemption applies to such business use, and so whether the user is a controller, is a legal question that was not verified here (see Open questions; professional advice needed). Recording calls is separately regulated in many places. Audio sent to a cloud transcription service leaves the device. |
 
 Existing products in this space, by their own description: [Granola](https://www.granola.ai) ("AI
 notepad ... notes, actions and memory. Without a meeting bot"), [Otter](https://otter.ai) ("real-time
@@ -446,6 +446,12 @@ The owner wants a minimal core. The test applied: if this is left out, does addi
 rewriting existing rows' meaning or every query, or is it a new nullable column, a new table or a new
 job? Only the first kind belongs in the first schema.
 
+An independent review applied the same test and judged parts of items 2 to 4 below deferrable
+(`source.derived_from`, the `qualifier` if phase 1 uses one predicate per role, and defining
+`purge` before it is exposed). Those points, and the qualifier and purge decisions, are recorded
+as open in `../OPEN-QUESTIONS.md` (D-1, D-10 and section C). The capability matrix in (a) is
+phase 6 material; its cells are not phase 0 requirements.
+
 **Would force a rewrite if left out (decide in phase 0, costs little now)**
 
 | # | Requirement | Why it cannot be retrofitted cheaply | Minimal form |
@@ -477,7 +483,8 @@ about what not to do (do not copy text into the audit log; do not rewrite ids) r
 
 ### Conflicts with settled decisions
 
-One, narrow. **"Invalidate, never delete" cannot be absolute.**
+One, narrow. **"Invalidate, never delete" cannot be absolute.** (Recorded as an open decision in
+`../OPEN-QUESTIONS.md`, D-10.)
 
 - Evidence: GDPR Art. 17 gives individuals a right to erasure (R2). The EDPB states that technical
   impossibility cannot justify non-compliance and that erasure must be designed in; for append-only
