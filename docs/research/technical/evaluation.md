@@ -103,7 +103,10 @@ Details and labels follow.
    attribution errors or are underspecified. It also states that the Mem0 paper's evaluation of Zep
    misused Zep's API, and reports 75.14% for Zep against 65.99% in the Mem0 paper. The post carries a
    correction notice saying an earlier version miscalculated Zep's score. **Confirmed** that the post
-   says this; the claims themselves are a vendor's and were not independently checked.
+   says this; the claims themselves are a vendor's and were not independently checked. The page
+   also carries a later banner: "We've published new LoCoMo scores for Zep: 80% at <200ms
+   latency" (page fetched 2026-11-13; the banner's date is rendered as "December 9, 2015", which
+   is presumably a typo for 2025). **Confirmed** that the banner says this.
 
 9. **Mem0's side.** The Mem0 paper reports its own systems at 66.88% and 68.44% (LLM-judge score) on
    LoCoMo and a 26% relative improvement over OpenAI's memory
@@ -118,9 +121,9 @@ Details and labels follow.
     may not be very meaningful". Source: https://www.letta.com/blog/benchmarking-ai-agent-memory
     (dated 12 August 2025). **Confirmed** that the post says this; vendor-reported.
 
-11. **Three vendors report three different numbers for the same system on the same benchmark**
-    (65.99%, 75.14%, and reportedly 58.44% for Zep on LoCoMo). **Confirmed** for the first two,
-    **likely** for the third. Whatever the cause, cross-vendor LoCoMo numbers are not a reliable
+11. **At least four different numbers are reported for the same system on the same benchmark**
+    (65.99% in the Mem0 paper, 75.14% and later 80% from Zep, and reportedly 58.44% from Mem0's
+    reply, all for Zep on LoCoMo). **Confirmed** for the first three, **likely** for the fourth. Whatever the cause, cross-vendor LoCoMo numbers are not a reliable
     basis for design decisions.
 
 12. **MemoryAgentBench's authors criticise both conversational benchmarks**: "LOCOMO still features
@@ -152,7 +155,10 @@ them are conversational, and the largest directly relevant slice (LongMemEval kn
 temporal-reasoning) is a fraction of 500 questions about personal chat. So: build a small internal
 set first, and use public sets later as a sanity check, not as the target.
 
-A cheap, deterministic internal evaluation in three layers:
+A cheap, deterministic internal evaluation in three layers. Layer A needs no LLM and is what
+phase 1 can use; layers B and C need the LLM pipeline, which arrives in phase 2. The sizes are
+starting suggestions; an independent review suggested starting B with about 10 scenarios (see
+`../OPEN-QUESTIONS.md`, section C).
 
 | Layer | What it checks | Needs an LLM at test time? | Size to start |
 |---|---|---|---|
