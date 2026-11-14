@@ -17,7 +17,7 @@ One command, `pnpm check`, runs the format check, lint, type check and every tes
 
 ### Continuous integration
 
-Planned as work items; not yet built. `pnpm check` runs on Linux and on macOS arm64 on every push, from phase 0. Before anything is published, a job installs the packed server on a clean machine and starts it, which is requirement REQ-CA-08 of the [competitive analysis](../research/evaluations/competitive-analysis.md). The first run of the server downloads the embedding model, so that job needs network access and takes longer than later starts.
+`pnpm check` runs on Linux and on macOS arm64 on every push to `main`, with the lowest supported Node.js line and the Active LTS line. The workflow is `.github/workflows/ci.yml`. The clean-install job below is planned and not yet built. Before anything is published, a job installs the packed server on a clean machine and starts it, which is requirement REQ-CA-08 of the [competitive analysis](../research/evaluations/competitive-analysis.md). The first run of the server downloads the embedding model, so that job needs network access and takes longer than later starts.
 
 ## Unit tests
 
