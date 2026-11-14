@@ -10,7 +10,7 @@ A memory layer for AI systems. Factloom stores what an agent learns as facts tha
 
 It then keeps that memory correct: when new information contradicts a stored fact, the old fact is ended or invalidated and linked to its replacement. Nothing is deleted.
 
-> **Status: design stage.** Nothing is implemented yet. This repository holds the research, the architecture, the roadmap and an empty workspace whose tooling is proven. The features below are goals, and the roadmap says which work item delivers each one.
+> **Status: early implementation.** No feature works yet. This repository holds the research, the architecture, the roadmap and a workspace in which the first few work items are done. The features below are goals, and the [roadmap](docs/roadmap/ROADMAP.md) says which work item delivers each one and which are complete.
 
 ## What it is for
 
