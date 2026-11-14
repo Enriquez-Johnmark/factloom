@@ -19,6 +19,8 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 - The root configuration for TypeScript, Biome and Vitest, and the scripts `pnpm check`, `pnpm test` and `pnpm format`.
 - The automatic enforcement of the import rules in [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md), with the proof that each rule fails when broken.
 - A continuous integration workflow on Linux and macOS arm64.
+- A second command, `pnpm eval`, for what needs the real embedding model, and a separate workflow job that runs it.
+- One check that every dependency version in the workspace is exact.
 - A clean-install job on Linux and on macOS arm64: build for publishing, pack, install with no other service, start, and list the tools.
 
 ## Out of scope
@@ -48,7 +50,8 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 - A workspace in which `pnpm install` and `pnpm check` succeed on a fresh clone.
 - Recorded proof that a forbidden import, a deep import and non-erasable syntax each fail the check.
 - A continuous integration workflow with a Linux job and a macOS arm64 job.
-- A clean-install job with a size budget.
+- A clean-install job that reports the installed size.
+- The `pnpm eval` command and its workflow job.
 
 ## Success criteria
 
@@ -72,7 +75,7 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 | Status | Pending |
 | Phase | 0 |
 | Depends on | None |
-| Requirements | REQ-28 |
+| Requirements | REQ-12, REQ-28 |
 | Components | Repository root, `packages/core`, `packages/graph-rag`, `packages/storage`, `apps/mcp-server` |
 
 **Objective.** Create the workspace and its one check command, and prove that the import rules are enforced by tools.
@@ -82,7 +85,8 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 **Outcome.** An engineer clones the repository, runs `pnpm install` and `pnpm check`, and gets exit code 0. An import that breaks the table in `SYSTEM-BOUNDARIES.md` fails the check with a message that names the rule.
 
 **Scope.**
-- Root `package.json`, private, with `packageManager`, the Node `engines` range from ADR 0015, and the scripts `check`, `test` and `format` named in [`CLAUDE.md`](../../../CLAUDE.md).
+- Root `package.json`, private, with `packageManager`, the Node `engines` range from ADR 0015, the scripts `check`, `test` and `format` named in [`CLAUDE.md`](../../../CLAUDE.md), and the script `eval` that [`TESTING.md`](../../architecture/TESTING.md) describes.
+- One test that every dependency version in the workspace is exact.
 - `pnpm-workspace.yaml` listing `packages/*` and `apps/*`, with a catalog that pins each shared version once.
 - Three library packages, `@factloom/core`, `@factloom/graph-rag` and `@factloom/storage`, each with `package.json`, a `tsconfig.json` that extends the root base, `src/index.ts`, a short `README.md` and one placeholder test.
 - The app `apps/mcp-server` with the same files, except that its entry is `src/main.ts` and it exports nothing ([`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md)).
@@ -108,6 +112,9 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 5. An `enum`, a `namespace` and a constructor parameter property each fail the type check. A type imported without `import type` fails the type check.
 6. A workspace package runs from source with plain `node` and no flag: the app's entry, which imports `@factloom/core` by name, runs and exits 0.
 7. Each placeholder test passes, and the test in `graph-rag`, `storage` and the app imports `@factloom/core` by name, so that resolution across packages is exercised by Vitest.
+8. `pnpm check` needs no network, no API key and no embedding model, now and after every later work item ([`TESTING.md`](../../architecture/TESTING.md), "Four kinds of test").
+9. `pnpm eval` exists as a second command for the tests that need the real embedding model. It selects test files by a naming rule that the Vitest configuration of `pnpm check` excludes. In this item no such file exists, so the command runs nothing and exits 0. FL-026 adds the first.
+10. One test, run by `pnpm check`, reads every `package.json` of the workspace and the catalog in `pnpm-workspace.yaml`, resolves each `catalog:` entry, and fails when any dependency version is a range or a tag and not one exact version. This is the only pin test in the roadmap: the items that add the MCP SDK, the Anthropic SDK and the embedding library rely on it.
 
 **Technical requirements.**
 1. Versions are the ones verified on 2026-11-13 in the [toolchain research](../../research/technical/toolchain.md), "Final table": pnpm 12.18.0, TypeScript 7.0.2, Biome 2.6.7, Vitest 5.1.0, `@types/node` on the 22 line. If a newer version is chosen, it is read from the registry on the day, and the version, the command and the date are stated in the commit message.
@@ -134,13 +141,15 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 - [ ] The same proof is run for `graph-rag` importing `@factloom/storage` and for `storage` importing `@factloom/graph-rag`, with the output recorded.
 - [ ] Deep import by package name: a source file in `graph-rag` imports a file inside `@factloom/core` other than its entry. `pnpm check` exits non-zero. The output is recorded and the line removed.
 - [ ] Deep import by relative path: a source file in `graph-rag` imports a file of `core` through a relative path that leaves the package. `pnpm check` exits non-zero. The output is recorded and the line removed.
-- [ ] Non-erasable syntax: an `enum` is added to a source file. `pnpm check` exits non-zero at the type check. The output is recorded and the enum removed. The same is done for a type imported without `import type`.
+- [ ] Non-erasable syntax: an `enum` is added to a source file. `pnpm check` exits non-zero at the type check. The output is recorded and the enum removed. The same is done, one at a time, for a `namespace`, for a constructor parameter property, and for a type imported without `import type`.
+- [ ] Unit test "every dependency version in the workspace is exact" passes. With one version in the catalog changed to a range, as a trial, it fails and names the dependency. The output is recorded and the change removed.
+- [ ] `pnpm eval` exits 0 and reports that it found no test.
 - [ ] `grep -L '"private": true' package.json packages/*/package.json apps/*/package.json` prints nothing.
 - [ ] `node apps/mcp-server/src/main.ts` exits 0 with no warning printed and no `dist` directory in the repository.
 - [ ] `git grep -n "from '@factloom" -- packages apps` shows only imports of placeholder exports. No file under `packages/` or `apps/` contains a type, schema or function named in [`INTERFACES.md`](../../architecture/INTERFACES.md).
 - [ ] `git status --short` is empty after `pnpm check`: the check writes no file.
 
-**Validation.** `pnpm check` on a fresh clone; the six failing proofs above, each run by hand with the output kept; the placeholder unit tests.
+**Validation.** `pnpm check` on a fresh clone; the failing proofs above, each run by hand with the output kept: four forbidden imports, two deep imports, four kinds of non-erasable syntax and one unpinned version; the placeholder unit tests and the pin test.
 
 **Completion evidence.** The commits. The recorded output of the passing `pnpm check` and of each failing proof, placed in this work item when its status changes. The sentence in [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md) that calls the lint rules planned is replaced by what was run. Q-22 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) is closed with the result. The note in `CLAUDE.md` that only spikes run is removed.
 
@@ -165,6 +174,7 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 - Two jobs from one definition: a Linux runner and a macOS arm64 runner.
 - Each job: check out, install the pinned pnpm and a Node version, install dependencies from the lockfile, run `pnpm check`.
 - A second, manually started job on the macOS arm64 runner that runs the two spikes, to answer Q-01 before the SQLite adapter exists.
+- A third job, separate from the check, that runs `pnpm eval`. It is started by hand or on a schedule, not on every push.
 
 **Non-goals.**
 - The clean-install job: FL-003.
@@ -179,6 +189,7 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 3. The install step fails when the lockfile does not match the manifests. It does not change the lockfile.
 4. Each job prints `node --version`, `pnpm --version`, the operating system and the processor architecture before the check.
 5. The manual job runs `cd spikes/sqlite-vec-fts5 && npm ci && node spike.mjs` and `cd spikes/fact-schema && npm ci && node check.mjs` on the macOS arm64 runner.
+6. The eval job runs `pnpm eval` on one named runner. It has network access, because the first run downloads the embedding model, and it keeps the model's cache directory between runs with the cache action. Until FL-026 adds the first eval-time test, the job runs nothing and passes. The check jobs need no model and no cache for one.
 
 **Technical requirements.**
 1. Every action is pinned to a full commit hash, with the release it corresponds to in a comment.
@@ -195,6 +206,7 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 - [ ] A push to `main` produces a workflow run in which all four matrix jobs end in success. The run's address is recorded.
 - [ ] The macOS job's log shows `arm64` as the architecture and the four stages of `pnpm check`.
 - [ ] The manual job is started once. Its log ends with `SPIKE OK` for the first spike and with the line `31 checks passed` for the second, and shows `platform: 'darwin-arm64'`. If either fails, the exact error is recorded and the item is `Blocked` on Q-01.
+- [ ] The eval job is started once by hand and ends in success. Its address is recorded.
 - [ ] `grep -n "uses:" <workflow file>` shows a 40-character commit hash on every line.
 - [ ] The workflow file contains no `secrets.` reference.
 
@@ -216,14 +228,13 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 
 **Background.** Requirement REQ-CA-08 of the [competitive analysis](../../research/evaluations/competitive-analysis.md), section 7: several memory projects studied did not start on a fresh install because a dependency had moved. In development the packages run from TypeScript source ([ADR 0015](../../architecture/adr/0015-toolchain.md)). Node refuses to strip types from a file that is a real copy under `node_modules`, which the [toolchain research](../../research/technical/toolchain.md) ran, so an installed server needs compiled JavaScript. ADR 0015 leaves that build to the moment a package is first packed. The compiler accepts `allowImportingTsExtensions` when it emits only with `rewriteRelativeImportExtensions` set, as the same ADR records.
 
-**Outcome.** A workflow job fails when the packed server cannot be installed or started on Linux or on macOS arm64, or when the installed size passes a recorded budget. The packages stay private and nothing is published.
+**Outcome.** A workflow job fails when the packed server cannot be installed or started on Linux or on macOS arm64, and it reports the installed size. The packages stay private and nothing is published.
 
 **Scope.**
 - A build for packing: compiled JavaScript for the four workspace members, produced by one command, used only by this job.
 - Packing the server so that it can be installed outside the workspace.
 - A clean-install job that runs on Linux and on macOS arm64, the two runners of FL-002. On each it installs the archives into an empty directory, starts the server over stdio, and makes the calls below.
-- A size budget that fails the job.
-- A check that the MCP SDK and the Anthropic SDK are pinned to exact versions.
+- A report of the installed size in the job log.
 
 **Non-goals.**
 - Publishing to a registry, a version number policy, a changelog or release notes.
@@ -237,15 +248,15 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 3. The job starts the installed server with `FACTLOOM_NAMESPACE` and `FACTLOOM_DB` set to a temporary file, and over stdio performs: initialise, list the tools, `record_fact` with one fact, `recall` with a question that matches it.
 4. The tool list contains exactly the five phase 1 names in [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md): `recall`, `remember`, `record_fact`, `invalidate_fact`, `get_fact_history`. Phase 2 adds a sixth tool and updates this expectation (FL-059 in EPIC-08).
 5. `recall` returns the recorded fact. This proves that the native SQLite modules and the embedding runtime load from an installed copy.
-6. The job measures the size of the install directory and fails when it is above the budget.
-7. A check fails when the app's manifest gives a range, not an exact version, for the MCP SDK or the Anthropic SDK.
+6. The job measures the size of the install directory and prints it. It does not fail on a size: no requirement asks for a limit.
+7. The job runs the pin test of FL-001 before it packs, so an archive is never built from a manifest with a version range. This item adds no pin check of its own.
 
 **Technical requirements.**
 1. The build sets `rewriteRelativeImportExtensions` in a configuration of its own. The development type check of FL-001 is unchanged and still emits nothing.
 2. Built output is ignored by git, which `.gitignore` already does for `dist/`.
 3. Whether the server is packed as four archives or as one that contains the three libraries is decided in this work item. The decision and its reason are stated in the commit. A new ADR is written only if the choice changes a package's `exports`.
 4. The stdio calls reuse the client code of the smoke test (FL-037), pointed at the installed server.
-5. The budget is one number per operating system, kept in the repository. It is set from the first measured size plus a margin stated beside it. [ADR 0014](../../architecture/adr/0014-local-embeddings-with-bge-small.md) records 745 MB for the embedding runtime's install on Linux as the reference.
+5. The size is reported, not gated. [ADR 0014](../../architecture/adr/0014-local-embeddings-with-bge-small.md) records 745 MB for the embedding runtime's install on Linux as the reference, and names the step to take if the size proves a problem.
 6. The first start downloads the embedding model, so the job has network access and a longer time limit than the check job ([`TESTING.md`](../../architecture/TESTING.md)).
 
 **Constraints.**
@@ -257,12 +268,11 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 **Acceptance criteria.**
 - [ ] A workflow run shows the clean-install job passing on Linux and on macOS arm64. Its address is recorded.
 - [ ] The job log shows the five tool names and the recalled fact.
-- [ ] The job log shows the measured install size and the budget for each operating system.
-- [ ] With the budget lowered below the measured size in a local run of the job's script, the script exits non-zero. The output is recorded and the budget restored.
-- [ ] With the MCP SDK version in the app's manifest changed to a range in a local run, the pin check exits non-zero. The output is recorded and the change removed.
+- [ ] The job log shows the measured install size for each operating system. The two sizes are recorded in this work item.
+- [ ] With the server's entry file renamed in a local run of the job's script, the script exits non-zero. The output is recorded and the change removed.
 - [ ] `pnpm check` exits 0 with no built output present, and `git status --short` is empty after the build and pack commands.
 - [ ] Every `package.json` still has `"private": true`.
 
-**Validation.** The clean-install job on both operating systems; the two local failure runs; `pnpm check`.
+**Validation.** The clean-install job on both operating systems; the local failure run; `pnpm check`.
 
-**Completion evidence.** The commits, the address of the passing workflow run, the measured sizes and budgets, and the output of the two failure runs.
+**Completion evidence.** The commits, the address of the passing workflow run, the measured sizes, and the output of the failure run.
