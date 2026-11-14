@@ -26,6 +26,22 @@ How each host passes its working directory to a server, and so whether the names
 
 Each host session starts its own server process, so several processes can have the same database file open. The settings that make this safe are under "Connection settings" in [`SCHEMA.md`](SCHEMA.md).
 
+## Subscriptions and API keys
+
+Two different things can need a key, and they are easy to confuse.
+
+- **The coding agent.** Claude Code and Codex each run on either a subscription or an API key. That is between the user and the agent's provider. Factloom is a local MCP server that the agent starts, so how the agent is paid for should make no difference to registering or calling it. This has not been run in each set-up yet; the registration guide records the result for each one ([open questions](../research/OPEN-QUESTIONS.md), Q-79).
+- **Factloom's own LLM call.** Only `remember` makes one, to extract facts from free text. It needs `ANTHROPIC_API_KEY`. The design assumes a subscription cannot be used for it; that assumption is not yet verified (Q-80).
+
+So a user with a subscription and no API key can use everything except `remember`. The agent is already a language model: it reads the conversation, works out the facts, and records each one with `record_fact`, which makes no LLM call. The server's instructions tell the agent to do this, and `remember` answers `llm_failed` with the same advice when no key is set.
+
+| Tool | Needs a key of Factloom's own |
+|---|---|
+| `recall`, `record_fact`, `invalidate_fact`, `get_fact_history` | No |
+| `remember` | Yes, `ANTHROPIC_API_KEY` |
+
+Extraction through another provider's key, such as OpenAI's, is not planned for phase 1. The LLM sits behind an interface, so a second provider can be added when someone needs it.
+
 ## Tools
 
 Five tools, in this order. Every input field has a description in its schema. Every tool declares an output schema and returns the same JSON both as `structuredContent` and as text.
