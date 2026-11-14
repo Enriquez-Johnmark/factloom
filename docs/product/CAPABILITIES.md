@@ -21,11 +21,11 @@ A capability is named for what a user or an agent can do, not for a package. "Ph
 
 | Capability | What it means | Requirements | Owning epic | Phase |
 |---|---|---|---|---|
-| Resolve conflicts | New information that conflicts with a stored fact is judged when it is written, and the stored fact is ended or invalidated, or the change is proposed for approval, as the domain's **correction policy** says | REQ-16, REQ-17 | [EPIC-08](../roadmap/epics/EPIC-08.md) | 2 |
+| Resolve conflicts | New information that conflicts with a stored fact is judged when it is written, and the stored fact is ended or invalidated, or the change is proposed for approval, as the domain's **correction policy** says. A person approves or rejects a proposal with a command; no MCP tool can | REQ-16, REQ-17 | [EPIC-08](../roadmap/epics/EPIC-08.md) | 2 |
 | Act on feedback | **Feedback** on a recalled fact is recorded and leads to a change of confidence, a **retraction** or an ended fact under the correction policy | REQ-18 | [EPIC-08](../roadmap/epics/EPIC-08.md) | 2 |
 | Purge | The content of a source, and of the facts that depend only on it, is removed and a record remains. A person runs a purge with a command; no MCP tool can. A write that contains a recognisable secret is refused before it is recorded | REQ-19 | [EPIC-08](../roadmap/epics/EPIC-08.md), with the secret check in [EPIC-04](../roadmap/epics/EPIC-04.md) | 2 (secret check: 1) |
 | Verify against sources | **Stale facts** are checked against their sources, with deterministic checks first; anchored code facts are checked with no LLM call: that the file still exists, that a named function is still in it, and that a version in a manifest still matches | REQ-21 | [EPIC-09](../roadmap/epics/EPIC-09.md) | 3 |
-| Merge entities | Duplicate entities are found on a schedule and recorded as the same thing by an **entity merge** that can be undone | REQ-20 | [EPIC-09](../roadmap/epics/EPIC-09.md) | 3 |
+| Merge entities | Duplicate entities are found on a schedule, meaning by a maintenance command that the host's scheduler or a session-start hook starts, and recorded as the same thing by an **entity merge** that can be undone | REQ-20 | [EPIC-09](../roadmap/epics/EPIC-09.md) | 3 |
 | Repair anchors | An **anchor** that points at a moved or renamed file is repaired, and a fact whose anchor cannot be repaired is flagged as an **orphaned fact** | REQ-22 | [EPIC-09](../roadmap/epics/EPIC-09.md) | 3 |
 | Archive | Facts that have not been used for a configured period become **archived facts**, left out of recall by default, and archiving can be reversed | REQ-23 | [EPIC-09](../roadmap/epics/EPIC-09.md) | 3 |
 
@@ -44,7 +44,7 @@ These are not visible to an agent, but every capability above depends on them.
 |---|---|---|---|---|
 | Check the workspace with one command | `pnpm check` runs the format check, lint, type check and tests, and a forbidden import between packages fails it | REQ-28 | [EPIC-01](../roadmap/epics/EPIC-01.md) | 0 |
 | Change memory through one door | Every write is a fact operation in `core` that builds one **change set** and commits it; product 2 has no other way to write | REQ-24 | [EPIC-02](../roadmap/epics/EPIC-02.md) | 1 |
-| Measure correctness | An eval set of extraction cases and "fact changed over time" scenarios runs deterministically on every check | REQ-30 | [EPIC-07](../roadmap/epics/EPIC-07.md) | 0 to 2 |
+| Measure correctness | An eval set of extraction cases and "fact changed over time" scenarios runs deterministically on every check, from recorded LLM responses. Evals that need the real embedding model run under a second command, `pnpm eval` | REQ-30 | [EPIC-07](../roadmap/epics/EPIC-07.md) | 0 to 2 |
 
 ## How the capabilities depend on each other
 
