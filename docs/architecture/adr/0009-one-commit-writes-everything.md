@@ -2,9 +2,11 @@
 
 Status: accepted
 
-The storage interface has one write method, `commit(changeSet)`. A change set is a list of changes as plain data: create an entity, record a source, record a fact, attach a source, invalidate a fact. The store applies all of them or none, in order, and writes one audit entry per change itself.
+The storage interface has one write method, `commit(changeSet)`. A change set is a list of changes as plain data: create an entity, record a source, record a fact, attach a source, invalidate a fact. The store applies all of them or none, in order, and writes one audit entry per change itself. A change is one item of the list, not one database row: recording a fact inserts its row, its source links and its embedding, and gets one entry.
 
 Two rules follow from this shape without anyone having to remember them. A change cannot be made without an audit entry, because no method writes one without the other. And a succession or a correction cannot be left half done, because its rows are one commit.
+
+The commit also enforces the single-value rule, inside the same transaction and after applying the changes: for a single-valued predicate, no two live facts with the same subject and predicate may overlap in valid time. A commit that would break it fails with `conflict`. The check is in the store, not in the caller before the commit, because each host session starts its own server process and several can share one database file. A check made before the commit could pass in two processes at once. The store still decides nothing: the change says whether its predicate is single-valued, and the store only refuses.
 
 The same shape is what later phases need. A change set that product 2 proposes and a person approves is the same data whether it is applied now or held in a queue.
 
