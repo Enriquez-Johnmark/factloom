@@ -2,6 +2,7 @@
 paths:
   - "**/*.test.ts"
   - "**/testing/**"
+  - "apps/mcp-server/evals/**"
 ---
 
 # Testing rules
