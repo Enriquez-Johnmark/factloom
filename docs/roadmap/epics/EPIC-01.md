@@ -64,7 +64,7 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-001 | Scaffold the pnpm workspace with one check command | 0 | None | Pending |
+| FL-001 | Scaffold the pnpm workspace with one check command | 0 | None | Completed |
 | FL-002 | Run the check in continuous integration on Linux and macOS arm64 | 0 | FL-001 | Pending |
 | FL-003 | Install the packed server on a clean machine in CI | 1 | FL-002, FL-037 | Pending |
 
@@ -72,7 +72,7 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 0 |
 | Depends on | None |
 | Requirements | REQ-12, REQ-28 |
@@ -135,23 +135,174 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 - [Git rules](../../../.claude/rules/git.md): one logical change per commit. No proof is committed in its failing state.
 
 **Acceptance criteria.**
-- [ ] On a fresh clone, `pnpm install` exits 0 and `pnpm check` exits 0. The full output of `pnpm check` is recorded, and it shows the four stages.
-- [ ] Forbidden import: `import '@factloom/storage'` is added to a source file of `core`. `pnpm check` exits non-zero and the output names the import rule. The output is recorded, the line is removed, and `pnpm check` exits 0 again.
-- [ ] Forbidden import with the dependency declared: `@factloom/storage` is also added to the dependencies of `core` and installed. `pnpm check` still exits non-zero at the lint stage. The output is recorded and both changes are removed.
-- [ ] The same proof is run for `graph-rag` importing `@factloom/storage` and for `storage` importing `@factloom/graph-rag`, with the output recorded.
-- [ ] Deep import by package name: a source file in `graph-rag` imports a file inside `@factloom/core` other than its entry. `pnpm check` exits non-zero. The output is recorded and the line removed.
-- [ ] Deep import by relative path: a source file in `graph-rag` imports a file of `core` through a relative path that leaves the package. `pnpm check` exits non-zero. The output is recorded and the line removed.
-- [ ] Non-erasable syntax: an `enum` is added to a source file. `pnpm check` exits non-zero at the type check. The output is recorded and the enum removed. The same is done, one at a time, for a `namespace`, for a constructor parameter property, and for a type imported without `import type`.
-- [ ] Unit test "every dependency version in the workspace is exact" passes. With one version in the catalog changed to a range, as a trial, it fails and names the dependency. The output is recorded and the change removed.
-- [ ] `pnpm eval` exits 0 and reports that it found no test.
-- [ ] `grep -L '"private": true' package.json packages/*/package.json apps/*/package.json` prints nothing.
-- [ ] `node apps/mcp-server/src/main.ts` exits 0 with no warning printed and no `dist` directory in the repository.
-- [ ] `git grep -n "from '@factloom" -- packages apps` shows only imports of placeholder exports. No file under `packages/` or `apps/` contains a type, schema or function named in [`INTERFACES.md`](../../architecture/INTERFACES.md).
-- [ ] `git status --short` is empty after `pnpm check`: the check writes no file.
+- [x] On a fresh clone, `pnpm install` exits 0 and `pnpm check` exits 0. The full output of `pnpm check` is recorded, and it shows the four stages.
+- [x] Forbidden import: `import '@factloom/storage'` is added to a source file of `core`. `pnpm check` exits non-zero and the output names the import rule. The output is recorded, the line is removed, and `pnpm check` exits 0 again.
+- [x] Forbidden import with the dependency declared: `@factloom/storage` is also added to the dependencies of `core` and installed. `pnpm check` still exits non-zero at the lint stage. The output is recorded and both changes are removed.
+- [x] The same proof is run for `graph-rag` importing `@factloom/storage` and for `storage` importing `@factloom/graph-rag`, with the output recorded.
+- [x] Deep import by package name: a source file in `graph-rag` imports a file inside `@factloom/core` other than its entry. `pnpm check` exits non-zero. The output is recorded and the line removed.
+- [x] Deep import by relative path: a source file in `graph-rag` imports a file of `core` through a relative path that leaves the package. `pnpm check` exits non-zero. The output is recorded and the line removed.
+- [x] Non-erasable syntax: an `enum` is added to a source file. `pnpm check` exits non-zero at the type check. The output is recorded and the enum removed. The same is done, one at a time, for a `namespace`, for a constructor parameter property, and for a type imported without `import type`.
+- [x] Unit test "every dependency version in the workspace is exact" passes. With one version in the catalog changed to a range, as a trial, it fails and names the dependency. The output is recorded and the change removed.
+- [x] `pnpm eval` exits 0 and reports that it found no test.
+- [x] `grep -L '"private": true' package.json packages/*/package.json apps/*/package.json` prints nothing.
+- [x] `node apps/mcp-server/src/main.ts` exits 0 with no warning printed and no `dist` directory in the repository.
+- [x] `git grep -n "from '@factloom" -- packages apps` shows only imports of placeholder exports. No file under `packages/` or `apps/` contains a type, schema or function named in [`INTERFACES.md`](../../architecture/INTERFACES.md).
+- [x] `git status --short` is empty after `pnpm check`: the check writes no file.
 
 **Validation.** `pnpm check` on a fresh clone; the failing proofs above, each run by hand with the output kept: four forbidden imports, two deep imports, four kinds of non-erasable syntax and one unpinned version; the placeholder unit tests and the pin test.
 
 **Completion evidence.** The commits. The recorded output of the passing `pnpm check` and of each failing proof, placed in this work item when its status changes. The sentence in [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md) that calls the lint rules planned is replaced by what was run. Q-22 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) is closed with the result. The note in `CLAUDE.md` that only spikes run is removed.
+
+**Recorded evidence.** Completed on 2026-11-14 on Linux x64 with Node.js v22.23.4 and pnpm 12.18.0. It has not been run on macOS; FL-002 does that. Each failing proof was added, run and removed; none was committed.
+
+Commits: `build: add pnpm workspace`, `build: add typescript config`, `build: add biome config with package boundary rules`, one `build: add ... package` commit for each of the four workspace members, `test: add vitest config and placeholder tests`, and `test: add the test that every dependency version is exact`.
+
+`pnpm install --frozen-lockfile` and `pnpm check` on a fresh clone of `main`:
+
+```text
+$ pnpm run check:format && pnpm run check:lint && pnpm run check:types && pnpm run test
+$ biome format .
+Checked 25 files in 4ms. No fixes applied.
+$ biome lint .
+Checked 25 files in 8ms. No fixes applied.
+$ tsc -p tsconfig.json
+$ vitest run
+ RUN  v5.1.0 <clone>
+ Test Files  5 passed (5)
+      Tests  6 passed (6)
+   Start at  21:42:55
+   Duration  277ms (transform 57%, import 27%, tests 9%, worker 8%)
+exit code: 0
+```
+
+Forbidden imports. The lint stage stops the check and names the rule:
+
+```text
+added to packages/core/src/index.ts: import '@factloom/storage';
+$ pnpm run check:format && pnpm run check:lint && pnpm run check:types && pnpm run test
+$ biome format .
+$ biome lint .
+packages/core/src/index.ts:7:8 lint/style/noRestrictedImports
+  × core is the innermost package. It must not import another @factloom package.
+Found 1 error.
+exit code: 1
+
+With the dependency also declared in core's package.json and installed (pnpm warns: "There are cyclic workspace dependencies"):
+added to packages/core/src/index.ts: import '@factloom/storage';
+$ biome format .
+$ biome lint .
+packages/core/src/index.ts:7:8 lint/style/noRestrictedImports
+  × core is the innermost package. It must not import another @factloom package.
+Found 1 error.
+exit code: 1
+
+added to packages/graph-rag/src/index.ts: import '@factloom/storage';
+$ pnpm run check:format && pnpm run check:lint && pnpm run check:types && pnpm run test
+$ biome format .
+$ biome lint .
+packages/graph-rag/src/index.ts:8:8 lint/style/noRestrictedImports
+  × graph-rag must not import @factloom/storage, and imports other packages by name only. It reaches storage through the MemoryStore interface in core.
+Found 1 error.
+exit code: 1
+
+added to packages/storage/src/index.ts: import '@factloom/graph-rag';
+$ pnpm run check:format && pnpm run check:lint && pnpm run check:types && pnpm run test
+$ biome format .
+$ biome lint .
+packages/storage/src/index.ts:8:8 lint/style/noRestrictedImports
+  × storage must not import @factloom/graph-rag, and imports other packages by name only.
+Found 1 error.
+exit code: 1
+```
+
+Deep imports, by package name and by a relative path that leaves the package:
+
+```text
+added to packages/graph-rag/src/index.ts: import '@factloom/core/src/index.ts';
+$ pnpm run check:format && pnpm run check:lint && pnpm run check:types && pnpm run test
+$ biome format .
+$ biome lint .
+packages/graph-rag/src/index.ts:8:8 lint/style/noRestrictedImports
+  × graph-rag must not import @factloom/storage, and imports other packages by name only. It reaches storage through the MemoryStore interface in core.
+Found 1 error.
+exit code: 1
+
+added to packages/graph-rag/src/index.ts: import '../../core/src/index.ts';
+$ pnpm run check:format && pnpm run check:lint && pnpm run check:types && pnpm run test
+$ biome format .
+$ biome lint .
+packages/graph-rag/src/index.ts:8:8 lint/style/noRestrictedImports
+  × graph-rag must not import @factloom/storage, and imports other packages by name only. It reaches storage through the MemoryStore interface in core.
+Found 1 error.
+exit code: 1
+```
+
+Syntax that Node.js cannot erase, and a type imported without `import type`. The type check stops the check:
+
+```text
+added to packages/core/src/index.ts: export enum Trigger { Agent, Person }
+$ biome format .
+$ biome lint .
+$ tsc -p tsconfig.json
+packages/core/src/index.ts(7,13): error TS1294: This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
+exit code: 1
+
+added to packages/core/src/index.ts: export namespace Facts { export const count = 1; }
+$ biome format .
+$ biome lint .
+$ tsc -p tsconfig.json
+packages/core/src/index.ts(7,18): error TS1294: This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
+exit code: 1
+
+added to packages/core/src/index.ts: export class Holder { constructor(private readonly value: string) {} read(): string { return this.value; } }
+$ biome format .
+$ biome lint .
+$ tsc -p tsconfig.json
+packages/core/src/index.ts(8,15): error TS1294: This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
+exit code: 1
+
+added to packages/graph-rag/src/index.ts: import { Fact } from './fact-type.ts'; export const noFact: Fact | null = null;
+$ biome format .
+$ biome lint .
+packages/graph-rag/src/index.ts:8:8 lint/style/useImportType  FIXABLE
+Found 1 warning.
+$ tsc -p tsconfig.json
+packages/graph-rag/src/index.ts(8,10): error TS1484: 'Fact' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+exit code: 1
+```
+
+An inexact version, `pnpm eval`, private packages, running from source, and a clean tree after the check:
+
+```text
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  scripts/exact-versions.test.ts > the workspace > pins every dependency to one exact version
+AssertionError: expected [ 'catalog: vitest is "^5.1.0"' ] to deeply equal []
++   "catalog: vitest is \"^5.1.0\"",
+      Tests  1 failed | 1 passed (2)
+exit code: 1
+
+RUN  v5.1.0 /home/user/factloom
+No test files found, exiting with code 0
+include: packages/*/src/**/*.eval.test.ts, apps/*/src/**/*.eval.test.ts, apps/*/evals/**/*.eval.test.ts
+exclude:  **/node_modules/**
+exit code: 0
+
+grep -L '"private": true' package.json packages/*/package.json apps/*/package.json prints:
+(end)
+
+factloom mcp-server: not implemented yet (wired from @factloom/core)
+exit code: 0
+dist directories: 0
+
+pnpm check exit code: 0
+(tracked files changed: 0)
+```
+
+What was found on the way:
+
+- The rule against deep imports works as one `noRestrictedImports` pattern group, `@factloom/*/**` and `**/src/**`. The second pattern catches a relative path into another package, because an import inside a package never passes through a `src` segment. A Biome override replaces the rule's options for its files, so each per-package block repeats the two patterns.
+- The app has no `src/index.ts`, as [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md) says; its entry is `src/main.ts`.
+- `@types/node` is pinned at 22.19.0, the version the research verified. The check script runs its four stages as four named scripts, so each can be run alone.
 
 ### FL-002: Run the check in continuous integration on Linux and macOS arm64
 
