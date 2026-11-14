@@ -71,7 +71,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 | FL-005 | Timestamps and date input | 0 | FL-004 | Completed |
 | FL-006 | Schemas and types for entities, facts, sources, audit entries, change sets and domains | 0 | FL-005 | Completed |
 | FL-007 | MemoryStore interface and the in-memory store: commit and structural reads | 0 | FL-006 | Completed |
-| FL-056 | In-memory search lanes and test helpers | 0 | FL-007 | Pending |
+| FL-056 | In-memory search lanes and test helpers | 0 | FL-007 | Completed |
 | FL-008 | recordFacts operation, including restatement | 1 | FL-007, FL-056 | Pending |
 | FL-009 | invalidateFact operation: retraction and correction | 1 | FL-008, FL-056 | Pending |
 | FL-010 | endFact operation: ending a fact and succession | 1 | FL-008, FL-056 | Pending |
@@ -462,7 +462,7 @@ Three cases the error table in `INTERFACES.md` does not spell out, and what the 
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 0 |
 | Depends on | FL-007 |
 | Requirements | Supports REQ-03 and REQ-04 |
@@ -510,22 +510,40 @@ Three cases the error table in `INTERFACES.md` does not spell out, and what the 
 - [Testing rules](../../../.claude/rules/testing.md): "Unit tests use fakes".
 
 **Acceptance criteria.**
-- [ ] Unit test "returns the nearest fact first in the vector lane" passes, with three facts at clearly different distances.
-- [ ] Unit test "returns the facts whose statement holds a word of the text" passes, ignoring case.
-- [ ] Unit test "applies the time filter before the limit in both lanes" passes: with a limit of 1, each lane returns the current fact although an invalidated fact matches better. The test states its as-of date and its known-at date.
-- [ ] Unit test "returns a copied fact through the vector lane" passes: a fact recorded with `{ copyFromFactId }` is returned for the vector of the fact it copies.
-- [ ] Unit test "returns nothing from another namespace" passes for both lanes.
-- [ ] Unit test "the fake embedder gives the same vector for the same text" passes, and "gives different vectors for different texts" passes.
-- [ ] Unit test "the scripted LLM gives its responses in order" passes, and "the scripted LLM throws when called more often than scripted" passes.
-- [ ] Unit test "the scripted LLM returns llm_failed for a response that does not match the schema" passes.
-- [ ] Unit test "test dependencies give the same identifiers and time on every run" passes.
-- [ ] Unit test "a later step can run at a later time on the same memory" passes: two sets of test dependencies share one store and have different clocks.
-- [ ] `git grep -n "vitest" -- packages/core/src` shows matches in `*.test.ts` files only.
-- [ ] `pnpm check` exits 0.
+- [x] Unit test "returns the nearest fact first in the vector lane" passes, with three facts at clearly different distances.
+- [x] Unit test "returns the facts whose statement holds a word of the text" passes, ignoring case.
+- [x] Unit test "applies the time filter before the limit in both lanes" passes: with a limit of 1, each lane returns the current fact although an invalidated fact matches better. The test states its as-of date and its known-at date.
+- [x] Unit test "returns a copied fact through the vector lane" passes: a fact recorded with `{ copyFromFactId }` is returned for the vector of the fact it copies.
+- [x] Unit test "returns nothing from another namespace" passes for both lanes.
+- [x] Unit test "the fake embedder gives the same vector for the same text" passes, and "gives different vectors for different texts" passes.
+- [x] Unit test "the scripted LLM gives its responses in order" passes, and "the scripted LLM throws when called more often than scripted" passes.
+- [x] Unit test "the scripted LLM returns llm_failed for a response that does not match the schema" passes.
+- [x] Unit test "test dependencies give the same identifiers and time on every run" passes.
+- [x] Unit test "a later step can run at a later time on the same memory" passes: two sets of test dependencies share one store and have different clocks.
+- [x] `git grep -n "vitest" -- packages/core/src` shows matches in `*.test.ts` files only.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `core`. The lane groups of the contract suite (FL-067) are the fuller proof and are that item's acceptance.
 
 **Completion evidence.** The commit and the passing `pnpm check` output.
+
+**Recorded evidence.** Completed on 2026-11-14, in two commits: `feat(core): add the vector and keyword lanes to the in-memory store` and `feat(core): add the test helpers for fakes and fixed dependencies`. The helpers are `create-fake-embedder.ts`, `create-scripted-llm.ts` and `create-test-deps.ts` in `packages/core/src`.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, ended with:
+
+```text
+ Test Files  14 passed (14)
+      Tests  148 passed (148)
+```
+
+`git grep -n "vitest" -- packages/core/src` shows matches in `*.test.ts` files only.
+
+How it is built, where the item left a choice:
+
+- The fake embedder is a bag of words over 16 dimensions: each word adds one at a position chosen by a hash of the word, so texts that share words point in similar directions. A small share of each vector comes from a hash of the whole text, which is what makes two different texts, including the same words in another order, differ.
+- `createTestDeps` takes an optional `newId` as well as an optional `store`. A later step of a test passes both from the first step, so identifiers carry on counting and are not reused on the shared memory.
+- The built-in test domain is exported as `TEST_DOMAIN`.
+- The scripted LLM throws at once, not through a rejected promise, when it is called more often than scripted.
 
 ### FL-008: recordFacts operation, including restatement
 
