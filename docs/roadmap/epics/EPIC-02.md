@@ -68,7 +68,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-004 | Result type and the shared error codes | 0 | FL-001 | Completed |
-| FL-005 | Timestamps and date input | 0 | FL-004 | Pending |
+| FL-005 | Timestamps and date input | 0 | FL-004 | Completed |
 | FL-006 | Schemas and types for entities, facts, sources, audit entries, change sets and domains | 0 | FL-005 | Pending |
 | FL-007 | MemoryStore interface and the in-memory store: commit and structural reads | 0 | FL-006 | Pending |
 | FL-056 | In-memory search lanes and test helpers | 0 | FL-007 | Pending |
@@ -162,7 +162,7 @@ Three things that differ from the letter of this item or of `INTERFACES.md`, eac
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 0 |
 | Depends on | FL-004 |
 | Requirements | REQ-02 |
@@ -207,17 +207,42 @@ Three things that differ from the letter of this item or of `INTERFACES.md`, eac
 - [Data rules](../../../.claude/rules/data.md), "Timestamps".
 
 **Acceptance criteria.**
-- [ ] Unit test "writes a date as fixed-width UTC text with milliseconds" passes.
-- [ ] Unit test "refuses a date outside the years 0000 to 9999" passes.
-- [ ] Unit test "reads a calendar date as the start of that day in UTC" passes, with `2026-03-15` giving `2026-03-15T00:00:00.000Z`.
-- [ ] Unit test "returns invalid_input for every other form" passes, with one case per form listed in functional requirement 4, and with the three malformed forms the [fact-schema spike](../../../spikes/fact-schema/check.mjs) uses.
-- [ ] Unit test "orders as text the way it orders in time" passes on a list that includes two instants one millisecond apart.
-- [ ] `git grep -n "toISOString" -- packages apps` shows matches in the timestamp module and its test only.
-- [ ] `pnpm check` exits 0.
+- [x] Unit test "writes a date as fixed-width UTC text with milliseconds" passes.
+- [x] Unit test "refuses a date outside the years 0000 to 9999" passes.
+- [x] Unit test "reads a calendar date as the start of that day in UTC" passes, with `2026-03-15` giving `2026-03-15T00:00:00.000Z`.
+- [x] Unit test "returns invalid_input for every other form" passes, with one case per form listed in functional requirement 4, and with the three malformed forms the [fact-schema spike](../../../spikes/fact-schema/check.mjs) uses.
+- [x] Unit test "orders as text the way it orders in time" passes on a list that includes two instants one millisecond apart.
+- [x] `git grep -n "toISOString" -- packages apps` shows matches in the timestamp module and its test only.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `core`, with no fakes: these are pure functions.
 
 **Completion evidence.** The commit and the passing `pnpm check` output.
+
+**Recorded evidence.** Completed on 2026-11-14, in two commits: `build(core): add zod 4.6.7 as the schema library` and `feat(core): add timestamps and date input`. The code is `packages/core/src/timestamp.ts`, with its tests beside it.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4:
+
+```text
+$ biome format .
+Checked 30 files in 4ms. No fixes applied.
+$ biome lint .
+Checked 30 files in 9ms. No fixes applied.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  7 passed (7)
+      Tests  67 passed (67)
+```
+
+`git grep -n "toISOString" -- packages apps` shows two lines, both in `packages/core/src/timestamp.ts`. The tests build their dates with `Date.UTC` and do not call it.
+
+The test "returns invalid_input for every other form" runs 21 refused forms, each named with its reason. They include every form listed in functional requirement 4, the three malformed forms of the fact-schema spike, and `9999-99-99T99:99:99.999Z`, which the database would accept. `TimestampSchema` is run against the same 21.
+
+How it is built, where the item left a choice:
+
+- The brand is applied by a type guard, `isTimestamp`, and nowhere else. No cast is used: `toTimestamp` and `parseDateInput` both return a value the guard has narrowed.
+- `TimestampSchema` is a Zod custom schema over the same guard, so the schema and `parseDateInput` cannot drift apart. Its output type is `Timestamp`.
+- `zod` 4.6.7 is the version the toolchain research verified, and was still the latest on the registry on 2026-11-14. It is pinned in the catalog; the test that every version is exact covers it.
 
 ### FL-006: Schemas and types for entities, facts, sources, audit entries, change sets and domains
 
