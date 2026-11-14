@@ -5,7 +5,7 @@ A memory layer for AI systems, in two products that share this repository.
 - **Product 1, temporal graph RAG:** stores knowledge as entities and facts, records when each fact was true and when it was learned, and recalls facts filtered by time.
 - **Product 2, self-correcting and self-healing memory:** keeps that knowledge true and tidy, using only the operations product 1 exposes.
 
-The first use is memory for coding agents through an MCP server. The workspace is scaffolded and there is no feature code yet: the packages hold placeholders.
+The first use is memory for coding agents through an MCP server. Implementation has just begun: `docs/roadmap/ROADMAP.md` says which work items are done. Most of each package is still a placeholder.
 
 ## Commands
 
