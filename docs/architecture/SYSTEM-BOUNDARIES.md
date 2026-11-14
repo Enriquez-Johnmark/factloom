@@ -41,7 +41,7 @@ Each package exports only what another package needs. Everything else stays priv
 |---|---|
 | Result | `Result`, its two halves `Success` and `Failure`, `ok`, `err`, `ERROR_CODES`, `ErrorCode`, `FactloomError` |
 | Schemas and types | The Zod schemas and derived types for `Timestamp`, `Entity`, `Fact`, `FactObject`, `Source`, `Trigger`, `Operation`, `ReasonCode`, `AuditAction`, `AuditEntry`, `TimeFilter`, `Domain`, `PredicateDefinition`, `ChangeSet`, `Change`, `CommitReceipt`, `FactWithSources` |
-| Time | `toTimestamp`, `parseDateInput` |
+| Time | `toTimestamp`, `parseDateInput`, and the two pure functions every store shares: `matchesTimeFilter`, the time predicate, and `periodsOverlap`, the test behind the single-value rule |
 | Names | `normaliseEntityName`, so that every store matches entity names the same way |
 | Interfaces | `MemoryStore`, `LlmClient`, `Embedder` |
 | Fact operations, phase 1 | `recordFacts`, `invalidateFact`, `endFact`, `findConflictCandidates`, with `OperationDeps`, `ChangeContext`, `NewSource`, `NewEntity`, `NewFact`, `FactDraft` |
