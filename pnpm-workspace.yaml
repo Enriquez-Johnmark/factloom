@@ -1,0 +1,14 @@
+packages:
+  - packages/*
+  - apps/*
+
+# Every shared version is pinned here, once, and exactly. A package.json refers to it with "catalog:".
+catalog:
+  # Formatter and linter, including the import rules between packages.
+  "@biomejs/biome": 2.6.7
+  # Types for the Node.js built-ins, on the line of the oldest supported Node.js.
+  "@types/node": 22.19.0
+  # Type checker. Node.js runs the source directly, so nothing is compiled in development.
+  typescript: 7.0.2
+  # Test runner.
+  vitest: 5.1.0

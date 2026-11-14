@@ -1,0 +1,27 @@
+{
+  "name": "factloom",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A memory layer for AI systems: temporal graph RAG with self-correcting and self-healing memory.",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": "^22.18.0 || >=24"
+  },
+  "scripts": {
+    "check": "pnpm run check:format && pnpm run check:lint && pnpm run check:types && pnpm run test",
+    "check:format": "biome format .",
+    "check:lint": "biome lint .",
+    "check:types": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "eval": "vitest run --config vitest.eval.config.ts --passWithNoTests",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
