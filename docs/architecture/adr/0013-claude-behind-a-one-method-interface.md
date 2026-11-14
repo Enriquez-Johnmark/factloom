@@ -4,7 +4,7 @@ Status: accepted
 
 Extraction, conflict detection and verification use Claude through the Anthropic API. `core` sees only `LlmClient`, which has one method: produce an object that matches a Zod schema from fixed instructions and a variable input. The Anthropic implementation lives in the app.
 
-One method is enough because structured output from a schema is all three jobs need. Each call names its task, so the composition root can choose a model per task; the research suggests the smallest current model for all three to begin with, at an estimated $0.14 to $0.55 per thousand memories, to be confirmed by the eval set ([research](../../research/technical/llm-anthropic.md)). Splitting the prompt into fixed and variable parts lets the implementation use prompt caching without the interface mentioning it.
+One method is enough because structured output from a schema is all three jobs need. Each call names its task, so the composition root can choose a model per task; the research suggests the smallest current model for all three to begin with, at an estimated $0.14 to $0.55 per thousand extraction calls. The figures are an estimate from stated assumptions about the size of a call, not a measurement, and the choice of model is to be confirmed by the eval set ([research](../../research/technical/llm-anthropic.md)). Splitting the prompt into fixed and variable parts lets the implementation use prompt caching without the interface mentioning it.
 
 ## Considered options
 
