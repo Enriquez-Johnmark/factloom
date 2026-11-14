@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-14:** the first feature code exists. 10 of 74 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-012, FL-018, FL-056, FL-067. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-14:** the first feature code exists. 10 of 74 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-012, FL-018, FL-056, FL-067. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -49,7 +49,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-007](epics/EPIC-02.md#fl-007-memorystore-interface-and-the-in-memory-store-commit-and-structural-reads) | MemoryStore interface and the in-memory store: commit and structural reads | EPIC-02 | FL-006 | Completed |
 | [FL-012](epics/EPIC-03.md#fl-012-storage-contract-suite-fixture-time-reads-commit-and-refusals) | Storage contract suite: fixture, time, reads, commit and refusals | EPIC-03 | FL-007 | Completed |
 | [FL-018](epics/EPIC-04.md#fl-018-software-development-domain-entity-types-and-predicates) | Software development domain: entity types and predicates | EPIC-04 | FL-006 | Completed |
-| [FL-027](epics/EPIC-07.md#fl-027-timeline-scenarios-as-reviewed-data) | Timeline scenarios as reviewed data | EPIC-07 | FL-006, FL-018 | Pending |
+| [FL-027](epics/EPIC-07.md#fl-027-timeline-scenarios-as-reviewed-data) | Timeline scenarios as reviewed data | EPIC-07 | FL-006, FL-018 | Under Review |
 | [FL-056](epics/EPIC-02.md#fl-056-in-memory-search-lanes-and-test-helpers) | In-memory search lanes and test helpers | EPIC-02 | FL-007 | Completed |
 | [FL-067](epics/EPIC-03.md#fl-067-storage-contract-suite-single-value-rule-namespaces-and-search-lanes) | Storage contract suite: single-value rule, namespaces and search lanes | EPIC-03 | FL-012, FL-056 | Completed |
 
@@ -492,7 +492,7 @@ Checked by script on 2026-11-14, over every epic file and the product documents.
 | No work item depends on one in a later phase | Pass |
 | Each epic's summary table agrees with its work items | Pass |
 | Every work item has every field of the template and at least one acceptance criterion | Pass |
-| Every status is `Pending` or `Completed` | Pass |
+| Every status is `Pending`, `Completed` or `Under Review` | Pass |
 | Every relative link resolves to an existing file | Pass |
 | Every requirement cited exists, and every requirement is delivered by a work item or owned by an epic | Pass |
 | The work items listed per requirement agree with the work items' own requirement lists | Pass |
