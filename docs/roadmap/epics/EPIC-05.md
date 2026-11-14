@@ -24,7 +24,7 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 
 - The vector lane and the keyword lane inside the SQLite adapter, and the time predicate in SQL: [EPIC-03](EPIC-03.md).
 - The `recall` and `get_fact_history` tools: [EPIC-06](EPIC-06.md).
-- Recording which facts were recalled, and leaving an **archived fact** out of recall: [EPIC-09](EPIC-09.md), FL-055 and FL-065.
+- Recording which facts were recalled, and leaving an **archived fact** out of recall: [EPIC-09](EPIC-09.md), FL-055 and FL-073.
 - The performance benchmark: FL-066 in [EPIC-07](EPIC-07.md). This epic must meet the budgets it enforces.
 - A reranking model, and graph expansion over more than one step ([ADR 0017](../../architecture/adr/0017-rank-fusion-in-typescript-with-time-filtering-in-each-lane.md), "Considered options"). See "Open decisions".
 - A hosted embedding model.
@@ -39,7 +39,8 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 
 ## Dependencies
 
-- [EPIC-02](EPIC-02.md): the types, the `MemoryStore` interface, the in-memory store and the test helpers.
+- [EPIC-01](EPIC-01.md): the `pnpm eval` command (FL-001) and its workflow job (FL-002), which run the tests that need the real embedding model.
+- [EPIC-02](EPIC-02.md): the types, the `MemoryStore` interface with `getSource`, the in-memory store and the test helpers, and `recordFacts` (FL-008), with which the retrieval eval loads its statements.
 - [EPIC-03](EPIC-03.md): the keyword lane (FL-016) and the vector lane (FL-017), which the retrieval eval measures.
 
 ## Deliverables
@@ -51,7 +52,7 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 
 ## Success criteria
 
-- `pnpm check` passes with the tests of every work item below.
+- `pnpm check` passes with the tests of every work item below that need no embedding model, and `pnpm eval` passes with those that need it.
 - A unit test of `recall` with no date returns only current facts (REQ-03).
 - Unit tests of `recall` answer an as-of question, a known-at question and a question with both, and the boundary instant (REQ-04).
 - The retrieval eval prints recall@1, recall@5 and MRR for each lane-weight variant, and the default weights are recorded in an ADR (REQ-05).
@@ -68,11 +69,11 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-026 | Local embedder with bge-small-en-v1.5 | 1 | FL-006 | Pending |
+| FL-026 | Local embedder with bge-small-en-v1.5 | 1 | FL-002, FL-006 | Pending |
 | FL-030 | Rank fusion as a pure function | 1 | FL-004 | Pending |
 | FL-031 | recall use case | 1 | FL-007, FL-030, FL-056 | Pending |
 | FL-032 | getFactHistory use case | 1 | FL-007, FL-056 | Pending |
-| FL-033 | Retrieval eval: harness and data | 1 | FL-016, FL-017, FL-026, FL-031 | Pending |
+| FL-033 | Retrieval eval: harness and data | 1 | FL-008, FL-016, FL-017, FL-026, FL-031 | Pending |
 | FL-057 | Lane weights chosen by measurement | 1 | FL-033 | Pending |
 
 ### FL-026: Local embedder with bge-small-en-v1.5
@@ -81,7 +82,7 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 |---|---|
 | Status | Pending |
 | Phase | 1 |
-| Depends on | FL-006 |
+| Depends on | FL-002, FL-006 |
 | Requirements | REQ-27 |
 | Components | `apps/mcp-server` |
 
@@ -96,6 +97,8 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 - a first run that downloads the model files from `huggingface.co` and later runs that use the cache.
 
 By default the library keeps its cache inside `node_modules` (research, section 3). Nothing was measured on Apple Silicon (open question Q-23).
+
+[`TESTING.md`](../../architecture/TESTING.md) says that `pnpm check` needs no network, no API key and no embedding model, and that a second command, `pnpm eval`, runs what needs the real model, including this embedder's own tests, on demand and in a separate continuous integration job (FL-001, FL-002). This item adds the first tests to `pnpm eval`.
 
 **Outcome.** The composition root can build an `Embedder`. Fact operations embed statements with it, `recall` embeds questions with it, and the SQLite adapter checks its model and dimensions against the database.
 
@@ -122,27 +125,28 @@ By default the library keeps its cache inside `node_modules` (research, section 
 8. Nothing is written to standard output while loading or embedding. Standard output belongs to the MCP protocol ([MCP research](../../research/technical/mcp.md), "Practical constraints").
 
 **Technical requirements.**
-1. `@huggingface/transformers` is a dependency of `apps/mcp-server` only, with an exact version and no range. The version is the latest on the registry on the day of implementation, checked with `npm view` and cited in the commit message. The research records the version it verified.
+1. `@huggingface/transformers` is a dependency of `apps/mcp-server` only, with an exact version and no range. The version is the latest on the registry on the day of implementation, checked with `npm view` and cited in the commit message. The research records the version it verified. The pin test of FL-001 fails if it is a range; this item adds no pin test of its own.
 2. The model repository, revision, quantisation variant and pooling are named constants, taken from the spike's "Model configurations" table and from ADR 0014. The revision is pinned, because the spike notes that an unpinned revision can change results.
 3. The factory takes the cache directory as an argument. The composition root passes a directory outside `node_modules` (FL-034).
 4. Texts given in one call are embedded together.
-5. The tests use the real model. The first run needs network access, as [`TESTING.md`](../../architecture/TESTING.md) notes for continuous integration.
+5. The tests that load the model run under `pnpm eval` only, selected by the naming rule of FL-001. They share one cache directory, `.cache/models` at the repository root, which git ignores and which the eval job of FL-002 keeps between runs. The first run on a machine needs network access to download the model. No test writes into the user's home directory.
+6. The two tests that need no model, "reports its model and dimensions before the model is loaded" and "returns embedding_failed when the model files are missing and cannot be fetched", run under `pnpm check`, with an empty temporary cache directory and fetching turned off.
 
 **Constraints.**
 - [ADR 0014](../../architecture/adr/0014-local-embeddings-with-bge-small.md) and [ADR 0003](../../architecture/adr/0003-dependencies-point-inward-with-manual-injection.md).
 - [ADR 0004](../../architecture/adr/0004-zod-schemas-and-result-values.md): an adapter catches what its library throws.
 
 **Acceptance criteria.**
-- [ ] Tests pass with these names: "returns one unit vector of 384 values for each text, in order", "returns an empty list for an empty list", "embeds a question differently from the same text as a statement", "returns the same vector for the same text on two calls", "scores a statement nearer to its paraphrase than to an unrelated statement", "reports its model and dimensions before the model is loaded", "returns embedding_failed when the model files are missing and cannot be fetched".
-- [ ] The last test uses an empty cache directory and a setting that prevents fetching.
-- [ ] A test named "writes nothing to standard output" runs the embedder in a child process, embeds one text, and asserts that the child's standard output is empty.
-- [ ] A test reads `apps/mcp-server/package.json` and fails if the version of `@huggingface/transformers` is a range.
+- [ ] Under `pnpm eval`, tests pass with these names: "returns one unit vector of 384 values for each text, in order", "returns an empty list for an empty list", "embeds a question differently from the same text as a statement", "returns the same vector for the same text on two calls", "scores a statement nearer to its paraphrase than to an unrelated statement".
+- [ ] Under `pnpm eval`, a test named "writes nothing to standard output" runs the embedder in a child process, embeds one text, and asserts that the child's standard output is empty.
+- [ ] Under `pnpm check`, tests pass with these names: "reports its model and dimensions before the model is loaded", "returns embedding_failed when the model files are missing and cannot be fetched". The second uses an empty cache directory and a setting that prevents fetching.
+- [ ] `pnpm check` passes with no network access and with `.cache/models` absent.
+- [ ] The eval job of FL-002 is started by hand and passes, and its log shows the tests above. A second start shows the model taken from the kept cache, with no download. Both addresses are recorded.
 - [ ] After a clean install on Linux, the size of `node_modules` (`du -sh node_modules` at the repository root) and the size of the cache directory after the first run are recorded.
-- [ ] `pnpm check` passes with the model in the cache.
 
-**Validation.** Tests in `apps/mcp-server` with the real model, on every check. The retrieval eval (FL-033) measures the quality of the vectors.
+**Validation.** Tests in `apps/mcp-server` with the real model under `pnpm eval`, locally and in the eval job. Two tests with no model on every check. The retrieval eval (FL-033) measures the quality of the vectors.
 
-**Completion evidence.** The commit, with the registry check in its message. The passing output of `pnpm check`. The two measured sizes, recorded next to the 745 MB figure in the [embeddings research](../../research/technical/embeddings.md).
+**Completion evidence.** The commit, with the registry check in its message. The passing output of `pnpm check` and of `pnpm eval`, and the addresses of the two eval job runs. The two measured sizes, recorded next to the 745 MB figure in the [embeddings research](../../research/technical/embeddings.md).
 
 ### FL-030: Rank fusion as a pure function
 
@@ -307,7 +311,7 @@ export declare function getFactHistory(
 4. When the fact's predicate is single-valued in the domain, it also reads every fact with the same subject and predicate, with the time filter `'all'`.
 5. Each fact appears once.
 6. Each entry carries the fact with its subject, object entity and sources, and the audit entries whose target is that fact, in the order they occurred.
-7. Each audit entry comes with the explanation of the change it records: the content of the source that the entry's `sourceId` names, or `null` when the entry names no source or the source has no content. The `get_fact_history` tool returns it as `explanation` ([`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "`get_fact_history`").
+7. Each audit entry is returned as an `ExplainedAuditEntry` ([`INTERFACES.md`](../../architecture/INTERFACES.md), "Use cases"): the entry with `explanation`, the content of the source that explains the change, read with `MemoryStore.getSource`, or `null` when the entry names no source or the source has no content. The `get_fact_history` tool returns it as `explanation` ([`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "`get_fact_history`").
 8. Entries are ordered by the start of valid time, with an unknown start first, then by the time the fact was recorded, then by identifier.
 9. The use case makes no write. A storage error is returned as it is.
 
@@ -316,7 +320,7 @@ export declare function getFactHistory(
 2. Every read uses the time filter `'all'`, because a history includes invalidated facts. This is the one read that the time predicate does not filter ([`.claude/rules/data.md`](../../../.claude/rules/data.md)).
 3. The walk keeps the set of facts already reached, so it ends even if the data held a cycle.
 4. The limit passed to `listFacts` is a named constant.
-5. The source that explains a change is not always a source of the fact it explains: the note that explains a retraction is linked to no fact. `INTERFACES.md` gives `FactHistoryEntry` with audit entries only, and `MemoryStore` has no read of a source by identifier. This item settles how the explanation is read and where it sits in the result, and records both in `INTERFACES.md` before the code is written.
+5. The source that explains a change is not always a source of the fact it explains: the note that explains a retraction is linked to no fact. So the explanation is read with `MemoryStore.getSource` for the source each entry names, which returns a source whether or not a fact is linked to it (FL-007). A source named by several entries is read once.
 
 **Constraints.**
 - [ADR 0006](../../architecture/adr/0006-facts-change-only-by-invalidation.md): a fact has at most one successor link, set when it is invalidated.
@@ -330,7 +334,7 @@ export declare function getFactHistory(
 
 **Validation.** Unit tests in `graph-rag` with the in-memory store, with memory built by change sets committed to the store, on every check.
 
-**Completion evidence.** The commit, the passing output of `pnpm check`, and the section of `INTERFACES.md` that records how the explanation is read.
+**Completion evidence.** The commit, and the passing output of `pnpm check`.
 
 ### FL-033: Retrieval eval: harness and data
 
@@ -338,7 +342,7 @@ export declare function getFactHistory(
 |---|---|
 | Status | Pending |
 | Phase | 1 |
-| Depends on | FL-016, FL-017, FL-026, FL-031 |
+| Depends on | FL-008, FL-016, FL-017, FL-026, FL-031 |
 | Requirements | REQ-05 |
 | Components | `apps/mcp-server` (evals), `@factloom/graph-rag` (one export) |
 
@@ -353,7 +357,7 @@ The work is in two items. This one builds the data, the harness and the metrics,
 **Scope.**
 - The eval data: the 60 statements and 40 questions of the spike's `cases.json`, with their labels unchanged, copied into the eval. Each statement gains a subject entity, and an object entity where the statement names one, written by hand before any variant is run.
 - An eval-only domain with one multi-valued predicate, so that loading the statements causes no conflict.
-- A harness that loads the statements as facts through `recordFacts` into a SQLite store with the local embedder, then asks each question through `recall` with given settings.
+- A harness that loads the statements as facts through `recordFacts` (FL-008) into a SQLite store with the local embedder, then asks each question through `recall` with given settings.
 - The metrics, and a command that prints them for a list of settings.
 - One export of `@factloom/graph-rag` that runs recall with explicit settings.
 
@@ -375,7 +379,8 @@ The work is in two items. This one builds the data, the harness and the metrics,
 2. `recall` as specified in `INTERFACES.md` takes no settings. This item adds one export to `@factloom/graph-rag` that runs recall with explicit settings, the internal function of FL-031, and adds it to [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md).
 3. The run is deterministic: a fixed clock, a counting identifier generator, a fixed order of statements and questions, a new database for each run.
 4. A root script, `pnpm eval:retrieval`, runs every entry of the list and prints the table.
-5. A test that runs in `pnpm check` runs the provisional settings only and asserts that the three numbers are printed and lie between 0 and 1. It sets no bar; FL-057 does.
+5. A test that runs under `pnpm eval`, not under `pnpm check`, runs the provisional settings only and asserts that the three numbers are printed and lie between 0 and 1. It sets no bar; FL-057 does. It needs the real embedding model, which `pnpm check` does not load ([`TESTING.md`](../../architecture/TESTING.md)).
+6. The metric functions and the test "a lane with weight zero contributes no fact", which can use the fake embedder, run under `pnpm check`.
 
 **Constraints.**
 - [ADR 0017](../../architecture/adr/0017-rank-fusion-in-typescript-with-time-filtering-in-each-lane.md) and [ADR 0008](../../architecture/adr/0008-vector-search-on-a-plain-table.md).
@@ -387,13 +392,13 @@ The work is in two items. This one builds the data, the harness and the metrics,
 - [ ] Two runs of `pnpm eval:retrieval` in a row print identical tables.
 - [ ] A test named "the eval data keeps the labels of the spike" compares the statements, questions and labels with `spikes/embedding-retrieval/cases.json` and passes.
 - [ ] Unit tests of the metric functions pass, each against a hand-computed value written in the test: "counts a question as answered at rank 1 only when its fact is first", "gives the reciprocal of the rank of the first right fact", "gives 0 when no right fact is in the first ten".
-- [ ] A test named "a lane with weight zero contributes no fact" passes: with the keyword and graph weights at 0, the facts returned for a question equal those of the vector lane for the same limit.
-- [ ] A test named "the retrieval eval runs with the provisional settings" passes in `pnpm check`.
-- [ ] `pnpm check` passes.
+- [ ] A test named "a lane with weight zero contributes no fact" passes in `pnpm check`, with the fake embedder: with the keyword and graph weights at 0, the facts returned for a question equal those of the vector lane for the same limit.
+- [ ] A test named "the retrieval eval runs with the provisional settings" passes under `pnpm eval`.
+- [ ] `pnpm check` passes with no network access and no embedding model in the cache.
 
-**Validation.** The eval command, run by hand. The check-time test on every check, with the real embedder and a SQLite database and no LLM.
+**Validation.** The eval command, run by hand. The eval-time test under `pnpm eval` and in the eval job of FL-002, with the real embedder, a SQLite database and no LLM. The metric tests on every check.
 
-**Completion evidence.** The commit with the eval and its data. The printed table of `pnpm eval:retrieval`. The passing output of `pnpm check`.
+**Completion evidence.** The commit with the eval and its data. The printed table of `pnpm eval:retrieval`, with the machine it ran on. The passing output of `pnpm check` and of `pnpm eval`.
 
 ### FL-057: Lane weights chosen by measurement
 
@@ -409,13 +414,13 @@ The work is in two items. This one builds the data, the harness and the metrics,
 
 **Background.** [ADR 0017](../../architecture/adr/0017-rank-fusion-in-typescript-with-time-filtering-in-each-lane.md) left the lane weights undecided, and FL-031 uses provisional values: every weight 1 and a fusion constant of 60. In the [spike](../../../spikes/embedding-retrieval/README.md), equal-weight fusion of a keyword ranking and an embedding ranking scored below the embedding ranking alone at recall@1, and weighted fusion was not tried. FL-033 built the harness and measured the provisional settings. This item is the second part of the original FL-033, split off so that building the harness and deciding with it are separate sessions. Open questions Q-27 (the fusion constant and the number of candidates per lane) and Q-28 (whether the graph lane helps) are answered here as far as this set can answer them.
 
-**Outcome.** `recall` has default settings chosen by measurement. A test on every check fails if the defaults stop meeting the bar. The next engineer reads the reason for each number in one ADR.
+**Outcome.** `recall` has default settings chosen by measurement. A test under `pnpm eval` fails if the defaults stop meeting the bar. The next engineer reads the reason for each number in one ADR.
 
 **Scope.**
 - The list of variants, added to the eval of FL-033.
 - The choice of default lane weights, lane list length and fusion constant, and the change of the settings constant of FL-031.
 - A new ADR, and its row in [`DECISIONS.md`](../../architecture/DECISIONS.md).
-- The check-time test of the acceptance bar.
+- The test of the acceptance bar, under `pnpm eval`.
 
 **Non-goals.**
 - Changing the harness, the data or the metrics of FL-033.
@@ -427,13 +432,14 @@ The work is in two items. This one builds the data, the harness and the metrics,
 1. The list of variants is fixed in the eval before the first run of this item. It contains at least: the vector lane alone; the keyword lane alone; vector and keyword at equal weight; vector at weight 1 with keyword at each of 0.25 and 0.5; each of those with the graph lane at weight 0, 0.25, 0.5 and 1; and the chosen defaults with a fusion constant of 1 as well as 60.
 2. The default settings of `recall` are set to the chosen variant.
 3. **Acceptance bar.** With the default settings, hybrid recall must not score below the vector lane alone at recall@1 on this set. If it does, the ADR says why those defaults were chosen all the same.
-4. A new ADR records: the variants and their numbers, the chosen lane weights, lane list length and fusion constant, the reason, and the limits of the measurement. It takes the next free number in `docs/architecture/adr/` and a row in `DECISIONS.md`. ADR 0017 is not edited.
+4. A new ADR records: the variants and their numbers, the platform they were measured on (operating system, processor architecture, Node version and the embedding model's revision), the chosen lane weights, lane list length and fusion constant, the reason, and the limits of the measurement. It takes the next free number in `docs/architecture/adr/` and a row in `DECISIONS.md`. ADR 0017 is not edited.
 5. The rows Q-27 and Q-28 of [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) are brought up to date with what was measured and what stays open.
 
 **Technical requirements.**
 1. The variants are data in `apps/mcp-server/evals/`, passed to the harness of FL-033. `pnpm eval:retrieval` prints one row for each.
-2. The test that runs in `pnpm check` runs two variants only, the defaults and the vector lane alone, so that the check stays short.
+2. The test of the bar runs under `pnpm eval`, not under `pnpm check`, because it needs the real embedding model. It runs two variants only, the defaults and the vector lane alone.
 3. The default settings stay one typed constant in `@factloom/graph-rag`. The signature of `recall` does not change.
+4. The numbers come from a real model whose floating-point output can differ between platforms, so they are recorded on one named platform, the runner of the eval job of FL-002. The committed expectation holds those numbers with a tolerance stated beside them, of at least one question in 40 (0.025) for recall@1 and recall@5. The test does not assert that two platforms give identical numbers.
 
 **Constraints.**
 - [ADR 0017](../../architecture/adr/0017-rank-fusion-in-typescript-with-time-filtering-in-each-lane.md).
@@ -442,11 +448,12 @@ The work is in two items. This one builds the data, the harness and the metrics,
 
 **Acceptance criteria.**
 - [ ] `pnpm eval:retrieval` exits with code 0 and prints one row for each variant in requirement 1, with recall@1, recall@5 and MRR@10, and the same three numbers for each question group.
-- [ ] A test named "the default settings meet the bar" passes in `pnpm check`. It asserts that the numbers for the defaults equal those recorded in the ADR, and that recall@1 with the defaults is not below recall@1 for the vector lane alone. If the ADR records an exception under requirement 3, the second assertion is replaced by the two recorded numbers, and the ADR section that gives the reason is named in the test.
-- [ ] The new ADR exists, is listed in `DECISIONS.md`, and its numbers equal the output of `pnpm eval:retrieval` at the same commit.
+- [ ] A test named "the default settings meet the bar" passes under `pnpm eval`. It asserts that recall@1 with the defaults is not below recall@1 for the vector lane alone, both computed in the same run, and that the numbers for the defaults lie within the stated tolerance of those recorded in the ADR. If the ADR records an exception under requirement 3, the first assertion is replaced by the two recorded numbers with the tolerance, and the ADR section that gives the reason is named in the test.
+- [ ] The eval job of FL-002, started by hand, passes with that test. Its address is recorded, and the platform it names equals the one in the ADR.
+- [ ] The new ADR exists, is listed in `DECISIONS.md`, and its numbers equal the output of `pnpm eval:retrieval` on the named platform at the same commit.
 - [ ] The unit tests of `recall` (FL-031) still pass with the new default settings.
 - [ ] `pnpm check` passes.
 
-**Validation.** The eval command, run by hand to choose the defaults. The check-time test on every check, with the real embedder and a SQLite database and no LLM.
+**Validation.** The eval command, run to choose the defaults. The test of the bar under `pnpm eval` and in the eval job, with the real embedder, a SQLite database and no LLM.
 
-**Completion evidence.** The commit or commits: the variants, the changed default settings, the new ADR. The printed table of `pnpm eval:retrieval`. The passing output of `pnpm check`. The rows Q-27 and Q-28 as revised.
+**Completion evidence.** The commit or commits: the variants, the changed default settings, the new ADR. The printed table of `pnpm eval:retrieval` with its platform. The passing output of `pnpm check` and the address of the eval job run. The rows Q-27 and Q-28 as revised.
