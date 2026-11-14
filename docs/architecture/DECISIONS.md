@@ -4,7 +4,7 @@ The index of architecture decision records. Each record is short: what was decid
 
 | No. | Decision | Status |
 |---|---|---|
-| [0001](adr/0001-typescript-pnpm-monorepo-with-four-packages.md) | TypeScript in one pnpm monorepo with four packages | Accepted |
+| [0001](adr/0001-typescript-pnpm-monorepo-with-four-packages.md) | TypeScript in one pnpm monorepo with three packages and one app | Accepted |
 | [0002](adr/0002-built-from-scratch.md) | Built from scratch, not on an existing memory project | Accepted |
 | [0003](adr/0003-dependencies-point-inward-with-manual-injection.md) | Dependencies point inward and are passed as arguments | Accepted |
 | [0004](adr/0004-zod-schemas-and-result-values.md) | Zod schemas are the source of types, and failures are Result values | Accepted |
@@ -22,6 +22,7 @@ The index of architecture decision records. Each record is short: what was decid
 | [0016](adr/0016-mcp-stdio-server-with-five-tools.md) | A stdio MCP server with five tools | Accepted |
 | [0017](adr/0017-rank-fusion-in-typescript-with-time-filtering-in-each-lane.md) | Rank fusion in TypeScript, with the time filter inside each lane | Accepted |
 | [0018](adr/0018-apache-2-licence.md) | Apache-2.0 licence | Accepted |
+| [0019](adr/0019-writes-containing-a-secret-are-refused.md) | Writes that contain a recognisable secret are refused | Accepted |
 
 ## How the research questions were settled
 
@@ -44,7 +45,7 @@ The research left twelve decisions open in [`OPEN-QUESTIONS.md`](../research/OPE
 
 ## Proposed in research and left out
 
-Each of these was recommended by a research document for the first schema and is deferred, because it is an added column or table and nothing uses it yet. They are listed under "Planned additions" in [`SCHEMA.md`](SCHEMA.md).
+Each of these was recommended by a research document for the first schema and is deferred, because it is an added column or table and nothing uses it yet. Only the first, and the usage counters in the second, are under "Planned additions" in [`SCHEMA.md`](SCHEMA.md). The others are recorded here only, and each is designed when the need named beside it arrives.
 
 - Entity merge and alias tables: phase 3.
 - Usage counters, a retrieval log and a pinned flag: phase 3.
@@ -52,3 +53,7 @@ Each of these was recommended by a research document for the first schema and is
 - A qualifier in the conflict key: when a domain needs it.
 - Nine entity types and fourteen predicates: the first domain starts with the few its eval scenarios use.
 - A separate supersession table with four kinds: the kind is recorded in the audit log.
+
+## Confirmed with the owner
+
+Before the roadmap was written, the owner confirmed eight points of this design in a review session on 2026-11-14: that facts change only by invalidation (0006); that conflicts are keyed by subject and predicate with specific predicates (0010); that phase 1 enforces the single-value rule but leaves resolving a conflict to the agent, with detection and resolution in phase 2; one required, configured namespace per server (0011); five MCP tools with one tool for a fact that is wrong or out of date (0016); TypeScript 7 with Biome and no build step in development (0015); keeping source text and refusing writes that contain a recognisable secret (0019); and the size of the local embedding runtime for phase 1 (0014).
