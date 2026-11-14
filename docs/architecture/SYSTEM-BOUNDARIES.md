@@ -39,7 +39,7 @@ Each package exports only what another package needs. Everything else stays priv
 
 | Group | Exports |
 |---|---|
-| Result | `Result`, `ok`, `err`, `ERROR_CODES`, `ErrorCode`, `FactloomError` |
+| Result | `Result`, its two halves `Success` and `Failure`, `ok`, `err`, `ERROR_CODES`, `ErrorCode`, `FactloomError` |
 | Schemas and types | The Zod schemas and derived types for `Timestamp`, `Entity`, `Fact`, `FactObject`, `Source`, `Trigger`, `Operation`, `ReasonCode`, `AuditAction`, `AuditEntry`, `TimeFilter`, `Domain`, `PredicateDefinition`, `ChangeSet`, `Change`, `CommitReceipt`, `FactWithSources` |
 | Time | `toTimestamp`, `parseDateInput` |
 | Names | `normaliseEntityName`, so that every store matches entity names the same way |
