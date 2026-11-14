@@ -59,7 +59,7 @@ The SQLite adapter has a few tests of its own for what the interface does not de
 
 ## Smoke test
 
-Starts the MCP server as a child process on a temporary database, with a fake LLM, and over stdio: lists the tools, records a fact, restarts the process, and recalls the fact. This is the test behind "runs from one SQLite file with no other service, and data persists across restarts".
+Starts the MCP server as a child process on a temporary database, with no API key, and over stdio: lists the tools, records a fact with `record_fact`, restarts the process, recalls the fact, and checks that `remember` answers `llm_failed`. This is the test behind "runs from one SQLite file with no other service, and data persists across restarts".
 
 Two projects studied in the research did not start on a fresh install because a dependency had moved ([evaluations](../research/evaluations/competitive-analysis.md)). The smoke test runs against exact pinned versions for that reason.
 
@@ -96,9 +96,9 @@ expect:
 
 Inputs go through the same use cases the MCP server calls. Assertions do not go through `recall`, which takes a free-text question and ranks its answers. An `ask` reads memory with `MemoryStore.listFacts` for the subject and predicate, with the as-of and known-at dates as its time filter. A `history` reads with the `getFactHistory` use case, starting from a fact that `listFacts` returned. Values are normalised and compared exactly. There is no natural-language answer and no LLM judge.
 
-Where the scenario files live in the repository is decided in the roadmap stage.
+The scenario files, the extraction cases, the recordings and the runner live in `apps/mcp-server/evals/`. The app is the composition root, and so the one place that may import the storage adapter, the use cases and the LLM and embedding implementations together.
 
-Start with about ten scenarios and add one whenever a bug is found. A restatement is handled by a deterministic rule from phase 1, so its scenario can run before phase 2. The first ones cover, deliberately:
+Start with the eleven scenarios below and add one whenever a bug is found. A restatement is handled by a deterministic rule from phase 1, so its scenario can run before phase 2. The first ones cover, deliberately:
 
 | Case | What must happen |
 |---|---|
