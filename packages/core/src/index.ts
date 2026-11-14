@@ -48,3 +48,9 @@ export {
   TimeFilterSchema,
 } from './fact.ts';
 export type { LlmClient, LlmTask } from './llm-client.ts';
+export { normaliseEntityName } from './entity-name.ts';
+export { createInMemoryStore } from './in-memory-store.ts';
+export type { MemoryStore } from './memory-store.ts';
+export type { OperationDeps } from './operation-deps.ts';
+export type { ValidPeriod } from './valid-period.ts';
+export { matchesTimeFilter, periodsOverlap } from './valid-period.ts';

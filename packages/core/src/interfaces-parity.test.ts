@@ -20,6 +20,8 @@ import type {
   TimeFilter,
 } from './fact.ts';
 import type { LlmClient } from './llm-client.ts';
+import type { MemoryStore } from './memory-store.ts';
+import type { OperationDeps } from './operation-deps.ts';
 import type { Result } from './result.ts';
 import type { Timestamp } from './timestamp.ts';
 
@@ -170,6 +172,58 @@ interface RefEmbedder {
   ): Promise<Result<readonly Float32Array[]>>;
 }
 
+interface RefMemoryStore {
+  commit(changeSet: RefChangeSet): Promise<Result<RefCommitReceipt>>;
+  findEntities(query: {
+    readonly namespace: RefNamespace;
+    readonly name: string;
+    readonly type: string | null;
+  }): Promise<Result<readonly RefEntity[]>>;
+  getFact(query: {
+    readonly namespace: RefNamespace;
+    readonly factId: RefFactId;
+  }): Promise<Result<RefFactWithSources | null>>;
+  listFacts(query: {
+    readonly namespace: RefNamespace;
+    readonly subjectEntityId: RefEntityId | null;
+    readonly predicate: string | null;
+    readonly touchingEntityIds: readonly RefEntityId[] | null;
+    readonly supersededByFactId: RefFactId | null;
+    readonly time: RefTimeFilter | 'live' | 'all';
+    readonly limit: number;
+  }): Promise<Result<readonly RefFactWithSources[]>>;
+  searchFactsByVector(query: {
+    readonly namespace: RefNamespace;
+    readonly vector: Float32Array;
+    readonly time: RefTimeFilter;
+    readonly limit: number;
+  }): Promise<Result<readonly RefFactWithSources[]>>;
+  searchFactsByKeyword(query: {
+    readonly namespace: RefNamespace;
+    readonly text: string;
+    readonly time: RefTimeFilter;
+    readonly limit: number;
+  }): Promise<Result<readonly RefFactWithSources[]>>;
+  getSource(query: {
+    readonly namespace: RefNamespace;
+    readonly sourceId: RefSourceId;
+  }): Promise<Result<RefSource | null>>;
+  listAuditEntries(query: {
+    readonly namespace: RefNamespace;
+    readonly targetKind: RefAuditEntry['targetKind'];
+    readonly targetId: string;
+  }): Promise<Result<readonly RefAuditEntry[]>>;
+  close(): Promise<void>;
+}
+
+type RefOperationDeps = {
+  readonly store: RefMemoryStore;
+  readonly embedder: RefEmbedder;
+  readonly domain: RefDomain;
+  readonly now: () => Timestamp;
+  readonly newId: () => string;
+};
+
 // --- The check: every line must be `true`, or this file does not compile ---
 
 const parity: {
@@ -195,6 +249,8 @@ const parity: {
   readonly FactWithSources: Same<FactWithSources, RefFactWithSources>;
   readonly LlmClient: Same<LlmClient, RefLlmClient>;
   readonly Embedder: Same<Embedder, RefEmbedder>;
+  readonly MemoryStore: Same<MemoryStore, RefMemoryStore>;
+  readonly OperationDeps: Same<OperationDeps, RefOperationDeps>;
 } = {
   Namespace: true,
   EntityId: true,
@@ -218,12 +274,14 @@ const parity: {
   FactWithSources: true,
   LlmClient: true,
   Embedder: true,
+  MemoryStore: true,
+  OperationDeps: true,
 };
 
 describe('the types derived from the schemas', () => {
   it('have the shapes that INTERFACES.md commits to', () => {
     // The real check is the type of `parity` above, made by the compiler.
     expect(Object.values(parity).every((same) => same === true)).toBe(true);
-    expect(Object.keys(parity)).toHaveLength(22);
+    expect(Object.keys(parity)).toHaveLength(24);
   });
 });
