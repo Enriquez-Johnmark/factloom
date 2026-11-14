@@ -5,14 +5,14 @@ paths:
 
 # Data rules
 
-The design is in `docs/architecture/SCHEMA.md`. These are the rules to follow when writing storage code.
+The design is in `docs/architecture/SCHEMA.md`. These are the rules to follow when writing storage code. The in-memory store in `packages/core` follows the same rules, apart from those about SQL.
 
 ## Facts are bi-temporal
 
 - Every fact has `valid_from` and `valid_to` (when it was true) and `created_at` and `invalidated_at` (when Factloom believed it). Never drop one from a table or a query.
 - Both periods are half-open: the start is included and the end is not.
 - A missing `valid_from` or `valid_to` is `NULL`. Never store a sentinel date.
-- Every read that returns facts applies the whole time predicate. Do not write a query that returns facts without it, except fact history.
+- Every read that returns facts applies the whole time predicate. Do not write a query that returns facts without it. There are two exceptions: `listFacts` with `time: 'all'`, which serves fact history, and `getFact` by identifier.
 
 ```sql
     f.created_at <= :known_at
@@ -23,8 +23,9 @@ AND (f.valid_to   IS NULL OR f.valid_to   >  :valid_at)
 
 ## Invalidate, never delete
 
-- Never `DELETE` a fact, an entity, a source or an audit entry.
+- Never `DELETE` a fact, an entity, a source, a source link or an audit entry.
 - The only `UPDATE` to a fact sets `invalidated_at` once, with `superseded_by_fact_id` if there is a replacement. An edit is a new row.
+- Never `UPDATE` an entity, a source, a source link or an audit entry. A source link can be added to a live fact; it is never changed or removed.
 - Do not weaken or drop the triggers that enforce this. Purge is the one exception and has its own operation.
 
 ```sql
@@ -35,8 +36,14 @@ WHERE id = :id AND namespace = :namespace AND invalidated_at IS NULL;
 ## Sources and the audit log
 
 - Insert at least one `fact_source` row with every fact, in the same transaction.
-- Write one `audit_log` row per row inserted or invalidated, in the same transaction, sharing one `operation_id`.
-- Put identifiers and reasons in the audit log. Never put fact or source text in it.
+- Write one audit entry per change in the change set, in the same transaction, sharing one `operation_id`. Recording a fact with its source links and embedding is one change.
+- The audit log holds no free text. Explain a change with `reason_code`, from the fixed list in `core`, and `source_id`, the source whose content is the explanation. Put only identifiers and numbers in `detail`.
+
+## The single-value rule
+
+- For a single-valued predicate, no two live facts with the same subject and predicate may have overlapping valid periods. A missing bound is open. Periods that only touch do not overlap.
+- Check it inside the commit transaction, after applying the change set, for every fact recorded with `singleValued: true`. Fail the commit with `conflict` and the identifiers of the overlapping facts.
+- Never check it only before the commit. Two processes can share one file.
 
 ## Namespaces
 
@@ -53,7 +60,8 @@ WHERE id = :id AND namespace = :namespace AND invalidated_at IS NULL;
 - Always bind parameters. Never build SQL by joining strings with values.
 - Prepare each statement once and reuse it.
 - Keep SQL in `packages/storage`. No other package contains a statement or sees a row.
-- A `commit` is one transaction: every change in the change set applies, or none does.
+- A `commit` is one transaction, started with `BEGIN IMMEDIATE`: every change in the change set applies, or none does.
+- Set `foreign_keys = ON`, `journal_mode = WAL` and `busy_timeout` on every connection. Without the first, no `REFERENCES` clause is enforced.
 
 ```ts
 const insertFact = db.prepare(`INSERT INTO fact (id, namespace, ...) VALUES (@id, @namespace, ...)`);
