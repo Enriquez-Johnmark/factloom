@@ -8,6 +8,15 @@ The time filter is the reason. A `vec0` table rejects missing values and filters
 
 Measured on Linux with random vectors ([spike](../../../spikes/sqlite-vec-fts5/README.md)): the two methods returned the same ten nearest rows, and the ordinary table took about 10 ms for 10,000 vectors of 768 dimensions and about 120 ms for 100,000. Both are exact scans; `vec0` in the released version has no approximate index either.
 
+The chosen model has 384 dimensions ([ADR 0014](0014-local-embeddings-with-bge-small.md)), and there the ordinary table costs more against `vec0`. At 100,000 rows:
+
+| Dimensions | Plain table, no filter | `vec0`, no filter | Plain table, time filter |
+|---|---|---|---|
+| 768 | 129.8 ms | 106.6 ms | 121.3 ms |
+| 384 | 87.8 ms | 43.7 ms | 82.0 ms |
+
+So at 384 dimensions the plain table is about twice as slow as `vec0`: 82.0 ms with the time filter against 43.7 ms. That is the price of using one `WHERE` clause everywhere, and it is accepted at this size.
+
 ## Considered options
 
 - **`vec0` with time columns copied as integers.** Rejected for the bookkeeping described above.
