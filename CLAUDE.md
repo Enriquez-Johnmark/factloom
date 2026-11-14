@@ -18,6 +18,8 @@ Run `pnpm install` once. The spikes are outside the workspace; each runs from it
 | `pnpm format` | Rewrites files to the project format |
 | `pnpm eval` | Tests that need the real embedding model. None exist yet |
 
+Every push to `main` runs `pnpm check` on Linux and macOS arm64 (`.github/workflows/ci.yml`).
+
 ## Where things are
 
 | Need | Read |
