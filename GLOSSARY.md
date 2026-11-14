@@ -31,7 +31,7 @@ The named relationship a fact asserts, such as `uses_test_framework`. The set of
 _Avoid_: relation type, edge type, property
 
 **Single-valued predicate**:
-A predicate that can have only one current value for a subject at a time, so a new value conflicts with the old one. Any other predicate is **multi-valued**.
+A predicate that can have only one value for a subject at any moment, so two different values whose valid times overlap are a conflict. Any other predicate is **multi-valued**.
 _Avoid_: functional predicate, exclusive predicate
 
 **Statement**:
@@ -96,15 +96,19 @@ _Avoid_: deletion, expiry, removal
 
 **Supersession**:
 The link from an invalidated fact to the fact that replaced it.
-_Avoid_: replacement link, successor
+_Avoid_: replacement link
 
 **Revision**:
-A change to a fact's valid time or confidence. The fact is invalidated and superseded by a copy that carries the change.
+A change to a fact's valid time. The fact is invalidated and superseded by a copy that carries the change.
 _Avoid_: update, edit
 
 **Succession**:
 The world changed: a fact stopped being true and another became true. The earlier fact is revised to end, and the later fact is recorded.
-_Avoid_: update, replacement
+_Avoid_: update
+
+**Restatement**:
+New information that states a live fact again. The fact gains a source, and no second fact is recorded.
+_Avoid_: repeat, re-record
 
 **Correction**:
 The earlier fact was wrong. It is invalidated and superseded by the right fact.
@@ -118,6 +122,14 @@ _Avoid_: deletion, forget
 The rare, audited removal of the content of a source or fact, leaving a record that it existed. It exists for legal erasure and for secrets stored by mistake, and is the single exception to keeping everything.
 _Avoid_: delete, erase, forget
 
+**Operation**:
+One named kind of change to memory, such as a succession or a correction.
+_Avoid_: action (reserved for what happened to one item), command
+
+**Change set**:
+The changes that one operation makes to memory, applied together or not at all.
+_Avoid_: batch, transaction (reserved for the database)
+
 **Audit entry**:
 One record of one change to memory: what changed, when, why, and what triggered it.
 _Avoid_: log line, event, history row
@@ -127,14 +139,18 @@ What caused a change: an agent, a person, feedback, or a maintenance job.
 _Avoid_: actor, initiator, cause
 
 **Fact history**:
-Every fact ever recorded for one subject and predicate, with the audit entries that explain each change.
+The facts linked to a given fact by supersession, with the audit entries that explain each change. For a single-valued predicate it is every fact recorded for that subject and predicate.
 _Avoid_: version history, changelog
 
 ### Keeping memory true
 
 **Conflict**:
-Two facts about the same subject and predicate that cannot both be current.
+Two live facts with the same subject and single-valued predicate, and different objects, whose valid times overlap.
 _Avoid_: contradiction (use only for the detection technique), clash
+
+**Single-value rule**:
+No two live facts for the same subject and single-valued predicate may overlap in valid time.
+_Avoid_: uniqueness rule, overlap check
 
 **Self-correction**:
 Fixing wrong content: resolving a conflict or acting on feedback by succession, correction, or retraction. It needs new information.
@@ -167,6 +183,10 @@ _Avoid_: outdated fact, old fact
 **Orphaned fact**:
 A live fact left without something it depends on, such as a source whose content was purged or an anchor that no longer resolves.
 _Avoid_: dangling fact, broken fact
+
+**Archived fact**:
+A live fact left out of recall by default because it has not been used. Archiving is part of self-healing, in phase 3.
+_Avoid_: hidden fact, forgotten fact
 
 **Verification**:
 Checking a fact against its source again. Deterministic checks come first and an LLM is used last.
