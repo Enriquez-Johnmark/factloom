@@ -12,5 +12,7 @@ catalog:
   typescript: 7.0.2
   # Test runner.
   vitest: 5.1.0
+  # Reads the eval scenario files, which are YAML. Development only.
+  yaml: 2.9.1
   # Schemas and validation. Every data type is derived from a Zod schema.
   zod: 4.6.7

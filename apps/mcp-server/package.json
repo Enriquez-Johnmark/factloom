@@ -6,6 +6,10 @@
   "dependencies": {
     "@factloom/core": "workspace:*",
     "@factloom/graph-rag": "workspace:*",
-    "@factloom/storage": "workspace:*"
+    "@factloom/storage": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "yaml": "catalog:"
   }
 }
