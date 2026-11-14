@@ -17,7 +17,7 @@ One command, `pnpm check`, runs the format check, lint, type check and every tes
 
 ### Continuous integration
 
-Planned as a phase 1 work item; not yet built. `pnpm check` runs on Linux and on macOS arm64 on every push. Before anything is published, a job installs the packed server on a clean machine and starts it, which is requirement REQ-CA-08 of the [competitive analysis](../research/evaluations/competitive-analysis.md). The first run of the server downloads the embedding model, so that job needs network access and takes longer than later starts.
+Planned as work items; not yet built. `pnpm check` runs on Linux and on macOS arm64 on every push, from phase 0. Before anything is published, a job installs the packed server on a clean machine and starts it, which is requirement REQ-CA-08 of the [competitive analysis](../research/evaluations/competitive-analysis.md). The first run of the server downloads the embedding model, so that job needs network access and takes longer than later starts.
 
 ## Unit tests
 
@@ -59,7 +59,7 @@ The SQLite adapter has a few tests of its own for what the interface does not de
 
 ## Smoke test
 
-Starts the MCP server as a child process on a temporary database, with no API key, and over stdio: lists the tools, records a fact with `record_fact`, restarts the process, recalls the fact, and checks that `remember` answers `llm_failed`. This is the test behind "runs from one SQLite file with no other service, and data persists across restarts".
+Starts the MCP server as a child process on a temporary database, with no API key and with the fake embedder, through a test entry point that wires the same server, and over stdio: lists the tools, records a fact with `record_fact`, restarts the process, recalls the fact, and checks that `remember` answers `llm_failed`. This is the test behind "runs from one SQLite file with no other service, and data persists across restarts".
 
 Two projects studied in the research did not start on a fresh install because a dependency had moved ([evaluations](../research/evaluations/competitive-analysis.md)). The smoke test runs against exact pinned versions for that reason.
 
