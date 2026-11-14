@@ -71,6 +71,8 @@ CREATE TABLE fact (
 CREATE INDEX fact_subject_predicate ON fact (namespace, subject_entity_id, predicate);
 -- Graph lane: facts that point at an entity.
 CREATE INDEX fact_object_entity ON fact (namespace, object_entity_id) WHERE object_entity_id IS NOT NULL;
+-- Fact history: the facts that a given fact superseded.
+CREATE INDEX fact_superseded_by ON fact (superseded_by_fact_id) WHERE superseded_by_fact_id IS NOT NULL;
 
 -- Facts are never deleted, and the only change is one invalidation.
 CREATE TRIGGER fact_never_deleted BEFORE DELETE ON fact
