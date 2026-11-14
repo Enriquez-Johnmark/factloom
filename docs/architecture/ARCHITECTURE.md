@@ -31,7 +31,7 @@ Dependencies point inward, and only `apps/mcp-server` knows which concrete imple
 | `@factloom/storage` | `SqliteMemoryStore`, its SQL, and the migrations. The storage contract suite, until a second adapter exists | Decisions about facts. It enforces rules; it does not make choices |
 | `apps/mcp-server` | Tool definitions and handlers. Configuration. The Anthropic `LlmClient` and the local `Embedder`. The wiring | Rules about facts |
 
-Packages added later, each when its phase starts: `packages/maintenance` for product 2, `packages/adapters` when a second domain exists, a Postgres adapter, and `apps/api`.
+Packages added later, each when its phase starts: `packages/maintenance` for product 2, `packages/adapters` in phase 4, when the software development domain moves out of `graph-rag`, a Postgres adapter, and `apps/api`.
 
 ## How data flows
 
