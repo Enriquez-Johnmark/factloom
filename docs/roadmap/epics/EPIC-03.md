@@ -67,7 +67,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-012 | Storage contract suite: fixture, time, reads, commit and refusals | 0 | FL-007 | Completed |
-| FL-067 | Storage contract suite: single-value rule, namespaces and search lanes | 0 | FL-012, FL-056 | Pending |
+| FL-067 | Storage contract suite: single-value rule, namespaces and search lanes | 0 | FL-012, FL-056 | Completed |
 | FL-013 | Migration runner and the first migration | 1 | FL-001, FL-004, FL-005 | Pending |
 | FL-014 | SQLite store: opening, connection settings and commit | 1 | FL-002, FL-012, FL-013 | Pending |
 | FL-068 | SQLite single-value rule, error mapping and two writers on one file | 1 | FL-014, FL-067 | Pending |
@@ -214,7 +214,7 @@ What was found on the way:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 0 |
 | Depends on | FL-012, FL-056 |
 | Requirements | REQ-03, REQ-04, REQ-15, REQ-25, REQ-30 |
@@ -293,15 +293,43 @@ What was found on the way:
 - [Testing rules](../../../.claude/rules/testing.md): "Storage adapters share one contract suite", "Time cases are explicit".
 
 **Acceptance criteria.**
-- [ ] `pnpm test` runs all four groups against the in-memory store, and every case passes: those of FL-012, and S1 to S6, A1 to A4, N1 to N5, K1 to K5 and V1 to V6. The count of passing cases is recorded.
-- [ ] Case P1 is absent from the output of the run against the in-memory store, and `git grep -n "P1" -- packages/storage` shows it in the suite.
-- [ ] Each case in the list of [`TESTING.md`](../../architecture/TESTING.md), "The suite covers, as a minimum", maps to one or more case identifiers of FL-012 or of this item. The mapping is recorded in the suite's header comment.
-- [ ] Every correction made to the in-memory store while writing the cases is covered by a case and named in the commit message.
-- [ ] `pnpm check` exits 0.
+- [x] `pnpm test` runs all four groups against the in-memory store, and every case passes: those of FL-012, and S1 to S6, A1 to A4, N1 to N5, K1 to K5 and V1 to V6. The count of passing cases is recorded.
+- [x] Case P1 is absent from the output of the run against the in-memory store, and `git grep -n "P1" -- packages/storage` shows it in the suite.
+- [x] Each case in the list of [`TESTING.md`](../../architecture/TESTING.md), "The suite covers, as a minimum", maps to one or more case identifiers of FL-012 or of this item. The mapping is recorded in the suite's header comment.
+- [x] Every correction made to the in-memory store while writing the cases is covered by a case and named in the commit message.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Contract tests, run by `pnpm test` in `storage` against the in-memory store.
 
 **Completion evidence.** The commit, the passing `pnpm check` output, and the number of contract cases run. [`TESTING.md`](../../architecture/TESTING.md) is corrected if the suite's signature differs from the one it shows.
+
+**Recorded evidence.** Completed on 2026-11-14, in the commit `test(storage): add the single-value, namespace, keyword and vector groups to the contract suite`.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, ended with:
+
+```text
+ Test Files  16 passed (16)
+      Tests  235 passed (235)
+```
+
+Contract cases run against the in-memory store, all passing:
+
+| Group | Cases |
+|---|---|
+| Time, reads, commit and refusals | 41 |
+| Single-value rule and namespaces | 15: S1 to S6, A1 to A4, N1 to N5 |
+| Keyword lane | 5: K1 to K5 |
+| Vector lane | 6: V1 to V6 |
+| Total | 67 |
+
+P1, two stores on one file, is written and is registered only when the options give a function that opens two stores on one file. The in-memory store has no file, so P1 did not run here. Its first run is against the SQLite adapter (FL-068). Any acceptance criterion of this item that depends on P1 running is met only as far as that: the case exists and is not yet exercised.
+
+What was found on the way:
+
+- The suite found nothing to correct in the in-memory store.
+- The fixture can now be written a second time in another namespace, with a prefix on every identifier. The namespace cases and the "nothing from the other namespace" cases of both lanes use it.
+- K5 and V4 assert both directions: a search in one namespace returns none of the other's facts, and a search in the other returns only its own.
+- The suite's file has grown to about 1,200 lines after formatting. It is one file per the item's scope; splitting it by group is a tidy-up worth doing when the SQLite adapter starts to use it.
 
 ### FL-013: Migration runner and the first migration
 
