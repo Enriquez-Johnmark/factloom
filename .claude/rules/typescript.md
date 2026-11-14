@@ -8,8 +8,10 @@ paths:
 ## Compiler
 
 - `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitReturns` and `noFallthroughCasesInSwitch` are on. Do not turn one off or silence it with a comment.
-- Modules are `NodeNext`. Write relative imports with the `.ts` extension.
-- Use only syntax that can be erased, because Node runs the source directly: no `enum`, no `namespace`, no constructor parameter properties. Use a union of string literals in place of an enum.
+- Modules are `NodeNext`. Write relative imports with the `.ts` extension. `allowImportingTsExtensions` permits it.
+- Use only syntax that can be erased, because Node runs the source directly: no `enum`, no `namespace`, no constructor parameter properties. Use a union of string literals in place of an enum. `erasableSyntaxOnly` enforces it.
+- Import a type with `import type`. `verbatimModuleSyntax` enforces it.
+- These three options are listed in ADR 0015. Do not turn one off.
 
 ```ts
 export type Trigger = 'agent' | 'person' | 'feedback' | 'maintenance'; // yes
