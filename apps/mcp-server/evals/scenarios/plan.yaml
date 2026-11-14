@@ -1,0 +1,14 @@
+# A plan is not a fact about the present: the value in force is still returned.
+name: "A plan: an intended move to another deployment target"
+steps:
+  - at: 2026-01-10
+    remember: shop-api is deployed to Fly.io.
+  - at: 2026-04-02
+    remember: We plan to move shop-api to Kubernetes in June.
+expect:
+  - ask: { subject: { name: shop-api, type: repository }, predicate: deploys_to }
+    returns: [Fly.io]
+    must_not_return: [Kubernetes]
+  - history: { subject: { name: shop-api, type: repository }, predicate: deploys_to }
+    superseded: []
+    fact_rows: 1

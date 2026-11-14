@@ -1,0 +1,14 @@
+# The same fact stated again: one fact, with the second source attached.
+name: "Restatement: the package manager is stated twice"
+steps:
+  - at: 2026-01-10
+    remember: shop-api uses pnpm as its package manager.
+  - at: 2026-02-14
+    remember: "Reminder for new contributors: the package manager of shop-api is pnpm."
+expect:
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_package_manager }
+    returns: [pnpm]
+    sources: 2
+  - history: { subject: { name: shop-api, type: repository }, predicate: uses_package_manager }
+    superseded: []
+    fact_rows: 1

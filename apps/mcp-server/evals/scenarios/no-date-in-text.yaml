@@ -1,0 +1,10 @@
+# The text gives no date: the start is unknown, so the fact is returned for any earlier date.
+name: "No date in the text: a test framework with an unknown start"
+steps:
+  - at: 2026-04-20
+    remember: shop-api uses Vitest for its tests.
+expect:
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_test_framework, as_of: 2020-01-01 }
+    returns: [Vitest]
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_test_framework }
+    returns: [Vitest]

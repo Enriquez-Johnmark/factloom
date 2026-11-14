@@ -1,0 +1,21 @@
+# A fact is withdrawn with nothing to replace it: it is invalidated and no longer returned.
+name: "Retraction: a convention that was never followed"
+steps:
+  - at: 2026-01-10
+    remember: shop-api follows the convention squash merges.
+  - at: 2026-03-12
+    change_fact:
+      subject: { name: shop-api, type: repository }
+      predicate: follows_convention
+      value: squash merges
+      because: was_wrong
+      explanation: We never used squash merges here. That note described another repository.
+expect:
+  - ask: { subject: { name: shop-api, type: repository }, predicate: follows_convention }
+    returns: []
+  - ask:
+      { subject: { name: shop-api, type: repository }, predicate: follows_convention, known_at: 2026-02-01 }
+    returns: [squash merges]
+  - history: { subject: { name: shop-api, type: repository }, predicate: follows_convention }
+    superseded: []
+    fact_rows: 1

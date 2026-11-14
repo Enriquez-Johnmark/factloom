@@ -1,0 +1,14 @@
+# The same thing named under two entity types: the existing entity is reused.
+name: "A known name mentioned under a different entity type: a convention that is also a decision"
+steps:
+  - at: 2026-01-10
+    remember: shop-api follows the convention trunk-based development.
+  - at: 2026-02-20
+    remember: The decision trunk-based development has the status accepted.
+expect:
+  - ask: { subject: { name: shop-api, type: repository }, predicate: follows_convention }
+    returns: [trunk-based development]
+  - ask: { subject: { name: trunk-based development }, predicate: has_status }
+    returns: [accepted]
+  - entities: { name: trunk-based development }
+    count: 1

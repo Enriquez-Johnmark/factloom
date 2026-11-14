@@ -1,0 +1,17 @@
+# The earlier fact was wrong: it is invalidated and the right one replaces it for every date.
+name: "Correction: the database port was recorded wrongly"
+steps:
+  - at: 2026-01-10
+    remember: The local PostgreSQL for shop-api listens on port 5433.
+  - at: 2026-03-05
+    remember: "Correction: PostgreSQL has always listened on port 5432, not 5433. The earlier note was a typo."
+expect:
+  - ask: { subject: { name: PostgreSQL, type: dependency }, predicate: listens_on_port }
+    returns: ["5432"]
+    must_not_return: ["5433"]
+  - ask: { subject: { name: PostgreSQL, type: dependency }, predicate: listens_on_port, as_of: 2026-01-20 }
+    returns: ["5432"]
+  - ask: { subject: { name: PostgreSQL, type: dependency }, predicate: listens_on_port, known_at: 2026-02-01 }
+    returns: ["5433"]
+  - history: { subject: { name: PostgreSQL, type: dependency }, predicate: listens_on_port }
+    superseded: [{ from: "5433", kind: correction }]

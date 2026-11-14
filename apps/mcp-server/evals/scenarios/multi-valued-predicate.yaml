@@ -1,0 +1,13 @@
+# A predicate that can hold several values at once: both facts stay current.
+name: "Multi-valued predicate: two conventions at once"
+steps:
+  - at: 2026-01-10
+    remember: shop-api follows conventional commits.
+  - at: 2026-01-24
+    remember: shop-api also follows trunk-based development.
+expect:
+  - ask: { subject: { name: shop-api, type: repository }, predicate: follows_convention }
+    returns: [conventional commits, trunk-based development]
+  - history: { subject: { name: shop-api, type: repository }, predicate: follows_convention }
+    superseded: []
+    fact_rows: 2

@@ -1,0 +1,127 @@
+import { type Domain, err, ok, parseDateInput, type Result } from '@factloom/core';
+import { parse as parseYaml } from 'yaml';
+import { z } from 'zod';
+
+/** A full timestamp or a calendar date, as `parseDateInput` reads it. */
+const DateTextSchema = z.string().refine((text) => parseDateInput(text).ok, {
+  error: 'Expected a UTC timestamp such as 2026-03-15T09:30:00.000Z, or a calendar date such as 2026-03-15.',
+});
+
+const TextSchema = z.string().min(1);
+
+/** An entity, by its name and, where it matters, its type. */
+const SubjectSchema = z.strictObject({ name: TextSchema, type: TextSchema.optional() });
+
+const RememberStepSchema = z.strictObject({
+  at: DateTextSchema,
+  /** A text, as an agent would send it to the `remember` tool. */
+  remember: TextSchema,
+});
+
+const ChangeFactStepSchema = z.strictObject({
+  at: DateTextSchema,
+  /** A report that a stored fact was wrong or is no longer true. */
+  change_fact: z.strictObject({
+    subject: SubjectSchema,
+    predicate: TextSchema,
+    value: TextSchema,
+    because: z.enum(['was_wrong', 'no_longer_true']),
+    ended_at: DateTextSchema.optional(),
+    explanation: TextSchema,
+  }),
+});
+
+const StepSchema = z.union([RememberStepSchema, ChangeFactStepSchema]);
+
+const AskSchema = z.strictObject({
+  ask: z.strictObject({
+    subject: SubjectSchema,
+    predicate: TextSchema,
+    /** What was true in the world on this date. Default: now, the time of the last step. */
+    as_of: DateTextSchema.optional(),
+    /** What Factloom believed on this date. Default: now. */
+    known_at: DateTextSchema.optional(),
+  }),
+  /** The exact set of values expected. An empty list means nothing is returned. */
+  returns: z.array(TextSchema),
+  must_not_return: z.array(TextSchema).optional(),
+  /** The number of sources the one returned fact must have. */
+  sources: z.number().int().positive().optional(),
+});
+
+const HistorySchema = z.strictObject({
+  history: z.strictObject({ subject: SubjectSchema, predicate: TextSchema }),
+  /** Each value that was superseded, and how. An empty list means nothing was. */
+  superseded: z.array(
+    z.strictObject({ from: TextSchema, kind: z.enum(['succession', 'correction', 'revision']) }),
+  ),
+  /** The number of facts ever recorded for the subject and predicate. */
+  fact_rows: z.number().int().nonnegative().optional(),
+});
+
+const EntitiesSchema = z.strictObject({
+  entities: z.strictObject({ name: TextSchema }),
+  /** The number of entities, of any type, that have the name. Shows that an entity was reused. */
+  count: z.number().int().nonnegative(),
+});
+
+const ExpectSchema = z.union([AskSchema, HistorySchema, EntitiesSchema]);
+
+/** One timeline scenario: dated inputs, then what memory must hold afterwards. */
+export const ScenarioSchema = z
+  .strictObject({
+    name: TextSchema,
+    steps: z.array(StepSchema).min(1),
+    expect: z.array(ExpectSchema).min(1),
+  })
+  .check((context) => {
+    const times = context.value.steps.map((step) => parseDateInput(step.at));
+    for (let index = 1; index < times.length; index += 1) {
+      const earlier = times[index - 1];
+      const later = times[index];
+      if (earlier?.ok && later?.ok && later.value < earlier.value) {
+        context.issues.push({
+          code: 'custom',
+          message: `Step ${index + 1} is dated before step ${index}. Steps must be in order of time.`,
+          input: context.value,
+        });
+      }
+    }
+  });
+export type Scenario = z.infer<typeof ScenarioSchema>;
+
+/** Reads one scenario from the text of its YAML file. */
+export function parseScenario(yamlText: string): Result<Scenario> {
+  let raw: unknown;
+  try {
+    raw = parseYaml(yamlText);
+  } catch (cause) {
+    return err('invalid_input', 'The scenario file is not valid YAML.', { cause });
+  }
+  const parsed = ScenarioSchema.safeParse(raw);
+  if (!parsed.success)
+    return err('invalid_input', `The scenario is not valid. ${z.prettifyError(parsed.error)}`);
+  return ok(parsed.data);
+}
+
+/** Lists what a scenario names that the domain does not have: predicates and entity types. */
+export function findNamesOutsideDomain(scenario: Scenario, domain: Domain): string[] {
+  const predicates = new Set(domain.predicates.map((predicate) => predicate.name));
+  const problems: string[] = [];
+  const check = (place: string, subject: { type?: string | undefined }, predicate: string): void => {
+    if (!predicates.has(predicate))
+      problems.push(`${place}: the predicate "${predicate}" is not in the domain`);
+    if (subject.type !== undefined && !domain.entityTypes.includes(subject.type)) {
+      problems.push(`${place}: the entity type "${subject.type}" is not in the domain`);
+    }
+  };
+  scenario.steps.forEach((step, index) => {
+    if ('change_fact' in step)
+      check(`step ${index + 1}`, step.change_fact.subject, step.change_fact.predicate);
+  });
+  scenario.expect.forEach((entry, index) => {
+    if ('ask' in entry) check(`expect ${index + 1}`, entry.ask.subject, entry.ask.predicate);
+    if ('history' in entry) check(`expect ${index + 1}`, entry.history.subject, entry.history.predicate);
+  });
+  return problems;
+}

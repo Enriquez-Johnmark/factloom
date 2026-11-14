@@ -1,0 +1,18 @@
+# The world changed: the old fact ends and the new one is current.
+name: "Succession: the test framework was switched"
+steps:
+  - at: 2026-01-10
+    remember: We use Jest for the unit tests in shop-api.
+  - at: 2026-04-02
+    remember: We switched the unit tests of shop-api from Jest to Vitest on 26 March 2026.
+expect:
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_test_framework }
+    returns: [Vitest]
+    must_not_return: [Jest]
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_test_framework, as_of: 2026-02-01 }
+    returns: [Jest]
+  - ask:
+      { subject: { name: shop-api, type: repository }, predicate: uses_test_framework, known_at: 2026-02-01 }
+    returns: [Jest]
+  - history: { subject: { name: shop-api, type: repository }, predicate: uses_test_framework }
+    superseded: [{ from: Jest, kind: succession }]

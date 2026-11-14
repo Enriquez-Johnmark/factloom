@@ -1,0 +1,12 @@
+# The text gives the date: the fact is valid from that date, not from when it was recorded.
+name: "A date in the text: the move to pnpm is dated"
+steps:
+  - at: 2026-04-20
+    remember: shop-api moved to pnpm as its package manager on 15 March 2026.
+expect:
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_package_manager, as_of: 2026-03-14 }
+    returns: []
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_package_manager, as_of: 2026-03-15 }
+    returns: [pnpm]
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_package_manager }
+    returns: [pnpm]

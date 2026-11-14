@@ -1,0 +1,21 @@
+# An older fact learned after the current one. One fits before it and is recorded as an
+# ended fact. The other overlaps a live fact for a single-valued predicate and is not recorded.
+name: "Older fact arriving late: earlier deployment targets"
+steps:
+  - at: 2026-03-01
+    remember: Since 1 February 2025, shop-api has been deployed to Fly.io.
+  - at: 2026-03-10
+    remember: For the record, from 1 January 2024 until 1 February 2025 shop-api was deployed to Heroku.
+  - at: 2026-03-20
+    remember: Someone mentioned that shop-api was deployed to Render from June 2025 to September 2025.
+expect:
+  - ask: { subject: { name: shop-api, type: repository }, predicate: deploys_to }
+    returns: [Fly.io]
+  - ask: { subject: { name: shop-api, type: repository }, predicate: deploys_to, as_of: 2024-06-01 }
+    returns: [Heroku]
+  - ask: { subject: { name: shop-api, type: repository }, predicate: deploys_to, as_of: 2025-07-15 }
+    returns: [Fly.io]
+    must_not_return: [Render]
+  - history: { subject: { name: shop-api, type: repository }, predicate: deploys_to }
+    superseded: []
+    fact_rows: 2

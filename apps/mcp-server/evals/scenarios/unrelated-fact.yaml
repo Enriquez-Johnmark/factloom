@@ -1,0 +1,16 @@
+# A new fact about the same subject under another predicate: nothing is invalidated.
+name: "Unrelated fact about the same subject: a package manager does not replace a test framework"
+steps:
+  - at: 2026-01-10
+    remember: shop-api runs its tests with Vitest.
+  - at: 2026-02-03
+    remember: shop-api installs its dependencies with pnpm.
+expect:
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_test_framework }
+    returns: [Vitest]
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_package_manager }
+    returns: [pnpm]
+  - history: { subject: { name: shop-api, type: repository }, predicate: uses_test_framework }
+    superseded: []
+  - history: { subject: { name: shop-api, type: repository }, predicate: uses_package_manager }
+    superseded: []
