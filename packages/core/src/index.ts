@@ -7,3 +7,5 @@ export const corePackageName = '@factloom/core';
 
 export type { ErrorCode, FactloomError, Failure, Result, Success } from './result.ts';
 export { ERROR_CODES, err, ok } from './result.ts';
+export type { Timestamp } from './timestamp.ts';
+export { parseDateInput, TimestampSchema, toTimestamp } from './timestamp.ts';
