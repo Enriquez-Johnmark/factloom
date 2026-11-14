@@ -16,19 +16,19 @@ Its first use is memory for coding agents, Claude Code and OpenAI Codex, through
 ```
 packages/
   core/         types, schemas, interfaces, the Result type, fact operations
-  graph-rag/    product 1 use cases: remember, recall, fact history
+  graph-rag/    product 1 use cases: remember, change a fact, recall, fact history
   storage/      the SQLite adapter for the storage interface
 apps/
   mcp-server/   the MCP server, and the composition root
 ```
 
-Dependencies point inward. `core` imports from no other package. `graph-rag` and `storage` import from `core` and not from each other. Only `apps/mcp-server` knows which concrete implementations exist. The exact rules are in [`SYSTEM-BOUNDARIES.md`](SYSTEM-BOUNDARIES.md).
+Dependencies point inward, and only `apps/mcp-server` knows which concrete implementations exist. Which package may import which, and each package's public API, are in [`SYSTEM-BOUNDARIES.md`](SYSTEM-BOUNDARIES.md).
 
 | Package | Owns | Does not contain |
 |---|---|---|
-| `@factloom/core` | Zod schemas and the types derived from them. The interfaces `MemoryStore`, `LlmClient` and `Embedder`. `Result` and the error codes. The fact operations: record, invalidate, end. An in-memory store and the storage contract tests | SQL, an LLM SDK, an embedding library, anything about MCP |
-| `@factloom/graph-rag` | The use cases `remember`, `recordStructuredFacts`, `recall`, `getFactHistory`. Rank fusion. The software development **domain**, until phase 4 | SQL, concrete clients |
-| `@factloom/storage` | `SqliteMemoryStore`, its SQL, and the migrations | Decisions about facts. It enforces rules; it does not make choices |
+| `@factloom/core` | Zod schemas and the types derived from them. The interfaces `MemoryStore`, `LlmClient` and `Embedder`. `Result` and the error codes. The fact operations: record, invalidate, end, find conflict candidates. An in-memory store and the other test helpers | SQL, an LLM SDK, an embedding library, a test framework, anything about MCP |
+| `@factloom/graph-rag` | The use cases `remember`, `recordStructuredFacts`, `changeFact`, `recall`, `getFactHistory`. Rank fusion. The software development **domain**, until a second domain exists | SQL, concrete clients |
+| `@factloom/storage` | `SqliteMemoryStore`, its SQL, and the migrations. The storage contract suite, until a second adapter exists | Decisions about facts. It enforces rules; it does not make choices |
 | `apps/mcp-server` | Tool definitions and handlers. Configuration. The Anthropic `LlmClient` and the local `Embedder`. The wiring | Rules about facts |
 
 Packages added later, each when its phase starts: `packages/maintenance` for product 2, `packages/adapters` when a second domain exists, a Postgres adapter, and `apps/api`.
@@ -44,16 +44,21 @@ agent ── remember(text) ──► mcp-server handler
                         graph-rag: remember
                               │ 1. LlmClient extracts entities and facts, using the domain
                               │ 2. resolve each entity against existing ones (exact name)
-                              │ 3. Embedder embeds each statement
+                              │ 3. core: findConflictCandidates, for each fact
+                              │ 4. sort into restated, conflicting and new
                               ▼
                         core: recordFacts
-                              │ 4. refuse a second current value for a single-valued predicate
-                              │ 5. build one change set: source, entities, facts
+                              │ 5. Embedder embeds each new statement
+                              │ 6. build one change set: source, entities, new facts,
+                              │    and the source attached to each restated fact
                               ▼
-                        MemoryStore.commit ──► one transaction: rows + one audit entry each
+                        MemoryStore.commit ──► one transaction: the changes, the single-value
+                                               rule, and one audit entry per change
 ```
 
-Phase 2 inserts conflict handling between steps 3 and 4: product 2 compares each new fact with the candidates, judges the pair, and either acts or proposes, according to the domain's **correction policy**. It then calls the same operations an agent can call today: `endFact` for a **succession**, `invalidateFact` for a **correction**.
+A restated fact gains the source and no new row. A conflicting fact is returned to the agent as skipped. The store enforces the **single-value rule** inside the commit, so a conflict that step 4 could not see, because another process wrote in between, still fails the commit.
+
+Phase 2 replaces the deterministic sorting in step 4 with conflict handling: product 2 compares each new fact with the candidates, judges the pair, and either acts or proposes, according to the domain's **correction policy**. It then calls the same operations an agent reaches today through `changeFact`: `endFact` for a **succession**, `invalidateFact` for a **correction**.
 
 ### Recall
 
@@ -63,13 +68,14 @@ agent ── recall(question, as_of?, known_at?) ──► mcp-server handler
                         graph-rag: recall
                               │ 1. Embedder embeds the question
                               │ 2. vector lane and keyword lane, each with the time filter
-                              │ 3. graph lane: one step out from the entities found
+                              │ 3. graph lane: one step out from the entities found, ranked by
+                              │    how many of them a fact touches, then by recency
                               │ 4. rank fusion over the three ranked lists
                               ▼
                         facts with sources, confidence and score
 ```
 
-The time filter is two dates, both defaulting to now. It is applied inside every lane. See "The time predicate" in [`SCHEMA.md`](SCHEMA.md).
+The time filter is two dates, both defaulting to now. If only the known-at date is given, the as-of date takes the same date. The filter is applied inside every lane. See "The time predicate" in [`SCHEMA.md`](SCHEMA.md).
 
 ### Background, from phase 3
 
