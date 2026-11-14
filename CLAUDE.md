@@ -56,7 +56,7 @@ The conventions are in `.claude/rules/` and are the only copy. Each loads when i
 
 ### Issue tracker
 
-Work is tracked in Markdown under `docs/roadmap/`, not in GitHub Issues. See `docs/agents/issue-tracker.md`.
+Work is tracked in Markdown under `docs/roadmap/`, not in GitHub Issues. That folder is created in the roadmap stage and does not exist yet. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
