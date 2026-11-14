@@ -13,7 +13,7 @@ Terms in bold are defined in [`GLOSSARY.md`](../../GLOSSARY.md). The reasoning b
 | Smoke | The MCP server starts and answers over stdio | Yes | No | On every check |
 | Eval | Memory ends in the right state after a sequence of inputs | Yes | Recorded responses | On every check. Live runs by hand |
 
-One command, `pnpm check`, runs the format check, lint, type check and every test above except live eval runs.
+One command, `pnpm check`, runs the format check, lint, type check and every test above except live eval runs. It needs no network, no API key and no embedding model: it uses the fake embedder and replayed LLM responses. A second command, `pnpm eval`, runs what needs the real embedding model: the embedder's own tests, the retrieval eval and the performance benchmark. It runs on demand and in a separate continuous integration job, not on every check.
 
 ### Continuous integration
 
@@ -108,7 +108,7 @@ Start with the eleven scenarios below and add one whenever a bug is found. A res
 | Multi-valued predicate | Both facts stay current |
 | Unrelated fact about the same subject | Nothing is invalidated. This is the case another system got wrong in the research runs |
 | Older fact arriving late | It is recorded as an ended fact and does not replace the current one. If its valid period overlaps a live fact for a single-valued predicate, it is not recorded |
-| Same name, different entity type | An existing entity is reused when exactly one has that name, whatever its type. Two entities remain possible when the name is already held by more than one |
+| A known name mentioned under a different entity type | The existing entity is reused; no second entity is created |
 | A date in the text ("on 15 March") | `valid_from` is that date, not the date of recording |
 | No date in the text | `valid_from` is unknown, so the fact is returned for any earlier as-of date |
 | A plan ("we will migrate in March") | Not recorded as a current fact |
