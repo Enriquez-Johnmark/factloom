@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-14:** the first feature code exists. 3 of 74 work items are `Completed`: FL-001, FL-002, FL-004. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-14:** the first feature code exists. 4 of 74 work items are `Completed`: FL-001, FL-002, FL-004, FL-005. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -44,7 +44,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-001](epics/EPIC-01.md#fl-001-scaffold-the-pnpm-workspace-with-one-check-command) | Scaffold the pnpm workspace with one check command | EPIC-01 | None | Completed |
 | [FL-002](epics/EPIC-01.md#fl-002-run-the-check-in-continuous-integration-on-linux-and-macos-arm64) | Run the check in continuous integration on Linux and macOS arm64 | EPIC-01 | FL-001 | Completed |
 | [FL-004](epics/EPIC-02.md#fl-004-result-type-and-the-shared-error-codes) | Result type and the shared error codes | EPIC-02 | FL-001 | Completed |
-| [FL-005](epics/EPIC-02.md#fl-005-timestamps-and-date-input) | Timestamps and date input | EPIC-02 | FL-004 | Pending |
+| [FL-005](epics/EPIC-02.md#fl-005-timestamps-and-date-input) | Timestamps and date input | EPIC-02 | FL-004 | Completed |
 | [FL-006](epics/EPIC-02.md#fl-006-schemas-and-types-for-entities-facts-sources-audit-entries-change-sets-and-domains) | Schemas and types for entities, facts, sources, audit entries, change sets and domains | EPIC-02 | FL-005 | Pending |
 | [FL-007](epics/EPIC-02.md#fl-007-memorystore-interface-and-the-in-memory-store-commit-and-structural-reads) | MemoryStore interface and the in-memory store: commit and structural reads | EPIC-02 | FL-006 | Pending |
 | [FL-012](epics/EPIC-03.md#fl-012-storage-contract-suite-fixture-time-reads-commit-and-refusals) | Storage contract suite: fixture, time, reads, commit and refusals | EPIC-03 | FL-007 | Pending |
