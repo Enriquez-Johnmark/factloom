@@ -2,7 +2,7 @@
 
 Throwaway check for the draft first migration. It is not the implementation.
 
-Run on 2026-11-13 on Linux x64, Node.js v22.23.4. Not run on macOS.
+Run on 2026-11-13 on Linux x64, Node.js v22.23.4, and again by the owner on 2026-11-14 on macOS arm64 (a MacBook Air with Apple Silicon), Node.js v24.22.1 and npm 11.19.1. The same 31 checks passed on both.
 
 ## Question
 
@@ -86,3 +86,20 @@ ok  no operation reduced the number of fact rows
 It shows the rules hold on a toy timeline in an in-memory SQLite database. The single-value rule is a query the storage adapter will run inside each commit; here it is run by hand, so the spike shows the query is right, not that the adapter calls it. It does not measure
 performance, and it does not test the write path that the storage package will implement: the
 script performs each change with hand-written SQL.
+
+## On macOS with Apple Silicon
+
+Run by the owner on 2026-11-14. `npm ci` took five seconds and printed one warning:
+
+```text
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   better-sqlite3@13.1.1 (install: node-gyp rebuild)
+```
+
+`better-sqlite3` declares no install script; npm infers this one from the `binding.gyp` file in the package. Nothing was compiled, and the prebuilt `darwin-arm64` binary inside the package was loaded. The script then printed the same 31 lines as above and ended with:
+
+```text
+31 checks passed on SQLite 3.54.1, sqlite-vec v0.1.9, Node v24.22.1
+```
+
+This is the first run of the SQLite driver and the vector extension on Apple Silicon, and on Node.js 24.
