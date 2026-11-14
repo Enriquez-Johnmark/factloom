@@ -45,7 +45,7 @@ Factloom stops assuming one domain, one database and one transport. The software
 | Epic | Why |
 |---|---|
 | [EPIC-02](EPIC-02.md) | The `MemoryStore` interface, the `Domain` type and the fact operations the adapters serve |
-| [EPIC-03](EPIC-03.md) | The storage contract suite (FL-012) that the Postgres adapter must pass, and the SQLite migrations whose numbers and names it mirrors |
+| [EPIC-03](EPIC-03.md) | The storage contract suite (FL-012, FL-067) that the Postgres adapter must pass, and the SQLite migrations whose numbers and names it mirrors |
 | [EPIC-04](EPIC-04.md) | The software development domain (FL-018) and the Anthropic LLM client (FL-019) that move |
 | [EPIC-05](EPIC-05.md) | The local embedder (FL-026) that moves, and the retrieval eval (FL-033, FL-057) that is run again on Postgres |
 | [EPIC-07](EPIC-07.md) | The timeline scenarios and their runner (FL-027, FL-039), and the benchmark (FL-066), which are run again on Postgres |
