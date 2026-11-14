@@ -170,8 +170,8 @@ export interface MemoryStore {
     readonly touchingEntityIds: readonly EntityId[] | null;
     /** Facts that this fact superseded. */
     readonly supersededByFactId: FactId | null;
-    /** A time filter, or 'all' for every row including invalidated ones. */
-    readonly time: TimeFilter | 'all';
+    /** A time filter; 'live' for every live fact at any valid time; 'all' for every row, invalidated ones included. */
+    readonly time: TimeFilter | 'live' | 'all';
     readonly limit: number;
   }): Promise<Result<readonly FactWithSources[]>>;
 
@@ -247,7 +247,7 @@ export type CommitReceipt = {
 - **`commit` is the only way to write.** There is no method that writes a fact without an audit entry, so the rule "every change is recorded" cannot be skipped by accident.
 - **All or nothing.** Changes apply in order inside one transaction. Any failure leaves memory as it was.
 - **The single-value rule is checked inside the transaction.** After applying the changes, for every fact recorded with `singleValued: true`, the store looks for another live fact with the same subject and predicate whose valid period overlaps it. A missing bound counts as open. If one exists the commit fails with `conflict` and names the facts. The check is in the store, not before it, because two server processes can share one database file: a check made before the commit could pass in both.
-- **Reads never write.** Recall does not update a counter or a timestamp.
+- **Reads never write.** Recall does not update a counter or a timestamp. From phase 3, how often a fact is recalled is recorded by the caller after the read, in a usage table outside `commit` and with no audit entry: usage counts are bookkeeping, not memory.
 - **The store decides nothing else.** It does not judge conflicts, choose what to invalidate, or call an LLM. It enforces the rules in [`SCHEMA.md`](SCHEMA.md).
 - **Entity identifiers are resolved through merges by the store.** From phase 3, a query for an entity also matches facts recorded against entities merged into it, and `subject` and `objectEntity` in results are the entity that the others were merged into. In phases 1 and 2 there are no merges, and the read methods do not change shape when they arrive.
 - **Methods return promises** although SQLite is synchronous, because Postgres is not. The consequence is one coarse `commit` instead of a transaction handle, since a SQLite transaction cannot stay open across an `await`.
@@ -328,7 +328,7 @@ export type Domain = {
 };
 ```
 
-There is one domain at first, software development, defined in `@factloom/graph-rag`. It moves to its own adapter package when a second domain exists.
+There is one domain at first, software development, defined in `@factloom/graph-rag`. It moves to its own adapter package in phase 4.
 
 ## Fact operations
 
@@ -446,7 +446,7 @@ How they behave:
 
 - **`recordFacts` is all or nothing.** If any draft breaks the single-value rule, nothing is recorded and the result is `conflict`. Deciding which facts to leave out is the caller's job; the `remember` use case does it before calling.
 - **`invalidateFact` with a replacement.** A replacement whose valid period is not given takes the valid period of the fact it corrects. The wrong fact is invalidated and linked to the replacement.
-- **`endFact`.** Writes a copy of the fact with `validTo` set, carrying the original's sources plus the new one, and invalidates the original with a link to the copy. A successor whose `validFrom` is not given starts at `validTo`.
+- **`endFact`.** Writes a copy of the fact with `validTo` set, carrying the original's sources plus the new one, and invalidates the original with a link to the copy. `endedFactId` is the identifier of that copy, the fact that is live afterwards. A successor whose `validFrom` is not given starts at `validTo`.
 - **A fact has at most one successor link, set when it is invalidated.** A fact retracted with no replacement cannot be linked to one later; the later fact is simply recorded.
 - **`findConflictCandidates` does not judge.** It returns the facts worth comparing, by an indexed lookup with a fixed upper bound and no LLM. For a single-valued predicate, any candidate with a different object is a **conflict**. For any predicate, a candidate with the same object is a restatement. Product 2 does the judging in phase 2; in phase 1 the use cases apply only those two deterministic rules.
 
@@ -504,7 +504,7 @@ export declare function purgeContent(
 - **`recordFeedback` decides nothing.** Product 2 reads feedback and then calls `invalidateFact`, `endFact` or `adjustConfidence` under the domain's correction policy. Errors: `invalid_input`, `not_found`, `storage_failed`.
 - **`purgeContent`** is specified in outline in [ADR 0012](adr/0012-purge-is-the-one-exception.md). Its full design is a phase 2 work item, with the requirements the review of this design found: it must cover every copy of a purged fact, the keyword and vector entries, the source's locator, and the content of any source that explained a change to those facts. Errors: `not_found`, `storage_failed`.
 
-Each phase 2 operation adds one `Change` kind, one `Operation` name and one or more `AuditAction` values. Adding a kind does not change the existing ones.
+Each phase 2 operation adds what it needs: a `Change` kind, an `Operation` name, `AuditAction` values and reason codes. `reviseValidTime` needs none, because it is made of existing changes. Adding a kind does not change the existing ones.
 
 ### Phase 3
 
@@ -556,7 +556,7 @@ export declare function undoEntityMerge(
 - **Verification is recorded, not applied.** `recordVerification` writes a row and an audit entry. What follows from a `contradicted` outcome, an invalidation or a lower confidence, is a separate call, so the audit log shows both the finding and the action. Errors: `invalid_input`, `not_found`, `already_invalidated`, `storage_failed`.
 - **`listStaleFacts` and `listOrphanedFacts` are reads.** They add two methods to `MemoryStore` in phase 3, backed by the `fact_verification` table. They return an empty list when nothing is due. Errors: `invalid_input`, `storage_failed`.
 - **A merge is a row, not an edit.** `mergeEntities` adds a row to an `entity_merge` table: from, into, when. No entity and no fact is rewritten. Reads resolve identifiers through the merges that have not been undone, following a chain if the target was itself merged later.
-- **A merge can be refused.** If the two entities hold live facts for the same single-valued predicate with different objects and overlapping valid periods, merging them would break the single-value rule. `mergeEntities` then returns `conflict` with those facts and merges nothing. Product 2 resolves them first. Other errors: `not_found`; `invalid_input` for an entity merged with itself or across types; `already_exists` when the first entity is already merged; `storage_failed`.
+- **A merge can be refused.** If the two entities hold live facts for the same single-valued predicate with different objects and overlapping valid periods, merging them would break the single-value rule. `mergeEntities` then returns `conflict` with those facts and merges nothing. Product 2 resolves them first. Two entities of different types can be merged, because the same thing is sometimes extracted under two types. Other errors: `not_found`; `invalid_input` for an entity merged with itself; `already_exists` when the first entity is already merged; `storage_failed`.
 - **Undoing a merge** sets `undone_at` on its row, once. Facts recorded against either entity before or after the merge stay with the entity they were recorded against, so nothing needs to be moved back. Errors: `not_found`, `already_exists` if already undone, `storage_failed`.
 
 ## Use cases
