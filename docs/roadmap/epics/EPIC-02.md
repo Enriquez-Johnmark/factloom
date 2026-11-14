@@ -70,7 +70,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 | FL-004 | Result type and the shared error codes | 0 | FL-001 | Completed |
 | FL-005 | Timestamps and date input | 0 | FL-004 | Completed |
 | FL-006 | Schemas and types for entities, facts, sources, audit entries, change sets and domains | 0 | FL-005 | Completed |
-| FL-007 | MemoryStore interface and the in-memory store: commit and structural reads | 0 | FL-006 | Pending |
+| FL-007 | MemoryStore interface and the in-memory store: commit and structural reads | 0 | FL-006 | Completed |
 | FL-056 | In-memory search lanes and test helpers | 0 | FL-007 | Pending |
 | FL-008 | recordFacts operation, including restatement | 1 | FL-007, FL-056 | Pending |
 | FL-009 | invalidateFact operation: retraction and correction | 1 | FL-008, FL-056 | Pending |
@@ -344,7 +344,7 @@ How it is built, where the item left a choice:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 0 |
 | Depends on | FL-006 |
 | Requirements | REQ-01, REQ-06, REQ-07, REQ-08, REQ-09, REQ-15, REQ-25 |
@@ -410,28 +410,53 @@ Reads:
 - [Testing rules](../../../.claude/rules/testing.md): assert on what the store contains, not on which methods were called.
 
 **Acceptance criteria.**
-- [ ] A type-level test passes: the exported `MemoryStore` and a copy of the declaration from `INTERFACES.md` are assignable to each other.
-- [ ] Unit test "applies none of a change set when its last change fails" passes: after a commit that creates an entity, records a source and a fact, and then invalidates a missing fact, `findEntities`, `listFacts` with `'all'` and `listAuditEntries` return nothing.
-- [ ] Unit test "writes one audit entry per change with one operation identifier" passes.
-- [ ] Unit test "applies changes in the order given" passes: a change set that lists a source, then an entity, then a fact writes audit entries `source.recorded`, `entity.created`, `fact.recorded` in that order, and a change set that lists a fact before the entity it refers to returns `not_found`.
-- [ ] Unit test "writes the detail fixed for each action" passes, with one case per action in functional requirement 6.
-- [ ] Unit test "returns a source by its identifier" passes: a source that no fact is linked to is returned, an unknown identifier gives `null`, and a source of another namespace gives `null`.
-- [ ] Unit test "refuses a second open-ended value for a single-valued predicate" passes with `conflict` and the stored fact's identifier in `relatedFactIds`.
-- [ ] Unit test "accepts a period that starts where another ends" passes.
-- [ ] Unit test "accepts a change set that invalidates a fact and records its replacement" passes.
-- [ ] Unit test "does not apply the single-value rule to a multi-valued predicate" passes.
-- [ ] Unit test "returns each documented error code from commit" passes, with one case per code in functional requirement 4 and one for `invalid_input`.
-- [ ] Unit test "returns a fact for an as-of date inside its valid period and not at its end" passes, with the as-of date and the known-at date both stated.
-- [ ] Unit test "returns what was believed at the known-at date" passes: a fact invalidated later is returned for a known-at date before the invalidation and not after.
-- [ ] Unit test "returns every live fact whatever its valid time" passes: with `time: 'live'`, an ended fact and a current fact are returned and an invalidated fact is not.
-- [ ] Unit test "returns nothing from another namespace" passes for `findEntities`, `getFact`, `listFacts`, `getSource` and `listAuditEntries`.
-- [ ] Unit test "finds an entity by its normalised name" passes, with `"  Example  Repo "` matching `"example repo"`.
-- [ ] `git grep -n "vitest" -- packages/core/src` shows matches in `*.test.ts` files only.
-- [ ] `pnpm check` exits 0.
+- [x] A type-level test passes: the exported `MemoryStore` and a copy of the declaration from `INTERFACES.md` are assignable to each other.
+- [x] Unit test "applies none of a change set when its last change fails" passes: after a commit that creates an entity, records a source and a fact, and then invalidates a missing fact, `findEntities`, `listFacts` with `'all'` and `listAuditEntries` return nothing.
+- [x] Unit test "writes one audit entry per change with one operation identifier" passes.
+- [x] Unit test "applies changes in the order given" passes: a change set that lists a source, then an entity, then a fact writes audit entries `source.recorded`, `entity.created`, `fact.recorded` in that order, and a change set that lists a fact before the entity it refers to returns `not_found`.
+- [x] Unit test "writes the detail fixed for each action" passes, with one case per action in functional requirement 6.
+- [x] Unit test "returns a source by its identifier" passes: a source that no fact is linked to is returned, an unknown identifier gives `null`, and a source of another namespace gives `null`.
+- [x] Unit test "refuses a second open-ended value for a single-valued predicate" passes with `conflict` and the stored fact's identifier in `relatedFactIds`.
+- [x] Unit test "accepts a period that starts where another ends" passes.
+- [x] Unit test "accepts a change set that invalidates a fact and records its replacement" passes.
+- [x] Unit test "does not apply the single-value rule to a multi-valued predicate" passes.
+- [x] Unit test "returns each documented error code from commit" passes, with one case per code in functional requirement 4 and one for `invalid_input`.
+- [x] Unit test "returns a fact for an as-of date inside its valid period and not at its end" passes, with the as-of date and the known-at date both stated.
+- [x] Unit test "returns what was believed at the known-at date" passes: a fact invalidated later is returned for a known-at date before the invalidation and not after.
+- [x] Unit test "returns every live fact whatever its valid time" passes: with `time: 'live'`, an ended fact and a current fact are returned and an invalidated fact is not.
+- [x] Unit test "returns nothing from another namespace" passes for `findEntities`, `getFact`, `listFacts`, `getSource` and `listAuditEntries`.
+- [x] Unit test "finds an entity by its normalised name" passes, with `"  Example  Repo "` matching `"example repo"`.
+- [x] `git grep -n "vitest" -- packages/core/src` shows matches in `*.test.ts` files only.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `core`. The contract suite of FL-012 is the fuller proof and is that item's acceptance, not this one's.
 
 **Completion evidence.** The commit and the passing `pnpm check` output.
+
+**Recorded evidence.** Completed on 2026-11-14, in four commits: `feat(core): add name normalisation, period overlap and the time predicate`, `feat(core): add the MemoryStore interface`, `feat(core): add the in-memory store with commit and structural reads`, and `feat(core): export the store and check its interface against the design`. The code is in `packages/core/src`: `memory-store.ts`, `in-memory-store.ts`, `valid-period.ts`, `entity-name.ts` and `operation-deps.ts`.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4:
+
+```text
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  12 passed (12)
+      Tests  128 passed (128)
+```
+
+`git grep -n "vitest" -- packages/core/src` shows matches in `*.test.ts` files only. The type-level test now also holds a copy of `MemoryStore` and of `OperationDeps` from `INTERFACES.md`, 24 names in all.
+
+How it is built, where the item left a choice:
+
+- A commit works on a copy of the store's containers and replaces the store's state only when every change has applied and the single-value rule holds. A failed commit therefore leaves nothing behind, with no undo logic.
+- The time predicate is a pure function, `matchesTimeFilter`, beside `periodsOverlap`. Both are exported, so the SQLite adapter's tests and FL-011 use the same functions; [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md) lists them.
+- Reads return copies made with `structuredClone`. A test changes a returned fact and entity and reads them again unchanged.
+
+Three cases the error table in `INTERFACES.md` does not spell out, and what the store does:
+
+- Attaching a source that the fact already has returns `already_exists`.
+- Invalidating a fact at a moment before it was recorded returns `invalid_input`.
+- A supersession link to the fact itself returns `invalid_input`. The fact schema rejects that state; the change schema cannot see it, so the store checks it.
 
 ### FL-056: In-memory search lanes and test helpers
 
