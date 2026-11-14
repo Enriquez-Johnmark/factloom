@@ -42,14 +42,14 @@ Factloom can show, on every check and with no network, that memory ends in the r
 
 ## Dependencies
 
-- [EPIC-01](EPIC-01.md): the app `apps/mcp-server`, which FL-001 creates and in which the evals directory lives.
+- [EPIC-01](EPIC-01.md): the app `apps/mcp-server`, which FL-001 creates and in which the evals directory lives; the `pnpm eval` command (FL-001) and its workflow job (FL-002), in which the benchmark runs.
 - [EPIC-02](EPIC-02.md): the types, the `LlmClient` interface and timestamps (FL-006).
-- EPIC-04: the software development domain (FL-018), whose entity types and predicates the data files use, and the use cases `remember` (FL-023) and `changeFact` (FL-025), which the runner calls.
+- EPIC-04: the software development domain (FL-018), whose entity types and predicates the data files use, the use cases `remember` (FL-023) and `changeFact` (FL-025), which the runner calls, and the record command of FL-069, which the runner reuses.
 - EPIC-05: `getFactHistory` (FL-032), which the runner uses for `history` assertions.
 - [EPIC-03](EPIC-03.md): the SQLite adapter with its structural reads (FL-015), on which the runner runs.
 - EPIC-06: the `recall` tool (FL-058) and the `record_fact` tool (FL-035), which the benchmark measures.
 
-EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario data and the runner. EPIC-04 depends on it too: extraction (FL-021) is written against the extraction cases.
+EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario data and the runner. EPIC-04 depends on it too: extraction (FL-021) is written against the extraction cases, and their run in replay (FL-069) uses the wrapper of FL-028. The runner of FL-039 reuses the record command of FL-069.
 
 ## Deliverables
 
@@ -65,8 +65,8 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 - `pnpm check` runs the scenarios and the extraction scorer from recordings, with no network and no API key, and gives the same report on every run.
 - Deleting one recording makes `pnpm check` fail with a message that names the missing recording.
 - The runner's report gives a staleness rate, a false invalidation rate, a missed invalidation rate and a historical accuracy for the scenario set, and the numbers measured before self-correction are recorded as the baseline for EPIC-08.
-- Every scenario that phase 1 behaviour decides passes: restatement, multi-valued predicate, unrelated fact, older fact arriving late, same name with another entity type, a date in the text, no date in the text, a plan, and retraction. With succession and correction, which wait for FL-042, that is all eleven.
-- The benchmark of FL-066 prints its table in continuous integration and exits non-zero when a budget of REQ-35 is missed.
+- Every scenario that phase 1 behaviour decides passes: restatement, multi-valued predicate, unrelated fact, older fact arriving late, a known name mentioned under a different entity type, a date in the text, no date in the text, a plan, and retraction. With succession and correction, which wait for FL-042, that is all eleven.
+- The benchmark of FL-066 runs under `pnpm eval`, prints its table in a continuous integration job started by hand or on a schedule, and exits non-zero when a budget of REQ-35 is exceeded by more than its stated tolerance.
 
 ## Work items
 
@@ -74,9 +74,9 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 |---|---|---|---|---|
 | FL-027 | Timeline scenarios as reviewed data | 0 | FL-006, FL-018 | Pending |
 | FL-028 | Record-and-replay wrapper for the LLM client | 1 | FL-006, FL-027 | Pending |
-| FL-029 | Extraction cases | 1 | FL-018, FL-027, FL-028 | Pending |
-| FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-023, FL-025, FL-032, FL-015 | Pending |
-| FL-066 | Performance benchmark and budgets | 1 | FL-058, FL-035 | Pending |
+| FL-029 | Extraction cases | 1 | FL-018, FL-027 | Pending |
+| FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Pending |
+| FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Pending |
 
 ### FL-027: Timeline scenarios as reviewed data
 
@@ -116,11 +116,12 @@ This item writes one file per row of the table.
 2. A step has a time, `at`, and one input. Two kinds of input exist, because inputs go through the use cases an agent reaches:
    - `remember`: a text, as an agent would send it to the `remember` tool.
    - `change_fact`: a report that a stored fact was wrong or is no longer true. It names the fact by subject, predicate and value, and carries `because`, an optional `ended_at`, and an `explanation`. It maps to the `changeFact` use case.
-3. An `expect` entry is one of two kinds:
+3. An `expect` entry is one of three kinds:
    - `ask`: a subject, a predicate, an optional `as_of` and an optional `known_at`; with `returns`, the exact set of values expected, and optionally `must_not_return`, and `sources`, the number of sources the one returned fact must have.
    - `history`: a subject and a predicate; with `superseded`, a list of `{ from, kind }` where `kind` is `succession`, `correction` or `revision`, and optionally `fact_rows`, the number of facts ever recorded for that subject and predicate.
+   - `entities`: a name and `count`, the number of entities of any type that have that name. Neither `ask` nor `history` can show that an entity was reused rather than created twice; this kind can.
 4. A date is a full timestamp or a calendar date, read with `parseDateInput` from `core`. A subject is an entity name, with an optional type. A predicate, and a type where one is given, must be in the software development domain of FL-018.
-5. The schema is strict. It rejects an unknown key, a step with both or neither kind of input, an `ask` with no `returns`, an empty `steps` list, and steps whose times are not in order.
+5. The schema is strict. It rejects an unknown key, a step with both or neither kind of input, an `ask` with no `returns`, an `entities` entry with no `count`, an empty `steps` list, and steps whose times are not in order.
 6. There is one file per row of the table, and each meets the row's "what must happen" with explicit assertions:
 
    | File covers | Assertions it must contain |
@@ -131,7 +132,7 @@ This item writes one file per row of the table.
    | Multi-valued predicate | Now returns both values. `history` has an empty `superseded` list |
    | Unrelated fact about the same subject | Two asks, one per predicate, each returning its value. Both `history` entries have an empty `superseded` list |
    | Older fact arriving late | Two late facts. One ends before the current fact begins: an `as_of` date inside its period returns it, and now still returns the current value. The other overlaps a live fact for a single-valued predicate: no ask returns it, and `fact_rows` does not grow |
-   | Same name, different entity type | Two texts name one thing in ways that suggest two entity types. Asks for both predicates with the same subject name each return their value |
+   | A known name mentioned under a different entity type | The first text gives the repository a convention, recorded as a `convention` entity through `follows_convention`. The second text names the same thing as a decision with a status. An `ask` for the repository's `follows_convention` returns the name. An `ask` with that name as subject and `has_status` returns the status. An `entities` entry with that name has `count: 1`: the existing entity is reused and no second entity is created |
    | A date in the text | `as_of` the day before the date returns nothing. `as_of` the date returns the value. The step's own `at` is weeks later |
    | No date in the text | `as_of` a date years before the step returns the value |
    | A plan | Now returns nothing for the planned value, and the value in force before the plan is still returned |
@@ -166,7 +167,7 @@ This item writes one file per row of the table.
 
 **Validation.** Unit tests in `apps/mcp-server/evals/` for the schema and the loader; the owner's review of the data.
 
-**Completion evidence.** The commit, the passing `pnpm check` output, and the owner's review record per file.
+**Completion evidence.** The commit, the passing `pnpm check` output, and the owner's review record per file. The `entities` kind of expectation is added to the file format shown in [`TESTING.md`](../../architecture/TESTING.md), "Layer B", in its own commit.
 
 ### FL-028: Record-and-replay wrapper for the LLM client
 
@@ -192,7 +193,7 @@ This item writes one file per row of the table.
 
 **Non-goals.**
 - The Anthropic client: FL-019.
-- Any recording of a real model. The first are made in FL-023, for the extraction cases, and in FL-039.
+- Any recording of a real model. The first are made in FL-069, for the extraction cases, and in FL-039.
 - Recording or replaying the embedder. Evals that need meaning use the real local embedder (FL-033); the others use the fake one.
 - Removing recordings that are no longer used.
 - Matching a request loosely. A request either has its exact recording or it has none.
@@ -241,13 +242,13 @@ This item writes one file per row of the table.
 |---|---|
 | Status | Pending |
 | Phase | 1 |
-| Depends on | FL-018, FL-027, FL-028 |
+| Depends on | FL-018, FL-027 |
 | Requirements | REQ-30 |
 | Components | `apps/mcp-server` (evals) |
 
 **Objective.** Write about 20 input texts with the facts expected from each, and a scorer that reports extraction precision and recall.
 
-**Background.** [`TESTING.md`](../../architecture/TESTING.md), "Layer C": one input text and the facts expected from it, subject, predicate, object and dates. The cases guard the extraction prompt. How good extraction is beyond one two-sentence example is open question Q-31. Precision and recall are reported and tracked, with no target, because the outcome depends on a model (`TESTING.md`, "What is measured"). The cases exist before extraction does: FL-021 is written against their expected facts. The cases call the public `remember` use case, so `graph-rag` needs no new export; the first run against recorded model output is therefore made in FL-023, where `remember` exists.
+**Background.** [`TESTING.md`](../../architecture/TESTING.md), "Layer C": one input text and the facts expected from it, subject, predicate, object and dates. The cases guard the extraction prompt. How good extraction is beyond one two-sentence example is open question Q-31. Precision and recall are reported and tracked, with no target, because the outcome depends on a model (`TESTING.md`, "What is measured"). The cases exist before extraction does: FL-021 is written against their expected facts. The cases call the public `remember` use case, so `graph-rag` needs no new export; the first run against recorded model output is therefore made in FL-069, after `remember` exists (FL-023). That run passes or fails each case by the facts it marks as required and forbidden, and reports precision and recall beside.
 
 **Outcome.** The author of the extraction step has a fixed set of inputs and expected facts to work against, and a scorer that prints precision and recall for whatever function is given to it. A change to the extraction instructions shows its effect as a change in two numbers and in the recordings.
 
@@ -259,14 +260,14 @@ This item writes one file per row of the table.
 
 **Non-goals.**
 - The extraction step, its schema and its instructions: FL-021.
-- Recordings of a real model for these cases, and the function that sends a case through `remember`. Both are made in FL-023, with the wrapper of FL-028 in the form its recordings take.
+- Recordings of a real model for these cases, the function that sends a case through `remember`, and the rule that passes or fails a case. All are made in FL-069, with the wrapper of FL-028.
 - A target for precision or recall.
 - Judging statements. A statement's wording is not compared, only subject, predicate, object and dates.
 - Entity resolution against stored entities: each case starts from empty memory.
 
 **Functional requirements.**
 1. A case file holds: a `name`; the `text`; `observed_at`, the moment the text is taken to be written, against which a relative date is resolved; `expected`, a list of facts; and optionally `forbidden`, a list of facts that must not be extracted.
-2. An expected or forbidden fact holds a subject with type and name, a predicate, an object that is either a value or an entity with type and name, and `valid_from` and `valid_to`, each a date or null.
+2. An expected or forbidden fact holds a subject with type and name, a predicate, an object that is either a value or an entity with type and name, and `valid_from` and `valid_to`, each a date or null. An expected fact also holds `required`, true or false: true for a fact the case exists to test, which must be extracted for the case to pass in FL-069. Every case with an expected fact has at least one that is required.
 3. The schema is strict, and it rejects a case whose predicate or entity type is not in the software development domain of FL-018.
 4. The cases cover, with the number of cases for each printed by the validation test:
    - one fact stated plainly;
@@ -291,7 +292,7 @@ This item writes one file per row of the table.
 1. Names and values are normalised with `normaliseEntityName` from `core`, the same function entity resolution uses.
 2. Precision over zero extracted and recall over zero expected are reported as not applicable, not as 0 or 1, and are left out of the set's totals.
 3. Case files use the same file format and loader approach as the scenarios of FL-027, in `apps/mcp-server/evals/extraction-cases/`.
-4. The run function imports no use case. The function it is given in production use sends the text through `remember` on empty memory and returns the facts recorded; FL-023 writes it. In this item the tests pass a stub.
+4. The run function imports no use case. The function it is given in production use sends the text through `remember` on empty memory and returns the facts recorded; FL-069 writes it. In this item the tests pass a stub.
 
 **Constraints.**
 - [`TESTING.md`](../../architecture/TESTING.md), "Layer C" and "What is measured".
@@ -308,10 +309,11 @@ This item writes one file per row of the table.
 - [ ] Unit test "reports precision and recall for the set" passes: with a stub extraction function that returns a known mix of right, wrong and missing facts over three inline cases, the report's numbers equal hand-computed values written in the test.
 - [ ] Unit test "counts a forbidden fact that was extracted" passes.
 - [ ] Unit test "reports a failed extraction as a failure and no extracted facts" passes.
-- [ ] Review by the owner: the owner reads each case and checks the expected facts against the text. The owner records, per file, "reviewed" and the date in the completion evidence.
+- [ ] Test "every case with an expected fact marks one as required" passes, and the schema rejects an expected fact with no `required` field, on an inline example.
+- [ ] Review by the owner: the owner reads each case and checks the expected facts, and which of them are required, against the text. The owner records, per file, "reviewed" and the date in the completion evidence.
 - [ ] `pnpm check` exits 0.
 
-**Validation.** Unit tests in `apps/mcp-server/evals/` for the scorer, with a stub function; a validation test of the data; the owner's review. The run through `remember`, in replay, is an acceptance criterion of FL-023.
+**Validation.** Unit tests in `apps/mcp-server/evals/` for the scorer, with a stub function; a validation test of the data; the owner's review. The run through `remember`, in replay, is FL-069.
 
 **Completion evidence.** The commit, the passing `pnpm check` output, the number of cases per kind, and the owner's review record.
 
@@ -321,7 +323,7 @@ This item writes one file per row of the table.
 |---|---|
 | Status | Pending |
 | Phase | 2 |
-| Depends on | FL-027, FL-028, FL-023, FL-025, FL-032, FL-015 |
+| Depends on | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 |
 | Requirements | REQ-30 |
 | Components | `apps/mcp-server` (evals), exercising `packages/graph-rag`, `packages/core` and `packages/storage` |
 
@@ -330,6 +332,8 @@ This item writes one file per row of the table.
 **Background.** [`TESTING.md`](../../architecture/TESTING.md), "Layer B" and "What is measured". In phase 1, `remember` sorts extracted facts by two deterministic rules: a restated fact gains the source, and a fact that conflicts with a stored one is skipped ([`INTERFACES.md`](../../architecture/INTERFACES.md), "Use cases"). So before phase 2 the succession and correction scenarios cannot pass through `remember`: the new fact is skipped and the old one stays current. That is the staleness the runner must measure. FL-042 then makes `remember` resolve the conflict, and its acceptance is this runner reporting a staleness rate of 0 and a false invalidation rate of 0.
 
 Assertions read memory directly. `recall` takes a free-text question and ranks its answers, so it is not used.
+
+The `remember` steps need LLM recordings, and a recording can only be made with a real API key, which only the owner holds. A replayed run fails while a recording is missing ([`TESTING.md`](../../architecture/TESTING.md), "Keeping it deterministic"). As for FL-069, this item is therefore done in a session with the owner present: the agent writes the runner and its unit tests, the owner makes the recordings in the same working tree with the record command of FL-069, and the code and the recordings are committed together once `pnpm check` passes. The `remember` use case reaches this item through FL-069, which depends on it.
 
 **Outcome.** `pnpm check` runs every scenario from recordings. An engineer working on self-correction changes the code, runs one command, and reads four numbers and the list of scenarios that failed.
 
@@ -357,34 +361,37 @@ Assertions read memory directly. `recall` takes a free-text question and ranks i
 6. An `ask` finds the subject with `findEntities` by name, and by type when one is given. It then calls `MemoryStore.listFacts` with the subject, the predicate, and a time filter built by the rule of [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md): both dates default to the time just after the last step, and `as_of` takes the `known_at` date when only `known_at` is given. The values returned are the object value, or the object entity's name.
 7. An `ask` passes when the set of normalised values equals `returns` exactly, none is in `must_not_return`, and `sources`, when given, equals the number of sources of the one returned fact. A subject that does not exist gives an empty set.
 8. A `history` takes a fact from `listFacts` with `'all'` for the subject and predicate and calls the `getFactHistory` use case (FL-032) with it. Each superseded fact's kind is the operation of its `fact.invalidated` audit entry. The entry passes when the `{ from, kind }` pairs found equal `superseded` exactly and, when `fact_rows` is given, the number of history entries equals it. A fact that was retracted has no supersession link and is not in `superseded`.
-9. A scenario passes when every step succeeds and every `expect` entry passes.
-10. The report gives, over the whole set:
+9. An `entities` entry calls `findEntities` with the name and `type: null` after the last step, and passes when the number of entities returned equals `count`.
+10. A scenario passes when every step succeeds and every `expect` entry passes.
+11. The report gives, over the whole set:
     - staleness rate: of the asks with no `as_of` and no `known_at`, the share that returned a value listed in `must_not_return`;
     - false invalidation rate: of the values listed in `returns` of those same asks, the share for which a fact was recorded and is no longer live;
     - missed invalidation rate: of the `superseded` pairs expected, the share whose `from` fact is still live;
     - historical accuracy: of the asks with `as_of` or `known_at`, the share that passed.
     It also lists each failed scenario with its failed entries, expected against found.
-11. Every scenario runs as one test in `pnpm check`. Two scenarios, succession and correction, need self-correction. Until FL-042 they are run and reported, and their failure does not fail the check. They are named in one list in the runner, with FL-042 as the reason. A listed scenario that passes fails the check, so the list cannot outlive its reason. Every other scenario must pass.
-12. The scenario files were checked against the software development domain when they were written (FL-027). The runner loads them with the same loader, so a file that names a predicate or an entity type the domain does not have fails before any step runs, with the file and the name.
+12. Every scenario runs as one test in `pnpm check`. Two scenarios, succession and correction, need self-correction. Until FL-042 they are run and reported, and their failure does not fail the check. They are named in one list in the runner, with FL-042 as the reason. A listed scenario that passes fails the check, so the list cannot outlive its reason. Every other scenario must pass.
+13. The scenario files were checked against the software development domain when they were written (FL-027). The runner loads them with the same loader, so a file that names a predicate or an entity type the domain does not have fails before any step runs, with the file and the name.
 
 **Technical requirements.**
 1. The runner calls only exports of the packages: `remember`, `changeFact` and `getFactHistory` from `@factloom/graph-rag`, `openSqliteMemoryStore` from `@factloom/storage`, and the helpers and types of `@factloom/core`. The app already declares those three packages as dependencies.
 2. Values are normalised with `normaliseEntityName` from `core` before comparison.
-3. Recordings live under `apps/mcp-server/evals/`, one directory per scenario. They are made by a command in record mode that the owner runs by hand with an API key in the environment. The command builds the Anthropic client of the app, which is in the same application, and wraps it with the wrapper of FL-028 in record mode. It reuses the record command written for the extraction cases in FL-023.
+3. Recordings live under `apps/mcp-server/evals/`, one directory per scenario. They are made by a command in record mode that the owner runs by hand with an API key in the environment. The command builds the Anthropic client of the app, which is in the same application, and wraps it with the wrapper of FL-028 in record mode. It reuses the record command written for the extraction cases in FL-069, given the scenario files in place of the cases, and is started as `pnpm run record:scenarios` from `apps/mcp-server`.
 4. The record command is not part of `pnpm check`. `pnpm check` sets no API key and makes no network call.
 5. The report is printed by the test run. Nothing is written to the repository by a replayed run.
 6. The metric functions are pure and have unit tests on hand-built results.
 
 **Constraints.**
 - [`TESTING.md`](../../architecture/TESTING.md), "Layer B", "Keeping it deterministic", "What is measured".
-- [Testing rules](../../../.claude/rules/testing.md): a scenario reads memory with `MemoryStore.listFacts` and `getFactHistory`, not with `recall`; no LLM judges an answer; never weaken a failing test to get a green run. The list in functional requirement 11 is the one stated exception, and it is closed by FL-042.
+- [Testing rules](../../../.claude/rules/testing.md): a scenario reads memory with `MemoryStore.listFacts` and `getFactHistory`, not with `recall`; no LLM judges an answer; never weaken a failing test to get a green run. The list in functional requirement 12 is the one stated exception, and it is closed by FL-042.
 - [Architecture rules](../../../.claude/rules/architecture.md): the runner changes memory only through use cases.
 - [ADR 0010](../../architecture/adr/0010-conflicts-are-keyed-by-subject-and-predicate.md) and [ADR 0006](../../architecture/adr/0006-facts-change-only-by-invalidation.md): what the scenarios guard.
 - [Git rules](../../../.claude/rules/git.md): recordings are checked for secrets before they are pushed.
 
 **Acceptance criteria.**
 - [ ] `pnpm check` exits 0 with no API key set, and its output contains the report with the four metrics and one line per scenario.
-- [ ] Nine scenarios pass: restatement, multi-valued predicate, unrelated fact about the same subject, older fact arriving late, same name with another entity type, a date in the text, no date in the text, a plan, and retraction.
+- [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs `pnpm run record:scenarios` from `apps/mcp-server`. It ends with exit code 0. The owner reads the diff of the new recordings for secrets and records the model identifier. Until this step is done nothing of this item is committed, and the item is not `Completed`.
+- [ ] Nine scenarios pass: restatement, multi-valued predicate, unrelated fact about the same subject, older fact arriving late, a known name mentioned under a different entity type, a date in the text, no date in the text, a plan, and retraction.
+- [ ] Unit test "an entities expectation counts the entities with a name of any type" passes, on an inline scenario.
 - [ ] The succession and correction scenarios are run and reported as failing, with the stale value named. Staleness rate, false invalidation rate, missed invalidation rate and historical accuracy are recorded as the baseline before self-correction.
 - [ ] False invalidation rate is 0 on the nine passing scenarios.
 - [ ] Unit test "a listed scenario that passes fails the check" passes, on an inline scenario.
@@ -405,7 +412,7 @@ Assertions read memory directly. `recall` takes a free-text question and ranks i
 |---|---|
 | Status | Pending |
 | Phase | 1 |
-| Depends on | FL-058, FL-035 |
+| Depends on | FL-002, FL-058, FL-035 |
 | Requirements | REQ-35 |
 | Components | `apps/mcp-server` (evals), exercising `packages/storage` and `packages/graph-rag` |
 
@@ -420,14 +427,16 @@ What has been measured so far comes from two spikes, both run on a Linux virtual
 
 Neither spike measured the keyword lane, the graph lane, rank fusion, a write, or a server start. The one extraction call measured in the [LLM research](../../research/technical/llm-anthropic.md) took about 3.5 seconds, which is why `remember` is reported and not budgeted: its time is dominated by the LLM call, and no local change removes that.
 
-**Outcome.** One command prints a table of timings for both namespace sizes and exits non-zero when a budget is missed. It runs in continuous integration on the same machine type each time, so a change that makes recall slower is seen in the run that introduces it.
+Hosted runners vary from run to run, so a 95th percentile measured there moves without a code change. A budget is therefore missed only when it is exceeded by more than a stated tolerance on the named machine, and the benchmark runs on demand and on a schedule, not on every push.
+
+**Outcome.** One command prints a table of timings for both namespace sizes and exits non-zero when a budget is exceeded by more than its tolerance. It runs under `pnpm eval` and in a continuous integration job, started by hand or on a schedule, on the same machine type each time, so a change that makes recall slower is seen in the next scheduled run.
 
 **Scope.**
 - A benchmark in `apps/mcp-server/evals/`.
 - A generator of synthetic namespaces of 10,000 and 100,000 facts.
 - Measurements of `recall`, `record_fact` and server start, and a reported time for `remember`.
 - The budgets as data, the table, and the exit code.
-- A job in the continuous integration workflow.
+- Its place in the eval job of FL-002, started by hand or on a schedule.
 - The record of the first run, and of what followed from it.
 
 **Non-goals.**
@@ -444,17 +453,17 @@ Neither spike measured the keyword lane, the graph lane, rank fusion, a write, o
 3. `record_fact` is measured through the `recordStructuredFacts` use case on the 10,000 and the 100,000 namespace, with the time spent inside the embedder subtracted. The table gives the 50th and the 95th percentile of what remains.
 4. Server start is measured by starting `node` on the server's `main.ts` as a child process on the 10,000 namespace, with the embedding model already in the cache, and taking the time until the initialise request is answered. The table gives the median of a fixed number of starts.
 5. `remember` is timed only when `ANTHROPIC_API_KEY` is set. Its time is printed in the table, marked as reported and not budgeted. Without a key the row says that it was not measured.
-6. The budgets are one data structure that holds the four numbers of REQ-35. The table shows each measured value beside its budget.
-7. The command exits with 0 when every budgeted value is within its budget, and with a non-zero code otherwise. The output names each budget missed.
+6. The budgets are one data structure that holds the four numbers of REQ-35, each with a tolerance stated beside it as a share of the budget. The first tolerance is 20 percent, a starting value that the first runs confirm or revise; a change is recorded in this work item. The table shows each measured value beside its budget and its tolerance.
+7. The command exits with 0 when every budgeted value is within its budget plus its tolerance, and with a non-zero code otherwise. The output names each budget missed. A value above the budget but within the tolerance is printed as a warning and does not fail.
 8. The output names the machine: the operating system, the processor architecture and model, the number of cores, and the Node and SQLite versions.
 9. If the first run misses a budget, one of two things is recorded in this work item before it is completed: what was changed to meet the budget, with the timings before and after; or the revised budget, approved by the owner, with the new number written into REQ-35 in `REQUIREMENTS.md`.
 
 **Technical requirements.**
 1. The benchmark calls only exports of the packages and the server's entry point. It adds no export to a package.
-2. A root script, `pnpm bench`, runs it. It is not part of `pnpm check`, because building 100,000 facts takes longer than a check should.
+2. A root script, `pnpm bench`, runs it, and `pnpm eval` runs it too ([`TESTING.md`](../../architecture/TESTING.md), "Four kinds of test"). It is not part of `pnpm check`, because it needs the real embedding model and building 100,000 facts takes longer than a check should.
 3. The time inside the embedder is measured by wrapping the `Embedder` passed to the use case, not by estimating.
 4. A clock for measuring durations is the one place in the evals where the real time is read. It is passed in as a dependency, and the unit tests of the percentile and budget functions use a fake.
-5. The continuous integration job runs on one runner label, read from the workflow of FL-002, on every push to `main`. Its output is kept as a job artefact or in the job log.
+5. The benchmark runs in the eval job of FL-002, on that job's one runner label, when the job is started by hand or by its schedule. It does not run on every push. Its output is kept as a job artefact or in the job log.
 6. The percentile function and the budget comparison are pure and have unit tests.
 
 **Constraints.**
@@ -468,12 +477,12 @@ Neither spike measured the keyword lane, the graph lane, rank fusion, a write, o
 - [ ] `pnpm bench` builds both namespaces and prints a table with: `recall` at the 50th and 95th percentile for 10,000 and for 100,000 facts; `record_fact` excluding embedding at the 50th and 95th percentile; server start; and the `remember` row.
 - [ ] The output names the machine, as in functional requirement 8.
 - [ ] With every budget met, `pnpm bench` exits 0. With the `recall` budget for 10,000 facts lowered to 1 ms in a local run, it exits non-zero and names that budget. The output is recorded and the budget restored.
-- [ ] Unit tests pass with these names: "gives the 95th percentile of a list of durations", "reports a value above its budget as missed", "does not budget the remember row".
+- [ ] Unit tests pass with these names: "gives the 95th percentile of a list of durations", "reports a value above its budget and its tolerance as missed", "warns and does not fail for a value above its budget within its tolerance", "does not budget the remember row".
 - [ ] A test named "builds the same namespace from the same seed" builds 100 facts twice and compares the fact identifiers and the first vector.
-- [ ] A workflow run shows the benchmark job with its table. Its address is recorded.
+- [ ] The eval job of FL-002, started by hand, shows the benchmark with its table. Its address is recorded. The workflow file shows that the job runs by hand and on a schedule and not on a push.
 - [ ] The first run is recorded in this work item: the table, the machine, and for each budget "met", "met after a change" with the change named, or "revised" with the owner's approval and the new number in REQ-35.
 - [ ] `pnpm check` still exits 0 and does not run the benchmark.
 
-**Validation.** The benchmark command, run locally and in continuous integration. Unit tests of the percentile and budget functions on every check.
+**Validation.** The benchmark command, run locally and in the eval job. Unit tests of the percentile and budget functions on every check.
 
 **Completion evidence.** The commit, the address of the workflow run, the table of the first run with the machine it ran on, and the record of each budget's outcome. Q-09 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) is updated with the timings on a file database.
