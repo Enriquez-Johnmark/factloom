@@ -26,6 +26,11 @@ export type ContractGroup = (typeof CONTRACT_GROUPS)[number];
 export type ContractOptions = {
   /** The groups to run. Defaults to all. An adapter is complete only when it runs all four. */
   readonly groups?: readonly ContractGroup[];
+  /**
+   * Opens two stores on one database file. Only an adapter that keeps a file can give it;
+   * the case that needs it is registered only when it is given.
+   */
+  readonly openTwoStoresOnOneFile?: () => Promise<readonly [MemoryStore, MemoryStore]>;
 };
 
 export const NAMESPACE = 'repo:example';
@@ -121,29 +126,74 @@ export function changeSet(
   };
 }
 
+/** Where a copy of the fixture is written: its namespace, and a prefix for every identifier in it. */
+export type FixturePlace = { readonly namespace: string; readonly prefix: string };
+
+const EXAMPLE_PLACE: FixturePlace = { namespace: NAMESPACE, prefix: '' };
+
 /** The changes of the succession commit of the fixture, in the order the change set lists them. */
-const SUCCESSION_CHANGES: readonly Change[] = [
-  { kind: 'record_source', source: source('s-2', '2026-04-02', 'We upgraded to PostgreSQL 16 on 15 March.') },
-  recordFact(
-    fact('pg14-ended', DATABASE, 'PostgreSQL 14', {
-      validFrom: at('2025-06-01'),
-      validTo: at('2026-03-15'),
-      createdAt: at('2026-04-02'),
-    }),
+function successionChanges({ namespace, prefix }: FixturePlace): readonly Change[] {
+  const id = (name: string): string => `${prefix}${name}`;
+  return [
     {
-      sourceIds: ['s-1', 's-2'],
-      embedding: { copyFromFactId: 'pg14' },
+      kind: 'record_source',
+      source: source(id('s-2'), '2026-04-02', 'We upgraded to PostgreSQL 16 on 15 March.', namespace),
     },
-  ),
-  { kind: 'invalidate_fact', factId: 'pg14', supersededByFactId: 'pg14-ended' },
-  recordFact(
-    fact('pg16', DATABASE, 'PostgreSQL 16', { validFrom: at('2026-03-15'), createdAt: at('2026-04-02') }),
-    {
-      sourceIds: ['s-2'],
-      embedding: new Float32Array([0.9, 0.1, 0, 0]),
-    },
-  ),
-];
+    recordFact(
+      fact(id('pg14-ended'), DATABASE, 'PostgreSQL 14', {
+        namespace,
+        subjectEntityId: id('e-repo'),
+        validFrom: at('2025-06-01'),
+        validTo: at('2026-03-15'),
+        createdAt: at('2026-04-02'),
+      }),
+      { sourceIds: [id('s-1'), id('s-2')], embedding: { copyFromFactId: id('pg14') } },
+    ),
+    { kind: 'invalidate_fact', factId: id('pg14'), supersededByFactId: id('pg14-ended') },
+    recordFact(
+      fact(id('pg16'), DATABASE, 'PostgreSQL 16', {
+        namespace,
+        subjectEntityId: id('e-repo'),
+        validFrom: at('2026-03-15'),
+        createdAt: at('2026-04-02'),
+      }),
+      { sourceIds: [id('s-2')], embedding: new Float32Array([0.9, 0.1, 0, 0]) },
+    ),
+  ];
+}
+
+const SUCCESSION_CHANGES = successionChanges(EXAMPLE_PLACE);
+
+/** The first commit of the fixture: the repository, a source, and the two facts first believed. */
+function firstCommit({ namespace, prefix }: FixturePlace): ChangeSet {
+  const id = (name: string): string => `${prefix}${name}`;
+  return changeSet(
+    id('op-1'),
+    '2026-01-10',
+    [
+      { kind: 'create_entity', entity: entity(id('e-repo'), 'example', 'repository', namespace) },
+      {
+        kind: 'record_source',
+        source: source(id('s-1'), '2026-01-10', 'We run PostgreSQL 14. CI runs on Node 20.', namespace),
+      },
+      recordFact(
+        fact(id('pg14'), DATABASE, 'PostgreSQL 14', {
+          namespace,
+          subjectEntityId: id('e-repo'),
+          validFrom: at('2025-06-01'),
+        }),
+        {
+          sourceIds: [id('s-1')],
+        },
+      ),
+      recordFact(fact(id('node20'), NODE, 'Node 20', { namespace, subjectEntityId: id('e-repo') }), {
+        sourceIds: [id('s-1')],
+        embedding: new Float32Array([0, 1, 0, 0]),
+      }),
+    ],
+    { namespace, explainedBySourceId: id('s-1') },
+  );
+}
 
 /**
  * Writes the timeline every case starts from, with three commits:
@@ -151,43 +201,41 @@ const SUCCESSION_CHANGES: readonly Change[] = [
  *   2026-04-02  succession: PostgreSQL was upgraded to 16 on 2026-03-15
  *   2026-05-01  correction: CI has always run on Node 22, not Node 20
  * It leaves five facts: pg14 and node20 invalidated; pg14-ended, pg16 and node22 live.
+ * A second copy can be written in another namespace, with a prefix on every identifier.
  */
-export async function writeTimeline(store: MemoryStore): Promise<void> {
+export async function writeTimeline(store: MemoryStore, place: FixturePlace = EXAMPLE_PLACE): Promise<void> {
+  const { namespace, prefix } = place;
+  const id = (name: string): string => `${prefix}${name}`;
   const commits: readonly ChangeSet[] = [
-    changeSet(
-      'op-1',
-      '2026-01-10',
-      [
-        { kind: 'create_entity', entity: entity('e-repo', 'example') },
-        {
-          kind: 'record_source',
-          source: source('s-1', '2026-01-10', 'We run PostgreSQL 14. CI runs on Node 20.'),
-        },
-        recordFact(fact('pg14', DATABASE, 'PostgreSQL 14', { validFrom: at('2025-06-01') })),
-        recordFact(fact('node20', NODE, 'Node 20'), { embedding: new Float32Array([0, 1, 0, 0]) }),
-      ],
-      { explainedBySourceId: 's-1' },
-    ),
-    changeSet('op-2', '2026-04-02', SUCCESSION_CHANGES, {
+    firstCommit(place),
+    changeSet(id('op-2'), '2026-04-02', successionChanges(place), {
+      namespace,
       operation: 'succession',
       reasonCode: 'reported_ended',
-      explainedBySourceId: 's-2',
+      explainedBySourceId: id('s-2'),
     }),
     changeSet(
-      'op-3',
+      id('op-3'),
       '2026-05-01',
       [
         {
           kind: 'record_source',
-          source: source('s-3', '2026-05-01', 'CI has always been on Node 22, not 20.'),
+          source: source(id('s-3'), '2026-05-01', 'CI has always been on Node 22, not 20.', namespace),
         },
-        recordFact(fact('node22', NODE, 'Node 22', { createdAt: at('2026-05-01') }), {
-          sourceIds: ['s-3'],
-          embedding: new Float32Array([0, 0.9, 0.1, 0]),
-        }),
-        { kind: 'invalidate_fact', factId: 'node20', supersededByFactId: 'node22' },
+        recordFact(
+          fact(id('node22'), NODE, 'Node 22', {
+            namespace,
+            subjectEntityId: id('e-repo'),
+            createdAt: at('2026-05-01'),
+          }),
+          {
+            sourceIds: [id('s-3')],
+            embedding: new Float32Array([0, 0.9, 0.1, 0]),
+          },
+        ),
+        { kind: 'invalidate_fact', factId: id('node20'), supersededByFactId: id('node22') },
       ],
-      { operation: 'correction', reasonCode: 'reported_wrong', explainedBySourceId: 's-3' },
+      { namespace, operation: 'correction', reasonCode: 'reported_wrong', explainedBySourceId: id('s-3') },
     ),
   ];
   for (const commit of commits) {
@@ -720,21 +768,395 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
   /** A store holding only the first commit of the timeline, to read the receipt of the second. */
   async function createStoreWithFirstCommit(): Promise<MemoryStore> {
     const fresh = await createStore();
-    const first = await fresh.commit(
-      changeSet('op-1', '2026-01-10', [
-        { kind: 'create_entity', entity: entity('e-repo', 'example') },
-        {
-          kind: 'record_source',
-          source: source('s-1', '2026-01-10', 'We run PostgreSQL 14. CI runs on Node 20.'),
-        },
-        recordFact(fact('pg14', DATABASE, 'PostgreSQL 14', { validFrom: at('2025-06-01') })),
-      ]),
-    );
+    const first = await fresh.commit(firstCommit(EXAMPLE_PLACE));
     if (!first.ok) throw new Error(first.error.message);
     return fresh;
   }
 
   return registered;
+}
+
+const OTHER_PLACE: FixturePlace = { namespace: 'repo:other', prefix: 'other-' };
+
+/** Registers cases that all start from the fixture, and counts them. */
+function startCases(createStore: () => Promise<MemoryStore>, alsoWriteOtherNamespace: boolean) {
+  const state: { store: MemoryStore | null; registered: number } = { store: null, registered: 0 };
+  beforeEach(async () => {
+    state.store = await createStore();
+    await writeTimeline(state.store);
+    if (alsoWriteOtherNamespace) await writeTimeline(state.store, OTHER_PLACE);
+  });
+  afterEach(async () => {
+    await state.store?.close();
+  });
+  return {
+    /** The store of the running case. */
+    store(): MemoryStore {
+      if (state.store === null) throw new Error('No store: a case ran outside its setup.');
+      return state.store;
+    },
+    test(name: string, run: () => Promise<void>): void {
+      state.registered += 1;
+      it(name, run);
+    },
+    count: (): number => state.registered,
+  };
+}
+
+/** A fact for the database predicate of the example repository, with the given valid period. */
+function databaseFact(id: string, value: string, validFrom: string | null, validTo: string | null): Fact {
+  return fact(id, DATABASE, value, {
+    validFrom: validFrom === null ? null : at(validFrom),
+    validTo: validTo === null ? null : at(validTo),
+    createdAt: at('2026-06-01'),
+  });
+}
+
+function registerSingleValueRuleAndNamespaces(
+  createStore: () => Promise<MemoryStore>,
+  openTwoStoresOnOneFile: ContractOptions['openTwoStoresOnOneFile'],
+): number {
+  const cases = startCases(createStore, true);
+  const commit = (changes: readonly Change[], fields: Partial<ChangeSet> = {}) =>
+    cases.store().commit(changeSet('op-rule', '2026-06-01', changes, fields));
+
+  // --- The single-value rule refuses ---
+  const conflicts = (
+    name: string,
+    changes: () => readonly Change[],
+    overlapping: readonly string[],
+  ): void => {
+    cases.test(name, async () => {
+      const before = await listFactIds(cases.store(), 'all');
+      const result = await commit(changes());
+      expect(result.ok ? null : result.error.code).toBe('conflict');
+      if (!result.ok) expect([...result.error.relatedFactIds].sort()).toEqual([...overlapping].sort());
+      expect(await listFactIds(cases.store(), 'all')).toEqual(before);
+    });
+  };
+  conflicts(
+    'S1: a second open-ended value overlaps the current one',
+    () => [recordFact(databaseFact('pg17', 'PostgreSQL 17', '2026-06-01', null))],
+    ['pg16'],
+  );
+  conflicts(
+    'S2: an older fact arriving late overlaps the ended fact it would contradict',
+    () => [recordFact(databaseFact('pg13', 'PostgreSQL 13', '2024-01-01', '2025-09-01'))],
+    ['pg14-ended'],
+  );
+  conflicts(
+    'S3: a fact dated in the future overlaps the open-ended current one',
+    () => [recordFact(databaseFact('pg18', 'PostgreSQL 18', '2027-01-01', null))],
+    ['pg16'],
+  );
+  conflicts(
+    'S4: an unknown start overlaps everything before its end',
+    () => [recordFact(databaseFact('pg12', 'PostgreSQL 12', null, '2025-07-01'))],
+    ['pg14-ended'],
+  );
+  conflicts(
+    'S5: the same value again overlaps too, because the store does not compare objects',
+    () => [recordFact(databaseFact('pg16-again', 'PostgreSQL 16', '2026-03-15', null))],
+    ['pg16'],
+  );
+  cases.test('S6: two overlapping facts recorded in one change set are refused', async () => {
+    const before = await listFactIds(cases.store(), 'all');
+    const result = await commit([
+      recordFact(fact('port-a', 'listens_on_port', '5432', { createdAt: at('2026-06-01') })),
+      recordFact(fact('port-b', 'listens_on_port', '5433', { createdAt: at('2026-06-01') })),
+    ]);
+    expect(result.ok ? null : result.error.code).toBe('conflict');
+    expect(await listFactIds(cases.store(), 'all')).toEqual(before);
+  });
+
+  // --- The single-value rule allows ---
+  cases.test('A1: a period that ends where another starts is accepted', async () => {
+    expect(
+      (await commit([recordFact(databaseFact('pg13', 'PostgreSQL 13', '2024-01-01', '2025-06-01'))])).ok,
+    ).toBe(true);
+    expect((await listFactIds(cases.store(), 'live', { predicate: DATABASE })).sort()).toEqual([
+      'pg13',
+      'pg14-ended',
+      'pg16',
+    ]);
+  });
+  cases.test('A2: two open-ended facts for a multi-valued predicate are both accepted', async () => {
+    const depends = (id: string, value: string) =>
+      recordFact(fact(id, 'depends_on', value, { createdAt: at('2026-06-01') }), { singleValued: false });
+    expect((await commit([depends('dep-zod', 'zod'), depends('dep-vitest', 'vitest')])).ok).toBe(true);
+    expect((await listFactIds(cases.store(), 'live', { predicate: 'depends_on' })).sort()).toEqual([
+      'dep-vitest',
+      'dep-zod',
+    ]);
+  });
+  cases.test('A3: a change set that invalidates a fact and records its replacement is accepted', async () => {
+    const result = await commit(
+      [
+        recordFact(databaseFact('pg16-corrected', 'PostgreSQL 16.1', '2026-03-15', null)),
+        { kind: 'invalidate_fact', factId: 'pg16', supersededByFactId: 'pg16-corrected' },
+      ],
+      { operation: 'correction', reasonCode: 'reported_wrong' },
+    );
+    expect(result.ok).toBe(true);
+    expect(await listFactIds(cases.store(), { validAt: NOW, knownAt: NOW }, { predicate: DATABASE })).toEqual(
+      ['pg16-corrected'],
+    );
+  });
+  cases.test('A4: an open-ended fact for the same subject and another predicate is accepted', async () => {
+    expect(
+      (await commit([recordFact(fact('port', 'listens_on_port', '5432', { createdAt: at('2026-06-01') }))]))
+        .ok,
+    ).toBe(true);
+  });
+
+  // --- Namespaces ---
+  const OTHER = OTHER_PLACE.namespace;
+  cases.test('N1: no read in one namespace returns a row of the other', async () => {
+    const store = cases.store();
+    expect((await listFactIds(store, 'all')).every((id) => !id.startsWith('other-'))).toBe(true);
+    expect(
+      (await listFactIds(store, 'all', { namespace: OTHER })).every((id) => id.startsWith('other-')),
+    ).toBe(true);
+    expect(await listFactIds(store, 'all', { namespace: OTHER })).toHaveLength(5);
+    expect(await store.getFact({ namespace: NAMESPACE, factId: 'other-pg16' })).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect(await store.getFact({ namespace: OTHER, factId: 'pg16' })).toEqual({ ok: true, value: null });
+    const found = await store.findEntities({ namespace: NAMESPACE, name: 'example', type: null });
+    expect(found.ok && found.value.map((e) => e.id)).toEqual(['e-repo']);
+    expect(await store.getSource({ namespace: NAMESPACE, sourceId: 'other-s-1' })).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect(
+      await store.listAuditEntries({ namespace: NAMESPACE, targetKind: 'fact', targetId: 'other-pg14' }),
+    ).toEqual({ ok: true, value: [] });
+    const otherAudit = await store.listAuditEntries({
+      namespace: OTHER,
+      targetKind: 'fact',
+      targetId: 'other-pg14',
+    });
+    expect(otherAudit.ok && otherAudit.value).toHaveLength(2);
+  });
+  cases.test('N2: invalidating a fact of the other namespace returns not_found', async () => {
+    const result = await commit([
+      { kind: 'invalidate_fact', factId: 'other-pg16', supersededByFactId: null },
+    ]);
+    expect(result.ok ? null : result.error.code).toBe('not_found');
+    expect(await listFactIds(cases.store(), 'live', { namespace: OTHER, predicate: DATABASE })).toContain(
+      'other-pg16',
+    );
+  });
+  cases.test(
+    'N3: a fact whose subject, object or source belongs to the other namespace returns not_found',
+    async () => {
+      const note = (fields: Partial<Fact>) =>
+        fact('f-x', 'has_note', 'x', { createdAt: at('2026-06-01'), ...fields });
+      const code = async (change: Change) => {
+        const result = await commit([change]);
+        return result.ok ? null : result.error.code;
+      };
+      expect(await code(recordFact(note({ subjectEntityId: 'other-e-repo' }), { singleValued: false }))).toBe(
+        'not_found',
+      );
+      expect(
+        await code(
+          recordFact(note({ object: { kind: 'entity', entityId: 'other-e-repo' } }), { singleValued: false }),
+        ),
+      ).toBe('not_found');
+      expect(await code(recordFact(note({}), { sourceIds: ['other-s-1'], singleValued: false }))).toBe(
+        'not_found',
+      );
+      expect(
+        await code(
+          recordFact(note({}), { embedding: { copyFromFactId: 'other-pg16' }, singleValued: false }),
+        ),
+      ).toBe('not_found');
+    },
+  );
+  cases.test('N4: a supersession link to a fact of the other namespace returns not_found', async () => {
+    const result = await commit([
+      { kind: 'invalidate_fact', factId: 'pg16', supersededByFactId: 'other-pg16' },
+    ]);
+    expect(result.ok ? null : result.error.code).toBe('not_found');
+    expect(await listFactIds(cases.store(), 'live', { predicate: DATABASE })).toContain('pg16');
+  });
+  cases.test(
+    'N5: the same entity in two namespaces is accepted, and the single-value rule does not cross them',
+    async () => {
+      // The fixture already holds the entity "example" in both namespaces.
+      const ended = await commit(
+        [
+          recordFact(
+            fact('pg16-ended', DATABASE, 'PostgreSQL 16', {
+              validFrom: at('2026-03-15'),
+              validTo: at('2026-06-01'),
+              createdAt: at('2026-06-01'),
+            }),
+            {
+              sourceIds: ['s-2'],
+              embedding: { copyFromFactId: 'pg16' },
+            },
+          ),
+          { kind: 'invalidate_fact', factId: 'pg16', supersededByFactId: 'pg16-ended' },
+          recordFact(databaseFact('pg17', 'PostgreSQL 17', '2026-06-01', null)),
+        ],
+        { operation: 'succession', reasonCode: 'reported_ended' },
+      );
+      // The other namespace still has an open-ended PostgreSQL 16; it does not stand in the way.
+      expect(ended.ok).toBe(true);
+      expect(
+        await listFactIds(
+          cases.store(),
+          { validAt: NOW, knownAt: NOW },
+          { namespace: OTHER, predicate: DATABASE },
+        ),
+      ).toEqual(['other-pg16']);
+    },
+  );
+
+  // --- Two stores on one file ---
+  if (openTwoStoresOnOneFile !== undefined) {
+    cases.test(
+      'P1: of two stores on one file that each commit a different current value, exactly one succeeds',
+      async () => {
+        const [first, second] = await openTwoStoresOnOneFile();
+        try {
+          const seeded = await first.commit(firstCommit({ namespace: 'repo:shared', prefix: 'shared-' }));
+          expect(seeded.ok).toBe(true);
+          const port = (id: string, value: string) =>
+            changeSet(
+              `op-${id}`,
+              '2026-06-01',
+              [
+                recordFact(
+                  fact(id, 'listens_on_port', value, {
+                    namespace: 'repo:shared',
+                    subjectEntityId: 'shared-e-repo',
+                    createdAt: at('2026-06-01'),
+                  }),
+                  {
+                    sourceIds: ['shared-s-1'],
+                  },
+                ),
+              ],
+              { namespace: 'repo:shared' },
+            );
+          const results = [
+            await first.commit(port('port-a', '5432')),
+            await second.commit(port('port-b', '5433')),
+          ];
+          expect(results.filter((result) => result.ok)).toHaveLength(1);
+          expect(
+            results.map((result) => (result.ok ? null : result.error.code)).filter((code) => code !== null),
+          ).toEqual(['conflict']);
+        } finally {
+          await first.close();
+          await second.close();
+        }
+      },
+    );
+  }
+  return cases.count();
+}
+
+function registerKeywordLane(createStore: () => Promise<MemoryStore>): number {
+  const cases = startCases(createStore, true);
+  const search = async (text: string, time: TimeFilter, namespace = NAMESPACE): Promise<string[]> => {
+    const found = await cases.store().searchFactsByKeyword({ namespace, text, time, limit: 10 });
+    if (!found.ok) throw new Error(found.error.message);
+    return found.value.map((result) => result.fact.id);
+  };
+  cases.test(
+    'K1: as of now, known at now, the keyword lane returns only the current fact that matches',
+    async () => {
+      expect(await search('postgresql', { validAt: NOW, knownAt: NOW })).toEqual(['pg16']);
+    },
+  );
+  cases.test('K2: as of 2026-02-01, known at now, the keyword lane returns the ended fact', async () => {
+    expect(await search('postgresql', { validAt: at('2026-02-01'), knownAt: NOW })).toEqual(['pg14-ended']);
+  });
+  cases.test(
+    'K3: as of 2026-02-01, known at 2026-02-01, the keyword lane returns what was believed then',
+    async () => {
+      expect(await search('postgresql', { validAt: at('2026-02-01'), knownAt: at('2026-02-01') })).toEqual([
+        'pg14',
+      ]);
+    },
+  );
+  cases.test('K4: a text that matches nothing returns an empty list', async () => {
+    expect(await search('kubernetes', { validAt: NOW, knownAt: NOW })).toEqual([]);
+  });
+  cases.test('K5: the keyword lane returns nothing from the other namespace', async () => {
+    expect(await search('postgresql', { validAt: NOW, knownAt: NOW }, OTHER_PLACE.namespace)).toEqual([
+      'other-pg16',
+    ]);
+    expect(
+      (await search('postgresql', { validAt: NOW, knownAt: NOW })).every((id) => !id.startsWith('other-')),
+    ).toBe(true);
+  });
+  return cases.count();
+}
+
+function registerVectorLane(createStore: () => Promise<MemoryStore>): number {
+  const cases = startCases(createStore, true);
+  const PG14_VECTOR = new Float32Array([1, 0, 0, 0]);
+  const search = async (time: TimeFilter, limit: number, namespace = NAMESPACE): Promise<string[]> => {
+    const found = await cases.store().searchFactsByVector({ namespace, vector: PG14_VECTOR, time, limit });
+    if (!found.ok) throw new Error(found.error.message);
+    return found.value.map((result) => result.fact.id);
+  };
+  cases.test(
+    'V1: as of now, known at now, with a limit of 1, the time filter is applied before the limit',
+    async () => {
+      expect(await search({ validAt: NOW, knownAt: NOW }, 1)).toEqual(['pg16']);
+    },
+  );
+  cases.test(
+    'V2: as of 2026-02-01, known at now, with a limit of 1, the vector lane returns the ended fact',
+    async () => {
+      expect(await search({ validAt: at('2026-02-01'), knownAt: NOW }, 1)).toEqual(['pg14-ended']);
+    },
+  );
+  cases.test('V3: as of now, known at now, the nearer fact comes first', async () => {
+    expect(await search({ validAt: NOW, knownAt: NOW }, 10)).toEqual(['pg16', 'node22']);
+  });
+  cases.test('V4: the vector lane returns nothing from the other namespace', async () => {
+    expect(await search({ validAt: NOW, knownAt: NOW }, 10, OTHER_PLACE.namespace)).toEqual([
+      'other-pg16',
+      'other-node22',
+    ]);
+    expect((await search({ validAt: NOW, knownAt: NOW }, 10)).every((id) => !id.startsWith('other-'))).toBe(
+      true,
+    );
+  });
+  cases.test('V5: a query vector of the wrong size returns invalid_input', async () => {
+    const found = await cases.store().searchFactsByVector({
+      namespace: NAMESPACE,
+      vector: new Float32Array([1, 0]),
+      time: { validAt: NOW, knownAt: NOW },
+      limit: 5,
+    });
+    expect(found.ok ? null : found.error.code).toBe('invalid_input');
+  });
+  cases.test(
+    'V6: a commit with a vector of another size returns embedding_model_mismatch and changes nothing',
+    async () => {
+      const before = await listFactIds(cases.store(), 'all');
+      const result = await cases.store().commit(
+        changeSet('op-v6', '2026-06-01', [
+          recordFact(fact('f-x', 'has_note', 'x', { createdAt: at('2026-06-01') }), {
+            embedding: new Float32Array([1, 0]),
+            singleValued: false,
+          }),
+        ]),
+      );
+      expect(result.ok ? null : result.error.code).toBe('embedding_model_mismatch');
+      expect(await listFactIds(cases.store(), 'all')).toEqual(before);
+    },
+  );
+  return cases.count();
 }
 
 /**
@@ -760,6 +1182,24 @@ export function describeMemoryStoreContract(
     if (groups.includes('time, reads, commit and refusals')) {
       describe('time, reads, commit and refusals', () => {
         registered['time, reads, commit and refusals'] = registerTimeReadsCommitAndRefusals(createStore);
+      });
+    }
+    if (groups.includes('single-value rule and namespaces')) {
+      describe('single-value rule and namespaces', () => {
+        registered['single-value rule and namespaces'] = registerSingleValueRuleAndNamespaces(
+          createStore,
+          options.openTwoStoresOnOneFile,
+        );
+      });
+    }
+    if (groups.includes('keyword lane')) {
+      describe('keyword lane', () => {
+        registered['keyword lane'] = registerKeywordLane(createStore);
+      });
+    }
+    if (groups.includes('vector lane')) {
+      describe('vector lane', () => {
+        registered['vector lane'] = registerVectorLane(createStore);
       });
     }
   });
