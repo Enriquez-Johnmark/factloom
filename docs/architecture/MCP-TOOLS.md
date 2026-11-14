@@ -183,7 +183,7 @@ Use case: `getFactHistory`.
 
 Output: `{ entries: HistoryEntry[] }`, ordered by valid time and then by recorded time. The entries are the facts linked to the given fact by supersession, followed in both directions. For a single-valued predicate they also include every other fact for the same subject and predicate, which is the whole timeline of that value.
 
-Each entry is a `RecalledFact` without `score`, plus `changes`, a list of `{ operation, action, trigger, reason_code, source_id, occurred_at }` taken from the audit log. The explanation of a change is the content of the source that `source_id` names.
+Each entry is a `RecalledFact` without `score`, plus `changes`, a list of `{ operation, action, trigger, reason_code, explanation, occurred_at }`, where `explanation` is the content of the source that explains the change, or `null` if there is none or it was purged, taken from the audit log. The explanation of a change is the content of the source that `source_id` names.
 
 ## Secrets
 
