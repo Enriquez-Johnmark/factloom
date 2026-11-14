@@ -9,7 +9,7 @@ How to read the roadmap, how to implement a work item, and how to keep the roadm
 | [`ROADMAP.md`](ROADMAP.md) | The index: every epic and work item with its phase, dependencies and status |
 | `epics/EPIC-NN.md` | One epic: its outcome, scope and boundaries, and the full specification of each of its work items |
 | [`../product/PRODUCT.md`](../product/PRODUCT.md) | What the product is for and what each phase must demonstrate |
-| [`../product/REQUIREMENTS.md`](../product/REQUIREMENTS.md) | The requirements, `REQ-01` to `REQ-36` |
+| [`../product/REQUIREMENTS.md`](../product/REQUIREMENTS.md) | The requirements, `REQ-01` to `REQ-37` |
 | [`../product/CAPABILITIES.md`](../product/CAPABILITIES.md) | The capabilities, with the requirements each satisfies and the epic that owns it |
 
 The roadmap carries no dates, estimates or effort sizes. Order comes from phases and dependencies only.
