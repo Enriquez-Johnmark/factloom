@@ -76,23 +76,25 @@ About 30 cases with facts inserted directly and no LLM. These are the contract t
 A scenario is one file: a list of dated inputs, then assertions about the resulting memory.
 
 ```yaml
-name: test framework switched
+name: "Succession: the test framework was switched"
 steps:
-  - at: 2026-01-10T00:00:00.000Z
-    remember: We use Jest for unit tests.
-  - at: 2026-04-02T00:00:00.000Z
-    remember: We switched the unit tests from Jest to Vitest last week.
+  - at: 2026-01-10
+    remember: We use Jest for the unit tests in shop-api.
+  - at: 2026-04-02
+    remember: We switched the unit tests of shop-api from Jest to Vitest on 26 March 2026.
 expect:
-  - ask: { subject: repository, predicate: uses_test_framework }
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_test_framework }
     returns: [Vitest]
     must_not_return: [Jest]
-  - ask: { subject: repository, predicate: uses_test_framework, as_of: 2026-02-01 }
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_test_framework, as_of: 2026-02-01 }
     returns: [Jest]
-  - ask: { subject: repository, predicate: uses_test_framework, known_at: 2026-02-01 }
+  - ask: { subject: { name: shop-api, type: repository }, predicate: uses_test_framework, known_at: 2026-02-01 }
     returns: [Jest]
-  - history: { subject: repository, predicate: uses_test_framework }
+  - history: { subject: { name: shop-api, type: repository }, predicate: uses_test_framework }
     superseded: [{ from: Jest, kind: succession }]
 ```
+
+A step is a text to remember, or a `change_fact` report that a stored fact was wrong or is no longer true. An expectation is one of three kinds: `ask`, for the values held for a subject and predicate, optionally with the number of `sources`; `history`, for what was superseded and how, optionally with `fact_rows`, the number of facts ever recorded; and `entities`, with a `count`, for how many entities have a name. The third kind exists because neither of the others can show that an entity was reused and not created twice. The format's schema is `apps/mcp-server/evals/scenario.ts`.
 
 Inputs go through the same use cases the MCP server calls. Assertions do not go through `recall`, which takes a free-text question and ranks its answers. An `ask` reads memory with `MemoryStore.listFacts` for the subject and predicate, with the as-of and known-at dates as its time filter. A `history` reads with the `getFactHistory` use case, starting from a fact that `listFacts` returned. Values are normalised and compared exactly. There is no natural-language answer and no LLM judge.
 
