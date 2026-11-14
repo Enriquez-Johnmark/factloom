@@ -1,0 +1,121 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!!**/node_modules",
+      "!!spikes",
+      "!!.claude",
+      "!!docs",
+      "!!**/*.md",
+      "!!pnpm-lock.yaml",
+      "!!skills-lock.json"
+    ]
+  },
+  "formatter": { "indentStyle": "space", "lineWidth": 110 },
+  "javascript": { "formatter": { "quoteStyle": "single" } },
+  "linter": {
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["@factloom/*/**", "**/src/**"],
+                "message": "Import another package by its name only, through its index.ts. Do not reach into its files."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@factloom/*", "@factloom/*/**", "**/src/**"],
+                    "message": "core is the innermost package. It must not import another @factloom package."
+                  },
+                  {
+                    "group": [
+                      "better-sqlite3",
+                      "sqlite-vec",
+                      "@modelcontextprotocol/*",
+                      "@anthropic-ai/*",
+                      "@huggingface/*"
+                    ],
+                    "message": "core must not import a database, LLM, embedding or MCP library. It owns the interfaces; outer packages implement them."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/graph-rag/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@factloom/storage", "@factloom/*/**", "**/src/**"],
+                    "message": "graph-rag must not import @factloom/storage, and imports other packages by name only. It reaches storage through the MemoryStore interface in core."
+                  },
+                  {
+                    "group": [
+                      "better-sqlite3",
+                      "sqlite-vec",
+                      "@modelcontextprotocol/*",
+                      "@anthropic-ai/*",
+                      "@huggingface/*"
+                    ],
+                    "message": "graph-rag must not import a database, LLM, embedding or MCP library."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/storage/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@factloom/graph-rag", "@factloom/*/**", "**/src/**"],
+                    "message": "storage must not import @factloom/graph-rag, and imports other packages by name only."
+                  },
+                  {
+                    "group": ["@modelcontextprotocol/*", "@anthropic-ai/*", "@huggingface/*"],
+                    "message": "storage must not import an LLM, embedding or MCP library."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
