@@ -69,7 +69,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 |---|---|---|---|---|
 | FL-004 | Result type and the shared error codes | 0 | FL-001 | Completed |
 | FL-005 | Timestamps and date input | 0 | FL-004 | Completed |
-| FL-006 | Schemas and types for entities, facts, sources, audit entries, change sets and domains | 0 | FL-005 | Pending |
+| FL-006 | Schemas and types for entities, facts, sources, audit entries, change sets and domains | 0 | FL-005 | Completed |
 | FL-007 | MemoryStore interface and the in-memory store: commit and structural reads | 0 | FL-006 | Pending |
 | FL-056 | In-memory search lanes and test helpers | 0 | FL-007 | Pending |
 | FL-008 | recordFacts operation, including restatement | 1 | FL-007, FL-056 | Pending |
@@ -248,7 +248,7 @@ How it is built, where the item left a choice:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 0 |
 | Depends on | FL-005 |
 | Requirements | REQ-01, REQ-02, REQ-07, REQ-08, REQ-25, REQ-26, REQ-27, REQ-31 |
@@ -296,18 +296,49 @@ How it is built, where the item left a choice:
 - [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md): the "Schemas and types" group of core's public API.
 
 **Acceptance criteria.**
-- [ ] A type-level test passes in the type check: for each of the sixteen types in scope and for `LlmClient` and `Embedder`, the exported type and a copy of the declaration from `INTERFACES.md` are assignable to each other.
-- [ ] Unit test "accepts the facts of the PostgreSQL and Node timeline" passes, with the seven fact rows that the [fact-schema spike](../../../spikes/fact-schema/check.mjs) writes in its example namespace, as `Fact` values.
-- [ ] Unit test "rejects a fact that breaks a rule the database also enforces" passes, with one case per rule in functional requirement 2.
-- [ ] Unit test "rejects a change set that records a fact with no source" passes.
-- [ ] Unit test "rejects a change set that holds a row from another namespace" passes.
-- [ ] Unit test "rejects free text nested in an audit entry's detail" passes.
-- [ ] Unit test "rejects a domain with a repeated predicate name" passes.
-- [ ] `pnpm check` exits 0.
+- [x] A type-level test passes in the type check: for each of the sixteen types in scope and for `LlmClient` and `Embedder`, the exported type and a copy of the declaration from `INTERFACES.md` are assignable to each other.
+- [x] Unit test "accepts the facts of the PostgreSQL and Node timeline" passes, with the seven fact rows that the [fact-schema spike](../../../spikes/fact-schema/check.mjs) writes in its example namespace, as `Fact` values.
+- [x] Unit test "rejects a fact that breaks a rule the database also enforces" passes, with one case per rule in functional requirement 2.
+- [x] Unit test "rejects a change set that records a fact with no source" passes.
+- [x] Unit test "rejects a change set that holds a row from another namespace" passes.
+- [x] Unit test "rejects free text nested in an audit entry's detail" passes.
+- [x] Unit test "rejects a domain with a repeated predicate name" passes.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `core`; the type-level test in the type check.
 
 **Completion evidence.** The commit and the passing `pnpm check` output.
+
+**Recorded evidence.** Completed on 2026-11-14, in three commits: `feat(core): add the schemas for facts, audit entries, change sets and domains`, `feat(core): add the LLM client and embedder interfaces`, and `feat(core): export the data model and check it against the design`. The code is in `packages/core/src`: `fact.ts`, `audit.ts`, `change-set.ts`, `domain.ts`, `llm-client.ts` and `embedder.ts`.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4:
+
+```text
+$ biome format .
+Checked 38 files in 7ms. No fixes applied.
+$ biome lint .
+Checked 38 files in 15ms. No fixes applied.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  9 passed (9)
+      Tests  95 passed (95)
+```
+
+The type-level test is `interfaces-parity.test.ts`. It holds a copy of each declaration from `INTERFACES.md` and requires the derived type and the copy to be assignable to each other, for 22 names: the sixteen types in scope, the four identifier aliases, `LlmClient` and `Embedder`. To show that it can fail, `confidence` was changed to `string` in the copied `Fact` once, by hand. The type check then failed for `Fact` and for the three types that contain it, and the change was undone:
+
+```text
+packages/core/src/interfaces-parity.test.ts(198,3): error TS2322: Type 'true' is not assignable to type 'false'.
+packages/core/src/interfaces-parity.test.ts(208,3): error TS2322: Type 'true' is not assignable to type 'false'.
+packages/core/src/interfaces-parity.test.ts(209,3): error TS2322: Type 'true' is not assignable to type 'false'.
+packages/core/src/interfaces-parity.test.ts(211,3): error TS2322: Type 'true' is not assignable to type 'false'.
+```
+
+How it is built, where the item left a choice:
+
+- Read-only types come from Zod's `.readonly()` on each object and array schema. The parity test is the proof that the result matches the `readonly` declarations.
+- The rules a fact must keep are a short list of functions, each returning a message, run by one `.check` on `FactSchema`. A broken rule is reported with its own message.
+- A vector is checked with a custom schema, so its type is `Float32Array` as in `INTERFACES.md`.
+- The identifier aliases have schemas too (`FactIdSchema` and the others), which require at least one character. The closed list of audit target kinds is exported as `AuditTargetKindSchema`.
 
 ### FL-007: MemoryStore interface and the in-memory store: commit and structural reads
 
