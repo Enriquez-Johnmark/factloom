@@ -191,6 +191,9 @@ export interface MemoryStore {
     readonly limit: number;
   }): Promise<Result<readonly FactWithSources[]>>;
 
+  /** One source by identifier. Fact history uses it to show the explanation of a change. */
+  getSource(query: { readonly namespace: Namespace; readonly sourceId: SourceId }): Promise<Result<Source | null>>;
+
   listAuditEntries(query: {
     readonly namespace: Namespace;
     readonly targetKind: AuditEntry['targetKind'];
