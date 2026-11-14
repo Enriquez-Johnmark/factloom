@@ -1,4 +1,4 @@
-# TypeScript in one pnpm monorepo with four packages
+# TypeScript in one pnpm monorepo with three packages and one app
 
 Status: accepted
 
