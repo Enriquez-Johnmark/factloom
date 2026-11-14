@@ -54,3 +54,7 @@ export type { MemoryStore } from './memory-store.ts';
 export type { OperationDeps } from './operation-deps.ts';
 export type { ValidPeriod } from './valid-period.ts';
 export { matchesTimeFilter, periodsOverlap } from './valid-period.ts';
+export { createFakeEmbedder } from './create-fake-embedder.ts';
+export { createScriptedLlm } from './create-scripted-llm.ts';
+export type { TestDepsOptions } from './create-test-deps.ts';
+export { createTestDeps, TEST_DOMAIN } from './create-test-deps.ts';
