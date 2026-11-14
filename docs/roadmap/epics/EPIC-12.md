@@ -49,8 +49,8 @@ The generic core serves seven further domains, each through a domain adapter tha
 |---|---|
 | [EPIC-10](EPIC-10.md) | The domain adapter package, Postgres, and the HTTP API. Private deployment depends on what that epic decides |
 | [EPIC-11](EPIC-11.md) | Document versions as sources, text derived from PDF files and scans, the approval flow, and several client organisations on one deployment. Every domain below uses document versions as sources, in all or some deployments |
-| [EPIC-08](EPIC-08.md) | Correction policy per domain, proposals (FL-043), feedback (FL-046, FL-059, FL-060) and purge (FL-047, FL-061) |
-| [EPIC-09](EPIC-09.md) | Reversible entity merge (FL-052, FL-063) with duplicate detection (FL-053, FL-064), verification (FL-049, FL-050, FL-062, FL-051) and archiving (FL-055, FL-065) |
+| [EPIC-08](EPIC-08.md) | Correction policy per domain, proposals (FL-043, FL-070), feedback (FL-046, FL-059, FL-060) and purge (FL-047, FL-061, FL-072) |
+| [EPIC-09](EPIC-09.md) | Reversible entity merge (FL-052, FL-063) with duplicate detection (FL-053, FL-064), verification (FL-049, FL-050, FL-071, FL-062, FL-051) and archiving (FL-055, FL-065, FL-073) |
 | [EPIC-07](EPIC-07.md) | The scenario format and runner each adapter's eval set reuses |
 
 ## What phases 0 to 5 already provide
