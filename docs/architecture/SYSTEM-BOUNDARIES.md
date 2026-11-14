@@ -6,7 +6,7 @@ Which package may import which, how that is enforced, and what each package's pu
 
 | Package | May import | Must not import |
 |---|---|---|
-| `@factloom/core` | `zod` | Any other `@factloom` package. Any database, LLM, embedding or MCP library |
+| `@factloom/core` | `zod` | Any other `@factloom` package. Any database, LLM, embedding or MCP library. A test framework, in its source files |
 | `@factloom/graph-rag` | `@factloom/core`, `zod` | `@factloom/storage`. Any database, LLM, embedding or MCP library |
 | `@factloom/storage` | `@factloom/core`, `better-sqlite3`, `sqlite-vec` | `@factloom/graph-rag`. Any LLM, embedding or MCP library |
 | `apps/mcp-server` | Every `@factloom` package, the MCP SDK, the Anthropic SDK, the embedding library, `zod` | Nothing is forbidden, but it holds no rules about facts |
@@ -25,11 +25,11 @@ Two further rules:
 
 Three mechanisms, so that a forbidden import fails without anyone remembering the rule.
 
-1. **Declared dependencies.** Each `package.json` lists only what the table allows. pnpm does not make an undeclared workspace package resolvable, so `import '@factloom/storage'` inside `core` fails the type check and fails at run time.
-2. **Lint.** A lint rule per package forbids importing the packages and libraries in the "must not import" column, and forbids deep imports into another package. This catches the case where someone adds a dependency to `package.json` to make an import work.
-3. **One public entry.** Each `package.json` exports only its `index.ts`.
+1. **Declared dependencies.** Each `package.json` lists only what the table allows. pnpm does not make an undeclared workspace package resolvable, so `import '@factloom/storage'` inside `core` fails the type check and fails at run time. This was run in the no-build setup ([toolchain research](../research/technical/toolchain.md)).
+2. **Lint.** Planned: a lint rule per package forbids importing the packages and libraries in the "must not import" column, and forbids deep imports into another package. This catches the case where someone adds a dependency to `package.json` to make an import work.
+3. **One public entry.** Each `package.json` exports only its `index.ts`. No package has a second entry.
 
-The scaffold stage proves this by adding a forbidden import, showing the check fail, and removing it.
+The lint rules are planned and have not been run in the no-build setup. The rule against forbidden imports was run only in a workspace with a build step, and the rule against deep imports was not run at all. The scaffold stage proves both by adding a forbidden import and a deep import, showing the check fail, and removing them.
 
 ## Public API of each package
 
@@ -40,19 +40,19 @@ Each package exports only what another package needs. Everything else stays priv
 | Group | Exports |
 |---|---|
 | Result | `Result`, `ok`, `err`, `ERROR_CODES`, `ErrorCode`, `FactloomError` |
-| Schemas and types | The Zod schemas and derived types for `Timestamp`, `Entity`, `Fact`, `FactObject`, `Source`, `AuditEntry`, `TimeFilter`, `Domain`, `PredicateDefinition`, `ChangeSet`, `Change` |
+| Schemas and types | The Zod schemas and derived types for `Timestamp`, `Entity`, `Fact`, `FactObject`, `Source`, `Trigger`, `Operation`, `ReasonCode`, `AuditAction`, `AuditEntry`, `TimeFilter`, `Domain`, `PredicateDefinition`, `ChangeSet`, `Change`, `CommitReceipt`, `FactWithSources` |
 | Time | `toTimestamp`, `parseDateInput` |
 | Interfaces | `MemoryStore`, `LlmClient`, `Embedder` |
-| Fact operations | `recordFacts`, `invalidateFact`, `endFact`, `findConflictCandidates` |
-| For tests | `createInMemoryStore`, `describeMemoryStoreContract`, `createFakeEmbedder`, `createScriptedLlm` |
+| Fact operations, phase 1 | `recordFacts`, `invalidateFact`, `endFact`, `findConflictCandidates`, with `OperationDeps`, `ChangeContext`, `NewSource`, `NewEntity`, `NewFact`, `FactDraft` |
+| Test helpers | `createInMemoryStore`, `createFakeEmbedder`, `createScriptedLlm`, `createTestDeps` |
 
-The test helpers are exported from a second entry, `@factloom/core/testing`, so that production code does not import them by accident.
+The test helpers are ordinary exports of the one `index.ts`. They import no test framework, so nothing in `core`'s source does. The operations of phases 2 and 3 in [`INTERFACES.md`](INTERFACES.md) are added to this list in their phase.
 
 ### `@factloom/graph-rag`
 
 | Group | Exports |
 |---|---|
-| Use cases | `remember`, `recordStructuredFacts`, `recall`, `getFactHistory`, with their input and output types |
+| Use cases | `remember`, `recordStructuredFacts`, `changeFact`, `recall`, `getFactHistory`, with their input and output types |
 | Domain | `softwareDevelopmentDomain` |
 
 Rank fusion and entity resolution are internal.
@@ -63,7 +63,7 @@ Rank fusion and entity resolution are internal.
 |---|---|
 | Adapter | `openSqliteMemoryStore(options)`, which returns a `Result<MemoryStore>` after applying pending migrations |
 
-The SQL, the migration runner and the row mappers are internal.
+The SQL, the migration runner and the row mappers are internal. So is the storage contract suite, `describeMemoryStoreContract`: this package runs it against the in-memory store from `core` and against the SQLite adapter. The suite moves to a shared place when a second adapter exists.
 
 ### `apps/mcp-server`
 
