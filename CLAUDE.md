@@ -29,6 +29,8 @@ The workspace is created in the scaffold stage. Until then only the spikes run, 
 | MCP tools | `docs/architecture/MCP-TOOLS.md` |
 | How it is tested and measured | `docs/architecture/TESTING.md` |
 | Why a decision was made | `docs/architecture/DECISIONS.md` |
+| What is planned, and its status | `docs/roadmap/ROADMAP.md` |
+| What the product must do | `docs/product/REQUIREMENTS.md` |
 | Research behind the design | `docs/research/` |
 | What is still unverified | `docs/research/OPEN-QUESTIONS.md` |
 
@@ -56,7 +58,7 @@ The conventions are in `.claude/rules/` and are the only copy. Each loads when i
 
 ### Issue tracker
 
-Work is tracked in Markdown under `docs/roadmap/`, not in GitHub Issues. That folder is created in the roadmap stage and does not exist yet. See `docs/agents/issue-tracker.md`.
+Work is tracked in Markdown under `docs/roadmap/`, not in GitHub Issues. `docs/roadmap/ROADMAP.md` is the index. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
