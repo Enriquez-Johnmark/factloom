@@ -72,7 +72,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-027 | Timeline scenarios as reviewed data | 0 | FL-006, FL-018 | Pending |
+| FL-027 | Timeline scenarios as reviewed data | 0 | FL-006, FL-018 | Under Review |
 | FL-028 | Record-and-replay wrapper for the LLM client | 1 | FL-006, FL-027 | Pending |
 | FL-029 | Extraction cases | 1 | FL-018, FL-027 | Pending |
 | FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Pending |
@@ -83,7 +83,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 0 |
 | Depends on | FL-006, FL-018 |
 | Requirements | REQ-30 |
@@ -157,18 +157,53 @@ This item writes one file per row of the table.
 - [Engineering principles](../../../.claude/rules/engineering-principles.md): few dependencies, each with a reason.
 
 **Acceptance criteria.**
-- [ ] Test "every scenario file matches the scenario schema" passes and reports eleven files.
-- [ ] Test "rejects a scenario with an unknown key" passes, and so do "rejects a step with no input", "rejects an ask with no expected values" and "rejects steps that are out of order", each on an inline example.
-- [ ] Test "covers every case in the table" passes: each of the eleven case names appears in exactly one file's `name`.
-- [ ] Test "every ask about the past states a date" passes: each file whose row mentions an earlier date has an `ask` with `as_of` or `known_at`.
-- [ ] Test "every scenario uses only entity types and predicates of the software development domain" passes, and "rejects a scenario that names a predicate the domain does not have" passes on an inline example.
+- [x] Test "every scenario file matches the scenario schema" passes and reports eleven files.
+- [x] Test "rejects a scenario with an unknown key" passes, and so do "rejects a step with no input", "rejects an ask with no expected values" and "rejects steps that are out of order", each on an inline example.
+- [x] Test "covers every case in the table" passes: each of the eleven case names appears in exactly one file's `name`.
+- [x] Test "every ask about the past states a date" passes: each file whose row mentions an earlier date has an `ask` with `as_of` or `known_at`.
+- [x] Test "every scenario uses only entity types and predicates of the software development domain" passes, and "rejects a scenario that names a predicate the domain does not have" passes on an inline example.
 - [ ] Review by the owner: the owner reads each file and checks every expected value against the row of the table, by hand. The owner records, per file, "reviewed" and the date in the completion evidence. A file changed after its review is reviewed again.
-- [ ] `git grep -n "evals/" -- apps/mcp-server/src` shows no import.
-- [ ] `pnpm check` exits 0.
+- [x] `git grep -n "evals/" -- apps/mcp-server/src` shows no import.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `apps/mcp-server/evals/` for the schema and the loader; the owner's review of the data.
 
 **Completion evidence.** The commit, the passing `pnpm check` output, and the owner's review record per file. The `entities` kind of expectation is added to the file format shown in [`TESTING.md`](../../architecture/TESTING.md), "Layer B", in its own commit.
+
+**Recorded evidence.** Everything except the owner's review was done on 2026-11-14, in three commits: `build(mcp-server): add yaml 2.9.1 and the evals folder to the check`, `test(evals): add the scenario format and the eleven timeline scenarios`, and `docs: show the scenario format as built in the testing strategy`. The item is `Under Review` until the owner has read the eleven files.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, ended with:
+
+```text
+ Test Files  17 passed (17)
+      Tests  250 passed (250)
+```
+
+`git grep -n "evals/" -- apps/mcp-server/src` shows no import.
+
+Owner's review, to be filled in by the owner. Each file is in `apps/mcp-server/evals/scenarios/`. For each, check every expected value against its row of the table in functional requirement 6.
+
+| File | Reviewed | Date |
+|---|---|---|
+| `succession.yaml` | | |
+| `correction.yaml` | | |
+| `restatement.yaml` | | |
+| `multi-valued-predicate.yaml` | | |
+| `unrelated-fact.yaml` | | |
+| `older-fact-arriving-late.yaml` | | |
+| `known-name-different-type.yaml` | | |
+| `date-in-text.yaml` | | |
+| `no-date-in-text.yaml` | | |
+| `plan.yaml` | | |
+| `retraction.yaml` | | |
+
+Choices made where the item left one, for the owner to confirm in the review:
+
+- A subject is written as `{ name, type }`, with the type optional. The repository in every scenario is an invented one, `shop-api`.
+- The correction scenario corrects through a `remember` text ("Correction: ..."), because a `change_fact` step carries no replacement value. Only the retraction scenario uses `change_fact`.
+- A scenario's `name` starts with its case name and a colon, which is how the test "covers every case in the table" matches files to cases.
+- In "Older fact arriving late", the fact that fits is Heroku, from 2024-01-01 to 2025-02-01, before Fly.io begins. The fact that overlaps is Render, from June to September 2025, inside the Fly.io period. It must not be recorded, so `fact_rows` stays at 2.
+- Expected values that look like numbers, the ports, are quoted so that they are read as text.
 
 ### FL-028: Record-and-replay wrapper for the LLM client
 
