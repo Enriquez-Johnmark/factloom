@@ -323,7 +323,7 @@ $ vitest run
       Tests  6 passed (6)
 ```
 
-This run covers the tooling only. The native SQLite modules are not part of the scaffold; they are still untested on macOS (Q-01 and Q-02 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md)).
+On the same machine, `node apps/mcp-server/src/main.ts` ran from source with no flag and no warning. The native SQLite modules are not part of the scaffold; the owner ran them separately in [`spikes/fact-schema`](../../../spikes/fact-schema/README.md), where all 31 checks passed.
 
 ### FL-002: Run the check in continuous integration on Linux and macOS arm64
 
