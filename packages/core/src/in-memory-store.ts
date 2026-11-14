@@ -1,7 +1,7 @@
 import type { AuditAction, AuditEntry } from './audit.ts';
 import { type Change, type ChangeSet, ChangeSetSchema } from './change-set.ts';
 import { normaliseEntityName } from './entity-name.ts';
-import type { Entity, Fact, FactWithSources, Namespace, Source } from './fact.ts';
+import type { Entity, Fact, FactWithSources, Namespace, Source, TimeFilter } from './fact.ts';
 import type { MemoryStore } from './memory-store.ts';
 import { err, type Failure, ok } from './result.ts';
 import { matchesTimeFilter, periodsOverlap } from './valid-period.ts';
@@ -297,6 +297,38 @@ function findSingleValueConflict(draft: State, changeSet: ChangeSet): Failure | 
   return null;
 }
 
+function isValidLimit(limit: number): boolean {
+  return Number.isInteger(limit) && limit >= 1;
+}
+
+function invalidLimit(): Failure {
+  return err('invalid_input', 'The limit must be a whole number of at least 1.');
+}
+
+/** The words of a text: lower case, split wherever a character is not a letter or a digit. */
+function wordsOf(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((word) => word.length > 0);
+}
+
+/** Cosine distance: 0 for the same direction, 1 for unrelated, 2 for opposite. */
+function cosineDistance(first: Float32Array, second: Float32Array): number {
+  let dot = 0;
+  let firstLength = 0;
+  let secondLength = 0;
+  for (let index = 0; index < first.length; index += 1) {
+    const a = first[index] ?? 0;
+    const b = second[index] ?? 0;
+    dot += a * b;
+    firstLength += a * a;
+    secondLength += b * b;
+  }
+  if (firstLength === 0 || secondLength === 0) return 1;
+  return 1 - dot / Math.sqrt(firstLength * secondLength);
+}
+
 /**
  * Creates a `MemoryStore` that keeps everything in memory. It is a complete implementation
  * of the interface, not a mock: use cases are tested against it, and the storage contract
@@ -318,8 +350,22 @@ export function createInMemoryStore(): MemoryStore {
     return structuredClone({ fact, subject, objectEntity, sources });
   };
 
-  const lanesNotBuilt = (): Promise<Failure> =>
-    Promise.resolve(err('storage_failed', 'The in-memory store has no retrieval lanes yet.'));
+  /** The facts of a namespace that pass the time filter, in the order they were recorded. */
+  const factsInTime = (namespace: Namespace, time: TimeFilter): Fact[] =>
+    [...state.facts.values()].filter((fact) => fact.namespace === namespace && matchesTimeFilter(fact, time));
+
+  /** Turns ranked facts into what a lane returns, best first, after the time filter and up to the limit. */
+  const rankedResults = (
+    ranked: readonly { readonly fact: Fact; readonly rank: number }[],
+    limit: number,
+  ): FactWithSources[] =>
+    [...ranked]
+      .sort((a, b) => a.rank - b.rank)
+      .slice(0, limit)
+      .flatMap(({ fact }) => {
+        const result = withSources(fact);
+        return result === null ? [] : [result];
+      });
 
   const store: MemoryStore = {
     commit(changeSet) {
@@ -375,9 +421,7 @@ export function createInMemoryStore(): MemoryStore {
     },
 
     listFacts(query) {
-      if (!Number.isInteger(query.limit) || query.limit < 1) {
-        return Promise.resolve(err('invalid_input', 'The limit must be a whole number of at least 1.'));
-      }
+      if (!isValidLimit(query.limit)) return Promise.resolve(invalidLimit());
       const { time } = query;
       const touching = query.touchingEntityIds === null ? null : new Set(query.touchingEntityIds);
       const matches = (fact: Fact): boolean => {
@@ -413,8 +457,34 @@ export function createInMemoryStore(): MemoryStore {
       return Promise.resolve(ok(results));
     },
 
-    searchFactsByVector: lanesNotBuilt,
-    searchFactsByKeyword: lanesNotBuilt,
+    searchFactsByVector(query) {
+      if (!isValidLimit(query.limit)) return Promise.resolve(invalidLimit());
+      if (state.dimensions !== null && query.vector.length !== state.dimensions) {
+        return Promise.resolve(
+          err(
+            'invalid_input',
+            `The query vector has ${query.vector.length} dimensions, but this memory holds vectors of ${state.dimensions}.`,
+          ),
+        );
+      }
+      const ranked = factsInTime(query.namespace, query.time).flatMap((fact) => {
+        const vector = state.vectors.get(fact.id);
+        return vector === undefined ? [] : [{ fact, rank: cosineDistance(query.vector, vector) }];
+      });
+      return Promise.resolve(ok(rankedResults(ranked, query.limit)));
+    },
+
+    searchFactsByKeyword(query) {
+      if (!isValidLimit(query.limit)) return Promise.resolve(invalidLimit());
+      const wanted = new Set(wordsOf(query.text));
+      const ranked = factsInTime(query.namespace, query.time).flatMap((fact) => {
+        const statementWords = new Set(wordsOf(fact.statement));
+        const matching = [...wanted].filter((word) => statementWords.has(word)).length;
+        // More matching words rank first, so the rank is the negative count.
+        return matching === 0 ? [] : [{ fact, rank: -matching }];
+      });
+      return Promise.resolve(ok(rankedResults(ranked, query.limit)));
+    },
 
     getSource(query) {
       const source = state.sources.get(query.sourceId);
