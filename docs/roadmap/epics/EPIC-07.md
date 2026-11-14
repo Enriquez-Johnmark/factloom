@@ -5,7 +5,7 @@
 | Status | Pending |
 | Phases | 0-2 |
 | Packages | `apps/mcp-server` (the directory `evals/`), exercising `packages/graph-rag`, `packages/core` and `packages/storage` |
-| Requirements | REQ-30, REQ-35 |
+| Requirements | REQ-30, REQ-35, REQ-37 |
 
 Nothing in this epic is implemented. Terms are used as defined in [`GLOSSARY.md`](../../../GLOSSARY.md).
 
@@ -77,6 +77,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-029 | Extraction cases | 1 | FL-018, FL-027 | Pending |
 | FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Pending |
 | FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Pending |
+| FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Pending |
 
 ### FL-027: Timeline scenarios as reviewed data
 
@@ -486,3 +487,59 @@ Hosted runners vary from run to run, so a 95th percentile measured there moves w
 **Validation.** The benchmark command, run locally and in the eval job. Unit tests of the percentile and budget functions on every check.
 
 **Completion evidence.** The commit, the address of the workflow run, the table of the first run with the machine it ran on, and the record of each budget's outcome. Q-09 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) is updated with the timings on a file database.
+
+### FL-074: Token and tool-call comparison with and without Factloom
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 1 |
+| Depends on | FL-038 |
+| Requirements | REQ-37 |
+| Components | `apps/mcp-server` (evals), a fixture repository, the coding agent's own command line |
+
+**Objective.** Measure whether a coding agent uses fewer tokens and makes fewer tool calls on the same tasks when Factloom is registered, and publish the result whatever it shows.
+
+**Background.** Factloom's purpose for coding agents is to stop them re-discovering, every session, what the code does not show: decisions, conventions, reasons. The expected benefit is fewer tokens and fewer search and read calls. That is a goal, not a finding. Memory also costs tokens: tool definitions and every `recall` result enter the context, and one study found that repository context files raised cost by about 20% with no gain in task success ([software development research](../../research/industries/software-development.md), finding 1.14). So the saving has to be measured, and the measurement has to be able to show a loss.
+
+**Outcome.** A table, committed to the repository, of token use, tool calls and task success with and without Factloom on a fixed set of tasks, and a statement in the root `README.md` that says exactly what the table shows.
+
+**Scope.**
+- A fixture repository and a fixed set of about ten tasks, each in two sessions. The first session gives the agent something worth knowing later, such as a decision and its reason, a convention, or the cause of a bug. The second session, started fresh, gives a task that depends on it.
+- A runner that plays each task twice through the agent's non-interactive command line: once with the Factloom server registered and once without. It records, per session, input tokens, output tokens, the number of tool calls by tool, and whether the task's check passed.
+- Each task has a check that passes or fails by running something, so that a cheaper wrong answer does not count as a saving.
+- A report with the totals and the per-task differences, the agent and model used, and the date.
+
+**Non-goals.**
+- A claim of statistical significance. Ten tasks show a direction, not a law, and the report says so.
+- A comparison with other memory systems.
+- Tuning Factloom to the tasks. If a task reveals a weakness, the fix is a separate work item and the task stays in the set.
+
+**Functional requirements.**
+1. The task set and the checks are written and committed before any run, and are not changed after seeing results. A change is listed in the report with its reason.
+2. The runner works with at least one of Claude Code and Codex. How each reports token use and tool calls from a non-interactive run is not verified in the research; the item starts by confirming it in the agent's current documentation, and cites the page.
+3. The baseline run uses the agent as shipped, including its built-in file memory, because that is what a user already has for free.
+4. Every figure in the report comes from the agent's own usage output. Nothing is estimated.
+5. The report states the result plainly in each of three cases: a saving, no clear difference, or a cost.
+
+**Technical requirements.**
+1. The runner and the task set live in `apps/mcp-server/evals/`, with the other evals ([`TESTING.md`](../../architecture/TESTING.md)).
+2. The runner is not part of `pnpm check` or `pnpm eval`: it needs a signed-in agent and spends real tokens. The owner starts it by hand.
+3. Each run starts from a clean copy of the fixture repository and, for the Factloom runs, a new database file and namespace.
+4. Secrets: the runner never prints or stores a key or a session token.
+
+**Constraints.**
+- Findings are labelled as measured or unverified, and nothing is stated as fact without its source ([engineering principles](../../../.claude/rules/engineering-principles.md)).
+- Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
+
+**Acceptance criteria.**
+- [ ] The task set and its checks are committed in a commit that precedes the commit of the first results.
+- [ ] Unit tests of the report's arithmetic (totals, differences, medians) pass under `pnpm check`.
+- [ ] The owner runs the runner once per configuration and commits the raw usage output and the generated report. The report names the agent, the model, the date and the number of tasks.
+- [ ] The report has, for each task and in total, input tokens, output tokens, tool calls and pass or fail, with and without Factloom.
+- [ ] The root `README.md` states the measured result in one or two sentences that match the report, including when the result is no saving or a cost.
+- [ ] `pnpm check` still exits 0 and does not start the runner.
+
+**Validation.** Unit tests for the report arithmetic on every check. The comparison itself is a manual run by the owner, because it needs a signed-in agent and spends tokens.
+
+**Completion evidence.** The commit of the task set, the commit of the raw output and report, and the sentence added to `README.md`.
