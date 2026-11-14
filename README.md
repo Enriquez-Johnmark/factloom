@@ -1,5 +1,7 @@
 # Factloom
 
+[![CI](https://github.com/Enriquez-Johnmark/factloom/actions/workflows/ci.yml/badge.svg)](https://github.com/Enriquez-Johnmark/factloom/actions/workflows/ci.yml)
+
 A memory layer for AI systems. Factloom stores what an agent learns as facts that record **when each fact was true** and **when it was learned**, so it can answer three different questions:
 
 - What is true now?
