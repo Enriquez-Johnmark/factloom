@@ -42,6 +42,8 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 
 ## Dependencies
 
+- [EPIC-01](EPIC-01.md): the continuous integration workflow (FL-002), in which the smoke test must pass on both platforms.
+- [EPIC-02](EPIC-02.md): `recordFacts` (FL-008), with which the test of the `recall` tool prepares its database, and the fake embedder of the test helpers.
 - [EPIC-03](EPIC-03.md): the SQLite adapter with commit, structural reads and both lanes.
 - [EPIC-04](EPIC-04.md): `remember`, `recordStructuredFacts`, `changeFact`, and the Anthropic client.
 - [EPIC-05](EPIC-05.md): `recall`, `getFactHistory`, and the local embedder.
@@ -67,10 +69,10 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-034 | Server configuration and composition root | 1 | FL-014, FL-015, FL-016, FL-017, FL-026 | Pending |
-| FL-058 | recall tool end to end | 1 | FL-034, FL-031 | Pending |
-| FL-035 | remember and record_fact tools | 1 | FL-058, FL-023, FL-024 | Pending |
-| FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-058, FL-025, FL-032 | Pending |
-| FL-037 | Smoke test over stdio with a restart | 1 | FL-035, FL-036 | Pending |
+| FL-058 | recall tool end to end | 1 | FL-008, FL-034, FL-031 | Pending |
+| FL-035 | remember and record_fact tools | 1 | FL-019, FL-058, FL-023, FL-024 | Pending |
+| FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-018, FL-035, FL-058, FL-025, FL-032 | Pending |
+| FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Pending |
 | FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Pending |
 
 ### FL-034: Server configuration and composition root
@@ -114,12 +116,13 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 6. When standard input closes, the store is closed and the process exits with code 0.
 
 **Technical requirements.**
-1. `@modelcontextprotocol/server` is a dependency with an exact version and no range. The version is the latest of the version 2 line on the registry on the day of implementation, checked with `npm view` and cited in the commit message. The research records the version it verified. The client package used by tests is a development dependency, pinned the same way.
+1. `@modelcontextprotocol/server` is a dependency with an exact version and no range. The version is the latest of the version 2 line on the registry on the day of implementation, checked with `npm view` and cited in the commit message. The research records the version it verified. The client package used by tests is a development dependency, pinned the same way. The pin test of FL-001 fails if either is a range; this item adds no pin test of its own.
 2. Configuration is parsed by a Zod schema in a pure function that takes the environment as an argument and returns a `Result`.
 3. Only `main.ts` reads the environment and names concrete implementations. The clock uses `toTimestamp` from `core`.
 4. The embedder's cache directory is `models` beside the default database, in `~/.factloom/`.
 5. Nothing in the app writes to standard output except the SDK's transport. All logging goes through the one logger.
 6. The function that creates the server takes its dependencies as one argument and takes the tools to register as a list, which is empty in this item. FL-058, FL-035 and FL-036 each add to the list and change nothing else in the frame.
+7. `main.ts` does two things: it reads the configuration and builds the real dependencies, then serves the server-creating function over stdio. The second step is a function of its own, so that a test entry can serve the same server with other dependencies (FL-058).
 
 **Constraints.**
 - [ADR 0016](../../architecture/adr/0016-mcp-stdio-server-with-five-tools.md), [ADR 0011](../../architecture/adr/0011-namespace-on-every-row.md), [ADR 0003](../../architecture/adr/0003-dependencies-point-inward-with-manual-injection.md).
@@ -134,10 +137,9 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 - [ ] The same test asserts that every line the child wrote to standard output parses as a JSON-RPC message.
 - [ ] A test named "exits when no namespace is configured" starts the child without `FACTLOOM_NAMESPACE` and asserts an exit code other than 0 and a message on standard error.
 - [ ] A test named "exits when the database was built with another embedding model" prepares a database whose embedding rows name another model, starts the child on it, and asserts an exit code other than 0 and `embedding_model_mismatch` on standard error.
-- [ ] A test reads `apps/mcp-server/package.json` and fails if the version of `@modelcontextprotocol/server` is a range.
-- [ ] `pnpm check` passes.
+- [ ] `pnpm check` passes with no network access and no embedding model in the cache.
 
-**Validation.** Unit tests of configuration and of the server-creating function with fakes and an in-process client. Tests over stdio with a child process and the SQLite adapter. All on every check.
+**Validation.** Unit tests of configuration and of the server-creating function with fakes and an in-process client. Tests over stdio with a child process and the SQLite adapter. All on every check. None of them loads the embedding model: the server answers the initialise request before the model is loaded (functional requirement 5).
 
 **Completion evidence.** The commit, with the registry check in its message. The passing output of `pnpm check`.
 
@@ -147,13 +149,15 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 |---|---|
 | Status | Pending |
 | Phase | 1 |
-| Depends on | FL-034, FL-031 |
+| Depends on | FL-008, FL-034, FL-031 |
 | Requirements | REQ-03, REQ-04, REQ-10 |
 | Components | `apps/mcp-server` |
 
 **Objective.** Add the first tool, `recall`, working from a tool call over stdio down to the SQLite file, with the translations that every later tool reuses.
 
 **Background.** The `recall` tool is specified in [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "`recall`", "Dates", "Errors" and "Annotations". It calls the `recall` use case (FL-031) and holds no rule of its own ([`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "What a handler does"). The [MCP research](../../research/technical/mcp.md) verified `registerTool` with an input schema, an output schema and annotations, that the SDK checks `structuredContent` against the output schema, and that a result with `isError: true` reaches the model. It also found that some Zod date and identifier types add a long pattern to the listed schema. This item is the second part of the original FL-034: the frame is built there, and the first tool here.
+
+`pnpm check` needs no embedding model ([`TESTING.md`](../../architecture/TESTING.md), "Four kinds of test"), but `recall` embeds its question, and `main.ts` builds the real embedder. So the test over stdio in `pnpm check` starts a test entry, a small script kept beside the tests, that serves the same server-creating function as `main.ts` with the SQLite store and the fake embedder of `core`. The real embedder is exercised end to end by the clean-install job (FL-003) and by the benchmark (FL-066).
 
 **Outcome.** A host that connects to the server lists one tool, `recall`, which answers from the configured database and namespace. FL-035 and FL-036 add their tools by reusing the translation of a fact, of a date and of an error.
 
@@ -162,11 +166,13 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 - The shared translation from a fact with its sources to the tool output.
 - The shared translation of a date input, and from a failed `Result` to a tool error.
 - A test over stdio from the tool call to the SQLite file.
+- The test entry that serves the server over stdio with the fake embedder. FL-037 reuses it.
 
 **Non-goals.**
 - The other four tools: FL-035 and FL-036.
+- A configuration variable that selects the embedder. The test entry is not reachable from `main.ts`, and the configuration keeps the three variables of [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md).
 - The time defaults and the lanes. They are in the use case (FL-031) and the store.
-- A tool parameter for the recall settings, or for including an **archived fact**: FL-065 in EPIC-09 adds the second.
+- A tool parameter for the recall settings, or for including an **archived fact**: FL-073 in EPIC-09 adds the second.
 - Recording which facts were recalled: FL-055 in EPIC-09.
 
 **Functional requirements.**
@@ -184,6 +190,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 2. Date fields in the input schema are plain strings with a description, checked in the handler, so that `tools/list` stays small (MCP research, "Schema size").
 3. The handler holds no rule about facts or time. The time defaults are in the use case (FL-031).
 4. The three translations are functions of their own, each with unit tests, because FL-035 and FL-036 reuse them.
+5. The test entry reads the database path and the namespace from the same configuration function as `main.ts`, builds the store with `openSqliteMemoryStore` and the fake embedder's model name and dimensions, and calls the serving function of FL-034. It differs from `main.ts` only in the embedder it builds.
 
 **Constraints.**
 - [ADR 0016](../../architecture/adr/0016-mcp-stdio-server-with-five-tools.md): a handler only translates.
@@ -194,11 +201,11 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 **Acceptance criteria.**
 - [ ] Tests of the tool, with a server built from the in-memory store and the fake embedder and a client connected in process, pass with these names: "lists recall with a description on every input field", "declares an output schema and the read-only annotation", "returns the same facts as structured content and as text", "returns current facts when no date is given", "accepts a calendar date as the as-of date", "returns a fact withdrawn since the known-at date with its invalidation", "returns invalid_input for a malformed date", "returns each source without its content", "starts an error text with the error code".
 - [ ] Unit tests of the translations pass with these names: "translates a fact with an entity as its object", "translates a fact with a value as its object", "puts the related fact identifiers after the message of an error".
-- [ ] A test named "answers recall over stdio from a SQLite file" records one fact in a temporary database through `recordFacts` with the SQLite store and the local embedder, starts `node` on `main.ts` as a child process with that database and a namespace, calls `recall` over stdio, and finds the fact in the result.
+- [ ] A test named "answers recall over stdio from a SQLite file" records one fact in a temporary database through `recordFacts` (FL-008) with the SQLite store and the fake embedder, starts `node` on the test entry as a child process with that database and a namespace, calls `recall` over stdio, and finds the fact in the result.
 - [ ] The same test asserts that every line the child wrote to standard output parses as a JSON-RPC message.
-- [ ] `pnpm check` passes.
+- [ ] `pnpm check` passes with no network access and no embedding model in the cache.
 
-**Validation.** Unit tests with fakes and an in-process client. One test over stdio with a child process, the SQLite adapter and the real embedder. All on every check.
+**Validation.** Unit tests with fakes and an in-process client. One test over stdio with a child process, the SQLite adapter and the fake embedder. All on every check.
 
 **Completion evidence.** The commit, and the passing output of `pnpm check`.
 
@@ -208,7 +215,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 |---|---|
 | Status | Pending |
 | Phase | 1 |
-| Depends on | FL-058, FL-023, FL-024 |
+| Depends on | FL-019, FL-058, FL-023, FL-024 |
 | Requirements | REQ-10, REQ-13 |
 | Components | `apps/mcp-server` |
 
@@ -268,13 +275,13 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 |---|---|
 | Status | Pending |
 | Phase | 1 |
-| Depends on | FL-058, FL-025, FL-032 |
+| Depends on | FL-018, FL-035, FL-058, FL-025, FL-032 |
 | Requirements | REQ-09, REQ-10 |
 | Components | `apps/mcp-server` |
 
 **Objective.** Add the tool that says a fact is wrong or no longer true, and the tool that shows how a fact changed and why. With them the server has the five tools of phase 1.
 
-**Background.** Both tools are specified in [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md). `invalidate_fact` is one tool with a `because` field, because an agent thinks "this fact is no longer right" before it thinks about which time axis is involved ([ADR 0016](../../architecture/adr/0016-mcp-stdio-server-with-five-tools.md)). It calls `changeFact` (FL-025). `get_fact_history` calls `getFactHistory` (FL-032). Nothing is deleted by either tool.
+**Background.** Both tools are specified in [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md). `invalidate_fact` is one tool with a `because` field, because an agent thinks "this fact is no longer right" before it thinks about which time axis is involved ([ADR 0016](../../architecture/adr/0016-mcp-stdio-server-with-five-tools.md)). It calls `changeFact` (FL-025). `get_fact_history` calls `getFactHistory` (FL-032). Nothing is deleted by either tool. The replacement of `invalidate_fact` reuses the input schema and translation of `record_fact` (FL-035), and both handlers need the software development domain (FL-018) in the composition root, because `changeFact` and `getFactHistory` take it as a dependency.
 
 **Outcome.** An agent can correct, retract, end or replace a fact it recalled, and can read the **fact history** of any fact. `tools/list` returns the complete surface of phase 1.
 
@@ -326,28 +333,31 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 |---|---|
 | Status | Pending |
 | Phase | 1 |
-| Depends on | FL-035, FL-036 |
+| Depends on | FL-002, FL-035, FL-036 |
 | Requirements | REQ-11, REQ-12 |
 | Components | `apps/mcp-server` |
 
 **Objective.** Prove on every check that the server starts as a host would start it, answers over stdio, runs from one SQLite file with no other service, and keeps memory across a restart.
 
-**Background.** [`TESTING.md`](../../architecture/TESTING.md), "Smoke test", defines it: start the server as a child process on a temporary database, with no API key, list the tools, record a fact with `record_fact`, restart the process, recall the fact, and check that `remember` answers `llm_failed`. Two projects studied in the research did not start on a fresh install because a dependency had moved, so the test runs against exact pinned versions ([ADR 0016](../../architecture/adr/0016-mcp-stdio-server-with-five-tools.md), "Consequences"; [competitive analysis](../../research/evaluations/competitive-analysis.md), REQ-CA-07 and REQ-CA-08). The [MCP research](../../research/technical/mcp.md) records the default start-up limit of one host, 10 seconds.
+**Background.** [`TESTING.md`](../../architecture/TESTING.md), "Smoke test", defines it: start the server as a child process on a temporary database, with no API key, list the tools, record a fact with `record_fact`, restart the process, recall the fact, and check that `remember` answers `llm_failed`. Two projects studied in the research did not start on a fresh install because a dependency had moved, so the test runs against exact pinned versions ([ADR 0016](../../architecture/adr/0016-mcp-stdio-server-with-five-tools.md), "Consequences"; [competitive analysis](../../research/evaluations/competitive-analysis.md), REQ-CA-07 and REQ-CA-08). The pin test of FL-001 enforces those versions. The [MCP research](../../research/technical/mcp.md) records the default start-up limit of one host, 10 seconds.
 
-**Outcome.** A broken start, a stray write to standard output, a lost fact after a restart or an unpinned SDK fails `pnpm check`.
+`pnpm check` needs no network, no API key and no embedding model (`TESTING.md`), and `record_fact` and `recall` embed text. The test therefore starts the test entry of FL-058, which serves the same server as `main.ts` with the fake embedder. The real embedder is exercised end to end by the clean-install job (FL-003).
+
+**Outcome.** A broken start, a stray write to standard output or a lost fact after a restart fails `pnpm check`.
 
 **Scope.**
 - One test that drives two server processes, one after the other, on the same database file.
-- A check that the three SDK dependencies are pinned exactly.
 
 **Non-goals.**
+- A pin check of its own. The pin test of FL-001 covers the three SDKs.
+- The real embedding model in the child process: FL-003 and FL-066.
 - A fake LLM inside the child process. The composition root has no switch for tests. The test starts the server with no API key, records with `record_fact`, and checks that `remember` answers `llm_failed`. `remember` with a scripted LLM is tested in process in FL-035.
-- Two processes writing at the same time. That case is in the storage contract suite (FL-012, FL-014).
+- Two processes writing at the same time. That case is in the storage contract suite (FL-067) and the adapter tests of FL-068.
 - The packed install on a clean machine: FL-003, which reuses this test's steps.
 - A real host. The owner does that in FL-038.
 
 **Functional requirements.**
-1. The test creates a temporary directory and starts `node` on the server's `main.ts` with `FACTLOOM_DB` in that directory, a `FACTLOOM_NAMESPACE`, and no `ANTHROPIC_API_KEY`.
+1. The test creates a temporary directory and starts `node` on the test entry of FL-058 with `FACTLOOM_DB` in that directory, a `FACTLOOM_NAMESPACE`, and no `ANTHROPIC_API_KEY`.
 2. First process: it calls `tools/list` and expects the five tool names in order. It calls `record_fact` with a fact of the software development domain and expects outcome `recorded`. It calls `remember` and expects a tool error that starts with `llm_failed`. It closes standard input and expects exit code 0.
 3. Second process, same database: it calls `recall` with a question about the fact and expects the fact's identifier in the result. It calls `get_fact_history` for that identifier and expects one entry with one change whose action is `fact.recorded`. It calls `invalidate_fact` with `because: "was_wrong"` and no replacement, then `recall` again, and expects the fact to be absent.
 4. The test asserts that every line either process wrote to standard output parses as a JSON-RPC message.
@@ -356,9 +366,8 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 
 **Technical requirements.**
 1. The test uses the pinned MCP client package as a development dependency, or raw JSON-RPC lines as in the proof in the MCP research.
-2. The embedder is the real one. Its model cache is shared between runs, so only the first run on a machine downloads the model ([`TESTING.md`](../../architecture/TESTING.md), "Continuous integration").
-3. A test reads `apps/mcp-server/package.json` and fails if `@modelcontextprotocol/server`, `@anthropic-ai/sdk` or `@huggingface/transformers` has a version range.
-4. The test runs as part of `pnpm check`.
+2. The embedder is the fake embedder of `core`, built by the test entry. No model is loaded or downloaded.
+3. The test runs as part of `pnpm check`.
 
 **Constraints.**
 - [ADR 0016](../../architecture/adr/0016-mcp-stdio-server-with-five-tools.md).
@@ -367,11 +376,10 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 
 **Acceptance criteria.**
 - [ ] A test named "the server keeps a recorded fact across a restart" passes and covers requirements 1 to 6.
-- [ ] A test named "the SDK dependencies are pinned to exact versions" passes.
-- [ ] `pnpm check` passes on Linux and on macOS arm64 in continuous integration (FL-002).
-- [ ] Changing one dependency to a range, as a trial, makes the pin test fail. The trial is reverted.
+- [ ] `pnpm check` passes with no network access and no embedding model in the cache.
+- [ ] `pnpm check` passes on Linux and on macOS arm64 in the workflow of FL-002. The address of that run is recorded.
 
-**Validation.** The smoke test and the pin test, on every check, on both platforms of continuous integration.
+**Validation.** The smoke test, on every check, on both platforms of continuous integration.
 
 **Completion evidence.** The commit. The passing output of `pnpm check` locally and the two passing continuous integration runs.
 
