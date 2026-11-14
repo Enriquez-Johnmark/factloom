@@ -4,7 +4,7 @@ Status: accepted
 
 Coding agents reach Factloom through a local MCP server over stdio, built on the version 2 MCP TypeScript SDK (`@modelcontextprotocol/server`). It exposes five tools, `recall`, `remember`, `record_fact`, `invalidate_fact` and `get_fact_history`, and no resources or prompts. The server keeps no state between calls. The surface is specified in [`MCP-TOOLS.md`](../MCP-TOOLS.md).
 
-Five is a deliberate limit. Hosts load tool names up front and definitions on demand, and every tool is something an agent must choose between. A tool handler only translates input, calls a use case, and translates the result.
+Five is the phase 1 surface, and a deliberate limit. Phase 2 adds one tool, `give_feedback`, when feedback has something to act on it. Hosts load tool names up front and definitions on demand, and every tool is something an agent must choose between. A tool handler only translates input, calls a use case, and translates the result.
 
 ## Considered options
 
