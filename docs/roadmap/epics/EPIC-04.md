@@ -67,7 +67,7 @@ Factloom can take new information and record it as entities and facts with a **s
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-018 | Software development domain: entity types and predicates | 0 | FL-006 | Pending |
+| FL-018 | Software development domain: entity types and predicates | 0 | FL-006 | Completed |
 | FL-019 | Anthropic LLM client | 1 | FL-006 | Pending |
 | FL-020 | Entity resolution by exact name | 1 | FL-007, FL-056 | Pending |
 | FL-021 | Extraction of facts from text | 1 | FL-018, FL-029, FL-056 | Pending |
@@ -81,7 +81,7 @@ Factloom can take new information and record it as entities and facts with a **s
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 0 |
 | Depends on | FL-006 |
 | Requirements | REQ-31 |
@@ -147,15 +147,26 @@ Factloom can take new information and record it as entities and facts with a **s
 - [`.claude/rules/engineering-principles.md`](../../../.claude/rules/engineering-principles.md): build only what the current phase needs.
 
 **Acceptance criteria.**
-- [ ] A test named "the software development domain passes the domain schema" parses the object with the `Domain` schema of FL-006 and passes.
-- [ ] A test named "every scenario case can be expressed with the domain" holds the coverage table above as data. For each row it checks that the subject type and any object entity type are in `entityTypes`, that the predicate is in `predicates`, and that the predicate's cardinality equals the table's. It passes.
-- [ ] A test asserts the exact list of four entity type names and six predicate names, so that an addition is a visible change.
-- [ ] A test asserts that every name matches lower-case snake case and that names are unique.
-- [ ] `pnpm check` passes.
+- [x] A test named "the software development domain passes the domain schema" parses the object with the `Domain` schema of FL-006 and passes.
+- [x] A test named "every scenario case can be expressed with the domain" holds the coverage table above as data. For each row it checks that the subject type and any object entity type are in `entityTypes`, that the predicate is in `predicates`, and that the predicate's cardinality equals the table's. It passes.
+- [x] A test asserts the exact list of four entity type names and six predicate names, so that an addition is a visible change.
+- [x] A test asserts that every name matches lower-case snake case and that names are unique.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests in `graph-rag`, run by `pnpm check`. No store, no LLM.
 
 **Completion evidence.** The commit, and the passing output of `pnpm check`.
+
+**Recorded evidence.** Completed on 2026-11-14, in the commit `feat(graph-rag): add the software development domain`. The code is `packages/graph-rag/src/software-development-domain.ts`, with its tests beside it.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, ended with:
+
+```text
+ Test Files  15 passed (15)
+      Tests  166 passed (166)
+```
+
+The coverage table is held as data in the test, one row per fact a scenario case needs: thirteen rows for the eleven cases, since two cases need two predicates each. A further test checks that each description is one sentence, contains "for example" and names its predicate.
 
 ### FL-019: Anthropic LLM client
 
