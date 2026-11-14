@@ -18,7 +18,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 - The `maintenance` package for product 2, and the rule that it imports `@factloom/core` only.
 - A conflict judge that gives one of four verdicts for each conflict candidate: duplicate, succession, correction, unrelated.
 - Automatic correction inside `remember` for a domain whose correction policy is `automatic`.
-- Stored proposals, with approve and reject operations and a read of pending proposals, for a domain whose correction policy is `human_approval`.
+- Stored proposals, with approve and reject operations and a read of pending proposals, for a domain whose correction policy is `human_approval`, and a command that a person runs to list, approve and reject them. It is not an MCP tool, so an agent cannot approve its own proposal.
 - The phase 2 fact operations of `INTERFACES.md`: `reviseValidTime`, `adjustConfidence`, `recordFeedback`, `purgeContent`, each with its `Change` kind, `Operation` name, `AuditAction` values, reason codes and migration.
 - The `give_feedback` MCP tool, which is the sixth tool, and the follow-up that acts on feedback.
 - The design of purge, proven by a spike before it is built, and a command that a person runs to purge. It is not an MCP tool, so an agent cannot purge.
@@ -51,7 +51,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 - [EPIC-02](EPIC-02.md): the phase 1 fact operations that corrections call: `endFact`, `invalidateFact`, `findConflictCandidates` (FL-010, FL-011).
 - [EPIC-03](EPIC-03.md): the SQLite adapter, its migration runner and the contract suite that every new change kind extends (FL-015).
 - [EPIC-04](EPIC-04.md): the LLM client (FL-019), the secret check (FL-022) that a feedback comment passes, and the `remember` use case that FL-042 changes.
-- [EPIC-06](EPIC-06.md): the server and the tool translations (FL-058) that the `give_feedback` tool reuses.
+- [EPIC-06](EPIC-06.md): the server, its configuration and entry point (FL-034), which the two commands of this epic share; the tool translations (FL-058) that the `give_feedback` tool reuses; the five-tool surface (FL-036) to which it is added; and the `remember` tool (FL-035), whose output FL-042 changes.
 - [EPIC-07](EPIC-07.md): the scenario data (FL-027), the record-and-replay wrapper (FL-028) and the scenario runner (FL-039) that set the bar for FL-041 and FL-042.
 
 ## Deliverables
@@ -59,7 +59,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 - `packages/maintenance`, with its boundary rules enforced.
 - The conflict judge and its eval.
 - `remember` with automatic correction, and the scenario numbers that show it.
-- Proposal storage with `approveProposedChange` and `rejectProposedChange` (proposed names).
+- Proposal storage with `approveProposedChange` and `rejectProposedChange` (proposed names), and a command in `apps/mcp-server` that a person runs to list, approve and reject proposals.
 - `reviseValidTime`, `adjustConfidence`, `recordFeedback` and `purgeContent` in `@factloom/core`, with their migrations and contract cases.
 - The `give_feedback` tool, and the follow-up in `maintenance` that acts on feedback.
 - The completed purge design in the decision records, with the spike that proves it.
@@ -72,7 +72,8 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 - The scenario "unrelated fact about the same subject" ends with no fact invalidated and with no conflict detection call made.
 - A lint run fails when `packages/maintenance` imports `@factloom/storage` or `@factloom/graph-rag`.
 - Every operation added in this epic has cases in the storage contract suite that pass against both stores.
-- After `purgeContent`, a test that reads every table and index finds none of the purged text.
+- After `purgeContent`, no read method of either store, and no query over any table or index of the SQLite database, returns the purged text. Freed database pages are cleared only if FL-047 settles how.
+- A person can list pending proposals and approve or reject one with a command of `apps/mcp-server`, and an approved proposal changes memory with the person as its trigger (FL-070).
 - A search of `packages/maintenance` for `commit(` and for SQL keywords in string literals finds nothing outside tests.
 
 ## Work items
@@ -81,15 +82,17 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 |---|---|---|---|---|
 | FL-040 | Create the maintenance package and its boundary rules | 2 | FL-001 | Pending |
 | FL-041 | Conflict judge | 2 | FL-040, FL-011, FL-019, FL-027, FL-028 | Pending |
-| FL-042 | Automatic correction inside remember | 2 | FL-041, FL-039 | Pending |
-| FL-043 | Proposed changes for human approval | 2 | FL-042 | Pending |
+| FL-042 | Automatic correction inside remember | 2 | FL-035, FL-041, FL-039 | Pending |
+| FL-043 | Proposed changes: storage and operations | 2 | FL-042 | Pending |
+| FL-070 | Human-approval policy in remember, with a command to list, approve and reject | 2 | FL-043, FL-042, FL-034 | Pending |
 | FL-044 | reviseValidTime operation | 2 | FL-010 | Pending |
-| FL-045 | Confidence history and adjustConfidence | 2 | FL-015 | Pending |
+| FL-045 | Confidence history and adjustConfidence | 2 | FL-015, FL-016, FL-017 | Pending |
 | FL-046 | Feedback operation and migration | 2 | FL-015, FL-022 | Pending |
-| FL-059 | give_feedback tool | 2 | FL-046, FL-058 | Pending |
+| FL-059 | give_feedback tool | 2 | FL-046, FL-036, FL-058 | Pending |
 | FL-060 | Acting on feedback | 2 | FL-046, FL-045, FL-042 | Pending |
 | FL-047 | Purge design, proven by a spike | 2 | FL-015 | Pending |
-| FL-061 | Purge implementation and a command to invoke it | 2 | FL-047 | Pending |
+| FL-061 | Purge operation | 2 | FL-047, FL-016, FL-017 | Pending |
+| FL-072 | Purge command | 2 | FL-061, FL-034 | Pending |
 
 ### FL-040: Create the maintenance package and its boundary rules
 
@@ -135,7 +138,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 
 **Acceptance criteria.**
 - [ ] `pnpm check` passes with the new package present.
-- [ ] Adding `import '@factloom/storage'` to a source file of the package makes `pnpm check` fail at the lint step and at the type check step. The import is then removed.
+- [ ] Adding `import '@factloom/storage'` to a source file of the package makes `pnpm check` fail at the lint step. `pnpm check` stops at the first failure (FL-001), so the type check is shown separately: with the same import and the dependency not declared in the package's `package.json`, the type check stage run on its own also fails. The import is then removed.
 - [ ] Adding `import '@factloom/graph-rag'` to a source file of the package makes `pnpm check` fail. The import is then removed.
 - [ ] Adding `import '@factloom/maintenance'` to a source file of `@factloom/graph-rag` makes `pnpm check` fail. The import is then removed.
 - [ ] `SYSTEM-BOUNDARIES.md` lists the package in the import table and in "Public API of each package".
@@ -204,6 +207,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 - [ ] A unit test shows the moment of change is the new fact's `validFrom` when given, and the source's observed time when not, with a scripted LLM.
 - [ ] A unit test shows one LLM call is made for a new fact with three remaining candidates.
 - [ ] A unit test shows an out-of-range index and a missing candidate each give `llm_failed`.
+- [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the judge eval in record mode from `apps/mcp-server` (`pnpm run record:judge`, which wraps the Anthropic client of FL-019 with the wrapper of FL-028 in record mode), reads the diff of the new recordings for secrets, and records the model identifier. A replayed run fails while a recording is missing, so the code and the recordings are committed together after this step, and the item is not `Completed` before it.
 - [ ] The judge eval runs inside `pnpm check` in replay and fails when a recording is missing.
 - [ ] The eval output shows the verdict table and both rates. The rates are recorded as numbers; this item sets no target for them, because no published figure exists to set one against. FL-042 sets the bar on the scenario set.
 - [ ] Every judge case whose expected verdict is reached by a deterministic rule gets that verdict.
@@ -218,7 +222,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 |---|---|
 | Status | Pending |
 | Phase | 2 |
-| Depends on | FL-041, FL-039 |
+| Depends on | FL-035, FL-041, FL-039 |
 | Requirements | REQ-16, REQ-17, REQ-24 (REQ-CA-02) |
 | Components | `@factloom/graph-rag` (`remember`), `@factloom/core` (reason codes), `apps/mcp-server` (wiring, `remember` tool output) |
 
@@ -233,10 +237,11 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 - Two reason codes for changes decided by the judge.
 - The result of `remember`, and the output of the `remember` tool, say which stored fact each recorded fact took the place of.
 - The composition root passes the judge from `maintenance`.
-- The scenario set passing at the stated bar.
+- The scenario set passing at the stated bar, with recordings for the judge's calls.
+- A new ADR for the change to "one commit per use case call", and the sentences it changes in other documents.
 
 **Non-goals.**
-- The `human_approval` policy. FL-043. In this item a domain with that policy keeps the phase 1 behaviour: the conflicting fact is skipped.
+- The `human_approval` policy: FL-043 and FL-070. In this item a domain with that policy keeps the phase 1 behaviour: the conflicting fact is skipped.
 - Changing `recordStructuredFacts` or `changeFact`. They keep returning `conflict`.
 - Resolving a conflict between two facts from the same text. They stay skipped with `conflicts_within_text`.
 - Recording a late-arriving older fact that overlaps a live fact. [`TESTING.md`](../../architecture/TESTING.md) says it is not recorded. Question Q-58 stays open.
@@ -265,7 +270,8 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 1. The judge is an optional member of `RememberDeps`, typed by the type FL-041 put in `@factloom/core`. `@factloom/graph-rag` does not import `@factloom/maintenance`.
 2. Corrections are applied only when the judge is present and `domain.correctionPolicy` is `automatic`.
 3. `endFact` and `invalidateFact` each take a new source, so the text of one `remember` call is recorded as one source per commit, each with the same content hash. The item states this in `INTERFACES.md`, because purge (FL-047, FL-061) must cover every one of them.
-4. The scenario set runs through `remember` with the judge wired in, a fixed clock and replayed LLM responses, using the runner from FL-039.
+4. The scenario set runs through `remember` with the judge wired in, a fixed clock and replayed LLM responses, using the runner from FL-039. The judge's calls need recordings, which only the owner can make; as in FL-039, the code and the new recordings are committed together after the owner has run `pnpm run record:scenarios` in the session.
+5. Requirement 6 changes a rule that other documents state: a `remember` call can now make more than one commit, and so can be partly applied, with new facts recorded and a succession skipped. A new ADR records the decision, why each succession or correction is its own commit, and what a caller sees when one fails. The item changes, in the same commit, the sentences that state the old rule: the boundary "each call of a use case makes at most one commit" in [EPIC-04](EPIC-04.md); "One call to `recordFacts` writes everything" in [`INTERFACES.md`](../../architecture/INTERFACES.md), "Use cases", for `remember`; the one-source-per-call description of `remember` in [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md); and the test name "writes everything in one commit" of FL-023, which becomes "writes everything but the corrections in one commit". [ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md) is not edited: one `commit` still writes everything of one operation.
 
 **Constraints.**
 - [`INTERFACES.md`](../../architecture/INTERFACES.md), "Use cases": a handler calls exactly one use case, and `remember` remains that use case.
@@ -281,13 +287,15 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 - [ ] A unit test shows that a judge returning `llm_failed` leaves the stored fact live and returns the new fact in `skipped`.
 - [ ] A unit test shows that with `correctionPolicy: 'human_approval'` no stored fact is changed.
 - [ ] A unit test shows the audit entries of a succession made by `remember` carry `judged_ended`, and those of a correction carry `judged_wrong`.
-- [ ] The MCP smoke test still passes, and the `remember` tool's output validates against its updated output schema.
+- [ ] A unit test shows that when the commit of a succession fails with `conflict`, the facts of the first commit stay recorded and the new fact is returned in `skipped`.
+- [ ] A test of the `remember` tool (FL-035) shows that its output validates against its updated output schema, and the MCP smoke test still passes.
+- [ ] The new ADR exists and is listed in [`DECISIONS.md`](../../architecture/DECISIONS.md), and the diff of the commit changes each of the four sentences listed in technical requirement 5.
 
 **Validation.** Unit tests of `remember` with a scripted judge and the in-memory store. The scenario set in replay inside `pnpm check`. One live run by hand: the owner runs the scenario set three times against the real API and records the three metrics for each run.
 
-**Completion evidence.** The commit; the scenario runner's output in replay showing the two zeros and the missed invalidation rate; the three live-run results; the updated sections of `INTERFACES.md` and `MCP-TOOLS.md`.
+**Completion evidence.** The commit with the code and the new recordings; the scenario runner's output in replay showing the two zeros and the missed invalidation rate; the three live-run results; the new ADR and the updated sections of `INTERFACES.md`, `MCP-TOOLS.md` and EPIC-04.
 
-### FL-043: Proposed changes for human approval
+### FL-043: Proposed changes: storage and operations
 
 | | |
 |---|---|
@@ -295,23 +303,25 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | Phase | 2 |
 | Depends on | FL-042 |
 | Requirements | REQ-17 (REQ-CA-16) |
-| Components | `@factloom/core` (operations, in-memory store), `@factloom/storage` (migration, adapter, contract suite), `@factloom/graph-rag` (`remember`) |
+| Components | `@factloom/core` (operations, in-memory store), `@factloom/storage` (migration, adapter, contract suite) |
 
-**Objective.** For a domain whose correction policy is `human_approval`, store a correction as a proposal instead of making it, and let a person approve or reject it.
+**Objective.** Store a succession or a correction as a proposal instead of making it, and let a caller approve or reject it, through operations in `@factloom/core` and storage in both stores.
 
 **Background.** `Domain.correctionPolicy` has had the value `human_approval` since phase 1, with nothing behind it. The [research on other domains](../../research/industries/other-industries.md) lists a human approval step as required for legal, healthcare and other regulated domains. The software development domain uses `automatic`, so nothing in phases 2 and 3 depends on this item at run time. It is built now, and kept minimal, because it is the foundation those later domains stand on: a stored proposal, an approve and a reject operation, and a read of pending proposals. [ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md) says how a proposal is held: as the operation's input, plain data, which becomes a change set when it is approved, so its recorded time is the time of approval.
 
-**Outcome.** With a `human_approval` domain, `remember` leaves the stored fact untouched and stores a proposal. A caller can list pending proposals, approve one, which makes the change, or reject one. There is no user interface: the operations are called from tests now, and from the HTTP API and document flows of later phases.
+The item was split to fit one session. It keeps the storage and the three operations. Calling `proposeChange` from `remember` under the `human_approval` policy, and the command a person runs to list, approve and reject, are FL-070.
+
+**Outcome.** A caller can store a proposal, list pending proposals, approve one, which makes the change, or reject one. The operations are called from tests in this item, from `remember` and a command in FL-070, and from the HTTP API and document flows of later phases.
 
 **Scope.**
 - A stored proposal: one table and its migration.
 - Three operations in `@factloom/core` (proposed names): `proposeChange`, `approveProposedChange`, `rejectProposedChange`.
 - One read: pending proposals of a namespace.
-- `remember` storing a proposal where FL-042 would have corrected.
 
 **Non-goals.**
+- `remember` storing a proposal, and the command that lists, approves and rejects: FL-070.
 - The rule that a later automatic decision does not override a human one. It is the second half of REQ-CA-16, which the [competitive analysis](../../research/evaluations/competitive-analysis.md) defers until an adapter requires human approval, after phase 3. In this item a change that a person rejected can be proposed again when the same text is remembered again, and nothing treats a fact a person changed differently from any other.
-- Any user interface, MCP tool or HTTP route. An agent must not approve its own proposal, so no MCP tool is planned. The interface arrives with [EPIC-10](EPIC-10.md) and [EPIC-11](EPIC-11.md).
+- Any user interface, MCP tool or HTTP route. An agent must not approve its own proposal, so no MCP tool is planned. A person uses the command of FL-070; a user interface arrives with [EPIC-10](EPIC-10.md) and [EPIC-11](EPIC-11.md).
 - Who may approve. There is no access control before the regulated domains ([ADR 0011](../../architecture/adr/0011-namespace-on-every-row.md)).
 - Proposals for anything but a succession or a correction. Merges and archiving in phase 3 report instead of proposing.
 - Expiry, reminders, assignment, comments, or editing a proposal before approval.
@@ -324,7 +334,6 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 5. `rejectProposedChange` marks the proposal rejected and changes no fact.
 6. A proposal is decided once. Approving or rejecting a decided proposal returns `already_exists`.
 7. The read returns the pending proposals of a namespace, oldest first, with the stored fact each refers to.
-8. With `correctionPolicy: 'human_approval'`, `remember` calls `proposeChange` where FL-042 calls `endFact` or `invalidateFact`. The new fact is returned in `skipped`, with a reason that says a proposal was stored and the proposal's identifier (proposed: a third value of `SkippedFact.reason`).
 
 **Technical requirements.**
 1. Proposals are written through `MemoryStore.commit`, by new `Change` kinds (proposed: `record_proposal`, `decide_proposal`), each with an audit entry. Proposed `AuditAction` values: `proposal.recorded`, `proposal.approved`, `proposal.rejected`. `AuditEntry.targetKind` gains `proposal`.
@@ -341,7 +350,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 
 **Acceptance criteria.**
 - [ ] Contract suite cases pass against both stores: a recorded proposal is returned by the read; an approved or rejected one is not; a proposal for a fact in another namespace is `not_found`; deciding twice is `already_exists`.
-- [ ] A unit test shows that with a `human_approval` domain, `remember` on a conflicting text leaves the stored fact live and current, stores one pending proposal, and returns the new fact in `skipped`.
+- [ ] A unit test shows that `proposeChange` stores one pending proposal and leaves the stored fact live and current.
 - [ ] A unit test with a fixed clock shows that approving a succession proposal ends the stored fact and records the successor, that both new rows have the approval time as `createdAt`, and that a read with a known-at date between proposal and approval returns the stored fact unchanged.
 - [ ] A unit test shows the proposal is marked approved and the facts are changed in one commit: with a store that fails the commit, neither happens.
 - [ ] A unit test shows approval with trigger `agent` is `invalid_input`.
@@ -349,9 +358,72 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 - [ ] A unit test shows that approving a proposal whose stored fact has been invalidated since returns `already_invalidated` and leaves the proposal pending.
 - [ ] A SQLite adapter test shows a direct `UPDATE` of a decided proposal and a `DELETE` of any proposal are refused by triggers.
 
-**Validation.** Contract suite against both stores. Unit tests of the three operations and of `remember` with a test domain whose policy is `human_approval`. `pnpm check`.
+- [ ] `pnpm check` exits 0.
+
+**Validation.** Contract suite against both stores. Unit tests of the three operations. SQLite adapter tests for the triggers. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the updated `INTERFACES.md` and `SCHEMA.md`.
+
+### FL-070: Human-approval policy in remember, with a command to list, approve and reject
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 2 |
+| Depends on | FL-043, FL-042, FL-034 |
+| Requirements | REQ-17 (REQ-CA-16) |
+| Components | `@factloom/graph-rag` (`remember`), `apps/mcp-server` (command, README) |
+
+**Objective.** For a domain whose correction policy is `human_approval`, make `remember` store a proposal where it would otherwise correct, and give a person a command to list pending proposals and approve or reject one.
+
+**Background.** This item is the second part of FL-043, which built the proposal storage and the operations `proposeChange`, `approveProposedChange` and `rejectProposedChange` (proposed names). REQ-17 asks that correction policy be set per domain: automatic, or proposed for human approval. FL-042 made `remember` correct automatically for an `automatic` domain. Without an entry point a person could not approve anything, so REQ-17 would hold only in tests. An agent must not approve its own proposal, so the entry point is not an MCP tool: it is a command of `apps/mcp-server` that a person runs, in the same way as the purge command (FL-072). The software development domain uses `automatic`, so the command finds proposals only in a namespace whose domain uses `human_approval`; this item's tests use a test domain.
+
+**Outcome.** With a `human_approval` domain, `remember` leaves the stored fact untouched and stores a proposal. A person runs one command to see what waits, and another to approve or reject it. An approved proposal changes memory with the trigger `person`.
+
+**Scope.**
+- `remember` calling `proposeChange` where FL-042 calls `endFact` or `invalidateFact`.
+- A third reason for a skipped fact (proposed: `proposal_stored`), in `INTERFACES.md` and in the `remember` tool's output schema in [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md).
+- A command of `apps/mcp-server` with three forms: list pending proposals, approve one, reject one.
+- A short section on the command in the app's README.
+
+**Non-goals.**
+- An MCP tool, a user interface or an HTTP route for approval. An agent must not approve its own proposal.
+- The rule that a later automatic decision does not override a human one: deferred, as FL-043 states.
+- Who may approve. The command runs with the access of whoever can open the database file.
+- Proposals from feedback: FL-060 lowers confidence under `human_approval` instead.
+- Changing the domain of the composition root. It stays the software development domain, with `automatic`.
+
+**Functional requirements.**
+1. With `correctionPolicy: 'human_approval'` and a judge present, `remember` calls `proposeChange` for each new fact that the judge would have used to end or invalidate a stored fact, with the verdict, the stored fact, the moment of change and the new fact. The stored fact is not changed. The new fact is returned in `skipped` with the reason `proposal_stored` and the proposal's identifier.
+2. The command is started by an argument to the application's entry point. With no argument the application still serves MCP over stdio. It takes its database and namespace from the same configuration as the server (FL-034) and refuses to start without a namespace.
+3. The list form prints each pending proposal, oldest first: its identifier, its kind (succession or correction), the time it was proposed, the stored fact's identifier and statement, and the new fact's statement. It changes nothing.
+4. The approve form takes a proposal identifier and calls `approveProposedChange` with the trigger `person`. It prints the identifiers of the facts written. The reject form calls `rejectProposedChange` with the trigger `person`.
+5. The command exits with 0 on success, and with a non-zero code and the error code on failure: `not_found`, `already_exists` for a proposal already decided, `already_invalidated` or `conflict` when the stored fact changed since.
+6. Only the list form prints statements, because a person must see what they approve. No form prints the content of a source.
+
+**Technical requirements.**
+1. The command holds no rule about facts. It parses its arguments, calls one read or one operation, and prints the result. It is not registered as a tool, and `tools/list` does not change.
+2. The entry point's handling of a command argument is one small function. If the purge command of FL-072 already exists, this item adds its forms to the same function; if not, it writes the function and FL-072 adds to it.
+3. Nothing the command prints goes to standard output in server mode, because the command is a different mode and is not an MCP server ([`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md)).
+
+**Constraints.**
+- [ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md): approval is one commit with its audit entries.
+- [ADR 0011](../../architecture/adr/0011-namespace-on-every-row.md): the command works in the configured namespace only.
+- [Architecture rules](../../../.claude/rules/architecture.md): an entry point translates and calls one use case or operation.
+
+**Acceptance criteria.**
+- [ ] A unit test shows that with a `human_approval` test domain, `remember` on a conflicting text leaves the stored fact live and current, stores one pending proposal, and returns the new fact in `skipped` with the reason `proposal_stored` and the proposal's identifier.
+- [ ] A unit test shows that with an `automatic` domain, `remember` behaves as in FL-042 and stores no proposal.
+- [ ] A test starts the command as a child process on a temporary database that holds one pending succession proposal, made with `proposeChange` in the test. The list form prints its identifier and exits 0. The approve form exits 0, and afterwards the stored fact is ended, the successor is current, and the audit entries of the approval carry the trigger `person`.
+- [ ] A test approves the same proposal a second time with the command and shows a non-zero exit code and `already_exists`.
+- [ ] A test rejects a pending proposal with the command and shows that no fact changed and the list form no longer prints it.
+- [ ] A test starts the command with no namespace and shows a non-zero exit code.
+- [ ] A test that lists the tools of the server built by the composition root finds no tool for approval.
+- [ ] `pnpm check` exits 0.
+
+**Validation.** Unit tests of `remember` with a test domain whose policy is `human_approval`. Child-process tests of the command. `pnpm check`.
+
+**Completion evidence.** The commit; the passing check output; the README section; the updated `INTERFACES.md` and `MCP-TOOLS.md`.
 
 ### FL-044: reviseValidTime operation
 
@@ -415,7 +487,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 |---|---|
 | Status | Pending |
 | Phase | 2 |
-| Depends on | FL-015 |
+| Depends on | FL-015, FL-016, FL-017 |
 | Requirements | REQ-01, REQ-18, REQ-24 |
 | Components | `@factloom/core` (operation, schemas, in-memory store), `@factloom/storage` (migration, adapter, contract suite) |
 
@@ -539,13 +611,13 @@ The original item was split in three. This one records feedback. The MCP tool is
 |---|---|
 | Status | Pending |
 | Phase | 2 |
-| Depends on | FL-046, FL-058 |
+| Depends on | FL-046, FL-036, FL-058 |
 | Requirements | REQ-18, REQ-10 |
 | Components | `apps/mcp-server` (tool, instructions, tests) |
 
 **Objective.** Add the sixth MCP tool, `give_feedback`, so that an agent can pass on that a recalled fact was found right, wrong or out of date.
 
-**Background.** [ADR 0016](../../architecture/adr/0016-mcp-stdio-server-with-five-tools.md) fixes five tools as the phase 1 surface and says phase 2 adds one, `give_feedback`, when feedback has something to act on it. [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "Not in phase 1", lists a feedback tool for phase 2. The use case behind it is `giveFeedback` (FL-046). The tool reuses the translation of an error from the `recall` tool (FL-058).
+**Background.** [ADR 0016](../../architecture/adr/0016-mcp-stdio-server-with-five-tools.md) fixes five tools as the phase 1 surface and says phase 2 adds one, `give_feedback`, when feedback has something to act on it. [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "Not in phase 1", lists a feedback tool for phase 2. The use case behind it is `giveFeedback` (FL-046). The tool reuses the translation of an error from the `recall` tool (FL-058), and joins the five-tool surface that FL-036 fixes in its test. The smoke test (FL-037) and the clean-install job (FL-003) also list the tools. They are phase 1 items and are normally built before this one; if either is not built yet, it is written with the six names when it is built.
 
 **Outcome.** An agent that is told "that's not right" about a recalled fact can pass the signal on with one tool call. `tools/list` returns six tools.
 
@@ -553,7 +625,7 @@ The original item was split in three. This one records feedback. The MCP tool is
 - The tool definition and handler.
 - The server's `instructions` string, which now mentions the tool.
 - The section for the tool in `MCP-TOOLS.md`, with its rows in the error and annotation tables.
-- The tests that fix the tool list: the test of the tool surface, the smoke test (FL-037) and the clean-install job (FL-003) now expect six names.
+- The tests that fix the tool list: the test of the tool surface (FL-036), and, where they exist, the smoke test (FL-037) and the clean-install job (FL-003), now expect six names.
 
 **Non-goals.**
 - Acting on the feedback: FL-060. The tool returns whatever `followUp` the use case gives.
@@ -590,7 +662,7 @@ The original item was split in three. This one records feedback. The MCP tool is
 - [ ] Tests of the tool, with a server built from the in-memory store and a client connected in process, pass with these names: "records feedback and returns its identifier", "stores the comment as the content of a source", "returns not_found for an unknown fact", "returns invalid_input for an unknown signal", "refuses a comment that contains a secret".
 - [ ] A test asserts that after the call `listAuditEntries` for the returned feedback identifier holds one entry with action `feedback.recorded` and trigger `agent`.
 - [ ] A test named "lists the six tools in order with their annotations" asserts the six names in order, the annotation values, an output schema on each, and a description on every input field.
-- [ ] The MCP smoke test lists six tools, calls `give_feedback` with `wrong` on a recorded fact, and gets a result with a `feedback_id` and a `follow_up` from the list in functional requirement 1.
+- [ ] The MCP smoke test (FL-037) lists six tools, calls `give_feedback` with `wrong` on a recorded fact, and gets a result with a `feedback_id` and a `follow_up` from the list in functional requirement 1. If FL-037 is not built yet, the item is `Blocked` on FL-037 for this criterion.
 - [ ] A test named "the instructions fit the limit" still passes.
 - [ ] `MCP-TOOLS.md` describes the tool, and the tool table there has six rows.
 - [ ] `pnpm check` exits 0.
@@ -682,7 +754,7 @@ The original item was split in three. This one records feedback. The MCP tool is
 
 **Background.** [ADR 0012](../../architecture/adr/0012-purge-is-the-one-exception.md) decides that purge is the single exception to keeping everything, for legal erasure and for a secret stored by mistake. It specifies the operation in outline and lists what a design review found the phase 2 design must cover. It also lists two questions as not decided. [`INTERFACES.md`](../../architecture/INTERFACES.md) gives the signature of `purgeContent`. [`SCHEMA.md`](../../architecture/SCHEMA.md), "Planned additions", names `fact.purged_at`, `source.purged_at` and a narrowly permitted change in two triggers. The part that could not be added later, an audit log with no free text, has been in place since the first migration.
 
-The original item was split in two. This one decides, and shows on a real database that what was decided works. FL-061 builds the migration, the operation and the command from the completed record.
+The original item was split in two. This one decides, and shows on a real database that what was decided works. FL-061 builds the migration and the operation from the completed record, and FL-072 the command.
 
 **Outcome.** ADR 0012 answers every question the phase 2 design must cover, and a spike under `spikes/` shows, on a database built from the project's migrations, that after the designed steps the purged text is found nowhere. FL-061 can be implemented from the record without a further decision.
 
@@ -692,7 +764,7 @@ The original item was split in two. This one decides, and shows on a real databa
 - The names the implementation will use: the `Change` kind (proposed: `purge_content`), the `Operation` name `purge`, `AuditAction` values (proposed: `source.purged`, `fact.purged`) and reason codes (proposed: `erasure_requested`, `secret_stored`), written into `INTERFACES.md` and `SCHEMA.md` as planned.
 
 **Non-goals.**
-- The migration, the operation `purgeContent`, the contract cases and a way to invoke a purge: FL-061. The spike is not the implementation and no code is moved from it.
+- The migration, the operation `purgeContent` and the contract cases: FL-061. A way to invoke a purge: FL-072. The spike is not the implementation and no code is moved from it.
 - An MCP tool for purge. An agent must not be able to remove content.
 - Purging by anything but a source identifier: by subject, by date range, by person.
 - A legal determination that a purge satisfies any regulation. Question Q-64 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) needs professional advice.
@@ -712,7 +784,7 @@ The decision record must answer each of these, and the answers become the requir
 7. What happens to the name of an entity that is itself the sensitive value. ADR 0012 lists this as not decided.
 8. Whether a purge clears freed pages of the database file and the write-ahead log, and how. ADR 0012 lists this as not decided. No research document covers it, so the answer is checked against the SQLite documentation and run in the spike, with the source cited.
 9. How the removal of a keyword entry obtains the old text that an external-content FTS5 index needs.
-10. How a person invokes a purge and finds the identifier of the source to purge, given that no MCP tool may do it. The plan, which FL-061 builds, is a command of `apps/mcp-server`.
+10. How a person invokes a purge and finds the identifier of the source to purge, given that no MCP tool may do it. The plan, which FL-072 builds, is a command of `apps/mcp-server`.
 
 The spike:
 
@@ -746,31 +818,34 @@ The spike:
 
 **Completion evidence.** The completed ADR 0012, or the record that supersedes part of it; the spike's README with its output; the commit.
 
-### FL-061: Purge implementation and a command to invoke it
+### FL-061: Purge operation
 
 | | |
 |---|---|
 | Status | Pending |
 | Phase | 2 |
-| Depends on | FL-047 |
+| Depends on | FL-047, FL-016, FL-017 |
 | Requirements | REQ-19, REQ-24 |
-| Components | `@factloom/core` (operation, in-memory store), `@factloom/storage` (migration, adapter, contract suite), `apps/mcp-server` (command) |
+| Components | `@factloom/core` (operation, in-memory store), `@factloom/storage` (migration, adapter, contract suite) |
 
-**Objective.** Build `purgeContent` from the completed design, so that the content of a source, and of every fact the design covers, can no longer be read from anywhere while the record that it existed stays, and give a person a command to run it.
+**Objective.** Build `purgeContent` from the completed design, so that the content of a source, and of every fact the design covers, can no longer be read through any read method or any query of the database, while the record that it existed stays.
 
-**Background.** FL-047 completed the design in [ADR 0012](../../architecture/adr/0012-purge-is-the-one-exception.md) and proved it with a spike. [`INTERFACES.md`](../../architecture/INTERFACES.md), "Phase 2", gives the signature of `purgeContent`. [`SCHEMA.md`](../../architecture/SCHEMA.md), "Planned additions", names `fact.purged_at`, `source.purged_at` and a narrowly permitted change in two triggers. A purge must not be reachable by an agent, so it is not an MCP tool. It still needs a way to be invoked: a command of `apps/mcp-server` that a person runs.
+**Background.** FL-047 completed the design in [ADR 0012](../../architecture/adr/0012-purge-is-the-one-exception.md) and proved it with a spike. [`INTERFACES.md`](../../architecture/INTERFACES.md), "Phase 2", gives the signature of `purgeContent`. [`SCHEMA.md`](../../architecture/SCHEMA.md), "Planned additions", names `fact.purged_at`, `source.purged_at` and a narrowly permitted change in two triggers. A purge removes the keyword and vector entries of the facts it covers, so it changes what both retrieval lanes return (FL-016, FL-017).
 
-**Outcome.** A person who finds a credential in memory, or receives an erasure request, runs one command and the content is removed. Tests prove it is gone from every table and index. The audit log still shows that the source and its facts existed, and when and why they were purged.
+The item was split to fit one session. It keeps the migration, the operation and its tests. The command that a person runs to purge is FL-072. This item claims only what FL-047's design establishes: content unreadable through every read method and every query of the database, and freed pages of the file cleared only if FL-047 settled how.
+
+**Outcome.** A caller of `purgeContent` removes the content of a source and of the facts the design covers. Tests prove it is gone from every read method, table and index. The audit log still shows that the source and its facts existed, and when and why they were purged.
 
 **Scope.**
 - The migration: the two columns and the replaced triggers.
 - The `Change` kind, the `Operation` name `purge`, the `AuditAction` values and the reason codes that FL-047 named.
 - The operation `purgeContent` in `@factloom/core`, in both stores.
 - Tests that search every place content could be read.
-- A command-line entry in `apps/mcp-server` that lists the sources of a fact and purges a source.
 
 **Non-goals.**
+- The command that a person runs: FL-072.
 - An MCP tool for purge. An agent must not be able to remove content.
+- A claim beyond the design of FL-047, for example about freed pages if FL-047 did not settle how to clear them.
 - Changing the design. A point the design left open, found while implementing, goes back to the decision record first.
 - Purging by anything but a source identifier: by subject, by date range, by person.
 - Recording which person ran the purge. An audit entry carries the trigger `person` and no identity of a person; that is an open decision of [EPIC-11](EPIC-11.md).
@@ -784,40 +859,83 @@ The spike:
 3. It returns the purged source and the purged facts. Errors: `not_found`, `storage_failed`. Purging a source that is already purged succeeds and changes nothing.
 4. Every identifier, timestamp, supersession link, source link and audit entry is as it was before the purge.
 5. A purged fact is treated by each read method and each retrieval lane as the design decides.
-6. The command is started by an argument to the application's entry point. With no argument the application still serves MCP over stdio. It takes its database and namespace from the same configuration as the server and refuses to start without a namespace.
-7. With a fact identifier, the command prints the sources of that fact and of the facts linked to it by supersession: for each, its identifier, kind, locator and observed time, and not its content. It changes nothing.
-8. With a source identifier and a reason, `erasure_requested` or `secret_stored`, the command calls `purgeContent` with the trigger `person` and prints the identifiers of the purged source and facts. Without a reason it refuses.
-9. The command exits with 0 on success and with a non-zero code and the error code on failure. It never prints content.
 
 **Technical requirements.**
 1. The migration replaces `fact_changes_only_by_invalidation`, `source_never_updated` and the keyword index trigger only as far as the design's condition requires. `.claude/rules/data.md` forbids weakening these triggers; purge is its stated exception.
 2. A schema inventory test lists every text and binary column of every table in the migrated database and fails if a column is not classified, in one list in the test, as "content, covered by purge" or "not content". A later migration that adds a column must then make that decision. This is what keeps purge complete when other phase 2 items and phase 3 add tables, in whichever order they are built.
 3. The in-memory store implements purge, so the contract suite runs against both stores.
 4. The migration carries a comment on what the Postgres version will do differently.
-5. The command holds no rule about facts. It parses its arguments, calls one read or one operation, and prints the result. It is not registered as a tool, and `tools/list` does not change.
-6. The app's README gains a short section on the command, with the two forms and a warning that a purge cannot be undone.
 
 **Constraints.**
 - [ADR 0012](../../architecture/adr/0012-purge-is-the-one-exception.md), as completed by FL-047.
 - [ADR 0006](../../architecture/adr/0006-facts-change-only-by-invalidation.md): purge is the one further change a fact row may undergo.
 - [ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md): purge is a change in a commit.
 - [`TESTING.md`](../../architecture/TESTING.md): "no operation reducing the number of fact rows" still holds.
-- [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md): only protocol messages go to standard output in server mode. The command is a different mode and is not an MCP server.
 
 **Acceptance criteria.**
 - [ ] A contract suite case, against both stores, builds this memory: a fact recorded from a source whose text contains a marker string; the fact ended, so a copy exists; the copy corrected, with an explanation that quotes the string; a second, unrelated fact from another source. After `purgeContent` on the first source, every `MemoryStore` read method is called for every identifier involved, and the string appears in no returned value.
 - [ ] The same case shows the keyword lane and the vector lane return none of the purged facts for a question made of the string.
 - [ ] The same case shows the unrelated fact and its source are unchanged, the number of fact rows, source rows and audit entries present before the purge has not fallen, and one audit entry with operation `purge` exists for each purged row.
 - [ ] A SQLite adapter test dumps every column of every table, including the keyword index and the embeddings, after the purge, and the string is not found.
-- [ ] If the design decided that freed pages are cleared: a SQLite adapter test reads the database file and its write-ahead log as bytes after the purge and finds neither the string nor the purged statement. If it decided they are not cleared, that limit is repeated in the doc comment of `purgeContent` and in the README section.
+- [ ] If the design decided that freed pages are cleared, and how: a SQLite adapter test reads the database file and its write-ahead log as bytes after the purge and finds neither the string nor the purged statement. Otherwise that limit, as the decision record states it under "What purge does not remove", is repeated in the doc comment of `purgeContent`, and no test or document of this item claims more.
 - [ ] A SQLite adapter test shows that an `UPDATE` of `statement`, `object_value`, `content` or `locator` that does not meet the design's condition is still refused.
 - [ ] The schema inventory test passes, and fails when a text column is added to a table in a test migration without being classified.
 - [ ] A contract case shows purging an already purged source succeeds and writes no further audit entries, and purging a source in another namespace is `not_found`.
-- [ ] A test starts the command as a child process on a temporary database that holds a fact with a marker string in its source, lists the fact's sources, purges the source with the reason `secret_stored`, and then finds the string in no line the command printed and in no table. The audit entries of the purge carry the trigger `person` and the reason code `secret_stored`.
-- [ ] A test starts the command with a source identifier and no reason and shows a non-zero exit code and an unchanged database.
-- [ ] The MCP smoke test still passes, and `tools/list` holds no tool for purge.
 - [ ] `pnpm check` exits 0.
 
-**Validation.** The contract suite against both stores. SQLite adapter tests for the triggers, the full dump, the file bytes and the inventory. Child-process tests of the command. The MCP smoke test. `pnpm check`.
+**Validation.** The contract suite against both stores. SQLite adapter tests for the triggers, the full dump, the inventory and, if the design clears freed pages, the file bytes. `pnpm check`.
 
-**Completion evidence.** The commit; the passing check output, including the dump test and the inventory test; the README section.
+**Completion evidence.** The commit; the passing check output, including the dump test and the inventory test.
+
+### FL-072: Purge command
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 2 |
+| Depends on | FL-061, FL-034 |
+| Requirements | REQ-19 |
+| Components | `apps/mcp-server` (command, README) |
+
+**Objective.** Give a person a command to find the source to purge and to purge it, so that `purgeContent` has a way to be invoked that no agent can reach.
+
+**Background.** This item is the second part of FL-061, which built `purgeContent` in both stores. A purge must not be reachable by an agent, so it is not an MCP tool ([ADR 0012](../../architecture/adr/0012-purge-is-the-one-exception.md); design question 10 of FL-047). It still needs a way to be invoked: a command of `apps/mcp-server` that a person runs, with the configuration of the server (FL-034). The command for proposals (FL-070) is a second form of the same entry point.
+
+**Outcome.** A person who finds a credential in memory, or receives an erasure request, runs one command to see the sources of a fact and another to purge one. The command never prints content.
+
+**Scope.**
+- A command of `apps/mcp-server` with two forms: list the sources of a fact, and purge a source.
+- A short section on the command in the app's README, with a warning that a purge cannot be undone.
+
+**Non-goals.**
+- An MCP tool for purge. An agent must not be able to remove content.
+- Purging by anything but a source identifier: by subject, by date range, by person.
+- Recording which person ran the purge. An audit entry carries the trigger `person` and no identity of a person; that is an open decision of [EPIC-11](EPIC-11.md).
+- Changing the operation or the design: FL-061 and FL-047.
+
+**Functional requirements.**
+1. The command is started by an argument to the application's entry point. With no argument the application still serves MCP over stdio. It takes its database and namespace from the same configuration as the server and refuses to start without a namespace.
+2. With a fact identifier, the command prints the sources of that fact and of the facts linked to it by supersession: for each, its identifier, kind, locator and observed time, and not its content. It changes nothing.
+3. With a source identifier and a reason, `erasure_requested` or `secret_stored`, the command calls `purgeContent` with the trigger `person` and prints the identifiers of the purged source and facts. Without a reason it refuses and changes nothing.
+4. The command exits with 0 on success and with a non-zero code and the error code on failure. It never prints content.
+
+**Technical requirements.**
+1. The command holds no rule about facts. It parses its arguments, calls one read or one operation, and prints the result. It is not registered as a tool, and `tools/list` does not change.
+2. The entry point's handling of a command argument is one small function. If FL-070 already wrote it, this item adds its forms to it; if not, this item writes it and FL-070 adds to it.
+3. In server mode only protocol messages go to standard output ([`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md)). The command is a different mode and is not an MCP server.
+
+**Constraints.**
+- [ADR 0012](../../architecture/adr/0012-purge-is-the-one-exception.md), as completed by FL-047.
+- [ADR 0011](../../architecture/adr/0011-namespace-on-every-row.md): the command works in the configured namespace only.
+- [Architecture rules](../../../.claude/rules/architecture.md): an entry point translates and calls one use case or operation.
+
+**Acceptance criteria.**
+- [ ] A test starts the command as a child process on a temporary database that holds a fact with a marker string in its source, lists the fact's sources, purges the source with the reason `secret_stored`, and then finds the string in no line the command printed and in no table. The audit entries of the purge carry the trigger `person` and the reason code `secret_stored`.
+- [ ] A test starts the command with a source identifier and no reason and shows a non-zero exit code and an unchanged database.
+- [ ] A test starts the command with no namespace and shows a non-zero exit code.
+- [ ] A test that lists the tools of the server built by the composition root finds no tool for purge.
+- [ ] `pnpm check` exits 0.
+
+**Validation.** Child-process tests of the command. `pnpm check`.
+
+**Completion evidence.** The commit; the passing check output; the README section.
