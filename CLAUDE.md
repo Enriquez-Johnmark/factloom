@@ -5,17 +5,18 @@ A memory layer for AI systems, in two products that share this repository.
 - **Product 1, temporal graph RAG:** stores knowledge as entities and facts, records when each fact was true and when it was learned, and recalls facts filtered by time.
 - **Product 2, self-correcting and self-healing memory:** keeps that knowledge true and tidy, using only the operations product 1 exposes.
 
-The first use is memory for coding agents through an MCP server. The project is at the design stage: there is no feature code yet.
+The first use is memory for coding agents through an MCP server. The workspace is scaffolded and there is no feature code yet: the packages hold placeholders.
 
 ## Commands
 
-The workspace is created in the scaffold stage. Until then only the spikes run, each from its own folder with `npm ci`.
+Run `pnpm install` once. The spikes are outside the workspace; each runs from its own folder with `npm ci`.
 
 | Command | Does |
 |---|---|
 | `pnpm check` | Format check, lint, type check and tests. Run it before every commit |
 | `pnpm test` | Tests only |
 | `pnpm format` | Rewrites files to the project format |
+| `pnpm eval` | Tests that need the real embedding model. None exist yet |
 
 ## Where things are
 
