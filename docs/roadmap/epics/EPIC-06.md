@@ -5,7 +5,7 @@
 | Status | Pending |
 | Phases | 1 |
 | Packages | `apps/mcp-server` |
-| Requirements | REQ-04, REQ-09, REQ-10, REQ-11, REQ-12, REQ-13, REQ-25, REQ-29, REQ-35 |
+| Requirements | REQ-04, REQ-09, REQ-10, REQ-11, REQ-12, REQ-13, REQ-25, REQ-29, REQ-35, REQ-36 |
 
 Terms in bold are defined in [`GLOSSARY.md`](../../../GLOSSARY.md).
 
@@ -216,7 +216,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | Status | Pending |
 | Phase | 1 |
 | Depends on | FL-019, FL-058, FL-023, FL-024 |
-| Requirements | REQ-10, REQ-13 |
+| Requirements | REQ-10, REQ-13, REQ-36 |
 | Components | `apps/mcp-server` |
 
 **Objective.** Add the two tools that record new information: `remember` for free text and `record_fact` for a fact that is already structured.
@@ -334,7 +334,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | Status | Pending |
 | Phase | 1 |
 | Depends on | FL-002, FL-035, FL-036 |
-| Requirements | REQ-11, REQ-12 |
+| Requirements | REQ-11, REQ-12, REQ-36 |
 | Components | `apps/mcp-server` |
 
 **Objective.** Prove on every check that the server starts as a host would start it, answers over stdio, runs from one SQLite file with no other service, and keeps memory across a restart.
@@ -390,7 +390,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | Status | Pending |
 | Phase | 1 |
 | Depends on | FL-037 |
-| Requirements | REQ-10, REQ-29 |
+| Requirements | REQ-10, REQ-29, REQ-36 |
 | Components | `apps/mcp-server` (README), `docs/research` |
 
 **Objective.** Write the exact steps to register the server in Claude Code and in Codex, have the owner run them on an Apple Silicon Mac, and record what happened.
@@ -400,6 +400,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 **Outcome.** A reader can register Factloom in either host by copying from the README. The Apple Silicon question is closed with recorded evidence, or the item is `Blocked` with the exact failure.
 
 **Scope.**
+- A section of the guide on subscriptions and API keys, covering four set-ups: Claude Code on a subscription, Claude Code on an API key, Codex on a subscription, and Codex on an API key. For each: whether the server registers the same way, and which tools work with no API key of Factloom's own ([`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "Subscriptions and API keys").
 - A section "Register the server" in the README of `apps/mcp-server`.
 - The run on the owner's Mac, and the record of it.
 - The closing of the rows in `OPEN-QUESTIONS.md`, with the research documents those rows name brought up to date.
@@ -429,6 +430,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 - [ADR 0011](../../architecture/adr/0011-namespace-on-every-row.md).
 
 **Acceptance criteria.**
+- [ ] With no `ANTHROPIC_API_KEY` set, the owner asks the agent in each host to save one fact and recall it. The agent records it with `record_fact` and recalls it, and the result is recorded in the guide for each set-up the owner has access to. A set-up the owner cannot test is marked untested, not assumed to work.
 
 The owner runs each step on the Apple Silicon Mac, in order, and records the result in the completion record.
 
