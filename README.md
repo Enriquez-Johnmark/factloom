@@ -14,6 +14,8 @@ It then keeps that memory correct: when new information contradicts a stored fac
 
 The first use is memory for coding agents, Claude Code and OpenAI Codex, through an MCP server. An agent can save a decision, a convention or a fix, and recall it in a later session.
 
+The goal is an agent that spends fewer tokens re-discovering what it already learned. That is a goal, not a result: a work item in the roadmap measures token use and tool calls with and without Factloom and publishes the outcome whatever it shows.
+
 Coding agents already ship file-based memory, and it is free. Factloom is for what those files cannot do: a fact that has a start and an end, an answer that changes with the date you ask about, a record of why a fact changed, and a check of stored facts against the code they describe.
 
 It is not a business database. It holds knowledge extracted from text, with sources and confidence.
