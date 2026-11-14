@@ -138,6 +138,7 @@ export type TimeFilter = {
 Two points that are easy to miss:
 
 - **The audit log explains a change by pointing at a source.** When an agent says "this is wrong because we moved to Vitest", that sentence is stored as the content of a source, and the audit entry carries `reasonCode: 'reported_wrong'` and that source's identifier. A later **purge** can then remove the sentence without changing the log.
+- **`detail` is fixed per action.** For `fact.invalidated` it is `{ supersededByFactId }`. For `fact.recorded` it is `{ revisesFactId }` when the fact is a copy made by a revision, and `null` otherwise. For `fact.source_attached` it is `{ sourceId }`. For `entity.created` and `source.recorded` it is `null`.
 - **`Operation` is what was being done; `AuditAction` is what happened to one row.** A **succession** is one operation with three actions: a fact recorded, a fact invalidated, a fact recorded.
 
 ## Storage
@@ -658,7 +659,10 @@ export type RecalledFact = FactWithSources & {
   readonly score: number;
 };
 
-export type FactHistoryEntry = FactWithSources & { readonly auditEntries: readonly AuditEntry[] };
+/** An audit entry with the content of the source that explains it, or null if there is none or it was purged. */
+export type ExplainedAuditEntry = AuditEntry & { readonly explanation: string | null };
+
+export type FactHistoryEntry = FactWithSources & { readonly auditEntries: readonly ExplainedAuditEntry[] };
 ```
 
 - **`remember`** asks the LLM for facts using the domain's entity types and predicates, which the extraction schema lists as closed sets. It resolves each entity by name, preferring an existing entity of any type when exactly one has that name. It then sorts the extracted facts with `findConflictCandidates`: a fact that restates a live one gains the source; a fact that conflicts with a stored fact, or with another fact from the same text, is returned in `skipped`; the rest are recorded. One call to `recordFacts` writes everything. A fact whose text gives no date has `validFrom: null`, meaning the start is unknown, so it is returned for any earlier as-of date.
@@ -666,4 +670,4 @@ export type FactHistoryEntry = FactWithSources & { readonly auditEntries: readon
 - **Secrets are refused.** `remember`, `recordStructuredFacts` and `changeFact` check their text against a fixed list of secret patterns before anything is stored or sent to the LLM, and return `invalid_input` naming the kind of secret, never the secret.
 - **`changeFact`** resolves the replacement's entities, then calls `invalidateFact` for `was_wrong` or `endFact` for `no_longer_true`. It is one commit either way.
 - **`recall`** runs the vector and keyword lanes, then the graph lane: the live facts that touch the entities the first two found, ranked by how many of those entities each fact touches and then by how recently it was recorded. The three ranked lists are merged by weighted reciprocal rank fusion, a pure function tested without a database. If only `knownAt` is given, `validAt` takes the same date, so the question means "what did Factloom believe was true then".
-- **`getFactHistory`** follows supersession links in both directions from the given fact. For a single-valued predicate it also includes every other fact for the same subject and predicate, which is the timeline of that value. Entries are ordered by valid time, then by recorded time.
+- **`getFactHistory`** follows supersession links in both directions from the given fact, and reads each audit entry's explaining source with `getSource` to fill `explanation`. For a single-valued predicate it also includes every other fact for the same subject and predicate, which is the timeline of that value. Entries are ordered by valid time, then by recorded time.
