@@ -5,7 +5,7 @@
 | Status | Pending |
 | Phases | 0-1 |
 | Packages | `packages/core` |
-| Requirements | REQ-01, REQ-02, REQ-06, REQ-07, REQ-08, REQ-14, REQ-15, REQ-24, REQ-25, REQ-26, REQ-27 |
+| Requirements | REQ-01, REQ-02, REQ-06, REQ-07, REQ-08, REQ-09, REQ-14, REQ-15, REQ-24, REQ-25, REQ-26, REQ-27 |
 
 Nothing in this epic is implemented. Terms are used as defined in [`GLOSSARY.md`](../../../GLOSSARY.md). [`INTERFACES.md`](../../architecture/INTERFACES.md) is the specification of every shape and signature named here.
 
@@ -26,7 +26,7 @@ Nothing in this epic is implemented. Terms are used as defined in [`GLOSSARY.md`
 ## Out of scope
 
 - SQL and the SQLite adapter: [EPIC-03](EPIC-03.md).
-- The storage contract suite: FL-012 in [EPIC-03](EPIC-03.md). It lives in `storage` and runs against the in-memory store built here.
+- The storage contract suite: FL-012 and FL-067 in [EPIC-03](EPIC-03.md). It lives in `storage` and runs against the in-memory store built here.
 - Extraction, entity resolution and the use cases `remember`, `recordStructuredFacts` and `changeFact`: EPIC-04.
 - `recall`, rank fusion and `getFactHistory`: EPIC-05.
 - The software development domain: FL-018 in EPIC-04.
@@ -52,7 +52,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 ## Deliverables
 
 - The public API of `@factloom/core` as listed in [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md), with the phase 1 operations.
-- An in-memory `MemoryStore` that passes the storage contract suite (FL-012).
+- An in-memory `MemoryStore` that passes the storage contract suite (FL-012, FL-067).
 - The three test helpers, exported from the package entry.
 - Unit tests for every operation, run against the in-memory store with a fixed clock.
 
@@ -84,7 +84,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 | Status | Pending |
 | Phase | 0 |
 | Depends on | FL-001 |
-| Requirements | REQ-24 |
+| Requirements | Supports REQ-24 |
 | Components | `packages/core` |
 
 **Objective.** Give every fallible function in the codebase one return shape and one list of error codes.
@@ -223,10 +223,10 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 
 **Functional requirements.**
 1. Each derived type is mutually assignable with the shape of the same name in `INTERFACES.md`. Absent values are `null`, not optional properties.
-2. `FactSchema` rejects: a confidence outside 0 to 1; `validFrom` not before `validTo` when both are given; `invalidatedAt` before `createdAt`; `supersededByFactId` given while `invalidatedAt` is null; `supersededByFactId` equal to the fact's own identifier; an empty statement or predicate. These mirror the `CHECK` constraints in [`SCHEMA.md`](../../architecture/SCHEMA.md).
+2. `FactSchema` rejects: a confidence outside 0 to 1; `validFrom` not before `validTo` when both are given; `invalidatedAt` before `createdAt`; `supersededByFactId` given while `invalidatedAt` is null; `supersededByFactId` equal to the fact's own identifier; an empty statement or predicate. These mirror the `CHECK` constraints in [`SCHEMA.md`](../../architecture/SCHEMA.md), plus a non-empty statement and predicate, which the database does not check.
 3. `FactObjectSchema` is a discriminated union on `kind` and rejects an object with both or neither of an entity and a value.
 4. `ChangeSetSchema` rejects: a `record_fact` change with no source identifier; an entity, source or fact whose namespace differs from the change set's; an empty `operationId`.
-5. `AuditEntrySchema` restricts `detail` to a flat record of strings, numbers and nulls.
+5. `AuditEntrySchema` restricts `detail` to a flat record of strings, numbers and nulls. What `detail` holds for each action is fixed in `INTERFACES.md`, "Data types", and is written by the stores (FL-007).
 6. `Operation`, `ReasonCode`, `AuditAction`, `Trigger` and the audit `targetKind` are closed lists with exactly the phase 1 values of `INTERFACES.md`.
 7. `DomainSchema` rejects a domain with two predicates of the same name, or with no entity type.
 8. Every object schema is strict: an unknown key is refused.
@@ -264,7 +264,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 | Status | Pending |
 | Phase | 0 |
 | Depends on | FL-006 |
-| Requirements | REQ-01, REQ-06, REQ-07, REQ-08, REQ-15, REQ-25 |
+| Requirements | REQ-01, REQ-06, REQ-07, REQ-08, REQ-09, REQ-15, REQ-25 |
 | Components | `packages/core` |
 
 **Objective.** Declare the storage interface and build the in-memory implementation of its write path and its structural reads.
@@ -276,15 +276,15 @@ The item was split to fit one session. It keeps the interface, `commit` and the 
 **Outcome.** `createInMemoryStore()` returns a `MemoryStore` that a test can commit to and read from by identifier, by structure and by time.
 
 **Scope.**
-- The `MemoryStore` interface, exactly as in `INTERFACES.md`: `commit`, `findEntities`, `getFact`, `listFacts`, `searchFactsByVector`, `searchFactsByKeyword`, `listAuditEntries`, `close`.
+- The `MemoryStore` interface, exactly as in `INTERFACES.md`, with its nine methods: `commit`, `findEntities`, `getFact`, `listFacts`, `searchFactsByVector`, `searchFactsByKeyword`, `getSource`, `listAuditEntries`, `close`.
 - The type `OperationDeps`.
 - `normaliseEntityName`: lower case, trimmed, runs of white space collapsed ([`SCHEMA.md`](../../architecture/SCHEMA.md), `entity.name_key`). It is exported from the package entry, as [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md) lists under "Names", so that every store matches entity names the same way.
-- `createInMemoryStore`, implementing `commit`, `findEntities`, `getFact`, `listFacts`, `listAuditEntries` and `close`.
+- `createInMemoryStore`, implementing `commit`, `findEntities`, `getFact`, `listFacts`, `getSource`, `listAuditEntries` and `close`.
 - Unit tests for the behaviours listed under acceptance criteria.
 
 **Non-goals.**
 - The full contract suite: FL-012. This item's tests cover one case per behaviour.
-- `searchFactsByVector` and `searchFactsByKeyword` on the in-memory store: FL-056. In this item the two methods exist on the returned object, as the interface requires, and return `storage_failed` with a message that says the lane is not built yet. `commit` already keeps each fact's vector, so FL-056 adds only the two reads.
+- `searchFactsByVector` and `searchFactsByKeyword` on the in-memory store: FL-056. In this item the two methods exist on the returned object, as the interface requires, and return `storage_failed` with a message that says the lane is not built yet. No test is written for that interim result, because FL-056 replaces it; the type-level test proves the methods exist. `commit` already keeps each fact's vector, so FL-056 adds only the two reads.
 - The test helpers `createFakeEmbedder`, `createScriptedLlm` and `createTestDeps`: FL-056. This item's tests build their change sets by hand, with fixed identifiers, timestamps and small vectors.
 - Resolving entity identifiers through merges: FL-052.
 - Persistence, or behaviour with two processes.
@@ -295,11 +295,11 @@ The item was split to fit one session. It keeps the interface, `commit` and the 
 
 `commit`:
 1. Validates the change set with `ChangeSetSchema` and returns `invalid_input` when it fails.
-2. Applies the changes in order: `create_entity`, `record_source`, `record_fact`, `attach_source`, `invalidate_fact`. A change may refer to an entity, source or fact created earlier in the same change set.
+2. Applies the changes in the order the change set lists them. It does not sort them by kind. The five kinds are `create_entity`, `record_source`, `record_fact`, `attach_source` and `invalidate_fact`. A change may refer to an entity, source or fact created earlier in the same change set.
 3. Applies every change or none. After a failed commit, every read returns what it returned before.
 4. Returns the codes of the error table in `INTERFACES.md`: `not_found` for a missing fact, entity or source in the namespace, including the fact named by `copyFromFactId`; `already_invalidated` for a fact to invalidate or attach to that is no longer live, with the superseding fact in `relatedFactIds` if there is one; `already_exists` for a second entity with the same type and normalised name in the namespace, or an identifier already used; `embedding_model_mismatch` for a vector whose size differs from the size of the vectors already held.
 5. Checks the single-value rule after applying the changes: for each fact recorded with `singleValued: true`, if another live fact in the namespace has the same subject and predicate and an overlapping valid period, the commit fails with `conflict` and names the overlapping facts. A missing bound counts as open. Periods that only touch do not overlap. The object is not compared.
-6. Writes one audit entry per change, in change order, each with the change set's `operationId`, `operation`, `trigger`, `reasonCode`, `explainedBySourceId` and `occurredAt`. The action is `entity.created`, `source.recorded`, `fact.recorded`, `fact.source_attached` or `fact.invalidated`. The receipt's `auditEntryCount` equals the number of changes.
+6. Writes one audit entry per change, in change order, each with the change set's `operationId`, `operation`, `trigger`, `reasonCode`, `explainedBySourceId` and `occurredAt`. The action is `entity.created`, `source.recorded`, `fact.recorded`, `fact.source_attached` or `fact.invalidated`. The receipt's `auditEntryCount` equals the number of changes. The entry's `detail` is fixed per action, as `INTERFACES.md` states: `{ supersededByFactId }` for `fact.invalidated`; `{ revisesFactId }` for `fact.recorded` when the fact is a copy made by a revision, and `null` otherwise; `{ sourceId }` for `fact.source_attached`; `null` for `entity.created` and `source.recorded`. A recorded fact is such a copy when a later change of the same change set invalidates another fact with a supersession link to it and the two have the same subject, predicate and object.
 7. Invalidating a fact sets `invalidatedAt` to the change set's `occurredAt` and sets `supersededByFactId` as given. Nothing else about a stored fact ever changes, and no fact is ever removed.
 
 Reads:
@@ -307,8 +307,9 @@ Reads:
 9. `listFacts` applies every filter that is given: subject, predicate, `touchingEntityIds` (subject or object), `supersededByFactId`. Its `time` takes one of three forms. With a `TimeFilter` it applies the four conditions of the time predicate in [`SCHEMA.md`](../../architecture/SCHEMA.md). With `'live'` it returns every live fact, at any valid time. With `'all'` it returns invalidated facts too. It returns the newest first by `createdAt`, up to `limit`.
 10. `getFact` returns the fact whatever its time, with its subject, its object entity if it has one, and all its sources, or `null`.
 11. `findEntities` matches the name with `normaliseEntityName`, for one type or for every type when `type` is null.
-12. `listAuditEntries` returns the entries for one target in the order they were written.
-13. A read with a limit below 1 returns `invalid_input`. A read that finds nothing returns an empty list or `null`.
+12. `getSource` returns the source with that identifier in the namespace, whether or not a fact is linked to it, or `null`. Fact history uses it to show the explanation of a change.
+13. `listAuditEntries` returns the entries for one target in the order they were written.
+14. A read with a limit below 1 returns `invalid_input`. A read that finds nothing returns an empty list or `null`.
 
 **Technical requirements.**
 1. The interface text is copied from `INTERFACES.md`. A difference found necessary while implementing is raised as a change to that document first, not made silently.
@@ -329,6 +330,9 @@ Reads:
 - [ ] A type-level test passes: the exported `MemoryStore` and a copy of the declaration from `INTERFACES.md` are assignable to each other.
 - [ ] Unit test "applies none of a change set when its last change fails" passes: after a commit that creates an entity, records a source and a fact, and then invalidates a missing fact, `findEntities`, `listFacts` with `'all'` and `listAuditEntries` return nothing.
 - [ ] Unit test "writes one audit entry per change with one operation identifier" passes.
+- [ ] Unit test "applies changes in the order given" passes: a change set that lists a source, then an entity, then a fact writes audit entries `source.recorded`, `entity.created`, `fact.recorded` in that order, and a change set that lists a fact before the entity it refers to returns `not_found`.
+- [ ] Unit test "writes the detail fixed for each action" passes, with one case per action in functional requirement 6.
+- [ ] Unit test "returns a source by its identifier" passes: a source that no fact is linked to is returned, an unknown identifier gives `null`, and a source of another namespace gives `null`.
 - [ ] Unit test "refuses a second open-ended value for a single-valued predicate" passes with `conflict` and the stored fact's identifier in `relatedFactIds`.
 - [ ] Unit test "accepts a period that starts where another ends" passes.
 - [ ] Unit test "accepts a change set that invalidates a fact and records its replacement" passes.
@@ -337,9 +341,8 @@ Reads:
 - [ ] Unit test "returns a fact for an as-of date inside its valid period and not at its end" passes, with the as-of date and the known-at date both stated.
 - [ ] Unit test "returns what was believed at the known-at date" passes: a fact invalidated later is returned for a known-at date before the invalidation and not after.
 - [ ] Unit test "returns every live fact whatever its valid time" passes: with `time: 'live'`, an ended fact and a current fact are returned and an invalidated fact is not.
-- [ ] Unit test "returns nothing from another namespace" passes for `findEntities`, `getFact`, `listFacts` and `listAuditEntries`.
+- [ ] Unit test "returns nothing from another namespace" passes for `findEntities`, `getFact`, `listFacts`, `getSource` and `listAuditEntries`.
 - [ ] Unit test "finds an entity by its normalised name" passes, with `"  Example  Repo "` matching `"example repo"`.
-- [ ] Unit test "says that a lane is not built yet" passes: each of the two search methods returns `storage_failed`.
 - [ ] `git grep -n "vitest" -- packages/core/src` shows matches in `*.test.ts` files only.
 - [ ] `pnpm check` exits 0.
 
@@ -354,7 +357,7 @@ Reads:
 | Status | Pending |
 | Phase | 0 |
 | Depends on | FL-007 |
-| Requirements | REQ-03, REQ-04 |
+| Requirements | Supports REQ-03 and REQ-04 |
 | Components | `packages/core` |
 
 **Objective.** Complete the in-memory store with the two retrieval lanes in simple form, and add the three test helpers that later unit tests use.
@@ -371,7 +374,8 @@ Reads:
 
 **Non-goals.**
 - Realistic ranking in the two lanes. Tests that use this store assert on which facts are returned, not on their order (`TESTING.md`).
-- The full contract suite, including its lane groups: FL-012.
+- The contract suite: FL-012, and FL-067 for its lane groups.
+- A helper for an embedder that fails if called. A test that must make no embedding call writes that embedder in three lines; it is not exported.
 - The keyword lane on FTS5 and the vector lane in SQLite: FL-016 and FL-017.
 - The record-and-replay wrapper for the LLM client: FL-028.
 - A helper that fakes a store. Tests use the real in-memory store.
@@ -411,7 +415,7 @@ Reads:
 - [ ] `git grep -n "vitest" -- packages/core/src` shows matches in `*.test.ts` files only.
 - [ ] `pnpm check` exits 0.
 
-**Validation.** Unit tests in `core`. The lane groups of the contract suite (FL-012) are the fuller proof and are that item's acceptance.
+**Validation.** Unit tests in `core`. The lane groups of the contract suite (FL-067) are the fuller proof and are that item's acceptance.
 
 **Completion evidence.** The commit and the passing `pnpm check` output.
 
@@ -472,7 +476,7 @@ Reads:
 - [ ] Unit test "records nothing when the embedder fails" passes with `embedding_failed`.
 - [ ] Unit test "marks a fact single-valued from the domain's predicate" passes: two open-ended facts for a multi-valued predicate are both recorded; for a single-valued one the second call returns `conflict`.
 - [ ] Unit test "creates an entity once when two drafts introduce it" passes.
-- [ ] Unit test "does not call the embedder when the source only restates" passes.
+- [ ] Unit test "records a source that only restates without embedding anything" passes, with an embedder written in the test that fails if it is called.
 - [ ] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `core` with `createTestDeps`.
@@ -572,7 +576,7 @@ Reads:
 1. Reads the fact with `getFact`. Returns `not_found` or `already_invalidated` as in FL-009.
 2. Returns `invalid_input` when `validTo` is not after the fact's `validFrom`. A fact with an unknown start accepts any `validTo`.
 3. Records the given source in the same commit.
-4. Writes a copy of the fact with a new identifier, the same subject, predicate, object, statement, confidence and `validFrom`, the given `validTo`, and `createdAt` from `now`. The copy's sources are all the original's sources and the new source. Its embedding is `{ copyFromFactId }` of the original.
+4. Writes a copy of the fact with a new identifier, the same subject, predicate, object, statement, confidence and `validFrom`, the given `validTo`, and `createdAt` from `now`. The copy's sources are all the original's sources and the new source. Its embedding is `{ copyFromFactId }` of the original. Its `singleValued` comes from the domain's predicate, as for any recorded fact; it does not conflict with the original, because the original is invalidated in the same change set.
 5. Invalidates the original with a supersession link to the copy.
 6. Without a successor the change set has `operation: 'revision'`. With one it has `operation: 'succession'` and also records the successor, with the new source as its source and a newly embedded statement.
 7. A successor whose `validFrom` is null starts at `validTo`. A successor that gives a `validFrom` keeps it.
@@ -598,7 +602,7 @@ Reads:
 - [ ] Unit test "starts a successor at the end of the fact it follows when no start is given" passes.
 - [ ] Unit test "ends a fact with no successor as a revision" passes, with the operation `revision` in the audit entries.
 - [ ] Unit test "returns invalid_input when the end is not after the start" passes.
-- [ ] Unit test "embeds only the successor" passes: with a fake embedder that counts calls, ending without a successor makes none.
+- [ ] Unit test "ends a fact with no successor without embedding anything" passes, with an embedder written in the test that fails if it is called.
 - [ ] Unit test "copies the original's vector to the ended copy" passes, on the pure function that builds the change set: the copy's embedding is `{ copyFromFactId }` naming the original.
 - [ ] Unit test "changes nothing when the successor conflicts with another live fact" passes.
 - [ ] `pnpm check` exits 0.
