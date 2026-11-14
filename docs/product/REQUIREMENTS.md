@@ -6,7 +6,7 @@ The consolidated list of what Factloom must do, with the epics and work items th
 
 ## How to read the inventory
 
-- **Identifiers** `REQ-01` to `REQ-36` are permanent. A requirement is never renumbered; one that is withdrawn keeps its number and is marked withdrawn.
+- **Identifiers** `REQ-01` to `REQ-37` are permanent. A requirement is never renumbered; one that is withdrawn keeps its number and is marked withdrawn.
 - **Source** says where the requirement came from. "prompt" is the owner's project brief, cited by section; "checkpoint 1 decision", "grilling Q7" and "architecture review" are the owner's decisions and reviews made during the design stage. Those four are not files in this repository. "A1" to "A5" are the proposed advantages in section 6 of the [competitive analysis](../research/evaluations/competitive-analysis.md). ADRs are in [`docs/architecture/adr/`](../architecture/adr/).
 - **Mandatory** says whether the phase can be called complete without the requirement. Every requirement here is mandatory for its phase. For phases 4 to 6 that means "mandatory when the phase is built"; the content of those phases is reviewed before their work items are written.
 - **Epics** are the owning epics, in [`docs/roadmap/epics/`](../roadmap/epics/).
@@ -35,6 +35,7 @@ The consolidated list of what Factloom must do, with the epics and work items th
 | REQ-15 | The single-value rule holds at all times: no two live facts for one subject and single-valued predicate overlap in valid time | architecture review | Yes | EPIC-02, EPIC-03 | FL-007, FL-011, FL-067, FL-068, FL-015, FL-044, FL-052, FL-063 |
 | REQ-35 | Performance budgets are measured by a benchmark and enforced: `recall` answers within 150 ms at the 95th percentile on a namespace of 10,000 facts and within 500 ms on 100,000; `record_fact` takes at most 50 ms excluding embedding; the server starts within 2 seconds once the embedding model is downloaded. The numbers are targets until the first benchmark run confirms or revises them | owner request, 2026-11-14 | Yes | EPIC-03, EPIC-05, EPIC-06, EPIC-07 | FL-066 |
 | REQ-36 | Factloom works with a coding agent however that agent is paid for: a Claude Code or Codex subscription, or an API key. Every tool except `remember` works with no API key of Factloom's own: the agent, which is already a language model, extracts the facts itself and records them with `record_fact`. `remember` is the one tool that needs a key, for Factloom's own extraction call. The registration guide covers all four set-ups | owner request, 2026-11-14 | Yes | EPIC-04, EPIC-06 | FL-024, FL-035, FL-037, FL-038 |
+| REQ-37 | The effect of Factloom on a coding agent's token use and tool calls is measured on a fixed set of tasks, with and without Factloom, and published whatever it shows. A reduction is the goal; it stays a goal until it is measured | owner request, 2026-11-14 | Yes | EPIC-07 | FL-074 |
 
 ### Product 2 (phases 2 and 3)
 
@@ -87,7 +88,7 @@ Notes on the mapping:
 
 ### Confirmed requirements
 
-REQ-01 to REQ-36 are confirmed by the owner. Each traces to the owner's brief, to a decision or request recorded during the design stage, or to an ADR. None is implemented yet. The numbers in REQ-35 are targets, not measurements: the first run of the benchmark (FL-066) confirms or revises them.
+REQ-01 to REQ-37 are confirmed by the owner. Each traces to the owner's brief, to a decision or request recorded during the design stage, or to an ADR. None is implemented yet. The numbers in REQ-35 are targets, not measurements: the first run of the benchmark (FL-066) confirms or revises them.
 
 ### Technical constraints and invariants
 
