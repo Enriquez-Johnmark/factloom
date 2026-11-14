@@ -153,7 +153,7 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 
 **Completion evidence.** The commits. The recorded output of the passing `pnpm check` and of each failing proof, placed in this work item when its status changes. The sentence in [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md) that calls the lint rules planned is replaced by what was run. Q-22 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) is closed with the result. The note in `CLAUDE.md` that only spikes run is removed.
 
-**Recorded evidence.** Completed on 2026-11-14 on Linux x64 with Node.js v22.23.4 and pnpm 12.18.0. It has not been run on macOS; FL-002 does that. Each failing proof was added, run and removed; none was committed.
+**Recorded evidence.** Completed on 2026-11-14 on Linux x64 with Node.js v22.23.4 and pnpm 12.18.0. The owner then ran it on macOS arm64 (see the end of this evidence); FL-002 makes that automatic. Each failing proof was added, run and removed; none was committed.
 
 Commits: `build: add pnpm workspace`, `build: add typescript config`, `build: add biome config with package boundary rules`, one `build: add ... package` commit for each of the four workspace members, `test: add vitest config and placeholder tests`, and `test: add the test that every dependency version is exact`.
 
@@ -303,6 +303,27 @@ What was found on the way:
 - The rule against deep imports works as one `noRestrictedImports` pattern group, `@factloom/*/**` and `**/src/**`. The second pattern catches a relative path into another package, because an import inside a package never passes through a `src` segment. A Biome override replaces the rule's options for its files, so each per-package block repeats the two patterns.
 - The app has no `src/index.ts`, as [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md) says; its entry is `src/main.ts`.
 - `@types/node` is pinned at 22.19.0, the version the research verified. The check script runs its four stages as four named scripts, so each can be run alone.
+
+Run by the owner on 2026-11-14, on a MacBook Air with Apple Silicon, Node.js v24.22.1 and pnpm 12.18.0, after `git pull`. This is the first run on macOS arm64 and on Node.js 24. pnpm downloaded the `darwin-arm64` builds of Biome, TypeScript and Rolldown:
+
+```text
+$ pnpm install
+Downloading @rolldown/binding-darwin-arm64@1.2.19: 8.02 MB/8.02 MB, done
+Downloading @biomejs/cli-darwin-arm64@2.6.7: 31.96 MB/31.96 MB, done
+Downloading @typescript/typescript-darwin-arm64@7.0.2: 9.27 MB/9.27 MB, done
+Done in 2.4s using pnpm v12.18.0
+$ pnpm check
+$ biome format .
+Checked 25 files in 8ms. No fixes applied.
+$ biome lint .
+Checked 25 files in 7ms. No fixes applied.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  5 passed (5)
+      Tests  6 passed (6)
+```
+
+This run covers the tooling only. The native SQLite modules are not part of the scaffold; they are still untested on macOS (Q-01 and Q-02 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md)).
 
 ### FL-002: Run the check in continuous integration on Linux and macOS arm64
 
