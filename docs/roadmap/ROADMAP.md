@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-14:** no feature is implemented. 1 of 74 work items is `Completed`: FL-001, the scaffold. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-14:** no feature is implemented. 2 of 74 work items are `Completed`: FL-001, FL-002. These are the workspace and its checks. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -42,7 +42,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | ID | Title | Epic | Depends on | Status |
 |---|---|---|---|---|
 | [FL-001](epics/EPIC-01.md#fl-001-scaffold-the-pnpm-workspace-with-one-check-command) | Scaffold the pnpm workspace with one check command | EPIC-01 | None | Completed |
-| [FL-002](epics/EPIC-01.md#fl-002-run-the-check-in-continuous-integration-on-linux-and-macos-arm64) | Run the check in continuous integration on Linux and macOS arm64 | EPIC-01 | FL-001 | Pending |
+| [FL-002](epics/EPIC-01.md#fl-002-run-the-check-in-continuous-integration-on-linux-and-macos-arm64) | Run the check in continuous integration on Linux and macOS arm64 | EPIC-01 | FL-001 | Completed |
 | [FL-004](epics/EPIC-02.md#fl-004-result-type-and-the-shared-error-codes) | Result type and the shared error codes | EPIC-02 | FL-001 | Pending |
 | [FL-005](epics/EPIC-02.md#fl-005-timestamps-and-date-input) | Timestamps and date input | EPIC-02 | FL-004 | Pending |
 | [FL-006](epics/EPIC-02.md#fl-006-schemas-and-types-for-entities-facts-sources-audit-entries-change-sets-and-domains) | Schemas and types for entities, facts, sources, audit entries, change sets and domains | EPIC-02 | FL-005 | Pending |
