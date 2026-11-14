@@ -15,9 +15,9 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 
 ## Scope
 
-- The maintenance run: one command, run once, with a report. No daemon.
+- The maintenance run: one command, run once, with a report. No daemon. "On a schedule", in REQ-20 and in the glossary's definition of self-healing, means here that the host's scheduler or a session-start hook starts this command; Factloom runs no process of its own between sessions.
 - The phase 3 fact operations of `INTERFACES.md`: `recordVerification`, `listStaleFacts`, `listOrphanedFacts`, `mergeEntities`, `undoEntityMerge`, each with its `Change` kind, `Operation` name, `AuditAction` values, reason codes and migration.
-- **Verification** of anchored code facts: deterministic checks first, an LLM last. The deterministic checks cover what the owner asks of the software development domain, that referenced files and functions still exist: the file by its path, the function by a word search for its name.
+- **Verification** of anchored code facts: deterministic checks first, an LLM last. The deterministic checks cover what the owner asks of the software development domain, that referenced files and functions still exist: the file by its path (FL-050), the function by a word search for its name (FL-071).
 - Detection of duplicate entities and their **entity merge**.
 - Anchor repair after a file is moved or renamed.
 - Usage tracking outside the read path, and archiving that is reversible and audited.
@@ -25,7 +25,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 ## Out of scope
 
 - Resolving conflicts at write time and acting on feedback. [EPIC-08](EPIC-08.md).
-- A syntax-aware symbol check: parsing with tree-sitter, the TypeScript compiler or a language server (the [verification ladder](../../research/industries/software-development.md), section E, rung 6). A function is checked by a word search for its name (FL-050). Parsing is considered only if text search proves too weak; see "Open decisions".
+- A syntax-aware symbol check: parsing with tree-sitter, the TypeScript compiler or a language server (the [verification ladder](../../research/industries/software-development.md), section E, rung 6). A function is checked by a word search for its name (FL-071). Parsing is considered only if text search proves too weak; see "Open decisions".
 - A recency term in ranking, forgetting curves, summaries that replace facts, and removal of archived rows. The [research on decay](../../research/technical/memory-decay-and-consolidation.md) lists each under "Do not build yet". No work item covers them.
 - Splitting an entity that was wrongly recorded as one, and merging across namespaces. No work item covers them. Two entities of different types can be merged ([`INTERFACES.md`](../../architecture/INTERFACES.md), "Phase 3").
 - Verification of facts from documents. [EPIC-11](EPIC-11.md).
@@ -39,7 +39,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 - **A failed deterministic check is not by itself a reason to invalidate.** A changed file means "verify again", a fact from another branch is out of scope, and a deleted file means "flag" ([software development research](../../research/industries/software-development.md), "Conflicts with settled decisions").
 - **A merge is a row, not an edit**, and can be refused ([`INTERFACES.md`](../../architecture/INTERFACES.md), "Phase 3"; [`SCHEMA.md`](../../architecture/SCHEMA.md), rule 9).
 - **Archiving is not invalidation.** An **archived fact** is still a **live fact** ([`GLOSSARY.md`](../../../GLOSSARY.md)).
-- **Git and the file system are reached through an interface in `@factloom/core`**, implemented in the application, as the LLM and the embedder are ([ADR 0003](../../architecture/adr/0003-dependencies-point-inward-with-manual-injection.md)).
+- **Git and the file system are reached through an interface declared in `@factloom/maintenance`**, its only consumer, and implemented in the application, which may import `maintenance` ([ADR 0003](../../architecture/adr/0003-dependencies-point-inward-with-manual-injection.md)). The interface is not in `@factloom/core`, because commits, paths and `HEAD` belong to the software development domain and the core is generic (REQ-31).
 - **Schema changes are new numbered migrations**, and every storage behaviour is a case in the storage contract suite ([`SCHEMA.md`](../../architecture/SCHEMA.md), [`TESTING.md`](../../architecture/TESTING.md)).
 - **Names marked "proposed" in this file are not in `INTERFACES.md`.** The work item that uses one settles the name and adds it to `INTERFACES.md` and `SCHEMA.md`.
 
@@ -51,13 +51,14 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 - [EPIC-04](EPIC-04.md): the secret check (FL-022), which a file passes before FL-051 sends it to the LLM.
 - [EPIC-05](EPIC-05.md): the `recall` use case (FL-031), whose results FL-055 counts.
 - [EPIC-07](EPIC-07.md): the record-and-replay wrapper (FL-028) for the two steps that use an LLM.
-- [EPIC-06](EPIC-06.md): the application that hosts the maintenance command and the `recall` tool that FL-055 and FL-065 extend.
+- [EPIC-06](EPIC-06.md): the application, its configuration and entry point (FL-034), which host the maintenance command; the smoke test (FL-037), which shows the server still starts with no argument; and the `recall` tool (FL-058) that FL-055 and FL-073 extend.
+- [EPIC-04](EPIC-04.md) also supplies the software development domain (FL-018), to which FL-071 and FL-062 add an entity type and a predicate.
 
 ## Deliverables
 
 - The maintenance command and its report.
 - `recordVerification`, `listStaleFacts`, `listOrphanedFacts`, `mergeEntities` and `undoEntityMerge` in `@factloom/core`, with migrations and contract cases.
-- The deterministic verification job, with fixture repositories: path checks and the function check (FL-050), then the manifest version check with succession (FL-062).
+- The deterministic verification job, with fixture repositories: path checks (FL-050), the function check (FL-071), then the manifest version check with succession (FL-062).
 - The LLM verification rung and its measured rates.
 - The duplicate entity job, with a reviewed set of entity pairs and its over-merge count.
 - The anchor repair job.
@@ -71,30 +72,33 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 - A test shows `recall` changes nothing in the store.
 - Every change made by a maintenance run has an audit entry with trigger `maintenance`.
 - The over-merge count on the entity pair set is reported, and is 0 for pairs decided without an LLM.
-- A fact about a function whose name no longer appears in its anchored file is flagged for review, stays live, and no LLM call is made.
+- A fact about a function whose name no longer appears in its anchored file is flagged for review, stays live, and no LLM call is made (FL-071).
+- `git grep -n "RepositoryReader\|HEAD" -- packages/core/src` finds nothing: the core holds nothing about repositories.
 
 ## Open decisions
 
 | Decision | What is known |
 |---|---|
-| Whether a function or symbol is checked by parsing the file, with tree-sitter, the TypeScript compiler or a language server, and not by a word search | Not used. FL-050 checks a named function by a word search for its name in the anchored file. A word search cannot tell a definition from a mention in a comment, and it misses a function that was renamed. Parsing adds a dependency for each language and is considered only if text search proves too weak, measured by the facts FL-050 flags wrongly or fails to flag |
+| Whether a function or symbol is checked by parsing the file, with tree-sitter, the TypeScript compiler or a language server, and not by a word search | Not used. FL-071 checks a named function by a word search for its name in the anchored file. A word search cannot tell a definition from a mention in a comment, and it misses a function that was renamed. Parsing adds a dependency for each language and is considered only if text search proves too weak, measured by the facts FL-071 flags wrongly or fails to flag |
 
 ## Work items
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-048 | Maintenance run entry point | 3 | FL-040 | Pending |
+| FL-048 | Maintenance run entry point | 3 | FL-040, FL-034, FL-037 | Pending |
 | FL-049 | Verification records and the stale and orphaned lists | 3 | FL-015, FL-045, FL-061 | Pending |
-| FL-050 | Deterministic verification: repository reader and path checks | 3 | FL-048, FL-049 | Pending |
-| FL-062 | Deterministic verification: manifest version check and succession | 3 | FL-050 | Pending |
+| FL-050 | Deterministic verification: repository reader and path checks | 3 | FL-018, FL-048, FL-049 | Pending |
+| FL-071 | Deterministic verification: function check by text search | 3 | FL-050, FL-018 | Pending |
+| FL-062 | Deterministic verification: manifest version check and succession | 3 | FL-050, FL-018 | Pending |
 | FL-051 | LLM verification as the last rung | 3 | FL-062, FL-028, FL-022 | Pending |
-| FL-052 | Entity merge with read resolution | 3 | FL-015 | Pending |
+| FL-052 | Entity merge with read resolution | 3 | FL-015, FL-016, FL-017 | Pending |
 | FL-063 | Undo a merge and refuse a conflicting merge | 3 | FL-052 | Pending |
 | FL-053 | Duplicate entity detection by name | 3 | FL-048, FL-052, FL-063 | Pending |
 | FL-064 | Duplicate entity detection by similarity | 3 | FL-053, FL-028 | Pending |
 | FL-054 | Anchor repair for moved and renamed files | 3 | FL-050 | Pending |
-| FL-055 | Usage tracking | 3 | FL-031, FL-048, FL-058 | Pending |
-| FL-065 | Archiving unused facts | 3 | FL-055, FL-058 | Pending |
+| FL-055 | Usage tracking | 3 | FL-015, FL-031, FL-058 | Pending |
+| FL-065 | Archive and unarchive operations | 3 | FL-055, FL-058 | Pending |
+| FL-073 | Archived facts left out of recall, and the archiving job | 3 | FL-065, FL-048, FL-058 | Pending |
 
 ### FL-048: Maintenance run entry point
 
@@ -102,7 +106,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 |---|---|
 | Status | Pending |
 | Phase | 3 |
-| Depends on | FL-040 |
+| Depends on | FL-040, FL-034, FL-037 |
 | Requirements | REQ-20, REQ-21, REQ-24 |
 | Components | `packages/maintenance` (run function), `apps/mcp-server` (command, wiring, registration guide) |
 
@@ -110,19 +114,21 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 
 **Background.** [`ARCHITECTURE.md`](../../architecture/ARCHITECTURE.md), "Background, from phase 3", says product 2 works on a schedule. Factloom's first form is a stdio server that a host starts per session, so there is no long-lived process to schedule in. The [competitive analysis](../../research/evaluations/competitive-analysis.md) (advantage A5) expects the checks to be triggered at session start. The [software development research](../../research/industries/software-development.md) (findings 5.7 to 5.10) confirmed in documentation that Claude Code and Codex both have a session start hook that can run a command; neither was run.
 
-**Outcome.** The jobs of FL-050, FL-053, FL-054 and FL-065, and the stages that FL-062, FL-051 and FL-064 add to them, have a place to be registered and a common report. A user can run maintenance by hand, from a scheduler, or from a session start hook.
+REQ-20 says duplicates are merged "on a schedule", and the glossary defines self-healing as running on a schedule. In this roadmap that means: the maintenance run is a command, and the host's scheduler or a session-start hook starts it. Factloom runs no daemon. The command reads the configuration of the server (FL-034), and the server must still start as before with no argument, which the smoke test (FL-037) shows.
+
+**Outcome.** The jobs of FL-050, FL-053, FL-054 and FL-073, and the stages that FL-071, FL-062, FL-051 and FL-064 add to them, have a place to be registered and a common report. A user can run maintenance by hand, from a scheduler, or from a session start hook.
 
 **Scope.**
 - A run function in `maintenance` that runs a list of jobs in order and collects their reports.
 - A command in the existing application that builds the dependencies and calls it.
 - The type of a job and of its report.
-- A section in the registration guide on how to trigger the command.
+- A section in the registration guide, the README section of FL-038, on how to trigger the command. If FL-038 has not yet written that section, this item adds its own section to the app's README and FL-038 places it.
 
 **Non-goals.**
 - A daemon, a timer inside the server, or a queue.
 - Any job. Each later work item adds its own.
 - A dry-run mode, a record of when the last run happened, and a minimum interval between runs. `listStaleFacts` already keeps recently verified facts out of the next run. Add these when a run is measured to be slow.
-- A new application. The command is a further mode of `apps/mcp-server`, beside the server and the purge command of phase 2, so there is still one composition root.
+- A new application. The command is a further mode of `apps/mcp-server`, beside the server and the purge and proposal commands of phase 2 (FL-072, FL-070), so there is still one composition root. It is added to the entry point's handling of a command argument where those items wrote it, or writes that function if neither exists yet.
 
 **Functional requirements.**
 1. The command takes its database and namespace from the same configuration as the server ([`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "Shape of the server") and refuses to start without a namespace.
@@ -219,31 +225,32 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 |---|---|
 | Status | Pending |
 | Phase | 3 |
-| Depends on | FL-048, FL-049 |
+| Depends on | FL-018, FL-048, FL-049 |
 | Requirements | REQ-21 (REQ-CA-09), REQ-24 |
-| Components | `@factloom/core` (repository interface), `packages/maintenance` (job), `@factloom/graph-rag` (the domain's entity type and name check), `apps/mcp-server` (git implementation, wiring), fixture repositories |
+| Components | `packages/maintenance` (repository interface, job), `apps/mcp-server` (git implementation, wiring), fixture repositories |
 
-**Objective.** Check that the files and functions that anchored code facts refer to still exist, using git and the file system only, and flag the facts whose file or function is gone, without any LLM call and without invalidating anything.
+**Objective.** Check that the files that anchored code facts refer to still exist and whether they changed, using git and the file system only, and flag the facts whose file is gone, without any LLM call and without invalidating anything.
 
 **Background.** This is the capability the [competitive analysis](../../research/evaluations/competitive-analysis.md) found in no system it ran or read (advantage A5, requirement REQ-CA-09), with the qualification stated there: the findings are "no such code found", not exhaustive searches, and hosted services were not examined. The checks come from the verification ladder in the [software development research](../../research/industries/software-development.md), section E, and each git command behind them was run in section 4 of that document. An **anchor** is a source's `locator` and `version`: a path and a commit.
 
-The owner's requirement for the software development domain is that self-healing "checks that referenced files and functions still exist". This item covers both parts. A file is checked by its path. A function or symbol is checked by a word search for its name in the anchored file at the current version. The original item was split: the check of a value in a manifest, and the succession that follows from it, are FL-062.
+The owner's requirement for the software development domain is that self-healing "checks that referenced files and functions still exist". This item covers the files: a file is checked by its path. The original item was split twice: the check of a function or symbol by a word search for its name is FL-071, and the check of a value in a manifest, with the succession that follows from it, is FL-062.
 
-**Outcome.** A maintenance run confirms the anchored facts whose file is unchanged. A fact whose file was deleted, or whose function is no longer named in its file, is flagged for a person and stays live. No API key is needed for any of it.
+The repository interface is declared in `@factloom/maintenance`, its only consumer, and implemented in the application, which may import `maintenance` (FL-040). It is not in `@factloom/core`: commits, paths and `HEAD` belong to the software development domain, and REQ-31 keeps the core generic.
+
+**Outcome.** A maintenance run confirms the anchored facts whose file is unchanged. A fact whose file was deleted is flagged for a person and stays live. No API key is needed for any of it.
 
 **Scope.**
-- An interface in `@factloom/core` for reading a repository (proposed: `RepositoryReader`), with a git implementation in the application and a fake for tests.
+- An interface in `@factloom/maintenance` for reading a repository (proposed: `RepositoryReader`), with a git implementation in the application and a fake for tests.
 - The verification job, registered in the maintenance run.
-- Four rungs of the ladder: the anchor's commit is on the current branch; the path exists; the name of a function or symbol is still in the file; the file is unchanged since the anchor.
-- An entity type for a function or symbol in the software development domain, which FL-018 does not have.
-- Fixture repositories built by the tests.
+- Three rungs of the ladder: the anchor's commit is on the current branch; the path exists; the file is unchanged since the anchor.
+- Fixture repositories built by the tests, and a helper that builds them, which FL-071, FL-062 and FL-054 reuse.
 
 **Non-goals.**
+- The check of a named function or symbol, and the domain's entity type for one: FL-071.
 - A structured value check, and ending or superseding a fact. FL-062. In this item no fact is changed.
 - An LLM rung. FL-051.
 - Finding where a missing file went. FL-054.
-- Parsing the file with tree-sitter, the TypeScript compiler or a language server. A word search needs no dependency and works for every language, and that is enough to answer "is this name still in this file". It cannot tell a definition from a mention and it does not follow a rename. Parsing is considered only if text search proves too weak, and is listed under "Open decisions" of this epic.
-- Searching the whole repository for a name that left its file. The fact is flagged, and a person or an agent decides.
+- An interface for repositories in `@factloom/core`.
 - Lockfiles, script entries, decision record status, and manifests of other ecosystems.
 - Reading the working tree. Checks read the repository at `HEAD`, so uncommitted edits are not judged.
 - Proposing a change under `human_approval`. The fact is flagged.
@@ -257,25 +264,22 @@ The owner's requirement for the software development domain is that self-healing
    |---|---|---|
    | 1 | The anchor's commit is an ancestor of `HEAD` | If not: skipped. Nothing is recorded and nothing is changed, because a fact from another branch is out of scope |
    | 2 | The path exists at `HEAD` | If not: outcome `source_missing`. The fact is flagged and stays live |
-   | 3 | The fact is about a named function or symbol, and that name is found as a whole word in the file's text at `HEAD` | If the name is not found: outcome `contradicted`. The fact is flagged for review and stays live. A fact that is not about a function or symbol passes this rung unchecked |
-   | 4 | The file's content at `HEAD` is the same as at the anchor's commit | If the same: outcome `confirmed`. If it differs: `inconclusive` |
+   | 3 | The file's content at `HEAD` is the same as at the anchor's commit | If the same: outcome `confirmed`. If it differs: `inconclusive` |
 
+   FL-071 adds a rung between 2 and 3 for facts about a named function or symbol, and FL-062 a rung after 3 for values a domain can read from a file.
 3. Every outcome is recorded with `recordVerification` and method `deterministic`.
-4. No rung of this item changes a fact. A fact with outcome `source_missing` or `contradicted` is counted as flagged, whatever the domain's correction policy.
+4. No rung of this item changes a fact. A fact with outcome `source_missing` is counted as flagged, whatever the domain's correction policy.
 5. A flagged fact is reported by the run, with its identifier and the outcome. A fact with outcome `source_missing` also appears in `listOrphanedFacts`.
-6. A fact is about a named function or symbol when its subject or its object is an entity of the domain's type for one. The name searched for is the entity's name. The search is for the whole word, with the case kept, so `parseDate` is not found in `parseDateInput`.
-7. A name that is found in a comment or a string still counts as found. This is the stated limit of a word search.
-8. If the repository cannot be read, for example the directory is not a git repository, the job fails as a whole, changes nothing, and the run reports the failure.
+6. If the repository cannot be read, for example the directory is not a git repository, the job fails as a whole, changes nothing, and the run reports the failure.
 
 **Technical requirements.**
-1. `maintenance` holds the ladder and names no entity type, no predicate, no file name and no git command. The name check is supplied by the composition root from the software development **domain**: a function that, given a fact with its entities, returns the names that must appear in its anchored file, or none. The word search itself is a pure function in `maintenance`, with its own unit tests.
-2. The domain from FL-018 has no entity type for a function or symbol. This item adds one (proposed: `symbol`) and, because the six predicates of FL-018 are about repositories, dependencies and decisions, one multi-valued predicate that a fact about a symbol can use (proposed: `described_as`, with a value as its object). The domain's tests of FL-018, which assert the exact lists, are changed in the same commit.
-3. The repository interface offers only what the four rungs need: whether a commit is an ancestor of `HEAD`, whether a path exists at a commit, the content identifier of a path at a commit, the text of a path at a commit, and the `HEAD` commit. It lives in `@factloom/core` because `maintenance` may import nothing else.
-4. The git implementation runs git as a child process with arguments passed as a list, never through a shell, and uses the commands recorded as run in the research (checks 4.1, 4.6 and 4.7), re-checked against the git documentation with the page cited. The research ran the word match of check 4.4 with a search tool over a directory; here the match is made in code on the text of the one anchored file, so no further tool is needed.
-5. The repository's location is configuration read by the composition root (proposed: `FACTLOOM_REPO`, default the working directory). It is added to the configuration table in `MCP-TOOLS.md`.
-6. Fixture repositories are created by the test in a temporary directory, with fixed author and committer dates. No fixture repository is committed inside this repository.
-7. The dependencies given to the job in every test of this item include an LLM client that fails if called.
-8. The verification interval, the age after which a fact is stale, is one named constant.
+1. `maintenance` holds the ladder and names no entity type, no predicate, no file name and no git command. The rungs that FL-071 and FL-062 add are supplied by the composition root from the software development **domain** (FL-018), so the job takes a list of rungs, each marked to run before rung 3 or after it for a file that changed, and knows nothing about what each checks. In this item the list is empty.
+2. The repository interface is declared in `@factloom/maintenance` and exported from its entry. It offers only what the rungs need: whether a commit is an ancestor of `HEAD`, whether a path exists at a commit, the content identifier of a path at a commit, the text of a path at a commit, and the `HEAD` commit. The text is read by the rungs of FL-071 and FL-062. The implementation lives in `apps/mcp-server`, and `@factloom/core` gains nothing.
+3. The git implementation runs git as a child process with arguments passed as a list, never through a shell, and uses the commands recorded as run in the research (checks 4.1, 4.6 and 4.7), re-checked against the git documentation with the page cited.
+4. The repository's location is configuration read by the composition root (proposed: `FACTLOOM_REPO`, default the working directory). It is added to the configuration table in `MCP-TOOLS.md`.
+5. Fixture repositories are created by the test in a temporary directory, with fixed author and committer dates. No fixture repository is committed inside this repository.
+6. The dependencies given to the job in every test of this item include an LLM client that fails if called.
+7. The verification interval, the age after which a fact is stale, is one named constant.
 
 **Constraints.**
 - [`TESTING.md`](../../architecture/TESTING.md): "A test that must make no LLM call passes a client that fails on any call."
@@ -287,19 +291,77 @@ The owner's requirement for the software development domain is that self-healing
 - [ ] Fixture "file deleted": a fact anchored to a file that a later commit deletes. After one run with an LLM client that fails if called: the fact is live and current, its latest verification is `source_missing`, `listOrphanedFacts` returns it, the run's report counts it as flagged, and no fact row was invalidated.
 - [ ] Fixture "nothing changed": the fact is recorded as `confirmed`, and a second run made with the clock inside the verification interval examines no anchored fact.
 - [ ] Fixture "other branch": a fact anchored at a commit that is not an ancestor of `HEAD` gets no verification row and no change.
-- [ ] Fixture "file changed": a fact that is not about a function, anchored to a file that a later commit edits. The outcome is `inconclusive` and the fact is unchanged.
+- [ ] Fixture "file changed": a fact anchored to a file that a later commit edits. The outcome is `inconclusive` and the fact is unchanged.
+- [ ] A test runs the job in a directory that is not a git repository and shows the job reported as failed and the store unchanged.
+- [ ] Every audit entry written by these runs has trigger `maintenance`, and after every fixture run the number of fact rows and the `invalidatedAt` of every fact are as before.
+- [ ] Unit tests of the ladder with the fake repository reader cover each row of the rung table, and one test shows that a rung passed to the job runs at the place it names: before rung 3, or after it for a file that changed.
+- [ ] `git grep -n "RepositoryReader\|HEAD" -- packages/core/src` finds nothing.
+
+**Validation.** Unit tests of the ladder with a fake reader and the in-memory store. Tests of the git implementation and of the whole run against fixture repositories with the SQLite adapter, on both CI platforms from FL-002. `pnpm check`.
+
+**Completion evidence.** The commit; the passing check output on Linux and macOS arm64; the list of git commands used, each with its documentation citation.
+
+### FL-071: Deterministic verification: function check by text search
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 3 |
+| Depends on | FL-050, FL-018 |
+| Requirements | REQ-21 (REQ-CA-09), REQ-24 |
+| Components | `packages/maintenance` (word search), `@factloom/graph-rag` (the domain's entity type, predicate and name check), `apps/mcp-server` (wiring), fixture repositories |
+
+**Objective.** Check that a function or symbol that an anchored code fact names is still named in its anchored file, by a word search with no LLM call, and flag the fact for review when it is not.
+
+**Background.** This item is the second part of FL-050, which built the repository reader, the verification job and the rungs for a path and a changed file. The owner's requirement for the software development domain is that self-healing "checks that referenced files and functions still exist". FL-050 covers files; this item covers functions. The [software development research](../../research/industries/software-development.md), section 4, ran the word match of check 4.4 with a search tool over a directory; here the match is made in code on the text of the one anchored file, so no further tool is needed. The domain of FL-018 has four entity types and none is a function or symbol, so this item adds one.
+
+**Outcome.** A fact about a function whose name no longer appears in its anchored file is flagged for a person and stays live. A fact about a function that is still named passes on to the file-unchanged rung. No API key is needed.
+
+**Scope.**
+- A rung in the job of FL-050, run before the file-unchanged rung, for facts about a named function or symbol.
+- The word search, a pure function in `maintenance`.
+- An entity type for a function or symbol in the software development domain (proposed: `symbol`), and one multi-valued predicate that a fact about a symbol can use (proposed: `described_as`, with a value as its object).
+- The name check that the composition root supplies from the domain.
+
+**Non-goals.**
+- Parsing the file with tree-sitter, the TypeScript compiler or a language server. A word search needs no dependency and works for every language, and that is enough to answer "is this name still in this file". It cannot tell a definition from a mention and it does not follow a rename. Parsing is considered only if text search proves too weak, and is listed under "Open decisions" of this epic.
+- Searching the whole repository for a name that left its file. The fact is flagged, and a person or an agent decides.
+- Changing a fact. In this item no fact is changed.
+- Extracting facts about symbols from text. The entity type is in the domain, so `remember` and `record_fact` can use it; its extraction quality is not measured here.
+
+**Functional requirements.**
+1. The rung runs for a fact that passed rung 2 of FL-050, before the file-unchanged rung.
+2. A fact is about a named function or symbol when its subject or its object is an entity of the domain's type for one. The name searched for is the entity's name. A fact that is not about a function or symbol passes the rung unchecked.
+3. The name is searched for as a whole word, with the case kept, in the file's text at `HEAD`. `parseDate` is not found in `parseDateInput`.
+4. If the name is found, the fact goes on to the next rung. If it is not found, the outcome `contradicted` is recorded with `recordVerification` and method `deterministic`, the fact is flagged for review and stays live, and no later rung runs for it.
+5. A name that is found in a comment or a string still counts as found. This is the stated limit of a word search.
+6. A flagged fact is counted as flagged whatever the domain's correction policy.
+
+**Technical requirements.**
+1. `maintenance` names no entity type and no predicate. The name check is supplied by the composition root from the software development **domain**: a function that, given a fact with its entities, returns the names that must appear in its anchored file, or none. The word search is a pure function in `maintenance`, with its own unit tests.
+2. The domain gains the entity type and the predicate in the same commit as the name check, and the tests of FL-018 that assert the exact lists are changed with it.
+3. The rung reads the file's text through the repository reader of FL-050 and adds no method to it.
+4. Fixture repositories are built with the helper of FL-050, with fixed author and committer dates.
+5. The dependencies given to the job in every test of this item include an LLM client that fails if called.
+
+**Constraints.**
+- [`TESTING.md`](../../architecture/TESTING.md): "A test that must make no LLM call passes a client that fails on any call."
+- [ADR 0010](../../architecture/adr/0010-conflicts-are-keyed-by-subject-and-predicate.md): a specific predicate.
+- REQ-31: the core is generic; the name check comes from the domain.
+
+**Acceptance criteria.**
 - [ ] Fixture "function removed": a fact whose subject is a symbol named `parseDate`, anchored to a file that defines it; a later commit removes the function and leaves the file. After one run with an LLM client that fails if called: the latest verification is `contradicted` and `deterministic`, the fact is live and current, the report counts it as flagged, and no fact row was invalidated.
 - [ ] Fixture "function still there": the same fact after a commit that edits another part of the file. The name is found, and the outcome is `inconclusive` because the file changed.
 - [ ] Fixture "longer name only": the file no longer holds `parseDate` and holds `parseDateInput`. The outcome is `contradicted`: the search is for the whole word.
+- [ ] Fixture "not about a symbol": a fact about a repository anchored to a file that a later commit edits. The rung does not decide it, and the outcome is `inconclusive` as in FL-050.
 - [ ] Unit tests of the word search pass with these names: "finds a name as a whole word", "does not find a name inside a longer name", "keeps the case of the name", "finds a name next to punctuation".
 - [ ] A test named "the software development domain has a type for a function or symbol" passes, and the tests of FL-018 that assert the exact lists pass with the added names.
-- [ ] A test runs the job in a directory that is not a git repository and shows the job reported as failed and the store unchanged.
-- [ ] Every audit entry written by these runs has trigger `maintenance`, and after every fixture run the number of fact rows and the `invalidatedAt` of every fact are as before.
-- [ ] Unit tests of the ladder with the fake repository reader cover each row of the rung table.
+- [ ] Every audit entry written by these runs has trigger `maintenance`.
+- [ ] `pnpm check` exits 0.
 
-**Validation.** Unit tests of the ladder and of the word search with a fake reader and the in-memory store. Tests of the git implementation and of the whole run against fixture repositories with the SQLite adapter, on both CI platforms from FL-002. `pnpm check`.
+**Validation.** Unit tests of the word search and of the rung with a fake reader and the in-memory store. Tests of the whole run against fixture repositories with the git implementation and the SQLite adapter, on both CI platforms from FL-002. `pnpm check`.
 
-**Completion evidence.** The commit; the passing check output on Linux and macOS arm64; the list of git commands used, each with its documentation citation.
+**Completion evidence.** The commit; the passing check output on Linux and macOS arm64. Any fact the fixtures show flagged wrongly is noted under "Open decisions" of this epic.
 
 ### FL-062: Deterministic verification: manifest version check and succession
 
@@ -307,20 +369,20 @@ The owner's requirement for the software development domain is that self-healing
 |---|---|
 | Status | Pending |
 | Phase | 3 |
-| Depends on | FL-050 |
+| Depends on | FL-050, FL-018 |
 | Requirements | REQ-21 (REQ-CA-09), REQ-24 |
-| Components | `@factloom/core` (repository interface), `packages/maintenance` (job), `@factloom/graph-rag` (the domain's predicate and structured check), `apps/mcp-server` (git implementation, wiring), fixture repositories |
+| Components | `packages/maintenance` (repository interface, job), `@factloom/graph-rag` (the domain's predicate and structured check), `apps/mcp-server` (git implementation, wiring), fixture repositories |
 
 **Objective.** Add a structured value check to the verification job: when a dependency's version in a manifest no longer matches a stored fact, end the fact and record the new version as its successor, with the manifest as the source and no LLM call.
 
-**Background.** FL-050 built the repository reader and the rungs that check a path, a name and whether a file changed. A changed file gives `inconclusive` there. Rung 4 of the verification ladder in the [software development research](../../research/industries/software-development.md), section E, goes further for values that can be read from a file by a rule: the value at the anchor's commit is compared with the value at `HEAD`. This is the capability the [competitive analysis](../../research/evaluations/competitive-analysis.md) found in no system it ran or read (advantage A5, requirement REQ-CA-09). [`INTERFACES.md`](../../architecture/INTERFACES.md), "Phase 3", says a verification is recorded and what follows is a separate call, so the audit log shows both the finding and the action. The software development domain of FL-018 has six predicates and none holds a dependency's version, so this item adds one.
+**Background.** FL-050 built the repository reader and the rungs that check a path and whether a file changed, and FL-071 the rung that checks a name. A changed file gives `inconclusive` there. Rung 4 of the verification ladder in the [software development research](../../research/industries/software-development.md), section E, goes further for values that can be read from a file by a rule: the value at the anchor's commit is compared with the value at `HEAD`. This is the capability the [competitive analysis](../../research/evaluations/competitive-analysis.md) found in no system it ran or read (advantage A5, requirement REQ-CA-09). [`INTERFACES.md`](../../architecture/INTERFACES.md), "Phase 3", says a verification is recorded and what follows is a separate call, so the audit log shows both the finding and the action. The software development domain of FL-018 has six predicates and none holds a dependency's version, so this item adds one.
 
 **Outcome.** After a dependency is upgraded in a commit, the next maintenance run ends the fact about the old version at the time of that commit and records the new one, with the manifest as its source. No API key is needed.
 
 **Scope.**
 - One more rung in the job of FL-050, used when the file changed: a structured check supplied by the domain.
 - A predicate for a dependency's version in the software development domain (proposed: `pins_version`, single-valued, with a value as its object), and the structured check for it.
-- One addition to the repository interface: the commits that touched a path between two commits, with their committer times.
+- One addition to the repository interface of FL-050, in `@factloom/maintenance`: the commits that touched a path between two commits, with their committer times.
 - The succession that follows a contradicted value, under the domain's correction policy.
 - A fixture repository in which a version changes.
 
@@ -328,12 +390,12 @@ The owner's requirement for the software development domain is that self-healing
 - Lockfiles, script entries, decision record status, and manifests of other ecosystems. Each is a further structured check, added when a scenario needs it.
 - Reading the working tree. Checks read the repository at `HEAD`, so uncommitted edits are not judged.
 - Proposing a change under `human_approval`. The fact is flagged.
-- Changing a fact that FL-050 flagged for a missing file or a missing name.
+- Changing a fact that FL-050 flagged for a missing file or FL-071 for a missing name.
 - An LLM rung: FL-051.
 - Extracting version facts from text. The predicate is in the domain, so `remember` and `record_fact` can use it; its extraction quality is not measured here.
 
 **Functional requirements.**
-1. The rung runs for a fact that passed the rungs of FL-050 and whose file differs between the anchor's commit and `HEAD`.
+1. The rung runs for a fact that passed the rungs of FL-050 and FL-071 and whose file differs between the anchor's commit and `HEAD`. It is passed to the job as a rung that runs after the file-unchanged rung.
 2. If the domain has a structured check for the fact's predicate, the checked value is read at the anchor's commit and at `HEAD`. The same value gives `confirmed`. A different value, or no value at `HEAD`, gives `contradicted`. If the domain has no check for the predicate, the outcome stays `inconclusive`.
 3. The outcome is recorded with `recordVerification` and method `deterministic`, before any change is made.
 4. For a `contradicted` fact with a new value at `HEAD`, under policy `automatic`, the job calls `endFact` with the new value as successor. `validTo` is the committer time of the first commit after the anchor in which the value differs. The source of the change is the manifest at `HEAD`: kind `file`, the path, and the `HEAD` commit.
@@ -389,7 +451,7 @@ The owner's requirement for the software development domain is that self-healing
 **Outcome.** A fact about a file that has changed is no longer left undecided forever. If the LLM finds the file no longer supports it, the fact's confidence falls, which brings it back into `listStaleFacts` and makes its weakness visible to an agent that recalls it.
 
 **Scope.**
-- One more rung in the verification job, after the deterministic rungs of FL-050 and FL-062, used only for facts whose deterministic outcome is `inconclusive`.
+- One more rung in the verification job, after the deterministic rungs of FL-050, FL-071 and FL-062, used only for facts whose deterministic outcome is `inconclusive`.
 - A prompt with a three-way answer.
 - A small set of verification cases and an eval in replay.
 
@@ -429,6 +491,7 @@ The owner's requirement for the software development domain is that self-healing
 - [ ] Unit tests show an oversized file and a file containing a secret pattern are not sent: each passes with an LLM client that fails if called.
 - [ ] A unit test shows that with no LLM client configured the run completes and reports the facts left `inconclusive`.
 - [ ] A unit test shows the call limit: with the limit set to 2 and five undecided facts, two calls are made.
+- [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the verification eval in record mode from `apps/mcp-server` (`pnpm run record:verification`, which wraps the Anthropic client with the wrapper of FL-028 in record mode), reads the diff of the new recordings for secrets, and records the model identifier. A replayed run fails while a recording is missing, so the code and the recordings are committed together after this step, and the item is not `Completed` before it.
 - [ ] The verification eval runs inside `pnpm check` in replay, fails on a missing recording, and prints the table and the rate. The rate is recorded; this item sets no target for it.
 
 **Validation.** Unit tests with scripted and failing LLM clients, the fake repository reader and the in-memory store. The eval in replay. One live run by hand: the owner runs the eval with recording on and records the model identifier and the rate.
@@ -441,7 +504,7 @@ The owner's requirement for the software development domain is that self-healing
 |---|---|
 | Status | Pending |
 | Phase | 3 |
-| Depends on | FL-015 |
+| Depends on | FL-015, FL-016, FL-017 |
 | Requirements | REQ-20 (REQ-CA-05), REQ-15, REQ-24 |
 | Components | `@factloom/core` (operation, in-memory store), `@factloom/storage` (migration, adapter, contract suite) |
 
@@ -697,7 +760,7 @@ The original item was split in two. This one builds the job and its two stages t
 2. The threshold of stage 3 is one named constant. Its first value is chosen from the similarities of the true and false pairs in the entity pair set, and the item records the two distributions. Thresholds from other systems are not reused, because they do not transfer between models (research, failure modes table).
 3. The LLM stage needs a task name. `LlmTask` has three values and none is for entities. The item adds a fourth (proposed: `entity_matching`) to `INTERFACES.md` and to the task map of the Anthropic client.
 4. The entity pair set is data in `apps/mcp-server/evals/`: two names, their types, a few facts for each, and the expected answer. At least 20 pairs, reviewed by hand, including same name with different meaning, short names, an abbreviation and its long form, two versions of one product, and one thing recorded under two types. It includes the two examples the research names: "Postgres" and "PostgreSQL", and two different things both called "Java".
-5. The eval runs the four stages over the pair set with the real local embedder and with the LLM replayed by the wrapper of FL-028. It prints, for each stage, how many pairs it decided, and the over-merge count (expected different, decided same) and under-merge count (expected same, not decided same).
+5. The eval runs the four stages over the pair set with the real local embedder and with the LLM replayed by the wrapper of FL-028. Because it needs the real embedding model, it runs under `pnpm eval` and in the eval job of FL-002, not under `pnpm check` ([`TESTING.md`](../../architecture/TESTING.md), "Four kinds of test"). It prints, for each stage, how many pairs it decided, and the over-merge count (expected different, decided same) and under-merge count (expected same, not decided same).
 6. The stable part of the prompt is in `instructions` and the pair is in `input`. No model name is written in `maintenance`.
 
 **Constraints.**
@@ -712,12 +775,13 @@ The original item was split in two. This one builds the job and its two stages t
 - [ ] A unit test shows a pair of different types with equal names reaches the LLM stage and is merged on "same".
 - [ ] A unit test shows the call limit: with the limit set to 2 and five candidates, two calls are made.
 - [ ] A unit test shows a failed LLM call leaves the pair unmerged and counts it as failed.
-- [ ] The entity pair eval runs inside `pnpm check` in replay and fails on a missing recording. Its output shows an over-merge count of 0 for pairs decided by stages 1 and 2. The over-merge and under-merge counts of stage 4 are printed and recorded; this item sets no target for them.
+- [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the entity pair eval in record mode from `apps/mcp-server` (`pnpm run record:entities`, which wraps the Anthropic client with the wrapper of FL-028 in record mode), reads the diff of the new recordings for secrets, and records the model identifier. A replayed run fails while a recording is missing, so the code and the recordings are committed together after this step, and the item is not `Completed` before it.
+- [ ] The entity pair eval runs under `pnpm eval` in replay and fails on a missing recording. Its output shows an over-merge count of 0 for pairs decided by stages 1 and 2. The over-merge and under-merge counts of stage 4 are printed and recorded; this item sets no target for them.
 - [ ] The owner reads each pair of the set and its expected answer, and records "reviewed" and the date.
 - [ ] Every merge made by the two stages has an audit entry with trigger `maintenance`.
-- [ ] `pnpm check` exits 0.
+- [ ] `pnpm check` exits 0 with no network access and no embedding model in the cache.
 
-**Validation.** Unit tests with scripted and failing LLM clients, the fake embedder and the in-memory store. The entity pair eval in replay. One live run by hand: the owner runs the eval with recording on and the real embedder, and records the counts and the two similarity distributions.
+**Validation.** Unit tests with scripted and failing LLM clients, the fake embedder and the in-memory store, on every check. The entity pair eval in replay under `pnpm eval`. One live run by hand: the owner runs the eval with recording on and the real embedder, and records the counts and the two similarity distributions.
 
 **Completion evidence.** The commit; the eval output; the threshold's value and the distributions it was chosen from; the model identifier the recordings were made with; Q-56 in `OPEN-QUESTIONS.md` brought up to date.
 
@@ -729,7 +793,7 @@ The original item was split in two. This one builds the job and its two stages t
 | Phase | 3 |
 | Depends on | FL-050 |
 | Requirements | REQ-22, REQ-24 |
-| Components | `@factloom/core` (repository interface), `packages/maintenance` (job), `apps/mcp-server` (git implementation), fixture repositories |
+| Components | `packages/maintenance` (repository interface, job), `apps/mcp-server` (git implementation), fixture repositories |
 
 **Objective.** When a fact's anchor points at a path that no longer exists, find where the file went using git, and give the fact a source at the new path. When git shows no successor, leave the fact flagged as an orphaned fact.
 
@@ -788,15 +852,15 @@ The original item was split in two. This one builds the job and its two stages t
 |---|---|
 | Status | Pending |
 | Phase | 3 |
-| Depends on | FL-031, FL-048, FL-058 |
+| Depends on | FL-015, FL-031, FL-058 |
 | Requirements | REQ-23 |
 | Components | `@factloom/core` (interface, in-memory store), `@factloom/storage` (migration, adapter, contract suite), `apps/mcp-server` (usage step after `recall`) |
 
 **Objective.** Record which facts recall returns, without making recall a write, so that archiving has something to decide by.
 
-**Background.** An **archived fact** is a live fact left out of recall by default because it has not been used. [`SCHEMA.md`](../../architecture/SCHEMA.md), "Planned additions", describes a `fact_usage` table and the record that a fact is archived, and says they were kept out of phase 1 so that recall stays a pure read and that archiving by disuse starts counting when it is introduced. [`INTERFACES.md`](../../architecture/INTERFACES.md) states the rule and its one exception: "Reads never write. Recall does not update a counter or a timestamp. From phase 3, how often a fact is recalled is recorded by the caller after the read, in a usage table outside `commit` and with no audit entry: usage counts are bookkeeping, not memory." The original item was split: this one records usage, and FL-065 archives. The [research on decay](../../research/technical/memory-decay-and-consolidation.md) gives the position this item follows: archiving is about tidiness and never changes what Factloom believes; usage is counted when a fact is returned to the caller, in one batched write after the response is produced, and a lost update is acceptable. It also names the main risk: a true fact that is rarely used. Two questions are open in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md): Q-11, whether usage writes cause contention, and Q-57, what period suits code memory. The research's 180 days is a placeholder.
+**Background.** An **archived fact** is a live fact left out of recall by default because it has not been used. [`SCHEMA.md`](../../architecture/SCHEMA.md), "Planned additions", describes a `fact_usage` table and the record that a fact is archived, and says they were kept out of phase 1 so that recall stays a pure read and that archiving by disuse starts counting when it is introduced. [`INTERFACES.md`](../../architecture/INTERFACES.md) states the rule and its one exception: "Reads never write. Recall does not update a counter or a timestamp. From phase 3, how often a fact is recalled is recorded by the caller after the read, in a usage table outside `commit` and with no audit entry: usage counts are bookkeeping, not memory." The original item was split: this one records usage, FL-065 archives and unarchives, and FL-073 leaves archived facts out of recall and runs the archiving job. The [research on decay](../../research/technical/memory-decay-and-consolidation.md) gives the position this item follows: archiving is about tidiness and never changes what Factloom believes; usage is counted when a fact is returned to the caller, in one batched write after the response is produced, and a lost update is acceptable. It also names the main risk: a true fact that is rarely used. Two questions are open in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md): Q-11, whether usage writes cause contention, and Q-57, what period suits code memory. The research's 180 days is a placeholder.
 
-**Outcome.** For every fact, memory's bookkeeping shows when it was last returned by recall and how often. `recall` is still a pure read, and the audit log holds no entry for a recall. FL-065 reads these counts to decide what to archive.
+**Outcome.** For every fact, memory's bookkeeping shows when it was last returned by recall and how often. `recall` is still a pure read, and the audit log holds no entry for a recall. The archiving job of FL-073 reads these counts to decide what to archive.
 
 **Scope.**
 - The migration that adds `fact_usage`.
@@ -805,11 +869,11 @@ The original item was split in two. This one builds the job and its two stages t
 - The measurement that open question Q-11 asks for.
 
 **Non-goals.**
-- Archiving, unarchiving and the archiving job: FL-065.
+- Archiving and unarchiving: FL-065. The archiving job: FL-073.
 - Any use of usage or age in ranking. The research lists it under "Do not build yet".
 - A retrieval log, a pinned flag, and an importance value. Section C of `OPEN-QUESTIONS.md` questions each, and nothing in this item reads one.
 - An audit entry for a recall. Usage counts are bookkeeping, not memory.
-- A job in the maintenance run. This item registers none; the run of FL-048 gains the archiving job in FL-065.
+- A job in the maintenance run. This item registers none, so it does not need the run of FL-048; the run gains the archiving job in FL-073.
 
 **Functional requirements.**
 1. The `recall` use case (FL-031) remains a pure read. It writes nothing, with or without usage tracking.
@@ -819,7 +883,7 @@ The original item was split in two. This one builds the job and its two stages t
 5. Usage is recorded by the `recall` tool only. `get_fact_history`, the fact operations and the evals record none.
 6. A fact that does not exist in the namespace is skipped by the usage write, without an error.
 7. The read returns, for a fact, the time it was last recalled and its count, or nothing when it was never recalled. It never returns usage from another namespace.
-8. Each store keeps the time at which its usage tracking began, so that FL-065 can tell "never used" from "not yet counted".
+8. Each store keeps the time at which its usage tracking began, so that the archiving job of FL-073 can tell "never used" from "not yet counted".
 
 **Technical requirements.**
 1. `INTERFACES.md`, "What a caller must know beyond the signatures", states that usage is recorded by the caller after the read, in a usage table outside `commit` and with no audit entry. This item adds the method's signature to that document. `commit` stays the only way to change memory ([ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md)); no new decision record is needed.
@@ -842,82 +906,135 @@ The original item was split in two. This one builds the job and its two stages t
 - [ ] A contract case shows usage recorded for a fact of another namespace, or for an unknown fact, changes nothing and returns no error.
 - [ ] A SQLite adapter test shows the row counts of `fact`, `source`, `entity` and `audit_log` are unchanged by a usage write.
 - [ ] A test shows `get_fact_history` records no usage.
-- [ ] The MCP smoke test still passes.
+- [ ] The test over stdio of the `recall` tool (FL-058) still passes.
 - [ ] The owner records the two timings of technical requirement 5 in `OPEN-QUESTIONS.md`.
 - [ ] `pnpm check` exits 0.
 
-**Validation.** Unit tests of `recall` and of the handler. The contract suite against both stores. The MCP smoke test. The owner's timing run. `pnpm check`.
+**Validation.** Unit tests of `recall` and of the handler. The contract suite against both stores. The stdio test of the `recall` tool. The owner's timing run. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the updated `INTERFACES.md`, `SCHEMA.md` and `MCP-TOOLS.md`; the timings added to `OPEN-QUESTIONS.md`.
 
-### FL-065: Archiving unused facts
+### FL-065: Archive and unarchive operations
 
 | | |
 |---|---|
 | Status | Pending |
 | Phase | 3 |
 | Depends on | FL-055, FL-058 |
-| Requirements | REQ-23, REQ-03, REQ-24 |
-| Components | `@factloom/core` (operations, in-memory store), `@factloom/storage` (migration, adapter, contract suite), `@factloom/graph-rag` (`recall` option), `packages/maintenance` (job), `apps/mcp-server` (usage step, `recall` tool input) |
+| Requirements | REQ-23, REQ-24 |
+| Components | `@factloom/core` (operations, in-memory store), `@factloom/storage` (migration, adapter, contract suite) |
 
-**Objective.** Archive facts that have gone unused for a configured period, leave them out of recall by default, and make archiving audited and reversible.
+**Objective.** Add the operations that archive and unarchive facts, audited and reversible, with the record of archiving kept beside the fact row.
 
-**Background.** An **archived fact** is a live fact left out of recall by default because it has not been used ([`GLOSSARY.md`](../../../GLOSSARY.md)). FL-055 records when each fact was last recalled. The [research on decay](../../research/technical/memory-decay-and-consolidation.md) gives the position this item follows: archiving is about tidiness and never changes what Factloom believes. It also names the main risk: a true fact that is rarely used. Open question Q-57 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) asks what period suits code memory; the research's 180 days is a placeholder. Unlike a usage count, archiving changes what recall returns, so it goes through `commit` and has audit entries.
+**Background.** An **archived fact** is a live fact left out of recall by default because it has not been used ([`GLOSSARY.md`](../../../GLOSSARY.md)). FL-055 records when each fact was last recalled. The [research on decay](../../research/technical/memory-decay-and-consolidation.md) gives the position this item follows: archiving is about tidiness and never changes what Factloom believes. Unlike a usage count, archiving changes what recall returns, so it goes through `commit` and has audit entries.
 
-**Outcome.** Default recall stops offering facts nobody has used for a long time. Nothing is lost: an archived fact is still live, still in fact history, still returned when asked for, and comes back to default recall when it is used or unarchived.
+The original item was split to fit one session. This one adds the operations and their storage. Leaving archived facts out of recall, the `recall` option and tool input, and the archiving job are FL-073. A fact is unarchived only by the explicit operation: recalling an archived fact does not unarchive it, because that would put a rule about facts into the `recall` handler ([`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "What a handler does").
+
+**Outcome.** A caller can archive live facts and unarchive one, and every read can tell whether a fact is archived. Nothing about the fact row changes, and the audit log shows each step.
 
 **Scope.**
 - The migration that adds the record of archiving.
-- Operations that archive and unarchive (proposed: `archiveFacts`, `unarchiveFact`), with `Change` kinds, an `Operation` name (proposed: `archive`), `AuditAction` values (proposed: `fact.archived`, `fact.unarchived`) and reason codes (proposed: `unused`, `used_again`, `requested`).
-- The retrieval lanes leaving out archived facts by default, and an option on `recall` to include them.
-- Unarchiving a fact when it is used again.
-- The archiving job, registered in the maintenance run.
+- Operations that archive and unarchive (proposed: `archiveFacts`, `unarchiveFact`), with `Change` kinds, an `Operation` name (proposed: `archive`), `AuditAction` values (proposed: `fact.archived`, `fact.unarchived`) and reason codes (proposed: `unused`, `requested`).
+- The archived state on a returned fact (proposed: an `archivedAt` value beside the fact).
 
 **Non-goals.**
 - Recording usage: FL-055.
+- Leaving archived facts out of recall, the `recall` option, and the archiving job: FL-073. In this item every read still returns archived facts.
+- Unarchiving a fact when it is recalled. A fact is unarchived only by `unarchiveFact`.
 - Any use of usage or age in ranking.
-- Verifying a fact before archiving it.
 - Removing archived facts from the keyword and vector entries, or removing any row.
 - An MCP tool to archive or unarchive.
 
 **Functional requirements.**
 1. `archiveFacts` marks live facts as archived, in one commit, with one audit entry for each. `unarchiveFact` reverses it, with an audit entry. Neither changes the fact row, its identifier, its `invalidated_at` or its valid time. Errors: `invalid_input`, `not_found`, `already_invalidated`, `storage_failed`; archiving an archived fact, or unarchiving one that is not, is `already_exists`.
-2. The three retrieval lanes leave out archived facts when the caller asks only about now. `recall` includes them when an as-of or known-at date is given, or when its new option is set (proposed: `includeArchived`, `include_archived` on the tool, default false).
-3. Every other read returns archived facts: `getFact`, `listFacts` for conflict candidates and fact history, `listStaleFacts`, and the single-value rule. An archived fact still conflicts.
-4. A result that includes an archived fact says so (proposed: an `archivedAt` value beside the fact).
-5. When the usage step of FL-055 records usage for an archived fact, it then calls `unarchiveFact` for that fact, with reason code `used_again`. A failure is logged and dropped, as for the usage write.
-6. The job archives a fact when all of these hold: it is a current fact; it is not archived; it was recorded more than the archiving period ago; and it has no usage within the period.
-7. No fact is archived for disuse until a full archiving period has passed since usage tracking began in that database, which the store of FL-055 keeps.
-8. Under policy `human_approval` the job archives nothing and reports the facts it would have archived, counted as flagged.
-9. Changes made by the job carry the trigger `maintenance` and the reason code `unused`.
+2. Every read returns archived facts in this item, and a returned fact says whether it is archived and since when.
+3. An archived fact still counts for the single-value rule: a commit that records a second open-ended value for a single-valued predicate still fails with `conflict` when the existing fact is archived.
+4. The reason code of an archive or unarchive is given by the caller: `unused` for the job of FL-073, `requested` otherwise.
 
 **Technical requirements.**
 1. Archiving and unarchiving are changes to what recall returns and go through `commit`, each with an audit entry ([ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md)).
-2. The archiving period is configuration with a default of 180 days, labelled in the configuration table of `MCP-TOOLS.md` as a placeholder until Q-57 is answered.
-3. The record of archiving is rows in a side table, added and closed like `entity_merge`, so that the fact row stays immutable and the history of archiving is kept.
-4. Requirement 7 is met inside each store. The job is given no date to pass.
-5. The job reads the facts to consider through one read method added to `MemoryStore` in both stores (proposed: `listUnusedFacts`, with a date and a limit), which is one indexed query in the SQLite adapter.
-6. The migration carries a comment on what the Postgres version will do differently.
+2. The record of archiving is rows in a side table, added and closed like `entity_merge`, so that the fact row stays immutable and the history of archiving is kept.
+3. The in-memory store implements the same behaviour, so the contract suite runs against both stores.
+4. The schema inventory test of FL-061 classifies the new columns as "not content".
+5. The migration carries a comment on what the Postgres version will do differently.
 
 **Constraints.**
 - [ADR 0006](../../architecture/adr/0006-facts-change-only-by-invalidation.md): archiving is not a change to the fact row, and is not an invalidation.
+- [`GLOSSARY.md`](../../../GLOSSARY.md): an archived fact is still a live fact.
+
+**Acceptance criteria.**
+- [ ] A contract case, against both stores, shows archive then unarchive leaves the fact row unchanged, writes two audit entries with operation `archive`, and that `getFact` reports the fact archived after the first and not after the second.
+- [ ] A contract case shows a commit that records a second open-ended value for a single-valued predicate still fails with `conflict` when the existing fact is archived.
+- [ ] Contract cases cover the refusals: archiving an archived fact is `already_exists`; unarchiving a fact that is not archived is `already_exists`; archiving an invalidated fact is `already_invalidated`; a fact in another namespace is `not_found`.
+- [ ] A SQLite adapter test opens a database created by the earlier migrations only, applies the new one, and archives an existing fact.
+- [ ] `git grep -n "unarchiveFact" -- apps/mcp-server/src` shows no call in the `recall` tool handler.
+- [ ] `pnpm check` exits 0.
+
+**Validation.** The contract suite against both stores. A SQLite adapter test of the migration. `pnpm check`.
+
+**Completion evidence.** The commit; the passing check output; the updated `INTERFACES.md` and `SCHEMA.md`.
+
+### FL-073: Archived facts left out of recall, and the archiving job
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 3 |
+| Depends on | FL-065, FL-048, FL-058 |
+| Requirements | REQ-23, REQ-03, REQ-24 |
+| Components | `@factloom/core` (in-memory store), `@factloom/storage` (lanes, one read, contract suite), `@factloom/graph-rag` (`recall` option), `packages/maintenance` (job), `apps/mcp-server` (`recall` tool input, wiring) |
+
+**Objective.** Leave archived facts out of recall by default, let a caller include them, and archive facts that have gone unused for a configured period with a job in the maintenance run.
+
+**Background.** This item is the second part of FL-065, which added the operations `archiveFacts` and `unarchiveFact` and the record of archiving. FL-055 records when each fact was last recalled, and the maintenance run of FL-048 is where the job is registered. The [research on decay](../../research/technical/memory-decay-and-consolidation.md) names the main risk of archiving: a true fact that is rarely used. Open question Q-57 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) asks what period suits code memory; the research's 180 days is a placeholder. A fact comes back to default recall only when it is unarchived by the explicit operation, never because it was recalled.
+
+**Outcome.** Default recall stops offering facts nobody has used for a long time. Nothing is lost: an archived fact is still live, still in fact history, still returned when asked for with a date or with the option, and comes back to default recall when it is unarchived.
+
+**Scope.**
+- The retrieval lanes leaving out archived facts when the caller asks only about now, in both stores.
+- An option on `recall` to include them, and the matching input of the `recall` tool.
+- One read of facts to consider for archiving, in both stores.
+- The archiving job, registered in the maintenance run, and the archiving period as configuration.
+
+**Non-goals.**
+- Unarchiving a fact when it is recalled. A fact is unarchived only by `unarchiveFact` (FL-065).
+- Any use of usage or age in ranking.
+- Verifying a fact before archiving it.
+- An MCP tool to archive or unarchive.
+
+**Functional requirements.**
+1. The three retrieval lanes leave out archived facts when the caller asks only about now. `recall` includes them when an as-of or known-at date is given, or when its new option is set (proposed: `includeArchived`, `include_archived` on the tool, default false).
+2. Every other read returns archived facts: `getFact`, `listFacts` for conflict candidates and fact history, `listStaleFacts`.
+3. A `recall` result that includes an archived fact says so, with the `archivedAt` value of FL-065.
+4. The job archives a fact when all of these hold: it is a current fact; it is not archived; it was recorded more than the archiving period ago; and it has no usage within the period.
+5. No fact is archived for disuse until a full archiving period has passed since usage tracking began in that database, which the store of FL-055 keeps.
+6. Under policy `human_approval` the job archives nothing and reports the facts it would have archived, counted as flagged.
+7. Changes made by the job carry the trigger `maintenance` and the reason code `unused`.
+8. The `recall` tool handler only translates `include_archived` and calls the use case. It records usage as FL-055 specifies and calls no other operation.
+
+**Technical requirements.**
+1. The archiving period is configuration with a default of 180 days, labelled in the configuration table of `MCP-TOOLS.md` as a placeholder until Q-57 is answered.
+2. Requirement 5 is met inside each store. The job is given no date to pass.
+3. The job reads the facts to consider through one read method added to `MemoryStore` in both stores (proposed: `listUnusedFacts`, with a date and a limit), which is one indexed query in the SQLite adapter.
+4. Leaving archived facts out is a further filter in the lanes, applied with the time predicate before the limit, as [ADR 0017](../../architecture/adr/0017-rank-fusion-in-typescript-with-time-filtering-in-each-lane.md) requires of the time filter.
+
+**Constraints.**
 - [`SCHEMA.md`](../../architecture/SCHEMA.md), "The time predicate": archiving does not alter the four conditions. It is a further filter in the lanes, used only for a question about now.
+- [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "What a handler does": the handler holds no rule about facts.
 - [`GLOSSARY.md`](../../../GLOSSARY.md): an archived fact is still a live fact.
 
 **Acceptance criteria.**
 - [ ] Contract cases, against both stores, with a fixed clock: an archived fact is not returned by either search lane or by `listFacts` with `touchingEntityIds` when archived facts are excluded, and is returned by each when they are included; `getFact` returns it; `listFacts` by subject and predicate returns it.
-- [ ] A contract case shows a commit that records a second open-ended value for a single-valued predicate still fails with `conflict` when the existing fact is archived.
-- [ ] A contract case shows archive then unarchive leaves the fact row unchanged, writes two audit entries with operation `archive`, and that the fact is again returned by default.
-- [ ] Contract cases cover the refusals: archiving an archived fact is `already_exists`; archiving an invalidated fact is `already_invalidated`; a fact in another namespace is `not_found`.
+- [ ] A contract case shows that with a limit of 1, a lane returns a matching fact that is not archived although an archived fact matches better: the filter runs before the limit.
 - [ ] A unit test of `recall` shows an archived fact is left out by default, returned with `includeArchived`, and returned when an as-of date is given.
-- [ ] A test of the `recall` tool handler shows that an archived fact returned with `include_archived` is unarchived afterwards, with an audit entry whose reason code is `used_again`.
+- [ ] A test of the `recall` tool handler shows that an archived fact returned with `include_archived` is still archived afterwards, and that no audit entry was written by the call.
 - [ ] Unit tests of the job with a fixed clock: a current fact recorded 200 days ago with no usage is archived; one recalled 10 days ago is not; an ended fact is not; a fact recorded 10 days ago is not.
 - [ ] A unit test shows that in a store whose usage tracking began 30 days ago, a fact recorded 200 days ago is not archived.
 - [ ] A unit test shows that under `human_approval` nothing is archived and the fact is counted as flagged.
-- [ ] Every audit entry written by the job has trigger `maintenance`.
-- [ ] The MCP smoke test still passes, and the `recall` tool's input schema includes `include_archived` with a description.
+- [ ] Every audit entry written by the job has trigger `maintenance` and reason code `unused`.
+- [ ] A test of the tool list shows the `recall` tool's input schema includes `include_archived` with a description, and the stdio test of the `recall` tool (FL-058) still passes.
 - [ ] `pnpm check` exits 0.
 
-**Validation.** Unit tests of `recall`, the handler, the operations and the job. The contract suite against both stores. The MCP smoke test. `pnpm check`.
+**Validation.** Unit tests of `recall`, the handler and the job. The contract suite against both stores. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the updated `INTERFACES.md`, `SCHEMA.md` and `MCP-TOOLS.md`.
