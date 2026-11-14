@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-14:** the first feature code exists. 9 of 74 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-012, FL-018, FL-056. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-14:** the first feature code exists. 10 of 74 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-012, FL-018, FL-056, FL-067. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -51,7 +51,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-018](epics/EPIC-04.md#fl-018-software-development-domain-entity-types-and-predicates) | Software development domain: entity types and predicates | EPIC-04 | FL-006 | Completed |
 | [FL-027](epics/EPIC-07.md#fl-027-timeline-scenarios-as-reviewed-data) | Timeline scenarios as reviewed data | EPIC-07 | FL-006, FL-018 | Pending |
 | [FL-056](epics/EPIC-02.md#fl-056-in-memory-search-lanes-and-test-helpers) | In-memory search lanes and test helpers | EPIC-02 | FL-007 | Completed |
-| [FL-067](epics/EPIC-03.md#fl-067-storage-contract-suite-single-value-rule-namespaces-and-search-lanes) | Storage contract suite: single-value rule, namespaces and search lanes | EPIC-03 | FL-012, FL-056 | Pending |
+| [FL-067](epics/EPIC-03.md#fl-067-storage-contract-suite-single-value-rule-namespaces-and-search-lanes) | Storage contract suite: single-value rule, namespaces and search lanes | EPIC-03 | FL-012, FL-056 | Completed |
 
 ### Phase 1: Product 1 for code
 
