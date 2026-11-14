@@ -67,7 +67,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-004 | Result type and the shared error codes | 0 | FL-001 | Pending |
+| FL-004 | Result type and the shared error codes | 0 | FL-001 | Completed |
 | FL-005 | Timestamps and date input | 0 | FL-004 | Pending |
 | FL-006 | Schemas and types for entities, facts, sources, audit entries, change sets and domains | 0 | FL-005 | Pending |
 | FL-007 | MemoryStore interface and the in-memory store: commit and structural reads | 0 | FL-006 | Pending |
@@ -81,7 +81,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 0 |
 | Depends on | FL-001 |
 | Requirements | Supports REQ-24 |
@@ -121,15 +121,42 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 - [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md): the "Result" group of core's public API.
 
 **Acceptance criteria.**
-- [ ] Unit test "lists the nine error codes in the documented order" passes.
-- [ ] Unit test "builds a failure with no related facts unless they are given" passes.
-- [ ] Unit test "leaves out the cause when none is given" passes.
-- [ ] A type-level test passes in the type check: a `switch` over `ErrorCode` with a `never` default compiles, and compiles no longer when one case is removed. The second half is shown once by hand and the compiler output recorded.
-- [ ] `pnpm check` exits 0.
+- [x] Unit test "lists the nine error codes in the documented order" passes.
+- [x] Unit test "builds a failure with no related facts unless they are given" passes.
+- [x] Unit test "leaves out the cause when none is given" passes.
+- [x] A type-level test passes in the type check: a `switch` over `ErrorCode` with a `never` default compiles, and compiles no longer when one case is removed. The second half is shown once by hand and the compiler output recorded.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `core`; the type check.
 
 **Completion evidence.** The commit and the passing `pnpm check` output.
+
+**Recorded evidence.** Completed on 2026-11-14, in the commit `feat(core): add the Result type and the shared error codes`. The code is `packages/core/src/result.ts`, with its tests beside it.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4:
+
+```text
+$ biome format .
+Checked 28 files in 3ms. No fixes applied.
+$ biome lint .
+Checked 28 files in 15ms. No fixes applied.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  6 passed (6)
+      Tests  13 passed (13)
+```
+
+The type-level proof. With the `conflict` case removed from the `switch` over `ErrorCode` in the test file, the type check failed; the case was then restored:
+
+```text
+packages/core/src/result.test.ts(24,13): error TS2322: Type '"conflict"' is not assignable to type 'never'.
+```
+
+Three things that differ from the letter of this item or of `INTERFACES.md`, each small:
+
+- The two halves of `Result` are named and exported as `Success` and `Failure`, so that `err` can return a `Failure`, which is assignable to a `Result` of any value type. `Result` itself is the union shown in `INTERFACES.md`. [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md) lists the two names.
+- `relatedFactIds` is typed `readonly string[]`. The `FactId` name arrives with the schemas in FL-006 and is the same type.
+- The placeholder export of FL-001, `corePackageName`, stays for now, because the placeholders of the other three workspace members import it. It goes when each of them has a real import from core.
 
 ### FL-005: Timestamps and date input
 
