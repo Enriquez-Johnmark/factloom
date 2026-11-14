@@ -66,7 +66,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-012 | Storage contract suite: fixture, time, reads, commit and refusals | 0 | FL-007 | Pending |
+| FL-012 | Storage contract suite: fixture, time, reads, commit and refusals | 0 | FL-007 | Completed |
 | FL-067 | Storage contract suite: single-value rule, namespaces and search lanes | 0 | FL-012, FL-056 | Pending |
 | FL-013 | Migration runner and the first migration | 1 | FL-001, FL-004, FL-005 | Pending |
 | FL-014 | SQLite store: opening, connection settings and commit | 1 | FL-002, FL-012, FL-013 | Pending |
@@ -79,7 +79,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 0 |
 | Depends on | FL-007 |
 | Requirements | REQ-02, REQ-03, REQ-04, REQ-06, REQ-07, REQ-08, REQ-09, REQ-30 |
@@ -182,15 +182,33 @@ The suite lives in `@factloom/storage`, where a test framework is already a deve
 - [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md): `storage` may import `core`; the suite is internal.
 
 **Acceptance criteria.**
-- [ ] `pnpm test` runs the first group against the in-memory store, and every case listed above passes: T1 to T8, R1 to R14, C1 to C8 and F1 to F10. The count of passing cases is recorded.
-- [ ] Each of the eight time-table cases is a separate test whose name states the as-of date and the known-at date.
-- [ ] A test of the option passes: with a group left out of `options`, none of its cases is registered.
-- [ ] Every correction made to the in-memory store while writing the suite is covered by a case and named in the commit message.
-- [ ] `pnpm check` exits 0.
+- [x] `pnpm test` runs the first group against the in-memory store, and every case listed above passes: T1 to T8, R1 to R14, C1 to C8 and F1 to F10. The count of passing cases is recorded.
+- [x] Each of the eight time-table cases is a separate test whose name states the as-of date and the known-at date.
+- [x] A test of the option passes: with a group left out of `options`, none of its cases is registered.
+- [x] Every correction made to the in-memory store while writing the suite is covered by a case and named in the commit message.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Contract tests, run by `pnpm test` in `storage` against the in-memory store.
 
 **Completion evidence.** The commit, the passing `pnpm check` output, and the number of contract cases run.
+
+**Recorded evidence.** Completed on 2026-11-14, in the commit `test(storage): add the first group of the storage contract suite`. The suite is `packages/storage/src/memory-store-contract.ts`; `in-memory-store.contract.test.ts` runs it against the in-memory store.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, ended with:
+
+```text
+ Test Files  16 passed (16)
+      Tests  209 passed (209)
+```
+
+Contract cases run against the in-memory store: 41, all passing. They are T1 to T8, R1 to R14, C1 to C8, and F1 to F10 with F5 written as two cases, one for an empty valid period and one for a reversed one. Two further tests cover the option: a store that runs the group registers 41 cases, and one with every group left out registers none.
+
+What was found on the way:
+
+- The suite found nothing to correct in the in-memory store.
+- Vitest treats a `describe` block with no test as an error. With no group selected, the suite therefore registers nothing at all.
+- `describeMemoryStoreContract` returns the number of cases each group registered. That is how the option is tested without a second test runner.
+- The fixture builders (`at`, `entity`, `source`, `fact`, `recordFact`, `changeSet`, `writeTimeline`, `listFactIds`) are exported from the suite's file, inside the package, for FL-067 and for the adapter's own tests.
 
 ### FL-067: Storage contract suite: single-value rule, namespaces and search lanes
 
