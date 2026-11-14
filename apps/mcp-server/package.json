@@ -1,0 +1,11 @@
+{
+  "name": "@factloom/mcp-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@factloom/core": "workspace:*",
+    "@factloom/graph-rag": "workspace:*",
+    "@factloom/storage": "workspace:*"
+  }
+}
