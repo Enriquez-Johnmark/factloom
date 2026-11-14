@@ -65,7 +65,7 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-001 | Scaffold the pnpm workspace with one check command | 0 | None | Completed |
-| FL-002 | Run the check in continuous integration on Linux and macOS arm64 | 0 | FL-001 | Pending |
+| FL-002 | Run the check in continuous integration on Linux and macOS arm64 | 0 | FL-001 | Completed |
 | FL-003 | Install the packed server on a clean machine in CI | 1 | FL-002, FL-037 | Pending |
 
 ### FL-001: Scaffold the pnpm workspace with one check command
@@ -329,7 +329,7 @@ On the same machine, `node apps/mcp-server/src/main.ts` ran from source with no 
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 0 |
 | Depends on | FL-001 |
 | Requirements | REQ-28, REQ-29 |
@@ -375,16 +375,54 @@ On the same machine, `node apps/mcp-server/src/main.ts` ran from source with no 
 - [Engineering principles](../../../.claude/rules/engineering-principles.md): no command or version stated from memory.
 
 **Acceptance criteria.**
-- [ ] A push to `main` produces a workflow run in which all four matrix jobs end in success. The run's address is recorded.
-- [ ] The macOS job's log shows `arm64` as the architecture and the four stages of `pnpm check`.
-- [ ] The manual job is started once. Its log ends with `SPIKE OK` for the first spike and with the line `31 checks passed` for the second, and shows `platform: 'darwin-arm64'`. If either fails, the exact error is recorded and the item is `Blocked` on Q-01.
-- [ ] The eval job is started once by hand and ends in success. Its address is recorded.
-- [ ] `grep -n "uses:" <workflow file>` shows a 40-character commit hash on every line.
-- [ ] The workflow file contains no `secrets.` reference.
+- [x] A push to `main` produces a workflow run in which all four matrix jobs end in success. The run's address is recorded.
+- [x] The macOS job's log shows `arm64` as the architecture and the four stages of `pnpm check`.
+- [x] The manual job is started once. Its log ends with `SPIKE OK` for the first spike and with the line `31 checks passed` for the second, and shows `platform: 'darwin-arm64'`. If either fails, the exact error is recorded and the item is `Blocked` on Q-01.
+- [x] The eval job is started once by hand and ends in success. Its address is recorded.
+- [x] `grep -n "uses:" <workflow file>` shows a 40-character commit hash on every line.
+- [x] The workflow file contains no `secrets.` reference.
 
 **Validation.** The workflow run itself. There is no local test; the definition is proved by running it.
 
 **Completion evidence.** The commit, the address of the passing workflow run, and the log lines named above. Q-03 is closed in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) with the result. Q-01, Q-04 and Q-05 are updated with what the runs showed and what remains: the owner's own machine, and Node lines not in the matrix.
+
+**Recorded evidence.** Completed on 2026-11-14. The workflow is `.github/workflows/ci.yml`, added in the commit `ci: run the check on Linux and macOS arm64`, whose message cites where each pinned version and runner label was read.
+
+| Run | Started by | Result | Address |
+|---|---|---|---|
+| Check, four matrix jobs | The push of the workflow to `main` | Success | https://github.com/Enriquez-Johnmark/factloom/actions/runs/43645710880 |
+| Spikes on macOS arm64 | By hand (`job: spikes`) | Success | https://github.com/Enriquez-Johnmark/factloom/actions/runs/43645725433 |
+| Eval | By hand (`job: eval`) | Success | https://github.com/Enriquez-Johnmark/factloom/actions/runs/43645728291 |
+
+The four matrix jobs are `ubuntu-24.04` and `macos-26`, each with Node.js 22 and 26. From the log of the `macos-26`, Node.js 26 job, read after it finished:
+
+```text
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  5 passed (5)
+      Tests  6 passed (6)
+Run node apps/mcp-server/src/main.ts
+factloom mcp-server: not implemented yet (wired from @factloom/core)
+```
+
+Each macOS job has a step that fails unless `uname -m` prints `arm64`; it passed in all three macOS jobs.
+
+From the log of the spikes job, on `macos-26` with Node.js v22.23.4. Its first step, `npm ci && node spike.mjs`, succeeded; its second ended with:
+
+```text
+31 checks passed on SQLite 3.54.1, sqlite-vec v0.1.9, Node v22.23.4
+```
+
+The eval job ran `pnpm eval`, found no test file, and exited 0, as expected until FL-026.
+
+`grep -n "uses:" .github/workflows/ci.yml` shows a 40-character commit hash on every line, and the file contains no `secrets.` reference.
+
+What was not read directly: the lines `SPIKE OK` and `platform: 'darwin-arm64'` in the first spike's output. That step's success, the architecture assertion before it, and the same spike's recorded output on Linux are the evidence for them. The owner's own Mac run of the second spike is recorded in [`spikes/fact-schema`](../../../spikes/fact-schema/README.md).
+
+Two choices made while writing the workflow:
+
+- The check, the spikes and the eval are three jobs in one workflow file. The check runs on a push; the other two run only when started by hand, and a manual start runs only the job that was chosen.
+- The check jobs also run `node apps/mcp-server/src/main.ts`, so that running from source with no build step is proved on each operating system and Node.js line, not only by the tests.
 
 ### FL-003: Install the packed server on a clean machine in CI
 
