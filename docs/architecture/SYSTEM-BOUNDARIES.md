@@ -29,7 +29,7 @@ Three mechanisms, so that a forbidden import fails without anyone remembering th
 2. **Lint.** Planned: a lint rule per package forbids importing the packages and libraries in the "must not import" column, and forbids deep imports into another package. This catches the case where someone adds a dependency to `package.json` to make an import work.
 3. **One public entry.** Each `package.json` exports only its `index.ts`. No package has a second entry.
 
-The lint rules are planned and have not been run in the no-build setup. The rule against forbidden imports was run only in a workspace with a build step, and the rule against deep imports was not run at all. The scaffold stage proves both by adding a forbidden import and a deep import, showing the check fail, and removing them.
+The lint rules were run in the scaffold on 2026-11-14, in the no-build workspace: a forbidden import in each of the three packages, a forbidden import with its dependency declared, a deep import by package name and a deep import by relative path each failed the check, and each was then removed. The recorded output is in work item [FL-001](../roadmap/epics/EPIC-01.md).
 
 ## Public API of each package
 
