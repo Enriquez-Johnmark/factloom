@@ -4,3 +4,6 @@
  * export replaces it.
  */
 export const corePackageName = '@factloom/core';
+
+export type { ErrorCode, FactloomError, Failure, Result, Success } from './result.ts';
+export { ERROR_CODES, err, ok } from './result.ts';
