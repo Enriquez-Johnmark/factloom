@@ -20,8 +20,8 @@ The roadmap carries no dates, estimates or effort sizes. Order comes from phases
 - An identifier is permanent. It is never changed, and never reused for something else, also after the item is retired.
 - Numbers inside an epic need not be consecutive. Identifiers were assigned in epic order with later additions, so EPIC-05 holds FL-026, FL-030 to FL-033 and FL-057. Do not renumber to tidy this.
 - A new work item takes the next unused number, whichever epic it joins. FL-066 was added to EPIC-07 this way.
-- A work item that turns out to be too large is split by keeping its identifier for the first part and giving new identifiers to the rest. FL-056 to FL-065 came from such splits: each stands in its epic file directly after the item it was split from, and the first part was given a narrower title.
-- The work items are FL-001 to FL-066, with no number unused.
+- A work item that turns out to be too large is split by keeping its identifier for the first part and giving new identifiers to the rest. FL-056 to FL-065 and FL-067 to FL-073 came from such splits: each stands in its epic file directly after the item it was split from, and the first part was given a narrower title.
+- The work items are FL-001 to FL-073, with no number unused.
 
 ## Status
 
@@ -67,9 +67,11 @@ Evals are not a package. The scenario files, the extraction cases, the recording
 
 1. Pick a `Pending` item whose dependencies are all `Completed`. Read its section, then the documents its Background and Constraints link to.
 2. Implement it in one focused session. If it does not fit, stop and split it as described under "Identifiers"; do not leave half of it on `main`.
-3. Run `pnpm check`. It must pass before the commit.
+3. Run `pnpm check`. It must pass before the commit. It needs no network, no API key and no embedding model. If the item adds or changes a test that needs the real embedding model, also run `pnpm eval`, which runs those tests ([`TESTING.md`](../architecture/TESTING.md), "Four kinds of test").
 4. Tick the acceptance criteria that were run, fill in the completion evidence, and set the status, in the epic file and in [`ROADMAP.md`](ROADMAP.md). These edits go in the same commit as the work, so that the roadmap never disagrees with the code.
 5. Follow [`.claude/rules/git.md`](../../.claude/rules/git.md) for the commit itself.
+
+Some items need LLM recordings that only the owner can make, with a real API key: FL-069, FL-039, FL-041, FL-042, FL-051 and FL-064. A replayed run fails while a recording is missing, so such an item is done in a session with the owner present. The agent writes the code, the owner runs the record command the item names, and the code and the recordings are committed together once `pnpm check` passes. Nothing of the item is committed before that step.
 
 If the work shows that a design document is wrong, correct the document in its own commit, and add an ADR when a decision changes. Do not change an identifier, a phase or a dependency silently; say why in the commit message.
 
@@ -90,9 +92,9 @@ A worked example, for REQ-04. Nothing in it is implemented yet; it shows where e
 | Requirement | Recall answers "what was true on a date" and "what was believed on a date", in every retrieval lane | [`REQUIREMENTS.md`](../product/REQUIREMENTS.md) |
 | Capability | Answer as-of and known-at questions | [`CAPABILITIES.md`](../product/CAPABILITIES.md) |
 | Epics | EPIC-03 for the time filter in storage, EPIC-05 for the use case, EPIC-06 for the tool | The "Requirements" row of each epic's header |
-| Work items | FL-012 (the contract suite's time cases), FL-015, FL-016 and FL-017 (structural reads and the two lanes in SQLite), FL-031 (the `recall` use case and its date defaults), FL-056 (the two lanes of the in-memory store), FL-058 (the `recall` tool with `as_of` and `known_at`) | The "Requirements" row of each work item |
+| Work items | FL-012 (the contract suite's time cases), FL-067 (its lane cases), FL-015, FL-016 and FL-017 (structural reads and the two lanes in SQLite), FL-031 (the `recall` use case and its date defaults), FL-056 (the two lanes of the in-memory store), FL-058 (the `recall` tool with `as_of` and `known_at`) | The "Requirements" row of each work item |
 | Implementation reference | The time predicate in `@factloom/storage`; the use case `recall` in `@factloom/graph-rag`; the tool `recall` in `apps/mcp-server` | "Components" in the work item, following "Where to find things" in [`ARCHITECTURE.md`](../architecture/ARCHITECTURE.md) |
-| Acceptance criteria | For example, the contract suite's cases for every row of the time table and for "each retrieval lane returns no fact outside the time filter" ([`TESTING.md`](../architecture/TESTING.md)) pass against the SQLite adapter | The check boxes of FL-012, FL-015, FL-016 and FL-017 |
+| Acceptance criteria | For example, the contract suite's cases for every row of the time table and for "each retrieval lane returns no fact outside the time filter" ([`TESTING.md`](../architecture/TESTING.md)) pass against the SQLite adapter | The check boxes of FL-012, FL-067, FL-015, FL-016 and FL-017 |
 | Validation evidence | The commit and the `pnpm check` output that shows those cases passing | "Completion evidence" in each work item |
 
 To check a requirement, start from its row in `REQUIREMENTS.md` and read the status and evidence of each work item listed there. A requirement is met when all of them are `Completed`.
