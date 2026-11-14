@@ -15,24 +15,31 @@ Terms in bold are defined in [`GLOSSARY.md`](../../GLOSSARY.md). The reasoning b
 
 One command, `pnpm check`, runs the format check, lint, type check and every test above except live eval runs.
 
+### Continuous integration
+
+Planned as a phase 1 work item; not yet built. `pnpm check` runs on Linux and on macOS arm64 on every push. Before anything is published, a job installs the packed server on a clean machine and starts it, which is requirement REQ-CA-08 of the [competitive analysis](../research/evaluations/competitive-analysis.md). The first run of the server downloads the embedding model, so that job needs network access and takes longer than later starts.
+
 ## Unit tests
 
 Use cases and fact operations take their dependencies as arguments, so a unit test passes fakes.
 
-- **`createInMemoryStore()`** is a complete `MemoryStore` held in arrays. It lives in `@factloom/core` and is exported for tests. It is a real implementation of the interface, not a mock: tests assert on what the store contains afterwards, not on which methods were called.
+- **`createInMemoryStore()`** is a complete `MemoryStore` held in arrays. It is a real implementation of the interface, not a mock: tests assert on what the store contains afterwards, not on which methods were called. It exists so that `graph-rag` can be tested without importing `@factloom/storage`. Its keyword and vector ranking is naive, so tests that use it assert on which facts are returned, not on their exact order.
 - **`createScriptedLlm(responses)`** returns the given objects in order and fails the test if it is called more often than expected. A test that must make no LLM call passes a client that fails on any call.
 - **`createFakeEmbedder()`** maps text to a small deterministic vector.
-- **A fixed clock and a counting identifier generator**, so every timestamp and identifier in a test is predictable.
+- **`createTestDeps(options)`** builds the dependencies of an operation from the three helpers above, with a fixed clock and a counting identifier generator, so every timestamp and identifier in a test is predictable.
+
+The four helpers are ordinary exports of `@factloom/core`, from its single `index.ts`. There is no separate entry for tests. They import no test framework, so `core` never imports one in its source.
 
 Pure functions get direct tests with no fakes: rank fusion, name normalisation, timestamp parsing, building a change set for a succession or a correction.
 
 ## Contract tests
 
-One suite, `describeMemoryStoreContract(createStore)`, defines what any `MemoryStore` must do. It is exported from `@factloom/core` and run against:
+One suite, `describeMemoryStoreContract(createStore)`, defines what any `MemoryStore` must do. It lives in `@factloom/storage`, which is where a test framework is already a development dependency, and that package runs it against:
 
-- the in-memory fake, so the fake cannot drift from the real adapters;
-- the SQLite adapter, in `@factloom/storage`;
-- the Postgres adapter, when it exists.
+- the in-memory store from `@factloom/core`, so it cannot drift from the real adapter;
+- the SQLite adapter.
+
+The suite moves to a shared place when a second adapter, Postgres, exists.
 
 The suite covers, as a minimum:
 
@@ -40,11 +47,15 @@ The suite covers, as a minimum:
 - each retrieval lane returning no fact outside the time filter;
 - a commit applying all of its changes or none;
 - one audit entry per change, sharing an operation identifier;
-- each refusal: invalidating a missing fact, invalidating twice, a fact with no source, a vector of the wrong size, a second entity with the same normalised name;
+- each refusal, with its error code: invalidating a missing fact (`not_found`), invalidating twice (`already_invalidated`), attaching a source to a fact that is no longer live (`already_invalidated`), a fact with no source (`invalid_input`), a vector of the wrong size (`embedding_model_mismatch`), a second entity with the same normalised name (`already_exists`);
+- attaching a source to a live fact, which writes no fact row and one audit entry;
+- the single-value rule, which fails the commit with `conflict`: a second open-ended value, an older fact arriving late that overlaps an ended fact, a fact dated in the future next to an open-ended one, and an unknown start;
+- the single-value rule not refusing what it should allow: periods that only touch, a multi-valued predicate, and a change set that invalidates a fact and records its replacement together;
+- two processes on one file: two stores opened on the same database file each try to record a different open-ended value for the same subject and single-valued predicate. Exactly one commit succeeds and the other returns `conflict`. This case runs only for an adapter that keeps its data in a file, so not for the in-memory store;
 - no operation reducing the number of fact rows;
 - nothing read or linked across namespaces.
 
-The SQLite adapter has a few tests of its own for what the interface does not describe: migrations apply in order, an edited migration is refused, and the triggers reject a direct `UPDATE` or `DELETE`.
+The SQLite adapter has a few tests of its own for what the interface does not describe: migrations apply in order, an edited migration is refused, the triggers reject a direct `UPDATE` or `DELETE`, and the connection settings in [`SCHEMA.md`](SCHEMA.md) are in force.
 
 ## Smoke test
 
@@ -83,20 +94,23 @@ expect:
     superseded: [{ from: Jest, kind: succession }]
 ```
 
-Assertions read memory through the same use cases the MCP server calls and compare normalised values exactly. There is no natural-language answer and no LLM judge.
+Inputs go through the same use cases the MCP server calls. Assertions do not go through `recall`, which takes a free-text question and ranks its answers. An `ask` reads memory with `MemoryStore.listFacts` for the subject and predicate, with the as-of and known-at dates as its time filter. A `history` reads with the `getFactHistory` use case, starting from a fact that `listFacts` returned. Values are normalised and compared exactly. There is no natural-language answer and no LLM judge.
 
-Start with about ten scenarios and add one whenever a bug is found. The first ten cover, deliberately:
+Where the scenario files live in the repository is decided in the roadmap stage.
+
+Start with about ten scenarios and add one whenever a bug is found. A restatement is handled by a deterministic rule from phase 1, so its scenario can run before phase 2. The first ones cover, deliberately:
 
 | Case | What must happen |
 |---|---|
 | Succession | The old fact ends; the new one is current; asking as of an earlier date returns the old one |
 | Correction | The wrong fact is invalidated; asking as of any date returns the right one; asking what was known earlier returns the wrong one |
-| Duplicate | One fact, with the second source attached |
+| Restatement | One fact, with the second source attached |
 | Multi-valued predicate | Both facts stay current |
 | Unrelated fact about the same subject | Nothing is invalidated. This is the case another system got wrong in the research runs |
-| Older fact arriving late | It is recorded as an ended fact and does not replace the current one |
-| Same name, different entity type | Two entities, not one |
+| Older fact arriving late | It is recorded as an ended fact and does not replace the current one. If its valid period overlaps a live fact for a single-valued predicate, it is not recorded |
+| Same name, different entity type | An existing entity is reused when exactly one has that name, whatever its type. Two entities remain possible when the name is already held by more than one |
 | A date in the text ("on 15 March") | `valid_from` is that date, not the date of recording |
+| No date in the text | `valid_from` is unknown, so the fact is returned for any earlier as-of date |
 | A plan ("we will migrate in March") | Not recorded as a current fact |
 | Retraction | The fact is invalidated with no replacement and is not recalled |
 
@@ -105,6 +119,10 @@ The scenario texts are written in the style of coding-agent notes and commit mes
 ### Layer C: extraction cases, phase 1
 
 One input text and the facts expected from it: subject, predicate, object and dates. About 20 to start. They guard the extraction prompt.
+
+### Retrieval eval, phase 1
+
+A separate eval, because it measures something else: whether `recall` finds the right facts for a free-text question. Each case is a question and the facts that should be returned, and the measure is recall at a fixed number of results. This is where the lane weights of rank fusion are set ([ADR 0017](adr/0017-rank-fusion-in-typescript-with-time-filtering-in-each-lane.md)). It uses the real embedder and no LLM.
 
 ### Keeping it deterministic
 
