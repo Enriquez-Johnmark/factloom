@@ -5,7 +5,7 @@
 | Status | Pending |
 | Phases | 0-1 |
 | Packages | `@factloom/graph-rag`, `apps/mcp-server` |
-| Requirements | REQ-13, REQ-14, REQ-19, REQ-26, REQ-31 |
+| Requirements | REQ-13, REQ-14, REQ-19, REQ-26, REQ-30, REQ-31 |
 
 Terms in bold are defined in [`GLOSSARY.md`](../../../GLOSSARY.md).
 
@@ -21,6 +21,7 @@ Factloom can take new information and record it as entities and facts with a **s
 - Extraction of facts from text.
 - The secret check that refuses a write.
 - The three write use cases: `remember`, `recordStructuredFacts` and `changeFact`.
+- The run of the extraction cases through `remember` against recorded model output, with the recordings (FL-069).
 
 ## Out of scope
 
@@ -44,7 +45,7 @@ Factloom can take new information and record it as entities and facts with a **s
 ## Dependencies
 
 - [EPIC-02](EPIC-02.md): the types, the `Result` type, the in-memory store and test helpers, and the four phase 1 fact operations.
-- [EPIC-07](EPIC-07.md): the extraction cases (FL-029), which exist before extraction is written and are what it is written to pass, and the record-and-replay wrapper (FL-028), which replays the model's responses when the cases are run.
+- [EPIC-07](EPIC-07.md): the extraction cases (FL-029), which exist before extraction is written and are what it is written to pass, and the record-and-replay wrapper (FL-028), which replays the model's responses when the cases are run in FL-069.
 
 ## Deliverables
 
@@ -60,6 +61,7 @@ Factloom can take new information and record it as entities and facts with a **s
 - A unit test remembers the same statement twice and memory holds one fact with two sources (REQ-14).
 - A unit test passes a text that contains a credential to each of the three use cases, and each returns `invalid_input`, makes no commit and makes no LLM call (REQ-19).
 - No file in `packages/graph-rag` imports an LLM SDK. The boundary lint of FL-001 passes (REQ-26).
+- The extraction cases run through `remember` in replay with no missing recording; every fact a case marks as required is extracted and no forbidden fact is; precision and recall are reported (FL-069).
 
 ## Work items
 
@@ -68,10 +70,11 @@ Factloom can take new information and record it as entities and facts with a **s
 | FL-018 | Software development domain: entity types and predicates | 0 | FL-006 | Pending |
 | FL-019 | Anthropic LLM client | 1 | FL-006 | Pending |
 | FL-020 | Entity resolution by exact name | 1 | FL-007, FL-056 | Pending |
-| FL-021 | Extraction of facts from text | 1 | FL-018, FL-019, FL-028, FL-029 | Pending |
+| FL-021 | Extraction of facts from text | 1 | FL-018, FL-029, FL-056 | Pending |
 | FL-022 | Secret check that refuses a write | 1 | FL-004 | Pending |
-| FL-023 | remember use case | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Pending |
-| FL-024 | recordStructuredFacts use case | 1 | FL-008, FL-011, FL-020, FL-022, FL-056 | Pending |
+| FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Pending |
+| FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Pending |
+| FL-024 | recordStructuredFacts use case | 1 | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 | Pending |
 | FL-025 | changeFact use case | 1 | FL-009, FL-010, FL-020, FL-022, FL-056 | Pending |
 
 ### FL-018: Software development domain: entity types and predicates
@@ -113,7 +116,7 @@ Factloom can take new information and record it as entities and facts with a **s
 | Multi-valued predicate | `repository` `follows_convention`, two conventions |
 | Unrelated fact about the same subject | `repository` `uses_test_framework` and `repository` `uses_package_manager` |
 | Older fact arriving late | `repository` `deploys_to`, an earlier target learned after the current one |
-| Same name, different entity type | one name first held by a `convention`, then mentioned as a `decision` with `has_status` |
+| A known name mentioned under a different entity type | `repository` `follows_convention` a `convention` entity; a later text names the same thing as a `decision` that is the subject of `has_status`. Entity resolution reuses the `convention` entity, because it is the only one with that name, so the `has_status` fact has it as its subject |
 | A date in the text | `repository` `uses_package_manager` with a stated date |
 | No date in the text | `repository` `uses_test_framework` with no date |
 | A plan | `repository` `deploys_to`, stated as an intention |
@@ -123,8 +126,8 @@ Factloom can take new information and record it as entities and facts with a **s
 - `extractionInstructions` holds one interim sentence that tells the model to use only the listed entity types and predicates. FL-021 replaces it.
 
 **Non-goals.**
-- The other entity types and predicates of the research (`path`, `symbol`, `command`, `work_item`, `person`, `pins_version`, `located_at` and the rest). Each is added when a scenario or a real use needs it.
-- A rule for which entity type a predicate may link. `PredicateDefinition` has no field for it. The expected subject and object are stated in each predicate's `description` only.
+- The other entity types and predicates of the research (`path`, `symbol`, `command`, `work_item`, `person`, `pins_version`, `located_at` and the rest). Each is added when a scenario or a real use needs it. An entity type for a function or symbol is added by FL-071 in EPIC-09.
+- A rule for which entity type a predicate may link. The coverage row above relies on there being none: a `has_status` fact may have a `convention` as its subject. `PredicateDefinition` has no field for it. The expected subject and object are stated in each predicate's `description` only.
 - The full extraction instructions: FL-021.
 - A separate adapter package. The domain stays in `graph-rag` until phase 4, when it moves to its own adapter package ([`INTERFACES.md`](../../architecture/INTERFACES.md), "Domain"; EPIC-10).
 - A predicate for a dependency's version. FL-062 in EPIC-09 adds it when deterministic verification needs it.
@@ -199,7 +202,7 @@ Factloom can take new information and record it as entities and facts with a **s
 7. The API key, the instructions, the input and the output never appear in an error message, in an error's `cause`, or in anything logged.
 
 **Technical requirements.**
-1. `@anthropic-ai/sdk` is a dependency of `apps/mcp-server` only, with an exact version and no range. The version is the latest on the registry on the day of implementation, checked with `npm view` and cited in the commit message. The research records the version it verified.
+1. `@anthropic-ai/sdk` is a dependency of `apps/mcp-server` only, with an exact version and no range. The version is the latest on the registry on the day of implementation, checked with `npm view` and cited in the commit message. The research records the version it verified. The pin test of FL-001 fails if it is a range; this item adds no pin test of its own.
 2. The factory takes its dependencies as one argument: the API key or `null`, the model map, the logger, and the SDK call it uses. Tests pass a fake in place of the SDK call. No test in `pnpm check` uses the network or a key.
 3. The key is read from `ANTHROPIC_API_KEY` by the composition root and passed in. This module does not read the environment.
 4. The maximum number of output tokens is a named constant.
@@ -213,7 +216,6 @@ Factloom can take new information and record it as entities and facts with a **s
 **Acceptance criteria.**
 - [ ] Unit tests with these names pass: "returns the parsed object when the response matches the schema", "returns llm_failed when the response does not match the schema", "returns llm_failed when the model refuses", "returns llm_failed when the response stops at the token limit", "returns llm_failed when the SDK throws", "returns llm_failed without a request when no key is configured", "uses the model configured for the task", "marks the instructions for caching and sends the input after them".
 - [ ] A test named "never exposes the API key" builds the client with a marker key, forces each failure above, and asserts that the marker is absent from the full printed form of every returned error, including `cause`, and from everything passed to the logger.
-- [ ] A test reads `apps/mcp-server/package.json` and fails if the version of `@anthropic-ai/sdk` is a range.
 - [ ] `pnpm check` passes with no network access and no `ANTHROPIC_API_KEY` set.
 - [ ] By hand, once: with `ANTHROPIC_API_KEY` set, the owner runs `pnpm run check:llm` from `apps/mcp-server` and records the two usage reports. The second report shows a cache read count above zero.
 
@@ -280,7 +282,7 @@ Factloom can take new information and record it as entities and facts with a **s
 |---|---|
 | Status | Pending |
 | Phase | 1 |
-| Depends on | FL-018, FL-019, FL-028, FL-029 |
+| Depends on | FL-018, FL-029, FL-056 |
 | Requirements | REQ-26, REQ-31 |
 | Components | `@factloom/graph-rag` (internal) |
 
@@ -288,7 +290,7 @@ Factloom can take new information and record it as entities and facts with a **s
 
 **Background.** `remember` "asks the LLM for facts using the domain's entity types and predicates, which the extraction schema lists as closed sets" ([`INTERFACES.md`](../../architecture/INTERFACES.md), "Use cases"). The LLM API accepts a subset of JSON Schema. The [LLM research](../../research/technical/llm-anthropic.md), section 3, lists the limits: no recursion, closed objects, no maps, a cap on optional fields and a cap on union-typed fields in one request. [ADR 0013](../../architecture/adr/0013-claude-behind-a-one-method-interface.md) requires the extraction schema to stay inside them. The one test call in the research (section 4) turned "March 2026" into the first day of the month, which is open question Q-29. [`TESTING.md`](../../architecture/TESTING.md) lists three cases that depend on extraction: a date in the text, no date in the text, and a plan.
 
-The extraction cases of FL-029 exist first. Their expected facts are the target the schema and the instructions are written against. The cases, the recordings and the record-and-replay wrapper of FL-028 live in `apps/mcp-server/evals/`, and the cases call the public `remember` use case, so `graph-rag` needs no new export. `remember` is FL-023, which depends on this item. The run of the cases against recorded model output is therefore an acceptance criterion of FL-023, and this item is tested inside `graph-rag` with a scripted LLM.
+The extraction cases of FL-029 exist first. Their expected facts are the target the schema and the instructions are written against. The cases, the recordings and the record-and-replay wrapper of FL-028 live in `apps/mcp-server/evals/`, and the cases call the public `remember` use case, so `graph-rag` needs no new export. `remember` is FL-023, which depends on this item, and the run of the cases against recorded model output is FL-069. This item is tested inside `graph-rag` with the scripted LLM of FL-056. It uses neither the Anthropic client (FL-019) nor the wrapper (FL-028).
 
 **Outcome.** An internal function of `graph-rag` that `remember` (FL-023) calls. Given a text, it returns the facts found in it in the shape of `StructuredFactInput`, the same shape `recordStructuredFacts` takes, so the two write paths share everything after this step.
 
@@ -298,9 +300,9 @@ The extraction cases of FL-029 exist first. Their expected facts are the target 
 - The function that calls `LlmClient.generateObject` with task `extraction` and maps the response.
 
 **Non-goals.**
-- Recordings of real model output, and the measured run of the FL-029 cases. Both need `remember` and are made in FL-023.
+- Recordings of real model output, and the measured run of the FL-029 cases. Both need `remember` and are made in FL-069.
 - A field for the precision of a date. Q-29 stays open. The instructions state one rule for imprecise dates, given below.
-- Choosing a stronger model, or tuning effort settings. Q-31 and Q-32 are answered with the extraction cases of FL-029, once they run in FL-023.
+- Choosing a stronger model, or tuning effort settings. Q-31 and Q-32 are answered with the extraction cases of FL-029, once they run in FL-069.
 - Entity resolution, conflict handling and recording: FL-020 and FL-023.
 - Extraction from files, commits or transcripts. Phase 1 takes only text given to `remember`.
 
@@ -336,7 +338,7 @@ The extraction cases of FL-029 exist first. Their expected facts are the target 
 - [ ] A test named "the instructions name every entity type and predicate of the domain" passes.
 - [ ] `pnpm check` passes with no network access.
 
-**Validation.** Unit tests in `graph-rag` with a scripted LLM, on every check. The extraction cases of FL-029 against recorded model output are run in FL-023.
+**Validation.** Unit tests in `graph-rag` with a scripted LLM, on every check. The extraction cases of FL-029 against recorded model output are run in FL-069.
 
 **Completion evidence.** The commit. The passing output of `pnpm check`.
 
@@ -396,19 +398,21 @@ The extraction cases of FL-029 exist first. Their expected facts are the target 
 
 **Completion evidence.** The commit, with the sources of the patterns cited in the code. The passing output of `pnpm check`.
 
-### FL-023: remember use case
+### FL-023: remember use case, tested with a scripted LLM
 
 | | |
 |---|---|
 | Status | Pending |
 | Phase | 1 |
 | Depends on | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 |
-| Requirements | REQ-14, REQ-19, REQ-26 |
-| Components | `@factloom/graph-rag`, `apps/mcp-server` (evals) |
+| Requirements | REQ-14, REQ-19, REQ-26, REQ-30 |
+| Components | `@factloom/graph-rag` |
 
 **Objective.** Implement `remember`: extract facts from a text, resolve their entities, sort them into restated, conflicting and new, and record the result in one commit.
 
 **Background.** The signature and the behaviour are in the "Use cases" section of [`INTERFACES.md`](../../architecture/INTERFACES.md). The flow is drawn in [`ARCHITECTURE.md`](../../architecture/ARCHITECTURE.md), "Remember". [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "`remember`", states the two deterministic rules of phase 1: **restatement**, and the **single-value rule** with its two skip reasons. `recordFacts` is all or nothing, so deciding which facts to leave out is this use case's job.
+
+The item was split to fit one session. It keeps the use case and its unit tests with a scripted LLM. The run of the extraction cases through `remember` against recorded model output, and the recordings, are FL-069, because only the owner can make the recordings.
 
 ```ts
 export declare function remember(
@@ -421,10 +425,10 @@ export declare function remember(
 
 **Scope.**
 - The use case, in one file, exported from `@factloom/graph-rag` with its input and output types.
-- The sorting rules below.
-- In `apps/mcp-server/evals/`: the function that runs one FL-029 extraction case through `remember` and returns the facts recorded, a record command that makes the recordings with the Anthropic client of the app, and the recordings.
+- The sorting rules below, as one internal function of `graph-rag` that compares a fact with its candidates. `recordStructuredFacts` (FL-024) reuses it.
 
 **Non-goals.**
+- The run of the extraction cases, the record command and the recordings: FL-069.
 - Judging a conflict or resolving it. Phase 2 replaces the skip with the conflict judge and the domain's **correction policy** (FL-041, FL-042).
 - Retrying after `conflict` or `already_exists` from the commit.
 - Splitting a long text into parts. The length limit is set by the MCP tool (FL-035).
@@ -452,6 +456,7 @@ export declare function remember(
 1. The use case takes its dependencies as its first argument and its input as its second, and returns a `Result`.
 2. It calls `recordFacts` at most once and writes in no other way.
 3. The limit passed to `findConflictCandidates` is a named constant.
+4. The comparison of requirements 6 and 7 is one internal function with its own unit tests: given a fact and its candidates, it returns whether the fact conflicts, restates a candidate, or is new. It is not exported from the package.
 
 **Constraints.**
 - [ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md): one commit.
@@ -463,13 +468,76 @@ export declare function remember(
 - [ ] A test named "writes everything in one commit" remembers a text with one new fact and one restated fact and asserts that every audit entry written by the call shares one operation identifier.
 - [ ] A test named "refuses a text that contains a secret before calling the LLM" passes a client that fails on any call, and asserts `invalid_input` and an unchanged store.
 - [ ] A test named "returns llm_failed and writes nothing when extraction fails" passes.
-- [ ] The extraction cases of FL-029 run through `remember` in `apps/mcp-server/evals/`, on the in-memory store with the clock fixed at each case's `observed_at` and the LLM replayed by the wrapper of FL-028. The run is part of `pnpm check`, has no missing recording and no `llm_failed` result, and prints precision and recall. No target applies to the two numbers.
-- [ ] By hand, once: the owner makes the recordings with the record command and `ANTHROPIC_API_KEY` set, reads their diff for secrets before the push, and records the model identifier. The usage reports of FL-019 show a cache read count above zero on a call after the first, and the owner records the token counts.
+- [ ] Unit tests of the comparison function pass with these names: "a different object under a single-valued predicate conflicts", "the same entity or an equal value restates", "a period that only touches does not overlap".
 - [ ] `pnpm check` passes with no network access and no API key.
 
-**Validation.** Unit tests in `graph-rag` with the in-memory store, on every check. The extraction cases of FL-029 in replay, on every check. One recording run by hand with a real key. The timeline scenarios run through this use case in FL-039.
+**Validation.** Unit tests in `graph-rag` with the in-memory store and a scripted LLM, on every check. The extraction cases of FL-029 run through this use case in FL-069, and the timeline scenarios in FL-039.
 
-**Completion evidence.** The commit with the recordings, and the passing output of `pnpm check`. The precision and recall printed for the FL-029 cases, the model the recordings were made with, and the token counts from the recording run.
+**Completion evidence.** The commit, and the passing output of `pnpm check`.
+
+### FL-069: Extraction replay run and recordings
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 1 |
+| Depends on | FL-023, FL-029, FL-028, FL-019 |
+| Requirements | REQ-26, REQ-30 |
+| Components | `apps/mcp-server` (evals), exercising `@factloom/graph-rag` |
+
+**Objective.** Run every extraction case of FL-029 through the `remember` use case against recorded model output, decide pass or fail per case, and report precision and recall. Make the recordings once with a real model.
+
+**Background.** This item is the second part of FL-023, split off because one step needs the owner. [`TESTING.md`](../../architecture/TESTING.md), "Layer C" and "Keeping it deterministic", says that LLM calls in the evals go through a recording wrapper, that the first run records and every later run replays, and that a replayed run fails if a recording is missing. The wrapper is FL-028, the cases and the scorer are FL-029, the Anthropic client is FL-019, and `remember` is FL-023. Extraction precision and recall are reported, with no target ([`TESTING.md`](../../architecture/TESTING.md), "What is measured"). A pass or fail per case is still needed, so that a change to the extraction instructions that drops a fact a case exists for fails the check.
+
+A recording can only be made with a real API key, and only the owner holds one. Until the recordings exist the replay run fails, so nothing of this item can be committed before the owner's step. This item is therefore done in a session with the owner present: the agent writes the code and its unit tests, the owner makes the recordings in the same working tree, and the code and the recordings are committed together once `pnpm check` passes.
+
+**Outcome.** `pnpm check` runs the extraction cases through `remember` from recordings, with no network and no API key, and prints a pass or fail per case and precision and recall for the set. A changed extraction prompt shows up as missing recordings, and the new recordings show up in the diff.
+
+**Scope.**
+- In `apps/mcp-server/evals/`: the function that runs one extraction case through `remember` on empty memory and returns the facts recorded. It is the function that the run function of FL-029 takes as an argument.
+- The rule that decides whether a case passes.
+- A record command, a package script of `apps/mcp-server`, that builds the Anthropic client of FL-019, wraps it with the wrapper of FL-028 in record mode, and runs every case.
+- The test, run by `pnpm check`, that runs every case in replay and prints the report.
+- The recordings, one directory for the extraction cases.
+
+**Non-goals.**
+- Changing the cases or the scorer: FL-029. A case found wrong is corrected there, in its own commit, and reviewed again by the owner.
+- A target for precision or recall.
+- Repeated live runs to measure how much the model varies. A live run is made by hand when wanted.
+- Recordings for the timeline scenarios: FL-039, which reuses the record command.
+- Changing the extraction instructions to make a case pass. That is a change to FL-021's code in its own commit, followed by new recordings.
+
+**Functional requirements.**
+1. Each case runs on a new in-memory store with the clock fixed at the case's `observed_at`, counting identifiers, the fake embedder of `core`, and the software development domain. The text is sent through `remember` with the trigger `agent` and a source of kind `agent_note`. The facts recorded are read back and given to the scorer of FL-029.
+2. In replay mode, which is the only mode inside `pnpm check`, the LLM is the wrapper of FL-028 over no inner client. A missing recording throws and names the case and the command that records, as FL-028 specifies.
+3. A case passes when every expected fact it marks as required is matched, and no fact it lists under `forbidden` is extracted. A case with no required fact passes when it has no forbidden fact extracted and `remember` returns no failure. A `remember` failure fails the case.
+4. The report prints, per case, pass or fail and the scorer's counts, and for the set the number of cases passed, precision and recall. Precision and recall do not decide pass or fail.
+5. The record command runs only when `ANTHROPIC_API_KEY` is set, and otherwise exits non-zero with a message that names the variable. It writes one recording per LLM call and prints the usage report of FL-019 for each call.
+
+**Technical requirements.**
+1. The evals import `remember` and `softwareDevelopmentDomain` from `@factloom/graph-rag` and the helpers of `@factloom/core` by package name. Nothing in `apps/mcp-server/src` imports from `evals/`.
+2. The model label given to the wrapper is the model that the default task map of FL-019 names for `extraction`, read from that map, not written a second time.
+3. The record command is not part of `pnpm check`. `pnpm check` sets no API key and makes no network call.
+4. The pass rule of requirement 3 is a pure function with its own unit tests.
+
+**Constraints.**
+- [`TESTING.md`](../../architecture/TESTING.md), "Layer C", "Keeping it deterministic" and "What is measured".
+- [Testing rules](../../../.claude/rules/testing.md), "Evals": a missing recording fails the run; re-record deliberately and review the diff.
+- [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md): the app is the one place that imports the use cases and the LLM client together.
+- [Git rules](../../../.claude/rules/git.md): recordings are checked for secrets before they are pushed.
+
+**Acceptance criteria.**
+- [ ] Unit tests of the pass rule pass with these names: "passes a case when every required fact is matched", "fails a case when a required fact is missing", "fails a case when a forbidden fact is extracted", "fails a case when remember fails".
+- [ ] Unit test "the record command refuses to run without an API key" passes.
+- [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the record command from `apps/mcp-server` (`pnpm run record:extraction`). It ends with exit code 0. The owner reads the diff of the new recordings for secrets, records the model identifier and the token counts from the usage reports, and confirms that a call after the first shows a cache read count above zero.
+- [ ] With the recordings in place and no API key set, `pnpm check` exits 0. Its output holds the report, with every case passing and with precision and recall printed.
+- [ ] With one recording removed in a local run, `pnpm check` exits non-zero and names the missing recording. The output is recorded and the file restored.
+- [ ] Two runs of `pnpm test` in a row print the same report, byte for byte.
+- [ ] `git grep -n "API_KEY" -- apps/mcp-server/evals` shows no line that holds a key's value.
+
+**Validation.** Eval: the extraction cases in replay, inside `pnpm check`. Unit tests of the pass rule and of the record command's refusal. One recording run by the owner, by hand.
+
+**Completion evidence.** One commit that holds the code and the recordings, the passing `pnpm check` output with the report, the model the recordings were made with, the token counts from the recording run, and the output of the run with a recording removed. Q-31 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) is updated with the first precision and recall, labelled as one run of one model. The item is not `Completed`, and not committed, before the owner's recording step.
 
 ### FL-024: recordStructuredFacts use case
 
@@ -477,8 +545,8 @@ export declare function remember(
 |---|---|
 | Status | Pending |
 | Phase | 1 |
-| Depends on | FL-008, FL-011, FL-020, FL-022, FL-056 |
-| Requirements | REQ-13, REQ-14 |
+| Depends on | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 |
+| Requirements | REQ-13, REQ-14, REQ-19 |
 | Components | `@factloom/graph-rag` |
 
 **Objective.** Implement `recordStructuredFacts`: record facts that a caller already gives as subject, predicate and object, with no LLM call.
@@ -505,10 +573,10 @@ export declare function recordStructuredFacts(
 1. Input is checked first. Each of these is `invalid_input`: an empty list of facts; an entity type or a predicate that the domain does not have, with the allowed values listed in the message; a confidence outside 0 to 1; a valid period whose end is not after its start; the same subject, predicate and object given twice with overlapping valid periods.
 2. The secret check of FL-022 runs on every statement, entity name and object value, and on the source locator and version.
 3. Entities are resolved with FL-020. The type check of requirement 1 comes first, because resolution may reuse an existing entity of another type.
-4. For each fact, `findConflictCandidates` is called. For a single-valued predicate, a candidate with a different object makes the whole call fail with `conflict`, with those candidates in `relatedFactIds`. Otherwise a candidate with the same object makes the fact a **restatement**. The comparison rules are those of FL-023.
+4. For each fact, `findConflictCandidates` is called. For a single-valued predicate, a candidate with a different object makes the whole call fail with `conflict`, with those candidates in `relatedFactIds`. Otherwise a candidate with the same object makes the fact a **restatement**. The comparison is the internal function that FL-023 writes; this item reuses it and does not write a second one.
 5. Two facts in the call that conflict with each other make the call fail with `conflict` and an empty `relatedFactIds`.
 6. One call to `recordFacts` writes the source, the new entities, the new facts and the source attached to each restated fact. The source has no content: the statement is on the fact.
-7. The change context and the reason code follow the rule of FL-023.
+7. The change context and the reason code follow the rule of FL-023: `stated` when at least one fact is new, `restated` when the call only attaches the source.
 8. The result lists one fact per input fact, in order, with its sources and outcome `recorded` or `restated`.
 9. Any other error is returned as it is, and nothing is written.
 
