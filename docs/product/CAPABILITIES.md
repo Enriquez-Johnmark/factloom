@@ -16,6 +16,7 @@ A capability is named for what a user or an agent can do, not for a package. "Ph
 | Keep one value per single-valued predicate | The **single-value rule** holds inside every commit, also when two processes write to one file | REQ-15 | [EPIC-03](../roadmap/epics/EPIC-03.md), with the in-memory store in [EPIC-02](../roadmap/epics/EPIC-02.md) | 1 |
 | Serve coding agents over MCP | Claude Code and Codex reach the use cases through a local stdio server with described and annotated tools, one SQLite file, one **namespace** per server, and no other service | REQ-10, REQ-11, REQ-12, REQ-25, REQ-29 | [EPIC-06](../roadmap/epics/EPIC-06.md) | 1 |
 | Answer within stated time budgets | A benchmark measures `recall`, `record_fact` and server start on namespaces of 10,000 and 100,000 facts, and fails when a budget is missed. The numbers are targets until the first benchmark run confirms or revises them | REQ-35 | [EPIC-07](../roadmap/epics/EPIC-07.md) for the benchmark; [EPIC-03](../roadmap/epics/EPIC-03.md), [EPIC-05](../roadmap/epics/EPIC-05.md) and [EPIC-06](../roadmap/epics/EPIC-06.md) for the code that must meet it | 1 |
+| Work with a subscription or an API key | Every tool except `remember` needs no API key of Factloom's own, because the agent can extract facts itself and record them with `record_fact`. `remember` needs a key for Factloom's own extraction call | REQ-36 | [EPIC-06](../roadmap/epics/EPIC-06.md), with [EPIC-04](../roadmap/epics/EPIC-04.md) for the write path with no LLM call | 1 |
 
 ## Product 2: self-correcting and self-healing memory
 
