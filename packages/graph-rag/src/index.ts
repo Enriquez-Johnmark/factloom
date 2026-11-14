@@ -5,3 +5,5 @@ import { corePackageName } from '@factloom/core';
  * that a workspace package is imported by name. The first real export replaces it.
  */
 export const graphRagBuiltOn: readonly string[] = [corePackageName];
+
+export { softwareDevelopmentDomain } from './software-development-domain.ts';
