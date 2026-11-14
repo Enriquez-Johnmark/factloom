@@ -1,0 +1,108 @@
+name: CI
+
+# Runs `pnpm check` on every push to main, on Linux and on macOS arm64.
+# Two further jobs are started by hand from the Actions tab: the SQLite spikes on macOS arm64,
+# and `pnpm eval`, which runs the tests that need the real embedding model.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Which manual job to run
+        required: true
+        type: choice
+        options:
+          - spikes
+          - eval
+
+# The workflow reads the repository and nothing else. It uses no secret.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: check (${{ matrix.os }}, Node ${{ matrix.node }})
+    if: github.event_name == 'push'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # ubuntu-24.04 is Linux x64 and macos-26 is macOS arm64, per GitHub's list of hosted runners.
+        os: [ubuntu-24.04, macos-26]
+        # 22 is the lowest line the engines range allows. 26 is the Active LTS line (2026-11-14).
+        node: [22, 26]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Installs the pnpm version named by packageManager in package.json.
+      - uses: pnpm/action-setup@9bbca1e9dc2902adb87e8780fe5c98796985a62d # v6.1.1
+        with:
+          run_install: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Show the environment
+        run: |
+          node --version
+          pnpm --version
+          node -p "process.platform + '-' + process.arch"
+          uname -sm
+      - name: Assert that the macOS runner is arm64
+        if: runner.os == 'macOS'
+        run: test "$(uname -m)" = "arm64"
+      # Fails if the lockfile does not match the manifests. Never changes the lockfile.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check
+        run: pnpm check
+      - name: Run the app from source
+        run: node apps/mcp-server/src/main.ts
+
+  spikes:
+    name: spikes (macOS arm64)
+    if: github.event_name == 'workflow_dispatch' && inputs.job == 'spikes'
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Show the environment
+        run: |
+          node --version
+          node -p "process.platform + '-' + process.arch"
+          test "$(uname -m)" = "arm64"
+      - name: SQLite driver, vector extension and full-text search
+        working-directory: spikes/sqlite-vec-fts5
+        run: npm ci && node spike.mjs
+      - name: Fact schema
+        working-directory: spikes/fact-schema
+        run: npm ci && node check.mjs
+
+  eval:
+    name: eval
+    if: github.event_name == 'workflow_dispatch' && inputs.job == 'eval'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@9bbca1e9dc2902adb87e8780fe5c98796985a62d # v6.1.1
+        with:
+          run_install: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      # The embedding model is downloaded on the first run and kept between runs.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.factloom/models
+          key: factloom-models-${{ runner.os }}
+      - name: Show the environment
+        run: |
+          node --version
+          pnpm --version
+          node -p "process.platform + '-' + process.arch"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Eval
+        run: pnpm eval
