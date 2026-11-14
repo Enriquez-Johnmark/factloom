@@ -5,7 +5,7 @@
 | Status | Pending |
 | Phases | 0-1 |
 | Packages | `@factloom/graph-rag`, `apps/mcp-server` |
-| Requirements | REQ-13, REQ-14, REQ-19, REQ-26, REQ-30, REQ-31 |
+| Requirements | REQ-13, REQ-14, REQ-19, REQ-26, REQ-30, REQ-31, REQ-36 |
 
 Terms in bold are defined in [`GLOSSARY.md`](../../../GLOSSARY.md).
 
@@ -546,7 +546,7 @@ A recording can only be made with a real API key, and only the owner holds one. 
 | Status | Pending |
 | Phase | 1 |
 | Depends on | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 |
-| Requirements | REQ-13, REQ-14, REQ-19 |
+| Requirements | REQ-13, REQ-14, REQ-19, REQ-36 |
 | Components | `@factloom/graph-rag` |
 
 **Objective.** Implement `recordStructuredFacts`: record facts that a caller already gives as subject, predicate and object, with no LLM call.
