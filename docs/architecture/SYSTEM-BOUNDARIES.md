@@ -42,6 +42,7 @@ Each package exports only what another package needs. Everything else stays priv
 | Result | `Result`, `ok`, `err`, `ERROR_CODES`, `ErrorCode`, `FactloomError` |
 | Schemas and types | The Zod schemas and derived types for `Timestamp`, `Entity`, `Fact`, `FactObject`, `Source`, `Trigger`, `Operation`, `ReasonCode`, `AuditAction`, `AuditEntry`, `TimeFilter`, `Domain`, `PredicateDefinition`, `ChangeSet`, `Change`, `CommitReceipt`, `FactWithSources` |
 | Time | `toTimestamp`, `parseDateInput` |
+| Names | `normaliseEntityName`, so that every store matches entity names the same way |
 | Interfaces | `MemoryStore`, `LlmClient`, `Embedder` |
 | Fact operations, phase 1 | `recordFacts`, `invalidateFact`, `endFact`, `findConflictCandidates`, with `OperationDeps`, `ChangeContext`, `NewSource`, `NewEntity`, `NewFact`, `FactDraft` |
 | Test helpers | `createInMemoryStore`, `createFakeEmbedder`, `createScriptedLlm`, `createTestDeps` |
@@ -61,7 +62,7 @@ Rank fusion and entity resolution are internal.
 
 | Group | Exports |
 |---|---|
-| Adapter | `openSqliteMemoryStore(options)`, which returns a `Result<MemoryStore>` after applying pending migrations |
+| Adapter | `openSqliteMemoryStore(options)`, which returns a `Result<MemoryStore>` after applying pending migrations. The options are the file path and the embedding model's name and dimensions |
 
 The SQL, the migration runner and the row mappers are internal. So is the storage contract suite, `describeMemoryStoreContract`: this package runs it against the in-memory store from `core` and against the SQLite adapter. The suite moves to a shared place when a second adapter exists.
 
