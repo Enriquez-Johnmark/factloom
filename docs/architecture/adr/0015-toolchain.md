@@ -23,7 +23,7 @@ What the research ran, and in which setup:
 
 The three options were also run together for this record on 2026-11-14, with TypeScript 7.0.2 and no emit, on a single directory of files and not on a workspace. An enum, a namespace and a parameter property were each rejected (`TS1294`), a type imported without `import type` was rejected (`TS1484`), and a `.ts` import was rejected without `allowImportingTsExtensions` (`TS5097`). The compiler accepts `allowImportingTsExtensions` only when it emits no JavaScript or when `rewriteRelativeImportExtensions` is set (`TS5096`), so a build for publishing adds the latter.
 
-Not yet run: the three options in the no-build workspace, and the two lint rules there. The scaffold stage proves them by adding an enum, a forbidden import and a deep import, and showing the check fail.
+Run in the scaffold on 2026-11-14, on Linux with Node 22: the three options in the no-build workspace, and the two lint rules there. An enum, a namespace, a constructor parameter property, a type imported without `import type`, a forbidden import and a deep import each failed the check. The output is recorded in work item [FL-001](../../roadmap/epics/EPIC-01.md).
 
 ## Why
 
