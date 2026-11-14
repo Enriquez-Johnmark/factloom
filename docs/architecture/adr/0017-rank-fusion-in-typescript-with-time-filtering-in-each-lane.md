@@ -16,4 +16,4 @@ The lane weights and list lengths are therefore parameters, and their defaults a
 
 - **One SQL statement that fuses the lanes.** It ran in a spike. Rejected: dialect-specific and hard to test.
 - **A reranking model.** Rejected for now: another model to run, with no evidence yet that it is needed.
-- **Graph expansion over several steps.** Phase 1 uses one step from the entities the other lanes found. Its value for coding-agent memory is unverified.
+- **Graph expansion over several steps.** Phase 1 uses one step from the entities the other lanes found, ranking each fact by how many of those entities it touches and then by how recently it was recorded. Its value for coding-agent memory is unverified, and the retrieval eval measures it along with the lane weights.
