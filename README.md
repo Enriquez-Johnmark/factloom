@@ -95,7 +95,7 @@ The full plan, with every work item and its dependencies, is in [`docs/roadmap/R
 
 TypeScript on Node.js in a pnpm monorepo. SQLite through `better-sqlite3`, with FTS5 and `sqlite-vec`. Zod for schemas, the MCP TypeScript SDK, Vitest. Claude through the Anthropic API for extraction, behind an interface. A local embedding model, `bge-small-en-v1.5`, so no text leaves the machine to be embedded. The reasons are in the [decision records](docs/architecture/DECISIONS.md).
 
-The stack has been run on Linux. On macOS with Apple Silicon, the workspace and its check have been run; the SQLite modules have not yet.
+The stack has been run on Linux with Node.js 22, and on macOS with Apple Silicon and Node.js 24: the workspace check and the schema checks with the SQLite driver and the vector extension pass on both.
 
 ## How this project is built
 
