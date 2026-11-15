@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-15:** the first feature code exists. 17 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-018, FL-056, FL-067, FL-075. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-15:** the first feature code exists. 18 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-018, FL-056, FL-067, FL-068, FL-075. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -89,7 +89,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-057](epics/EPIC-05.md#fl-057-lane-weights-chosen-by-measurement) | Lane weights chosen by measurement | EPIC-05 | FL-033 | Pending |
 | [FL-058](epics/EPIC-06.md#fl-058-recall-tool-end-to-end) | recall tool end to end | EPIC-06 | FL-008, FL-034, FL-031 | Pending |
 | [FL-066](epics/EPIC-07.md#fl-066-performance-benchmark-and-budgets) | Performance benchmark and budgets | EPIC-07 | FL-002, FL-058, FL-035 | Pending |
-| [FL-068](epics/EPIC-03.md#fl-068-sqlite-single-value-rule-error-mapping-and-two-writers-on-one-file) | SQLite single-value rule, error mapping and two writers on one file | EPIC-03 | FL-014, FL-067 | Pending |
+| [FL-068](epics/EPIC-03.md#fl-068-sqlite-single-value-rule-error-mapping-and-two-writers-on-one-file) | SQLite single-value rule, error mapping and two writers on one file | EPIC-03 | FL-014, FL-067 | Completed |
 | [FL-069](epics/EPIC-04.md#fl-069-extraction-replay-run-and-recordings) | Extraction replay run and recordings | EPIC-04 | FL-023, FL-029, FL-028, FL-019 | Pending |
 | [FL-074](epics/EPIC-07.md#fl-074-token-and-tool-call-comparison-with-and-without-factloom) | Token and tool-call comparison with and without Factloom | EPIC-07 | FL-038 | Pending |
 | [FL-075](epics/EPIC-07.md#fl-075-property-based-tests-of-the-time-rules) | Property-based tests of the time rules | EPIC-07 | FL-056, FL-067 | Completed |
