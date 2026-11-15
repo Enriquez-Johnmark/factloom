@@ -3,10 +3,12 @@
 import json
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 REPO = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
-OUT = Path(__file__).resolve().parent / "items.json"
+# Written outside the repository, so that the format check does not see it.
+OUT = Path(tempfile.gettempdir()) / "factloom-roadmap-items.json"
 EPICS = sorted((REPO / "docs/roadmap/epics").glob("EPIC-*.md"))
 REQ_FILE = REPO / "docs/product/REQUIREMENTS.md"
 LAST_ITEM, LAST_REQ = 77, 38

@@ -1,8 +1,8 @@
 # Regenerates the top of docs/roadmap/ROADMAP.md from items.json, keeping the hand-written tail.
-import json,re,glob,functools,collections,os,datetime
+import json,re,glob,functools,collections,os,datetime,tempfile
 D=os.path.dirname(os.path.abspath(__file__))+'/'
 R=os.path.join(D,'..','..','docs','roadmap')+'/'
-items=json.load(open(D+'items.json')); by={i['id']:i for i in items}
+items=json.load(open(os.path.join(tempfile.gettempdir(),'factloom-roadmap-items.json'))); by={i['id']:i for i in items}
 epics={}
 for p in sorted(glob.glob(R+'epics/EPIC-*.md')):
     t=open(p).read(); m=re.match(r'# (EPIC-\d\d): (.*)',t); ph=re.search(r'\| Phases? \| (.*?) \|',t)
