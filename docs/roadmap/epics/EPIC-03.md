@@ -526,6 +526,7 @@ What was found on the way:
 - [`SCHEMA.md`](../../architecture/SCHEMA.md), "Connection settings".
 
 **Acceptance criteria.**
+- [ ] Crash-safety test passes: a second process starts a commit of several changes on a database file and is killed before it finishes. When the file is opened again, every read returns what it returned before that commit, and a new commit succeeds. The test also covers a process killed just after a commit returned: its changes are all present.
 - [ ] Adapter test "refuses the four overlapping periods and accepts the touching one" passes, with the five periods of the spike's single-value checks, which are those of cases S1 to S4 and A1 of FL-067.
 - [ ] Adapter test "does not apply the single-value rule to a multi-valued predicate" passes, and "accepts a change set that invalidates a fact and records its replacement" passes.
 - [ ] Adapter test "returns each documented error code" passes, with one case each for `not_found`, `already_invalidated`, `already_exists` and `conflict`, each asserting unchanged row counts.
