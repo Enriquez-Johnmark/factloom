@@ -5,7 +5,7 @@
 | Status | Pending |
 | Phases | 0-2 |
 | Packages | `apps/mcp-server` (the directory `evals/`), exercising `packages/graph-rag`, `packages/core` and `packages/storage` |
-| Requirements | REQ-30, REQ-35, REQ-37 |
+| Requirements | REQ-30, REQ-35, REQ-37, REQ-38 |
 
 Nothing in this epic is implemented. Terms are used as defined in [`GLOSSARY.md`](../../../GLOSSARY.md).
 
@@ -78,6 +78,9 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Pending |
 | FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Pending |
 | FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Pending |
+| FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Pending |
+| FL-076 | Differential tests between the in-memory store and SQLite | 1 | FL-075, FL-068, FL-016, FL-017 | Pending |
+| FL-077 | Mutation-testing trial on core | 1 | FL-008, FL-009, FL-010, FL-011 | Pending |
 
 ### FL-027: Timeline scenarios as reviewed data
 
@@ -578,3 +581,159 @@ Hosted runners vary from run to run, so a 95th percentile measured there moves w
 **Validation.** Unit tests for the report arithmetic on every check. The comparison itself is a manual run by the owner, because it needs a signed-in agent and spends tokens.
 
 **Completion evidence.** The commit of the task set, the commit of the raw output and report, and the sentence added to `README.md`.
+
+### FL-075: Property-based tests of the time rules
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 1 |
+| Depends on | FL-056, FL-067 |
+| Requirements | REQ-38 |
+| Components | `packages/core`, `packages/storage` (tests only) |
+
+**Objective.** Check the rules that must always hold for memory against thousands of generated sequences of changes, not only against examples someone thought of.
+
+**Background.** The unit tests and the contract suite check chosen examples. The architecture review found a real defect, overlapping valid periods, by trying cases the examples did not cover ([`DECISIONS.md`](../../architecture/DECISIONS.md)). A property-based test generates sequences of commits and checks invariants after each one. The invariants come from [`SCHEMA.md`](../../architecture/SCHEMA.md), "Rules the schema enforces", and from the error table of `commit` in [`INTERFACES.md`](../../architecture/INTERFACES.md).
+
+**Outcome.** A defect in the time rules that no hand-written case covers is likely to be found by a generated one, and when it is, the failing sequence is printed in a form that can be replayed.
+
+**Scope.**
+- A generator of valid change sets over a small world: a few entities, a few predicates of both cardinalities, a few values, and dates from a short range, so that overlaps and boundaries are common.
+- A property test in `storage` that applies a generated sequence to a store and checks the invariants after every commit.
+- It runs against the in-memory store in this item. FL-076 runs the same generator against SQLite.
+- One development dependency for property-based testing.
+
+**Non-goals.**
+- Comparing two stores: FL-076.
+- Generating use-case inputs or text. The generator builds change sets, as the contract suite does.
+- Generating changes of phases 2 and 3.
+
+**Functional requirements.**
+1. After every commit, accepted or refused, these hold: the number of facts listed with `'all'` has not gone down; no fact that was listed before has changed except by going from live to invalidated, once; no two live facts with the same subject and single-valued predicate have overlapping valid periods; every fact has at least one source; a refused commit leaves every read unchanged.
+2. For a random as-of date and known-at date, `listFacts` with that time filter returns exactly the facts for which `matchesTimeFilter` is true among those listed with `'all'`.
+3. A known-at question is stable: the answer for a known-at date in the past, taken after commit N, equals the answer taken after every later commit whose time is after that date.
+4. Both lanes return only facts that pass the time filter, and never more than the limit.
+5. The generator also produces changes that should be refused (a missing fact, a second invalidation, an overlapping fact), so that refusals are exercised and not only successes.
+
+**Technical requirements.**
+1. The library and its version are read from the npm registry and its documentation on the day, pinned exactly in the catalog, and cited in the commit. Its support for the Vitest version in use is checked first.
+2. Every run uses a fixed seed that is printed, and a failure prints the seed and the shrunk sequence. A failure found once is added to the contract suite as a named case.
+3. The number of generated sequences is set so that `pnpm check` stays fast; the number and the measured time are recorded.
+4. The generator lives beside the contract suite in `storage` and is not exported from the package.
+
+**Constraints.**
+- [Testing rules](../../../.claude/rules/testing.md): no test depends on the real time or on random values that cannot be replayed.
+- [Engineering principles](../../../.claude/rules/engineering-principles.md): few dependencies, each pinned and with a stated reason; no version stated from memory.
+- [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md): `core` imports no test framework in its source.
+
+**Acceptance criteria.**
+- [ ] Property test "every commit keeps the rules of memory" passes with the recorded number of sequences and seed.
+- [ ] Property test "a read by time agrees with the time predicate" passes.
+- [ ] Property test "what was believed at a past date does not change later" passes.
+- [ ] Shown once by hand: with the single-value check removed from the in-memory store's commit, the first property test fails and prints a short sequence. The output is recorded and the check restored.
+- [ ] `pnpm check` exits 0, and the time the property tests add is recorded.
+
+**Validation.** The property tests, run by `pnpm check`; the by-hand proof that they can fail.
+
+**Completion evidence.** The commit, the passing `pnpm check` output with the seed and the number of sequences, and the recorded failing output of the by-hand proof.
+
+### FL-076: Differential tests between the in-memory store and SQLite
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 1 |
+| Depends on | FL-075, FL-068, FL-016, FL-017 |
+| Requirements | REQ-38 |
+| Components | `packages/core`, `packages/storage` (tests only) |
+
+**Objective.** Apply the same generated sequences of changes to the in-memory store and to the SQLite adapter, and require the two to answer every read identically.
+
+**Background.** The in-memory store and the SQLite adapter are two independent implementations of `MemoryStore`. The contract suite checks both against chosen cases. Two implementations rarely share the same defect, so any difference between them on a generated sequence is a defect in one of them or a gap in [`INTERFACES.md`](../../architecture/INTERFACES.md).
+
+**Outcome.** The in-memory store, which every use-case test relies on, is known to behave as the real adapter does on far more inputs than the contract suite lists.
+
+**Scope.**
+- A property test that applies each generated sequence of FL-075 to both stores.
+- After every commit it compares: the result of the commit (success, or the error code and related facts); `listFacts` for several time filters and for `'live'` and `'all'`; `getFact`; `findEntities`; `getSource`; `listAuditEntries`.
+- The set of facts each lane returns for a query, compared as a set.
+
+**Non-goals.**
+- Comparing the order of lane results. The two stores rank differently by design ([ADR 0017](../../architecture/adr/0017-rank-fusion-in-typescript-with-time-filtering-in-each-lane.md)); only the set of facts within the limit of an unlimited query is compared.
+- Comparing error messages. Codes and related facts are compared.
+- Performance: FL-066.
+
+**Functional requirements.**
+1. A difference fails the test and prints the seed, the shrunk sequence, the read that differed and both answers.
+2. Each difference found is settled in one of three ways, and the choice is recorded: the in-memory store is corrected, the adapter is corrected, or `INTERFACES.md` is made specific and both are brought to it. A case for it is added to the contract suite.
+3. Audit entry identifiers are compared by order within a namespace, not by value, if the two stores number them differently.
+
+**Technical requirements.**
+1. The SQLite store is opened in memory for each sequence, so the test needs no file and leaves none.
+2. The number of sequences and the time they take are recorded, and `pnpm check` stays fast.
+
+**Constraints.**
+- [Testing rules](../../../.claude/rules/testing.md): no test depends on the real time or on random values that cannot be replayed.
+- [Engineering principles](../../../.claude/rules/engineering-principles.md): few dependencies, each pinned and with a stated reason; no version stated from memory.
+- [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md): `core` imports no test framework in its source.
+
+**Acceptance criteria.**
+- [ ] Property test "the in-memory store and SQLite give the same answers" passes with the recorded number of sequences and seed.
+- [ ] Every difference found while writing the item is listed in the completion evidence with how it was settled.
+- [ ] Shown once by hand: with the time predicate of one store changed from `>` to `>=` at a period's end, the test fails. The output is recorded and the change undone.
+- [ ] `pnpm check` exits 0.
+
+**Validation.** The differential property test, run by `pnpm check`; the by-hand proof that it can fail.
+
+**Completion evidence.** The commit, the passing output with seed and number of sequences, and the list of differences found and how each was settled.
+
+### FL-077: Mutation-testing trial on core
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 1 |
+| Depends on | FL-008, FL-009, FL-010, FL-011 |
+| Requirements | REQ-38 |
+| Components | `packages/core`, `packages/storage` (tests only) |
+
+**Objective.** Find out whether a mutation-testing tool works with this toolchain, and if it does, use it once on `core` to find tests that cannot detect a defect.
+
+**Background.** A mutation-testing tool makes small changes to the code, such as replacing `<` with `<=`, and runs the tests against each. A change that no test notices marks a gap. This measures whether tests can detect a defect, which a coverage percentage does not. Whether any such tool supports the versions in use, Vitest and TypeScript as pinned in the catalog, is not verified; this item is a trial for that reason.
+
+**Outcome.** Either a list of gaps in the tests of `core` with each one closed or justified, or a recorded finding that no tool works with the toolchain yet.
+
+**Scope.**
+- Check the candidate tools' current documentation and registry entries for support of the pinned Vitest and TypeScript versions.
+- If one works: run it on `packages/core/src`, excluding test files and the test helpers.
+- For each surviving change: add a test that catches it, or record why it is equivalent or does not matter.
+- Record the result in this work item.
+
+**Non-goals.**
+- A mutation score as a target or a gate in `pnpm check` or in continuous integration. A run is slow, and a target invites tests written to a number.
+- Running it on `storage`, `graph-rag` or the app. That is decided from what this trial shows.
+- Keeping the tool as a dependency if the trial shows it is not worth it.
+
+**Functional requirements.**
+1. The trial ends in one of two recorded outcomes: the tool ran and its surviving changes were handled, or no tool supports the toolchain, with the evidence.
+2. If the tool ran, the functions that carry the rules are covered by it: `periodsOverlap`, `matchesTimeFilter`, the single-value check and the audit detail in the in-memory store's commit, `parseDateInput`, and each fact operation.
+3. A test added for a surviving change has a name that states the behaviour, as every other test does.
+
+**Technical requirements.**
+1. The tool and its version are read from the registry and its documentation on the day and cited. If it is kept, it is pinned exactly in the catalog; if not, it is removed and the lockfile restored.
+2. The run is started by its own command, not by `pnpm check`.
+
+**Constraints.**
+- [Testing rules](../../../.claude/rules/testing.md): no test depends on the real time or on random values that cannot be replayed.
+- [Engineering principles](../../../.claude/rules/engineering-principles.md): few dependencies, each pinned and with a stated reason; no version stated from memory.
+- [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md): `core` imports no test framework in its source.
+
+**Acceptance criteria.**
+- [ ] The work item records which tools were checked, with the page that states their support, and the outcome.
+- [ ] If a tool ran: the number of changes made, killed and surviving is recorded, and every surviving change in the listed functions has a new test or a written reason.
+- [ ] `pnpm check` exits 0 and does not start the tool.
+
+**Validation.** The tool's own report, and the tests added because of it.
+
+**Completion evidence.** The commit or commits, the recorded outcome, and the tool's summary if it ran.
