@@ -9,7 +9,7 @@ How to read the roadmap, how to implement a work item, and how to keep the roadm
 | [`ROADMAP.md`](ROADMAP.md) | The index: every epic and work item with its phase, dependencies and status |
 | `epics/EPIC-NN.md` | One epic: its outcome, scope and boundaries, and the full specification of each of its work items |
 | [`../product/PRODUCT.md`](../product/PRODUCT.md) | What the product is for and what each phase must demonstrate |
-| [`../product/REQUIREMENTS.md`](../product/REQUIREMENTS.md) | The requirements, `REQ-01` to `REQ-37` |
+| [`../product/REQUIREMENTS.md`](../product/REQUIREMENTS.md) | The requirements, `REQ-01` to `REQ-38` |
 | [`../product/CAPABILITIES.md`](../product/CAPABILITIES.md) | The capabilities, with the requirements each satisfies and the epic that owns it |
 
 The roadmap carries no dates, estimates or effort sizes. Order comes from phases and dependencies only.
@@ -98,6 +98,10 @@ A worked example, for REQ-04. Nothing in it is implemented yet; it shows where e
 | Validation evidence | The commit and the `pnpm check` output that shows those cases passing | "Completion evidence" in each work item |
 
 To check a requirement, start from its row in `REQUIREMENTS.md` and read the status and evidence of each work item listed there. A requirement is met when all of them are `Completed`.
+
+## Reviewing tests
+
+The tests of a work item are written in the same session as its code, and share its blind spots. For the work items where a mistake is expensive, a separate session reviews the tests against the item's requirements before it is marked `Completed`, looking for what is not tested. These are: the SQLite commit and the single-value rule (FL-014, FL-068), the conflict judge and automatic correction (FL-041, FL-042), and purge (FL-047, FL-061). Expected values that define what is correct, such as the scenario files of FL-027, are reviewed by the owner.
 
 ## Keeping the roadmap true
 
