@@ -78,7 +78,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Pending |
 | FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Pending |
 | FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Pending |
-| FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Pending |
+| FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Completed |
 | FL-076 | Differential tests between the in-memory store and SQLite | 1 | FL-075, FL-068, FL-016, FL-017 | Pending |
 | FL-077 | Mutation-testing trial on core | 1 | FL-008, FL-009, FL-010, FL-011 | Pending |
 
@@ -586,7 +586,7 @@ Hosted runners vary from run to run, so a 95th percentile measured there moves w
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-056, FL-067 |
 | Requirements | REQ-38 |
@@ -628,15 +628,46 @@ Hosted runners vary from run to run, so a 95th percentile measured there moves w
 - [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md): `core` imports no test framework in its source.
 
 **Acceptance criteria.**
-- [ ] Property test "every commit keeps the rules of memory" passes with the recorded number of sequences and seed.
-- [ ] Property test "a read by time agrees with the time predicate" passes.
-- [ ] Property test "what was believed at a past date does not change later" passes.
-- [ ] Shown once by hand: with the single-value check removed from the in-memory store's commit, the first property test fails and prints a short sequence. The output is recorded and the check restored.
-- [ ] `pnpm check` exits 0, and the time the property tests add is recorded.
+- [x] Property test "every commit keeps the rules of memory" passes with the recorded number of sequences and seed.
+- [x] Property test "a read by time agrees with the time predicate" passes.
+- [x] Property test "what was believed at a past date does not change later" passes.
+- [x] Shown once by hand: with the single-value check removed from the in-memory store's commit, the first property test fails and prints a short sequence. The output is recorded and the check restored.
+- [x] `pnpm check` exits 0, and the time the property tests add is recorded.
 
 **Validation.** The property tests, run by `pnpm check`; the by-hand proof that they can fail.
 
 **Completion evidence.** The commit, the passing `pnpm check` output with the seed and the number of sequences, and the recorded failing output of the by-hand proof.
+
+**Recorded evidence.** Completed on 2026-11-15, in two commits: `build(storage): add fast-check 4.10.2 for property-based tests` and `test(storage): add property-based tests of the rules of memory`. The generator is `packages/storage/src/change-sequence-generator.ts` and the tests are `memory-store-properties.test.ts` beside it.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, ended with:
+
+```text
+ Test Files  18 passed (18)
+      Tests  253 passed (253)
+```
+
+The three property tests each run 300 generated sequences with the fixed seed 20261115, against the in-memory store. A sequence has 1 to 12 steps. Run alone, the file takes about 2 seconds of wall time, most of it start-up.
+
+The proof that the tests can fail. With the single-value check removed from the in-memory store's commit, "every commit keeps the rules of memory" failed on the eighth sequence and shrank it to two steps. The check was then restored and `pnpm check` passed again:
+
+```text
+Error: Property failed after 8 tests
+{ seed: 20261115, path: "7:2:2:3:3", endOnFailure: true }
+Counterexample: [[{"kind":"record","subject":0,"predicate":1,"value":0,"from":null,"to":null},{"kind":"record","subject":0,"predicate":1,"value":0,"from":null,"to":null}]]
+Shrunk 4 time(s)
+Caused by: AssertionError: f-1 and f-2 overlap for single_b: expected true to be false
+```
+
+With the code as it is, the properties found no defect in the in-memory store.
+
+How it is built, where the item left a choice:
+
+- The library is fast-check 4.10.2. It runs inside ordinary Vitest tests, so it needs no adapter for the test runner.
+- A sequence is a list of intentions: record a fact, invalidate one with or without a replacement, end one, attach a source, invalidate a missing fact. Each becomes a change set when it meets the store's state, because only then is it known which facts exist. A step picks among all facts ever recorded, live or not, so refusals are generated as well as successes.
+- The world is two subjects, two single-valued predicates and one multi-valued predicate, three values, and valid dates from a stretch of twenty days. That keeps overlaps and boundary dates frequent.
+- The first test also asserts that the run produced more than 300 accepted and more than 150 refused commits, so that it cannot pass by generating only one kind.
+- The second test checks both lanes as well as `listFacts`: each returns only facts that pass the time filter, and exactly as many as the limit allows.
 
 ### FL-076: Differential tests between the in-memory store and SQLite
 
