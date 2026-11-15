@@ -1,11 +1,12 @@
 import type { ChangeSet } from '../change-set.ts';
 import type { FactId, Source } from '../fact.ts';
 import type { OperationDeps } from '../operation-deps.ts';
-import { err, ok, type Result } from '../result.ts';
+import { ok, type Result } from '../result.ts';
 import type { Timestamp } from '../timestamp.ts';
 import { buildSource } from './build-source.ts';
 import type { ChangeContext, FactDraft, NewSource } from './operation-inputs.ts';
 import { buildRecordChanges, type PreparedDrafts, prepareFactDrafts } from './prepare-fact-drafts.ts';
+import { readLiveFact } from './read-live-fact.ts';
 
 export type InvalidateFactInput = ChangeContext & {
   readonly factId: FactId;
@@ -56,20 +57,9 @@ export async function invalidateFact(
   input: InvalidateFactInput,
 ): Promise<Result<{ readonly invalidatedFactId: FactId; readonly replacementFactId: FactId | null }>> {
   const { namespace, factId } = input;
-  const found = await deps.store.getFact({ namespace, factId });
+  const found = await readLiveFact(deps, { namespace, factId });
   if (!found.ok) return found;
-  if (found.value === null) return err('not_found', `No fact ${factId} in this namespace.`);
   const wrong = found.value.fact;
-  if (wrong.invalidatedAt !== null) {
-    const superseded = wrong.supersededByFactId;
-    return err(
-      'already_invalidated',
-      superseded === null
-        ? `The fact ${factId} was invalidated and nothing superseded it.`
-        : `The fact ${factId} was invalidated and superseded by ${superseded}. Use that fact.`,
-      { relatedFactIds: superseded === null ? [] : [superseded] },
-    );
-  }
 
   const now = deps.now();
   let replacement: PreparedDrafts | null = null;
