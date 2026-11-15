@@ -74,7 +74,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 | FL-056 | In-memory search lanes and test helpers | 0 | FL-007 | Completed |
 | FL-008 | recordFacts operation, including restatement | 1 | FL-007, FL-056 | Completed |
 | FL-009 | invalidateFact operation: retraction and correction | 1 | FL-008, FL-056 | Completed |
-| FL-010 | endFact operation: ending a fact and succession | 1 | FL-008, FL-056 | Pending |
+| FL-010 | endFact operation: ending a fact and succession | 1 | FL-008, FL-056 | Completed |
 | FL-011 | findConflictCandidates operation | 1 | FL-007, FL-056 | Pending |
 
 ### FL-004: Result type and the shared error codes
@@ -715,7 +715,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-008, FL-056 |
 | Requirements | REQ-02, REQ-06, REQ-08, REQ-24 |
@@ -760,20 +760,38 @@ $ vitest run
 - [ADR 0010](../../architecture/adr/0010-conflicts-are-keyed-by-subject-and-predicate.md): periods that only touch do not overlap.
 
 **Acceptance criteria.**
-- [ ] Unit test "ends PostgreSQL 14 and records PostgreSQL 16 as its successor" passes, with the dates of the spike. Afterwards: asked for now, only PostgreSQL 16; as of 2026-02-01, the ended PostgreSQL 14; as of 2026-03-15, only PostgreSQL 16; known at 2026-04-01 and as of 2026-04-01, the original PostgreSQL 14.
-- [ ] Unit test "gives the ended copy the original's sources and the source that reported the end" passes.
-- [ ] Unit test "links the original to its ended copy" passes: `listFacts` with `supersededByFactId` set to the copy returns the original.
-- [ ] Unit test "starts a successor at the end of the fact it follows when no start is given" passes.
-- [ ] Unit test "ends a fact with no successor as a revision" passes, with the operation `revision` in the audit entries.
-- [ ] Unit test "returns invalid_input when the end is not after the start" passes.
-- [ ] Unit test "ends a fact with no successor without embedding anything" passes, with an embedder written in the test that fails if it is called.
-- [ ] Unit test "copies the original's vector to the ended copy" passes, on the pure function that builds the change set: the copy's embedding is `{ copyFromFactId }` naming the original.
-- [ ] Unit test "changes nothing when the successor conflicts with another live fact" passes.
-- [ ] `pnpm check` exits 0.
+- [x] Unit test "ends PostgreSQL 14 and records PostgreSQL 16 as its successor" passes, with the dates of the spike. Afterwards: asked for now, only PostgreSQL 16; as of 2026-02-01, the ended PostgreSQL 14; as of 2026-03-15, only PostgreSQL 16; known at 2026-04-01 and as of 2026-04-01, the original PostgreSQL 14.
+- [x] Unit test "gives the ended copy the original's sources and the source that reported the end" passes.
+- [x] Unit test "links the original to its ended copy" passes: `listFacts` with `supersededByFactId` set to the copy returns the original.
+- [x] Unit test "starts a successor at the end of the fact it follows when no start is given" passes.
+- [x] Unit test "ends a fact with no successor as a revision" passes, with the operation `revision` in the audit entries.
+- [x] Unit test "returns invalid_input when the end is not after the start" passes.
+- [x] Unit test "ends a fact with no successor without embedding anything" passes, with an embedder written in the test that fails if it is called.
+- [x] Unit test "copies the original's vector to the ended copy" passes, on the pure function that builds the change set: the copy's embedding is `{ copyFromFactId }` naming the original.
+- [x] Unit test "changes nothing when the successor conflicts with another live fact" passes.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `core` with `createTestDeps`, each stating its as-of date and its known-at date, and covering the boundary instant.
 
 **Completion evidence.** The commit and the passing `pnpm check` output.
+
+**Recorded evidence.** Completed on 2026-11-15, in two commits: `refactor(core): share the read of a live fact between fact operations` and `feat(core): add the endFact operation`. The code is `packages/core/src/operations/end-fact.ts`, with its tests beside it. The read that returns `not_found` or `already_invalidated` moved into `read-live-fact.ts`, which `invalidateFact` and `endFact` both use.
+
+Besides the nine named tests, the file tests a successor that gives its own start, a fact with an unknown start, a fact that was already ended, a missing fact, and the order of the changes of a succession. With the successor's default start, the original's sources on the copy, and the boundary of the end check each changed by hand, five tests failed. The test for an end equal to the start still passed with the operation's own check weakened, because the store refuses a valid period of no length; the check stays in the operation so that the message names the fact. All three changes were restored.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 82 files. No fixes applied.
+$ biome lint .
+Checked 82 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  22 passed (22)
+      Tests  294 passed (294)
+```
 
 ### FL-011: findConflictCandidates operation
 
