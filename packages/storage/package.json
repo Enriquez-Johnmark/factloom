@@ -7,9 +7,13 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@factloom/core": "workspace:*"
+    "@factloom/core": "workspace:*",
+    "better-sqlite3": "catalog:",
+    "sqlite-vec": "catalog:"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "catalog:",
+    "@types/node": "catalog:",
     "fast-check": "catalog:"
   }
 }
