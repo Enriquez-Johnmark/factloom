@@ -69,3 +69,5 @@ export type { RecordFactsInput } from './operations/record-facts.ts';
 export { recordFacts } from './operations/record-facts.ts';
 export type { InvalidateFactInput } from './operations/invalidate-fact.ts';
 export { invalidateFact } from './operations/invalidate-fact.ts';
+export type { EndFactInput } from './operations/end-fact.ts';
+export { endFact } from './operations/end-fact.ts';
