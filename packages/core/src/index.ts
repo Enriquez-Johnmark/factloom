@@ -71,3 +71,5 @@ export type { InvalidateFactInput } from './operations/invalidate-fact.ts';
 export { invalidateFact } from './operations/invalidate-fact.ts';
 export type { EndFactInput } from './operations/end-fact.ts';
 export { endFact } from './operations/end-fact.ts';
+export type { FindConflictCandidatesInput } from './operations/find-conflict-candidates.ts';
+export { findConflictCandidates } from './operations/find-conflict-candidates.ts';
