@@ -58,3 +58,12 @@ export { createFakeEmbedder } from './create-fake-embedder.ts';
 export { createScriptedLlm } from './create-scripted-llm.ts';
 export type { TestDepsOptions } from './create-test-deps.ts';
 export { createTestDeps, TEST_DOMAIN } from './create-test-deps.ts';
+export type {
+  ChangeContext,
+  FactDraft,
+  NewEntity,
+  NewFact,
+  NewSource,
+} from './operations/operation-inputs.ts';
+export type { RecordFactsInput } from './operations/record-facts.ts';
+export { recordFacts } from './operations/record-facts.ts';
