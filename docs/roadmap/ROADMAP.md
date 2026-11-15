@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-15:** the first feature code exists. 12 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-012, FL-018, FL-056, FL-067, FL-075. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-15:** the first feature code exists. 13 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-012, FL-018, FL-056, FL-067, FL-075. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -59,7 +59,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 |---|---|---|---|---|
 | [FL-003](epics/EPIC-01.md#fl-003-install-the-packed-server-on-a-clean-machine-in-ci) | Install the packed server on a clean machine in CI | EPIC-01 | FL-002, FL-037 | Pending |
 | [FL-008](epics/EPIC-02.md#fl-008-recordfacts-operation-including-restatement) | recordFacts operation, including restatement | EPIC-02 | FL-007, FL-056 | Completed |
-| [FL-009](epics/EPIC-02.md#fl-009-invalidatefact-operation-retraction-and-correction) | invalidateFact operation: retraction and correction | EPIC-02 | FL-008, FL-056 | Pending |
+| [FL-009](epics/EPIC-02.md#fl-009-invalidatefact-operation-retraction-and-correction) | invalidateFact operation: retraction and correction | EPIC-02 | FL-008, FL-056 | Completed |
 | [FL-010](epics/EPIC-02.md#fl-010-endfact-operation-ending-a-fact-and-succession) | endFact operation: ending a fact and succession | EPIC-02 | FL-008, FL-056 | Pending |
 | [FL-011](epics/EPIC-02.md#fl-011-findconflictcandidates-operation) | findConflictCandidates operation | EPIC-02 | FL-007, FL-056 | Pending |
 | [FL-013](epics/EPIC-03.md#fl-013-migration-runner-and-the-first-migration) | Migration runner and the first migration | EPIC-03 | FL-001, FL-004, FL-005 | Pending |
