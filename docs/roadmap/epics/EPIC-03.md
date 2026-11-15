@@ -70,7 +70,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 | FL-067 | Storage contract suite: single-value rule, namespaces and search lanes | 0 | FL-012, FL-056 | Completed |
 | FL-013 | Migration runner and the first migration | 1 | FL-001, FL-004, FL-005 | Completed |
 | FL-014 | SQLite store: opening, connection settings and commit | 1 | FL-002, FL-012, FL-013 | Completed |
-| FL-068 | SQLite single-value rule, error mapping and two writers on one file | 1 | FL-014, FL-067 | Pending |
+| FL-068 | SQLite single-value rule, error mapping and two writers on one file | 1 | FL-014, FL-067 | Completed |
 | FL-015 | SQLite structural reads with the time predicate | 1 | FL-014, FL-068 | Pending |
 | FL-016 | Keyword lane on FTS5 | 1 | FL-015 | Pending |
 | FL-017 | Vector lane on a plain table, with model checking | 1 | FL-002, FL-015 | Pending |
@@ -531,7 +531,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-014, FL-067 |
 | Requirements | REQ-11, REQ-15, REQ-25 |
@@ -579,19 +579,49 @@ $ vitest run
 - [`SCHEMA.md`](../../architecture/SCHEMA.md), "Connection settings".
 
 **Acceptance criteria.**
-- [ ] Crash-safety test passes: a second process starts a commit of several changes on a database file and is killed before it finishes. When the file is opened again, every read returns what it returned before that commit, and a new commit succeeds. The test also covers a process killed just after a commit returned: its changes are all present.
-- [ ] Adapter test "refuses the four overlapping periods and accepts the touching one" passes, with the five periods of the spike's single-value checks, which are those of cases S1 to S4 and A1 of FL-067.
-- [ ] Adapter test "does not apply the single-value rule to a multi-valued predicate" passes, and "accepts a change set that invalidates a fact and records its replacement" passes.
-- [ ] Adapter test "returns each documented error code" passes, with one case each for `not_found`, `already_invalidated`, `already_exists` and `conflict`, each asserting unchanged row counts.
-- [ ] Adapter test "returns not_found for an identifier that exists only in another namespace" passes, for a fact to invalidate, a subject entity and a source.
-- [ ] Adapter test "two stores on one file cannot both commit facts that break the single-value rule" passes with two stores in one process, one commit after the other: exactly one result is `ok`, the other is `conflict` and names the committed fact, and a SQL count of rows for that subject and predicate with `invalidated_at IS NULL` is 1.
-- [ ] Adapter test "a commit waits for a writer in another process and then returns conflict" passes, as technical requirement 2 describes: the result is `conflict`, not `storage_failed`, and the SQL count is 1.
-- [ ] Adapter test "a second process reads what the first wrote" passes: a child process opens a file, commits the fixture and exits; a store opened afterwards on the same file shows the same row counts by SQL.
-- [ ] `pnpm check` exits 0 on Linux and on macOS arm64 in the workflow of FL-002, which FL-014 already requires.
+- [x] Crash-safety test passes: a second process starts a commit of several changes on a database file and is killed before it finishes. When the file is opened again, every read returns what it returned before that commit, and a new commit succeeds. The test also covers a process killed just after a commit returned: its changes are all present.
+- [x] Adapter test "refuses the four overlapping periods and accepts the touching one" passes, with the five periods of the spike's single-value checks, which are those of cases S1 to S4 and A1 of FL-067.
+- [x] Adapter test "does not apply the single-value rule to a multi-valued predicate" passes, and "accepts a change set that invalidates a fact and records its replacement" passes.
+- [x] Adapter test "returns each documented error code" passes, with one case each for `not_found`, `already_invalidated`, `already_exists` and `conflict`, each asserting unchanged row counts.
+- [x] Adapter test "returns not_found for an identifier that exists only in another namespace" passes, for a fact to invalidate, a subject entity and a source.
+- [x] Adapter test "two stores on one file cannot both commit facts that break the single-value rule" passes with two stores in one process, one commit after the other: exactly one result is `ok`, the other is `conflict` and names the committed fact, and a SQL count of rows for that subject and predicate with `invalidated_at IS NULL` is 1.
+- [x] Adapter test "a commit waits for a writer in another process and then returns conflict" passes, as technical requirement 2 describes: the result is `conflict`, not `storage_failed`, and the SQL count is 1.
+- [x] Adapter test "a second process reads what the first wrote" passes: a child process opens a file, commits the fixture and exits; a store opened afterwards on the same file shows the same row counts by SQL.
+- [x] `pnpm check` exits 0 on Linux and on macOS arm64 in the workflow of FL-002, which FL-014 already requires.
 
 **Validation.** Adapter tests in `storage`, on temporary files, two of them with a child process. The contract suite is turned on for this adapter in FL-015.
 
 **Completion evidence.** The commit and the passing `pnpm check` output. "Not yet run: two processes writing to one file" in [`SCHEMA.md`](../../architecture/SCHEMA.md) is replaced by the result, and Q-10 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) is updated.
+
+**Recorded evidence.** Completed on 2026-11-15, in two commits: `feat(storage): enforce the single-value rule and return the error codes in the SQLite commit` and `test(storage): run two processes on one database file`. The code is `packages/storage/src/create-commit.ts`. The tests are `sqlite-commit-rules.test.ts` and `sqlite-two-processes.test.ts`, with the second process in `second-process.child.ts`.
+
+What differs from a plain reading of the requirements:
+
+- **The process that holds the lock uses the driver directly, not the adapter.** Technical requirement 3 asks for the adapter's public export, and technical requirement 2 asks the child to hold the lock for a fixed time. The adapter's commit is one synchronous call, so nothing can hold its lock open between two steps. In the two modes that hold a lock, the child starts `BEGIN IMMEDIATE` on its own connection and inserts a fact with SQL. In the two modes that commit, it uses `openSqliteMemoryStore` and `commit`.
+- **The child commits a small fixture of its own**, one entity, one source and one fact, not the fixture of FL-012. That fixture lives in a file that imports the test runner, which a plain Node.js process should not load.
+- **The crash-safety test compares row counts read with SQL**, not "every read", because the read methods do not exist until FL-015.
+- **The wait is shown by the result, not by a timing.** The commit in the first process returns `conflict` naming the child's fact, which is visible only after the child has committed. Without the wait it would return `storage_failed` or succeed.
+- The test of FL-014 that expected `storage_failed` for a fact already invalidated now expects `already_invalidated`. That is the change of behaviour this item makes.
+
+Not run: more than two writers, a lock held longer than the busy timeout of 5,000 ms, and a process killed by power loss and not by a signal.
+
+With the single-value check removed and one namespace filter inverted by hand, all ten tests of the two files failed; both were restored. The two-process file was then run five times in a row and passed each time.
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43715483592. `SCHEMA.md` now records the result in place of "Not yet run", and Q-10 is closed.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 94 files. No fixes applied.
+$ biome lint .
+Checked 94 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  27 passed (27)
+      Tests  353 passed (353)
+```
 
 ### FL-015: SQLite structural reads with the time predicate
 
