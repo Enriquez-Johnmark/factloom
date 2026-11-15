@@ -73,7 +73,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 | FL-007 | MemoryStore interface and the in-memory store: commit and structural reads | 0 | FL-006 | Completed |
 | FL-056 | In-memory search lanes and test helpers | 0 | FL-007 | Completed |
 | FL-008 | recordFacts operation, including restatement | 1 | FL-007, FL-056 | Completed |
-| FL-009 | invalidateFact operation: retraction and correction | 1 | FL-008, FL-056 | Pending |
+| FL-009 | invalidateFact operation: retraction and correction | 1 | FL-008, FL-056 | Completed |
 | FL-010 | endFact operation: ending a fact and succession | 1 | FL-008, FL-056 | Pending |
 | FL-011 | findConflictCandidates operation | 1 | FL-007, FL-056 | Pending |
 
@@ -633,7 +633,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-008, FL-056 |
 | Requirements | REQ-06, REQ-08, REQ-24 |
@@ -678,20 +678,38 @@ $ vitest run
 - [Architecture rules](../../../.claude/rules/architecture.md): one operation per file; writes go through one door.
 
 **Acceptance criteria.**
-- [ ] Unit test "retracts a fact with no replacement" passes: the fact is absent from `listFacts` for now, present for a known-at date before the retraction, and has `supersededByFactId` null.
-- [ ] Unit test "corrects a fact and links it to the replacement" passes on the Node 20 to Node 22 case of the spike: asked as of any date and known now, only Node 22 is returned; asked known at a date before the correction, only Node 20 is returned.
-- [ ] Unit test "gives the replacement the valid period of the fact it corrects when none is given" passes.
-- [ ] Unit test "keeps the replacement's own valid period when one is given" passes.
-- [ ] Unit test "writes a correction as one operation with three audit entries after the source" passes: `source.recorded`, `fact.recorded`, `fact.invalidated`, sharing one operation identifier, with the operation `correction` and the source as the explanation.
-- [ ] Unit test "returns already_invalidated with the superseding fact" passes.
-- [ ] Unit test "returns not_found for a fact in another namespace" passes.
-- [ ] Unit test "changes nothing when the replacement conflicts with another live fact" passes: the result is `conflict` and the original fact is still live.
-- [ ] Unit test "never reduces the number of facts" passes: `listFacts` with `'all'` returns one more fact after a correction and the same number after a retraction.
-- [ ] `pnpm check` exits 0.
+- [x] Unit test "retracts a fact with no replacement" passes: the fact is absent from `listFacts` for now, present for a known-at date before the retraction, and has `supersededByFactId` null.
+- [x] Unit test "corrects a fact and links it to the replacement" passes on the Node 20 to Node 22 case of the spike: asked as of any date and known now, only Node 22 is returned; asked known at a date before the correction, only Node 20 is returned.
+- [x] Unit test "gives the replacement the valid period of the fact it corrects when none is given" passes.
+- [x] Unit test "keeps the replacement's own valid period when one is given" passes.
+- [x] Unit test "writes a correction as one operation with three audit entries after the source" passes: `source.recorded`, `fact.recorded`, `fact.invalidated`, sharing one operation identifier, with the operation `correction` and the source as the explanation.
+- [x] Unit test "returns already_invalidated with the superseding fact" passes.
+- [x] Unit test "returns not_found for a fact in another namespace" passes.
+- [x] Unit test "changes nothing when the replacement conflicts with another live fact" passes: the result is `conflict` and the original fact is still live.
+- [x] Unit test "never reduces the number of facts" passes: `listFacts` with `'all'` returns one more fact after a correction and the same number after a retraction.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `core` with `createTestDeps`, each stating its as-of date and its known-at date.
 
 **Completion evidence.** The commit and the passing `pnpm check` output.
+
+**Recorded evidence.** Completed on 2026-11-15, in two commits: `refactor(core): share source building and draft preparation between fact operations` and `feat(core): add the invalidateFact operation`. The code is `packages/core/src/operations/invalidate-fact.ts`, with its tests beside it. Building a source and preparing drafts moved out of `record-facts.ts` into `build-source.ts` and `prepare-fact-drafts.ts`, which both operations use.
+
+Besides the nine named tests, the file tests a replacement with a predicate outside the domain, a retraction with an embedder that fails if called, and the pure change-set builder for a retraction and for a correction. With the inherited valid period and the supersession link each removed by hand, four tests failed; both were restored.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 79 files. No fixes applied.
+$ biome lint .
+Checked 79 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  21 passed (21)
+      Tests  280 passed (280)
+```
 
 ### FL-010: endFact operation: ending a fact and succession
 
