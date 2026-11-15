@@ -69,7 +69,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 | FL-012 | Storage contract suite: fixture, time, reads, commit and refusals | 0 | FL-007 | Completed |
 | FL-067 | Storage contract suite: single-value rule, namespaces and search lanes | 0 | FL-012, FL-056 | Completed |
 | FL-013 | Migration runner and the first migration | 1 | FL-001, FL-004, FL-005 | Completed |
-| FL-014 | SQLite store: opening, connection settings and commit | 1 | FL-002, FL-012, FL-013 | Pending |
+| FL-014 | SQLite store: opening, connection settings and commit | 1 | FL-002, FL-012, FL-013 | Completed |
 | FL-068 | SQLite single-value rule, error mapping and two writers on one file | 1 | FL-014, FL-067 | Pending |
 | FL-015 | SQLite structural reads with the time predicate | 1 | FL-014, FL-068 | Pending |
 | FL-016 | Keyword lane on FTS5 | 1 | FL-015 | Pending |
@@ -405,7 +405,7 @@ Versions. `better-sqlite3` 13.1.1 and `sqlite-vec` 0.1.9 are the versions the sp
 
 Besides the named tests, the runner is tested for applying only a newly added file and for refusing a file name with no number. With the history check removed and the order reversed by hand, four runner tests failed; both were restored. The refusal tests were not each broken by hand: the migration is the DDL the spike already ran, and the comparison test fails if it differs from `SCHEMA.md`.
 
-Not yet run: this work item on macOS. Continuous integration runs it there on the next push.
+Run on macOS arm64 after this was written: the workflow run https://github.com/Enriquez-Johnmark/factloom/actions/runs/43706673063 passed on both operating systems, with Node.js 22 and 26. It is the first run of the native SQLite modules on Apple Silicon inside the workspace.
 
 `pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
 
@@ -425,7 +425,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-002, FL-012, FL-013 |
 | Requirements | REQ-01, REQ-02, REQ-06, REQ-07, REQ-08, REQ-11, REQ-25 |
@@ -481,20 +481,51 @@ $ vitest run
 - [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md): one export; nothing above `storage` sees a row or a statement.
 
 **Acceptance criteria.**
-- [ ] Adapter test "a connection has foreign keys on, write-ahead logging and a busy timeout" passes, reading the three settings back from a store opened on a file.
-- [ ] Adapter test "writes the fixture's succession as rows" passes: after the three fixture commits of FL-012, SQL shows 5 fact rows, 5 embedding rows, the supersession links of the fixture, 2 source links for `pg14-ended`, and the audit rows of the succession in order with one operation identifier.
-- [ ] Adapter test "writes the detail fixed for each action" passes: the audit rows of the fixture hold `{ supersededByFactId }`, `{ revisesFactId }` and `null` where requirement 8 says, read back with SQL.
-- [ ] Adapter test "rolls back every row when the last change fails" passes: row counts in `entity`, `source`, `fact`, `fact_source`, `fact_embedding` and `audit_log` are unchanged.
-- [ ] Adapter test "returns invalid_input for a change set that fails its schema" passes, and the database's change count is unchanged.
-- [ ] Adapter test "copies a vector for a fact recorded with copyFromFactId" passes: the two embedding rows hold equal bytes.
-- [ ] Adapter test "returns storage_failed when the file cannot be opened" passes, with a path inside a directory that does not exist.
-- [ ] Adapter test "returns storage_failed after the store is closed" passes.
-- [ ] `git grep -n -E "\\$\\{" -- packages/storage/src` shows no template value inside a SQL string, apart from fixed fragments. Each match is listed in the completion evidence with the reason it is safe.
-- [ ] `pnpm check` exits 0, on Linux and on macOS arm64 in the workflow of FL-002. The address of that run is recorded: it is the first run of the native SQLite modules on Apple Silicon inside the workspace.
+- [x] Adapter test "a connection has foreign keys on, write-ahead logging and a busy timeout" passes, reading the three settings back from a store opened on a file.
+- [x] Adapter test "writes the fixture's succession as rows" passes: after the three fixture commits of FL-012, SQL shows 5 fact rows, 5 embedding rows, the supersession links of the fixture, 2 source links for `pg14-ended`, and the audit rows of the succession in order with one operation identifier.
+- [x] Adapter test "writes the detail fixed for each action" passes: the audit rows of the fixture hold `{ supersededByFactId }`, `{ revisesFactId }` and `null` where requirement 8 says, read back with SQL.
+- [x] Adapter test "rolls back every row when the last change fails" passes: row counts in `entity`, `source`, `fact`, `fact_source`, `fact_embedding` and `audit_log` are unchanged.
+- [x] Adapter test "returns invalid_input for a change set that fails its schema" passes, and the database's change count is unchanged.
+- [x] Adapter test "copies a vector for a fact recorded with copyFromFactId" passes: the two embedding rows hold equal bytes.
+- [x] Adapter test "returns storage_failed when the file cannot be opened" passes, with a path inside a directory that does not exist.
+- [x] Adapter test "returns storage_failed after the store is closed" passes.
+- [x] `git grep -n -E "\\$\\{" -- packages/storage/src` shows no template value inside a SQL string, apart from fixed fragments. Each match is listed in the completion evidence with the reason it is safe.
+- [x] `pnpm check` exits 0, on Linux and on macOS arm64 in the workflow of FL-002. The address of that run is recorded: it is the first run of the native SQLite modules on Apple Silicon inside the workspace.
 
 **Validation.** Adapter tests in `storage`, on temporary files and in-memory databases. The contract suite is turned on for this adapter in FL-015.
 
 **Completion evidence.** The commit, the passing `pnpm check` output, the address of the workflow run on both operating systems, and a statement that the contract suite does not yet run against the adapter.
+
+**Recorded evidence.** Completed on 2026-11-15, in two commits: `feat(storage): open a SQLite store and write a change set with commit` and `refactor(mcp-server): wire the placeholder from the storage adapter's real export`. The code is in `packages/storage/src`: `open-connection.ts`, `create-commit.ts` and `open-sqlite-memory-store.ts`, with the tests in `open-sqlite-memory-store.test.ts`.
+
+The contract suite does not yet run against this adapter. Its read methods return `storage_failed` until FL-015 to FL-017 build them, so the tests here read the rows with SQL through a second, read-only connection to the same file.
+
+What differs from a plain reading of the requirements:
+
+- The audit rows of a commit are written after the rows of all its changes, in the order of the changes. Written one by one, the first entry of the fixture's first commit failed its foreign key: it points to the explaining source, which a later change of the same change set records.
+- The time recorded for an applied migration is read from the system clock inside `openSqliteMemoryStore`, because the options are the path and the embedding model only. It is not part of memory.
+- The immediate transaction was confirmed by reading the driver's source, not by a test: `lib/methods/transaction.js` of `better-sqlite3` 13.1.1 prepares `BEGIN IMMEDIATE` for the `immediate` form. A test cannot tell it from a deferred transaction with one connection; FL-068 tests two writers.
+- Left to FL-068, as the non-goals say: this adapter does not yet check that the entities and sources a change names are in the change set's namespace. The contract suite's namespace cases cover it when it is turned on.
+
+With the `revisesFactId` detail and the check of the invalidation's row count each removed by hand, two tests failed; both were restored.
+
+Template values in `packages/storage/src` (`git grep -n -E "\$\{"`, plus the same search over the new files): in `create-commit.ts`, `open-sqlite-memory-store.ts` and `run-migrations.ts` every match is in an error message, none in SQL. In the tests, `initial-migration.test.ts` builds three `INSERT` statements from constants written in the test, and `open-sqlite-memory-store.test.ts` counts rows with `FROM ${table}`, where `table` is one of six names in a fixed list. No value from outside reaches a SQL string.
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43710999572. The native modules first ran on Apple Silicon inside the workspace one push earlier, in the run recorded under FL-013.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 90 files. No fixes applied.
+$ biome lint .
+Checked 90 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  25 passed (25)
+      Tests  343 passed (343)
+```
 
 ### FL-068: SQLite single-value rule, error mapping and two writers on one file
 
