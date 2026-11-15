@@ -75,7 +75,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 | FL-008 | recordFacts operation, including restatement | 1 | FL-007, FL-056 | Completed |
 | FL-009 | invalidateFact operation: retraction and correction | 1 | FL-008, FL-056 | Completed |
 | FL-010 | endFact operation: ending a fact and succession | 1 | FL-008, FL-056 | Completed |
-| FL-011 | findConflictCandidates operation | 1 | FL-007, FL-056 | Pending |
+| FL-011 | findConflictCandidates operation | 1 | FL-007, FL-056 | Completed |
 
 ### FL-004: Result type and the shared error codes
 
@@ -797,7 +797,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-007, FL-056 |
 | Requirements | REQ-15, REQ-16, REQ-24 |
@@ -839,17 +839,35 @@ $ vitest run
 - [`INTERFACES.md`](../../architecture/INTERFACES.md): reads never write; the lookup is bounded and uses no LLM.
 
 **Acceptance criteria.**
-- [ ] Unit test "returns the current fact for a new open-ended value" passes.
-- [ ] Unit test "returns the ended fact that an older fact arriving late overlaps" passes, with the periods of the [fact-schema spike](../../../spikes/fact-schema/README.md).
-- [ ] Unit test "returns nothing for a period that ends where the stored fact begins" passes.
-- [ ] Unit test "returns the open-ended fact for a period dated in the future" passes.
-- [ ] Unit test "treats an unknown start as open" passes.
-- [ ] Unit test "leaves out invalidated facts" passes: after a succession, the original row is not a candidate and its ended copy is.
-- [ ] Unit test "returns nothing for another predicate, another subject or another namespace" passes.
-- [ ] Unit test "returns at most the limit, newest first" passes.
-- [ ] Unit test "writes nothing" passes: `listAuditEntries` and `listFacts` with `'all'` return the same before and after the call.
-- [ ] `pnpm check` exits 0.
+- [x] Unit test "returns the current fact for a new open-ended value" passes.
+- [x] Unit test "returns the ended fact that an older fact arriving late overlaps" passes, with the periods of the [fact-schema spike](../../../spikes/fact-schema/README.md).
+- [x] Unit test "returns nothing for a period that ends where the stored fact begins" passes.
+- [x] Unit test "returns the open-ended fact for a period dated in the future" passes.
+- [x] Unit test "treats an unknown start as open" passes.
+- [x] Unit test "leaves out invalidated facts" passes: after a succession, the original row is not a candidate and its ended copy is.
+- [x] Unit test "returns nothing for another predicate, another subject or another namespace" passes.
+- [x] Unit test "returns at most the limit, newest first" passes.
+- [x] Unit test "writes nothing" passes: `listAuditEntries` and `listFacts` with `'all'` return the same before and after the call.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `core` with `createTestDeps`.
 
 **Completion evidence.** The commit and the passing `pnpm check` output.
+
+**Recorded evidence.** Completed on 2026-11-15, in the commit `feat(core): add the findConflictCandidates operation`. The code is `packages/core/src/operations/find-conflict-candidates.ts`, with its tests beside it. The fetch bound is 200 live facts for one subject and predicate.
+
+Besides the nine named tests, the file tests the two `invalid_input` cases. With the overlap filter removed and the order reversed by hand, five tests failed; both were restored. The known limit of the fetch bound is recorded in a comment and is not tested.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 84 files. No fixes applied.
+$ biome lint .
+Checked 84 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  23 passed (23)
+      Tests  304 passed (304)
+```
