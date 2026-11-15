@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { err, type Failure, type MemoryStore, ok, type Result, toTimestamp } from '@factloom/core';
 import type { Database } from 'better-sqlite3';
 import { createCommit } from './create-commit.ts';
+import { createReads } from './create-reads.ts';
 import { openConnection } from './open-connection.ts';
 import { runMigrations } from './run-migrations.ts';
 
@@ -18,8 +19,18 @@ export type SqliteMemoryStoreOptions = {
 
 function notBuiltYet(method: string): Promise<Failure> {
   return Promise.resolve(
-    err('storage_failed', `The SQLite store cannot ${method} yet: its read methods are not built.`),
+    err('storage_failed', `The SQLite store cannot ${method} yet: its search lanes are not built.`),
   );
+}
+
+/** Runs a read and turns what the driver or a row mapper throws into `storage_failed`. */
+function read<Value>(run: () => Result<Value>): Promise<Result<Value>> {
+  try {
+    return Promise.resolve(run());
+  } catch (cause) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    return Promise.resolve(err('storage_failed', `The read failed. ${reason}`, { cause }));
+  }
 }
 
 /**
@@ -47,15 +58,16 @@ export function openSqliteMemoryStore(options: SqliteMemoryStoreOptions): Result
       model: options.embeddingModel,
       dimensions: options.embeddingDimensions,
     });
+    const reads = createReads(db);
     const store: MemoryStore = {
       commit: (changeSet) => Promise.resolve(commit(changeSet)),
-      findEntities: () => notBuiltYet('find entities'),
-      getFact: () => notBuiltYet('read a fact'),
-      listFacts: () => notBuiltYet('list facts'),
+      findEntities: (query) => read(() => ok(reads.findEntities(query))),
+      getFact: (query) => read(() => ok(reads.getFact(query))),
+      listFacts: (query) => read(() => reads.listFacts(query)),
       searchFactsByVector: () => notBuiltYet('search by vector'),
       searchFactsByKeyword: () => notBuiltYet('search by keyword'),
-      getSource: () => notBuiltYet('read a source'),
-      listAuditEntries: () => notBuiltYet('list audit entries'),
+      getSource: (query) => read(() => ok(reads.getSource(query))),
+      listAuditEntries: (query) => read(() => ok(reads.listAuditEntries(query))),
       close: () => {
         db.close();
         return Promise.resolve();
