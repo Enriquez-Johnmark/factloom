@@ -71,7 +71,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 | FL-013 | Migration runner and the first migration | 1 | FL-001, FL-004, FL-005 | Completed |
 | FL-014 | SQLite store: opening, connection settings and commit | 1 | FL-002, FL-012, FL-013 | Completed |
 | FL-068 | SQLite single-value rule, error mapping and two writers on one file | 1 | FL-014, FL-067 | Completed |
-| FL-015 | SQLite structural reads with the time predicate | 1 | FL-014, FL-068 | Pending |
+| FL-015 | SQLite structural reads with the time predicate | 1 | FL-014, FL-068 | Completed |
 | FL-016 | Keyword lane on FTS5 | 1 | FL-015 | Pending |
 | FL-017 | Vector lane on a plain table, with model checking | 1 | FL-002, FL-015 | Pending |
 
@@ -627,7 +627,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-014, FL-068 |
 | Requirements | REQ-02, REQ-03, REQ-04, REQ-06, REQ-08, REQ-09, REQ-15, REQ-25 |
@@ -679,18 +679,60 @@ With these reads in place, the single-value check and the error codes of FL-068 
 - [TypeScript rules](../../../.claude/rules/typescript.md): parse at the edge; no cast to silence an error.
 
 **Acceptance criteria.**
-- [ ] The contract group "time, reads, commit and refusals" of FL-012 runs against the SQLite adapter and every case passes, including the eight time-table cases and R12 to R14 for `getSource`. The count is recorded.
-- [ ] The contract group "single-value rule and namespaces" of FL-067 runs against the SQLite adapter and every case passes, including N1 for `getSource` and P1, which is registered for this adapter. The count is recorded.
-- [ ] The same two groups still pass against the in-memory store.
-- [ ] Adapter test "uses the subject and predicate index" passes: `EXPLAIN QUERY PLAN` for the `listFacts` query with a subject and a predicate names `fact_subject_predicate`.
-- [ ] Adapter test "uses the object entity index for facts that point at an entity" passes in the same way for `fact_object_entity`.
-- [ ] Adapter test "a read leaves the database unchanged" passes: the total change count of the connection is the same before and after each read method is called.
-- [ ] `git grep -c "invalidated_at IS NULL OR" -- packages/storage/src` shows the time predicate written in one source file.
-- [ ] `pnpm check` exits 0.
+- [x] The contract group "time, reads, commit and refusals" of FL-012 runs against the SQLite adapter and every case passes, including the eight time-table cases and R12 to R14 for `getSource`. The count is recorded.
+- [x] The contract group "single-value rule and namespaces" of FL-067 runs against the SQLite adapter and every case passes, including N1 for `getSource` and P1, which is registered for this adapter. The count is recorded.
+- [x] The same two groups still pass against the in-memory store.
+- [x] Adapter test "uses the subject and predicate index" passes: `EXPLAIN QUERY PLAN` for the `listFacts` query with a subject and a predicate names `fact_subject_predicate`.
+- [x] Adapter test "uses the object entity index for facts that point at an entity" passes in the same way for `fact_object_entity`.
+- [x] Adapter test "a read leaves the database unchanged" passes: the total change count of the connection is the same before and after each read method is called.
+- [x] `git grep -c "invalidated_at IS NULL OR" -- packages/storage/src` shows the time predicate written in one source file.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Contract tests against both stores; adapter tests for the query plans and for reads not writing.
 
 **Completion evidence.** The commit, the passing `pnpm check` output, and the number of contract cases that pass against each store.
+
+**Recorded evidence.** Completed on 2026-11-15, in two commits: `feat(storage): read facts by structure with the time predicate on SQLite` and `test(storage): run two groups of the contract suite against SQLite`. The code is in `packages/storage/src`: `time-predicate.ts`, `row-mappers.ts` and `create-reads.ts`. The tests are `sqlite-memory-store.contract.test.ts` and `sqlite-reads.test.ts`.
+
+Contract cases that pass:
+
+| Group | In-memory store | SQLite store |
+|---|---|---|
+| Time, reads, commit and refusals | 41 | 41 |
+| Single-value rule and namespaces | 15 | 16, with P1 for two stores on one file |
+| Keyword lane | 5 | Not run: FL-016 |
+| Vector lane | 6 | Not run: FL-017 |
+
+All 57 cases passed against SQLite on the first run, with no change to the commit of FL-014 and FL-068.
+
+What differs from a plain reading of the requirements:
+
+- **`listFacts` has one SQL text per combination of filters**, built from fixed fragments and prepared the first time the combination is used. One text with `(@subject IS NULL OR ...)` for every filter would keep SQLite from choosing an index. Every value is still bound.
+- **`touchingEntityIds` is two selects joined with `UNION`**, one on the subject and one on the object entity, so that each uses its own index and a fact that both find is returned once.
+- **A list of identifiers is bound as one JSON array and read with `json_each`.** The SQLite documentation says the JSON functions are built in by default since 3.38.0 (https://www.sqlite.org/json1.html, section 2, read 2026-11-15). The section on `json_each` itself could not be read in full from this environment; that it returns each element in a `value` column was confirmed by running the queries on SQLite 3.54.1.
+- **"A read leaves the database unchanged" compares `PRAGMA data_version`** read through a second connection before and after, not the change count of the store's own connection, which the interface does not expose.
+- **Sources of a fact are returned in the order they were recorded**, by `source.created_at` and then row order. `fact_source` has no row order of its own, so the order in which sources were attached is not kept. The in-memory store returns attachment order; the contract compares the sources as a set.
+- **The storage package does not import `zod`**, as the boundaries require, so the row mappers describe the one method of a core schema they call, `safeParse`, with a small type of their own.
+
+With the boundary instant of the time predicate changed by hand, case T3 failed, and it was restored. With the namespace filter of `getFact` removed by hand, no case failed: the entities and sources of the fact are loaded with their own namespace filter, which returned nothing. The filter was restored; the namespace is checked twice on that path.
+
+`git grep -c "invalidated_at IS NULL OR" -- packages/storage/src` prints one file, `time-predicate.ts`.
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43726897285.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 99 files. No fixes applied.
+$ biome lint .
+Checked 99 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  29 passed (29)
+      Tests  418 passed (418)
+```
 
 ### FL-016: Keyword lane on FTS5
 
