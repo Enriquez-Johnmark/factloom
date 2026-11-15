@@ -68,7 +68,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 |---|---|---|---|---|
 | FL-012 | Storage contract suite: fixture, time, reads, commit and refusals | 0 | FL-007 | Completed |
 | FL-067 | Storage contract suite: single-value rule, namespaces and search lanes | 0 | FL-012, FL-056 | Completed |
-| FL-013 | Migration runner and the first migration | 1 | FL-001, FL-004, FL-005 | Pending |
+| FL-013 | Migration runner and the first migration | 1 | FL-001, FL-004, FL-005 | Completed |
 | FL-014 | SQLite store: opening, connection settings and commit | 1 | FL-002, FL-012, FL-013 | Pending |
 | FL-068 | SQLite single-value rule, error mapping and two writers on one file | 1 | FL-014, FL-067 | Pending |
 | FL-015 | SQLite structural reads with the time predicate | 1 | FL-014, FL-068 | Pending |
@@ -335,7 +335,7 @@ What was found on the way:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-001, FL-004, FL-005 |
 | Requirements | REQ-01, REQ-02, REQ-06, REQ-08, REQ-11, REQ-25 |
@@ -384,20 +384,42 @@ What was found on the way:
 - [Engineering principles](../../../.claude/rules/engineering-principles.md): pinned versions, each dependency with a stated reason.
 
 **Acceptance criteria.**
-- [ ] Adapter test "applies pending migrations in number order" passes, with two files in a temporary directory.
-- [ ] Adapter test "applies nothing when every migration is already recorded" passes.
-- [ ] Adapter test "refuses to continue when an applied migration file was changed" passes with `storage_failed`.
-- [ ] Adapter test "refuses a database that records a migration it does not have" passes.
-- [ ] Adapter test "leaves no trace of a migration that fails part way" passes.
-- [ ] Adapter test "records the number, name, hash and time of each migration" passes.
-- [ ] A comparison test passes: the SQL statements of `0001_initial.sql` equal the statements in the "Tables" block of `SCHEMA.md`, comments and white space aside.
-- [ ] Adapter tests pass for each refusal the spike checked, one test per line: a fact cannot be deleted; a fact's statement, valid period or confidence cannot be changed; a fact cannot be invalidated twice or made live again; a supersession link needs an invalidation; a fact cannot supersede itself; a fact cannot be superseded from another namespace; the row number of a fact cannot be changed; a timestamp in any of the four other forms the spike uses is rejected; `valid_from` must be before `valid_to`; a fact has exactly one kind of object; a fact must refer to an existing entity when foreign keys are on; the same entity cannot be created twice in a namespace; an entity, a source and a source link cannot be changed or deleted; an audit entry cannot be changed or deleted.
-- [ ] Adapter test "keeps the keyword index in step with inserted facts" passes: after a fact is inserted, a `MATCH` on `fact_fts` for a word of its statement returns its row.
-- [ ] `pnpm check` exits 0.
+- [x] Adapter test "applies pending migrations in number order" passes, with two files in a temporary directory.
+- [x] Adapter test "applies nothing when every migration is already recorded" passes.
+- [x] Adapter test "refuses to continue when an applied migration file was changed" passes with `storage_failed`.
+- [x] Adapter test "refuses a database that records a migration it does not have" passes.
+- [x] Adapter test "leaves no trace of a migration that fails part way" passes.
+- [x] Adapter test "records the number, name, hash and time of each migration" passes.
+- [x] A comparison test passes: the SQL statements of `0001_initial.sql` equal the statements in the "Tables" block of `SCHEMA.md`, comments and white space aside.
+- [x] Adapter tests pass for each refusal the spike checked, one test per line: a fact cannot be deleted; a fact's statement, valid period or confidence cannot be changed; a fact cannot be invalidated twice or made live again; a supersession link needs an invalidation; a fact cannot supersede itself; a fact cannot be superseded from another namespace; the row number of a fact cannot be changed; a timestamp in any of the four other forms the spike uses is rejected; `valid_from` must be before `valid_to`; a fact has exactly one kind of object; a fact must refer to an existing entity when foreign keys are on; the same entity cannot be created twice in a namespace; an entity, a source and a source link cannot be changed or deleted; an audit entry cannot be changed or deleted.
+- [x] Adapter test "keeps the keyword index in step with inserted facts" passes: after a fact is inserted, a `MATCH` on `fact_fts` for a word of its statement returns its row.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Adapter tests in `storage`, on an in-memory SQLite database and, for the runner, a temporary directory.
 
 **Completion evidence.** The commit and the passing `pnpm check` output, with the versions of `better-sqlite3`, `sqlite-vec` and SQLite that the tests printed.
+
+**Recorded evidence.** Completed on 2026-11-15, in four commits: `build(storage): add better-sqlite3 13.1.1 and sqlite-vec 0.1.9`, `feat(storage): add the first migration`, `feat(storage): add the migration runner` and `test(storage): check the first migration against SCHEMA.md and its refusals`. The code is `packages/storage/migrations/0001_initial.sql` and `packages/storage/src/run-migrations.ts`, with the tests in `run-migrations.test.ts` and `initial-migration.test.ts`.
+
+Versions. `better-sqlite3` 13.1.1 and `sqlite-vec` 0.1.9 are the versions the spikes ran. On 2026-11-15 the npm registry listed `better-sqlite3` 13.2.0 as the latest (`npm view better-sqlite3 version`); the workspace stays on 13.1.1 until the spikes are run again with a newer one. A test asserts what the migrated database reports: SQLite 3.54.1 and sqlite-vec v0.1.9. The driver ships no type declarations, so `@types/better-sqlite3` 9.6.0 was added for development; whether its declarations match the driver everywhere is open question Q-82. pnpm 12.18.0 installed both packages from their prebuilt binaries with no build step and no warning, on Linux x64.
+
+Besides the named tests, the runner is tested for applying only a newly added file and for refusing a file name with no number. With the history check removed and the order reversed by hand, four runner tests failed; both were restored. The refusal tests were not each broken by hand: the migration is the DDL the spike already ran, and the comparison test fails if it differs from `SCHEMA.md`.
+
+Not yet run: this work item on macOS. Continuous integration runs it there on the next push.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 87 files. No fixes applied.
+$ biome lint .
+Checked 87 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  25 passed (25)
+      Tests  332 passed (332)
+```
 
 ### FL-014: SQLite store: opening, connection settings and commit
 
