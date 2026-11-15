@@ -8,6 +8,8 @@ catalog:
   "@biomejs/biome": 2.6.7
   # Types for the Node.js built-ins, on the line of the oldest supported Node.js.
   "@types/node": 22.19.0
+  # Property-based testing: generates sequences of changes to check the rules of memory. Development only.
+  fast-check: 4.10.2
   # Type checker. Node.js runs the source directly, so nothing is compiled in development.
   typescript: 7.0.2
   # Test runner.
