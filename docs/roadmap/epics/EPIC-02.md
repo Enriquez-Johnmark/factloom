@@ -72,7 +72,7 @@ No other epic is needed. Epics 03 to 09 depend on this one.
 | FL-006 | Schemas and types for entities, facts, sources, audit entries, change sets and domains | 0 | FL-005 | Completed |
 | FL-007 | MemoryStore interface and the in-memory store: commit and structural reads | 0 | FL-006 | Completed |
 | FL-056 | In-memory search lanes and test helpers | 0 | FL-007 | Completed |
-| FL-008 | recordFacts operation, including restatement | 1 | FL-007, FL-056 | Pending |
+| FL-008 | recordFacts operation, including restatement | 1 | FL-007, FL-056 | Completed |
 | FL-009 | invalidateFact operation: retraction and correction | 1 | FL-008, FL-056 | Pending |
 | FL-010 | endFact operation: ending a fact and succession | 1 | FL-008, FL-056 | Pending |
 | FL-011 | findConflictCandidates operation | 1 | FL-007, FL-056 | Pending |
@@ -549,7 +549,7 @@ How it is built, where the item left a choice:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-007, FL-056 |
 | Requirements | REQ-01, REQ-07, REQ-08, REQ-14, REQ-24 |
@@ -594,20 +594,40 @@ How it is built, where the item left a choice:
 - [ADR 0011](../../architecture/adr/0011-namespace-on-every-row.md).
 
 **Acceptance criteria.**
-- [ ] Unit test "records a source, a new entity and a fact in one commit" passes: afterwards `getFact` returns the fact with that source, and the audit entries for the commit share one operation identifier and read `source.recorded`, `entity.created`, `fact.recorded`.
-- [ ] Unit test "attaches the source to a restated fact and records no second fact" passes: `listFacts` with `'all'` returns one fact, and it has two sources.
-- [ ] Unit test "records nothing when one draft conflicts with a live fact" passes: the result is `conflict`, and the other drafts, the source and the new entities are absent afterwards.
-- [ ] Unit test "returns invalid_input for a predicate the domain does not have" passes.
-- [ ] Unit test "returns invalid_input when there is nothing to record" passes.
-- [ ] Unit test "records nothing when the embedder fails" passes with `embedding_failed`.
-- [ ] Unit test "marks a fact single-valued from the domain's predicate" passes: two open-ended facts for a multi-valued predicate are both recorded; for a single-valued one the second call returns `conflict`.
-- [ ] Unit test "creates an entity once when two drafts introduce it" passes.
-- [ ] Unit test "records a source that only restates without embedding anything" passes, with an embedder written in the test that fails if it is called.
-- [ ] `pnpm check` exits 0.
+- [x] Unit test "records a source, a new entity and a fact in one commit" passes: afterwards `getFact` returns the fact with that source, and the audit entries for the commit share one operation identifier and read `source.recorded`, `entity.created`, `fact.recorded`.
+- [x] Unit test "attaches the source to a restated fact and records no second fact" passes: `listFacts` with `'all'` returns one fact, and it has two sources.
+- [x] Unit test "records nothing when one draft conflicts with a live fact" passes: the result is `conflict`, and the other drafts, the source and the new entities are absent afterwards.
+- [x] Unit test "returns invalid_input for a predicate the domain does not have" passes.
+- [x] Unit test "returns invalid_input when there is nothing to record" passes.
+- [x] Unit test "records nothing when the embedder fails" passes with `embedding_failed`.
+- [x] Unit test "marks a fact single-valued from the domain's predicate" passes: two open-ended facts for a multi-valued predicate are both recorded; for a single-valued one the second call returns `conflict`.
+- [x] Unit test "creates an entity once when two drafts introduce it" passes.
+- [x] Unit test "records a source that only restates without embedding anything" passes, with an embedder written in the test that fails if it is called.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `core` with `createTestDeps`.
 
 **Completion evidence.** The commit and the passing `pnpm check` output.
+
+**Recorded evidence.** Completed on 2026-11-15, in three commits: `feat(core): add the input types of the fact operations`, `feat(core): hash source content with the Web Crypto global` and `feat(core): add the recordFacts operation`. The code is in `packages/core/src/operations`: `operation-inputs.ts`, `hash-content.ts` and `record-facts.ts`, with the tests beside them.
+
+The hash uses `globalThis.crypto.subtle`. The Node.js documentation lists the `crypto` global as available without a flag since v19.0.0, and marks it "Stability: 1 - Experimental" on the v22 page ([globals](https://nodejs.org/docs/latest-v22.x/api/globals.html#crypto_1), read 2026-11-15). It was run on Node.js v22.23.4; the continuous integration matrix runs it on Node.js 22 and 26.
+
+Besides the nine named tests, the file tests an entity type outside the domain, a reversed valid period, a missing restated fact, and the pure change-set builder without a store. With the single-valued flag and the once-per-entity rule each removed by hand, four tests failed; both were restored.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints one informational note about `packages/storage/src/change-sequence-generator.ts`, which this work item did not touch; it is not an error:
+
+```text
+$ biome format .
+Checked 75 files in 26ms. No fixes applied.
+$ biome lint .
+Checked 75 files in 41ms. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  20 passed (20)
+      Tests  267 passed (267)
+```
 
 ### FL-009: invalidateFact operation: retraction and correction
 
