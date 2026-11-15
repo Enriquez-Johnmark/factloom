@@ -26,3 +26,6 @@ coverage/
 
 # Local Claude Code overrides
 .claude/settings.local.json
+
+# Written by scripts/roadmap/check.py and read by gen_index.py
+scripts/roadmap/items.json
