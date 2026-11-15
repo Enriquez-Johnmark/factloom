@@ -4,6 +4,6 @@ import { listWiredPackages } from './packages.ts';
 
 describe('@factloom/mcp-server', () => {
   it('resolves the workspace packages it is wired from by name', () => {
-    expect(listWiredPackages()).toEqual([corePackageName]);
+    expect(listWiredPackages()).toEqual([corePackageName, '@factloom/storage']);
   });
 });
