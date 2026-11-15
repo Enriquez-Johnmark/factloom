@@ -280,7 +280,7 @@ Each host session starts its own MCP server, so several processes can have the s
 
 The three PRAGMAs and their documented behaviour are in the [SQLite research](../research/technical/sqlite.md), section "WAL mode and other PRAGMAs". That research ran them with a `busy_timeout` of 5,000 ms, which is also the default it observed in `better-sqlite3`. It also lists `synchronous = NORMAL` and `trusted_schema = OFF`, which none of the rules in this document depend on.
 
-Not yet run: two processes writing to one file. The same research lists it as unverified, and `BEGIN IMMEDIATE` was not part of it. The storage contract suite has a case for it ([`TESTING.md`](TESTING.md)).
+Two processes writing to one file was run on 2026-11-15, in the adapter tests of work item [FL-068](../roadmap/epics/EPIC-03.md): while a second process held the write lock with an uncommitted fact, a commit in the first process waited, then ran its single-value check against what the second had committed and returned `conflict`. A process killed before its commit finished left no row behind. The research had listed this as unverified.
 
 ## Planned additions
 
