@@ -4,7 +4,7 @@ The SQLite adapter for the `MemoryStore` interface in `@factloom/core`, with its
 
 It imports `@factloom/core` only. It enforces the rules of the schema and makes no decisions about facts.
 
-**Status:** scaffold only. The export in `src/index.ts` is a placeholder.
+**Status:** the first migration and the migration runner exist. The adapter itself does not yet, and the export in `src/index.ts` is still a placeholder.
 
 - Design: [`docs/architecture/SCHEMA.md`](../../docs/architecture/SCHEMA.md)
 - Rules for this package: [`.claude/rules/data.md`](../../.claude/rules/data.md)
