@@ -1,7 +1,2 @@
-import { corePackageName } from '@factloom/core';
-
-/**
- * The packages this one is built on. A placeholder export, so that the scaffold can prove
- * that a workspace package is imported by name. The first real export replaces it.
- */
-export const storageBuiltOn: readonly string[] = [corePackageName];
+export type { SqliteMemoryStoreOptions } from './open-sqlite-memory-store.ts';
+export { openSqliteMemoryStore } from './open-sqlite-memory-store.ts';

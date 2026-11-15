@@ -1,0 +1,70 @@
+import { join } from 'node:path';
+import { err, type Failure, type MemoryStore, ok, type Result, toTimestamp } from '@factloom/core';
+import type { Database } from 'better-sqlite3';
+import { createCommit } from './create-commit.ts';
+import { openConnection } from './open-connection.ts';
+import { runMigrations } from './run-migrations.ts';
+
+const MIGRATIONS_DIRECTORY = join(import.meta.dirname, '..', 'migrations');
+
+export type SqliteMemoryStoreOptions = {
+  /** The database file, created if it does not exist. `:memory:` gives a private database. */
+  readonly path: string;
+  /** The name of the embedding model whose vectors this database holds. */
+  readonly embeddingModel: string;
+  /** The size of that model's vectors. */
+  readonly embeddingDimensions: number;
+};
+
+function notBuiltYet(method: string): Promise<Failure> {
+  return Promise.resolve(
+    err('storage_failed', `The SQLite store cannot ${method} yet: its read methods are not built.`),
+  );
+}
+
+/**
+ * Opens a SQLite file as a memory store: applies the connection settings, loads the vector
+ * extension and brings the schema up to date. Returns `storage_failed` when the file cannot
+ * be opened or its migration history does not match this version.
+ */
+export function openSqliteMemoryStore(options: SqliteMemoryStoreOptions): Result<MemoryStore> {
+  let db: Database;
+  try {
+    db = openConnection(options.path);
+  } catch (cause) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    return err('storage_failed', `The database ${options.path} could not be opened. ${reason}`, { cause });
+  }
+  try {
+    // The one time not taken from a caller's clock: it records when this file's schema was
+    // brought up to date, and is not part of memory.
+    const migrated = runMigrations({ db, directory: MIGRATIONS_DIRECTORY, now: toTimestamp(new Date()) });
+    if (!migrated.ok) {
+      db.close();
+      return migrated;
+    }
+    const commit = createCommit(db, {
+      model: options.embeddingModel,
+      dimensions: options.embeddingDimensions,
+    });
+    const store: MemoryStore = {
+      commit: (changeSet) => Promise.resolve(commit(changeSet)),
+      findEntities: () => notBuiltYet('find entities'),
+      getFact: () => notBuiltYet('read a fact'),
+      listFacts: () => notBuiltYet('list facts'),
+      searchFactsByVector: () => notBuiltYet('search by vector'),
+      searchFactsByKeyword: () => notBuiltYet('search by keyword'),
+      getSource: () => notBuiltYet('read a source'),
+      listAuditEntries: () => notBuiltYet('list audit entries'),
+      close: () => {
+        db.close();
+        return Promise.resolve();
+      },
+    };
+    return ok(store);
+  } catch (cause) {
+    db.close();
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    return err('storage_failed', `The database ${options.path} could not be prepared. ${reason}`, { cause });
+  }
+}

@@ -1,0 +1,248 @@
+import {
+  type AuditAction,
+  type AuditEntry,
+  type Change,
+  type ChangeSet,
+  ChangeSetSchema,
+  type CommitReceipt,
+  err,
+  type Fact,
+  normaliseEntityName,
+  ok,
+  type Result,
+} from '@factloom/core';
+import type { Database } from 'better-sqlite3';
+
+/** The embedding model a database holds vectors of. Written to every embedding row. */
+export type EmbeddingModel = { readonly model: string; readonly dimensions: number };
+
+const ACTION_OF_CHANGE: { readonly [Kind in Change['kind']]: AuditAction } = {
+  create_entity: 'entity.created',
+  record_source: 'source.recorded',
+  record_fact: 'fact.recorded',
+  attach_source: 'fact.source_attached',
+  invalidate_fact: 'fact.invalidated',
+};
+
+function targetOf(change: Change): {
+  readonly targetKind: AuditEntry['targetKind'];
+  readonly targetId: string;
+} {
+  switch (change.kind) {
+    case 'create_entity':
+      return { targetKind: 'entity', targetId: change.entity.id };
+    case 'record_source':
+      return { targetKind: 'source', targetId: change.source.id };
+    case 'record_fact':
+      return { targetKind: 'fact', targetId: change.fact.id };
+    case 'attach_source':
+    case 'invalidate_fact':
+      return { targetKind: 'fact', targetId: change.factId };
+    default: {
+      const unhandled: never = change;
+      return unhandled;
+    }
+  }
+}
+
+/** A row that a change needed and did not find. Thrown inside the transaction to roll it back. */
+class RefusedChange extends Error {}
+
+type ObjectRow = {
+  readonly subject_entity_id: string;
+  readonly predicate: string;
+  readonly object_entity_id: string | null;
+  readonly object_value: string | null;
+};
+
+/** The bytes of a vector's 32-bit floats, the form `vec_distance_cosine()` reads. */
+function toBlob(vector: Float32Array): Buffer {
+  return Buffer.from(vector.buffer, vector.byteOffset, vector.byteLength);
+}
+
+/**
+ * Builds the `commit` of a SQLite store. Every statement is prepared once, here, and reused
+ * by each commit on this connection.
+ */
+export function createCommit(
+  db: Database,
+  embeddingModel: EmbeddingModel,
+): (changeSet: ChangeSet) => Result<CommitReceipt> {
+  const insertEntity = db.prepare(
+    `INSERT INTO entity (id, namespace, type, name, name_key, created_at)
+     VALUES (@id, @namespace, @type, @name, @nameKey, @createdAt)`,
+  );
+  const insertSource = db.prepare(
+    `INSERT INTO source (id, namespace, kind, locator, version, content, content_hash, observed_at, created_at)
+     VALUES (@id, @namespace, @kind, @locator, @version, @content, @contentHash, @observedAt, @createdAt)`,
+  );
+  const insertFact = db.prepare(
+    `INSERT INTO fact (id, namespace, subject_entity_id, predicate, object_entity_id, object_value,
+                       statement, confidence, valid_from, valid_to, created_at)
+     VALUES (@id, @namespace, @subjectEntityId, @predicate, @objectEntityId, @objectValue,
+             @statement, @confidence, @validFrom, @validTo, @createdAt)`,
+  );
+  const insertFactSource = db.prepare('INSERT INTO fact_source (fact_id, source_id) VALUES (?, ?)');
+  const insertEmbedding = db.prepare(
+    'INSERT INTO fact_embedding (fact_id, model, dimensions, embedding) VALUES (?, ?, ?, ?)',
+  );
+  const copyEmbedding = db.prepare(
+    `INSERT INTO fact_embedding (fact_id, model, dimensions, embedding)
+     SELECT @factId, e.model, e.dimensions, e.embedding
+     FROM fact_embedding e JOIN fact f ON f.id = e.fact_id
+     WHERE f.id = @copyFromFactId AND f.namespace = @namespace`,
+  );
+  const invalidateFact = db.prepare(
+    `UPDATE fact SET invalidated_at = @invalidatedAt, superseded_by_fact_id = @supersededByFactId
+     WHERE id = @id AND namespace = @namespace AND invalidated_at IS NULL`,
+  );
+  const selectObject = db.prepare<[string, string], ObjectRow>(
+    `SELECT subject_entity_id, predicate, object_entity_id, object_value
+     FROM fact WHERE id = ? AND namespace = ?`,
+  );
+  const insertAuditEntry = db.prepare(
+    `INSERT INTO audit_log (namespace, operation_id, operation, action, target_kind, target_id,
+                            trigger, reason_code, source_id, detail, occurred_at)
+     VALUES (@namespace, @operationId, @operation, @action, @targetKind, @targetId,
+             @trigger, @reasonCode, @sourceId, @detail, @occurredAt)`,
+  );
+
+  /**
+   * The fact that a recorded fact is a revised copy of, if any: a fact stored before this
+   * commit that a change of the same change set invalidates with a supersession link to the
+   * recorded one, and that has the same subject, predicate and object. The same rule as the
+   * in-memory store in core.
+   */
+  function findRevisedFactId(recorded: Fact, changeSet: ChangeSet): string | null {
+    const recordedHere = new Set(
+      changeSet.changes.flatMap((change) => (change.kind === 'record_fact' ? [change.fact.id] : [])),
+    );
+    for (const change of changeSet.changes) {
+      if (change.kind !== 'invalidate_fact' || change.supersededByFactId !== recorded.id) continue;
+      if (recordedHere.has(change.factId)) continue;
+      const stored = selectObject.get(change.factId, changeSet.namespace);
+      if (
+        stored !== undefined &&
+        stored.subject_entity_id === recorded.subjectEntityId &&
+        stored.predicate === recorded.predicate &&
+        stored.object_entity_id === (recorded.object.kind === 'entity' ? recorded.object.entityId : null) &&
+        stored.object_value === (recorded.object.kind === 'value' ? recorded.object.value : null)
+      ) {
+        return change.factId;
+      }
+    }
+    return null;
+  }
+
+  /** Writes the rows of one change and returns the detail of its audit entry. */
+  function applyChange(change: Change, changeSet: ChangeSet): AuditEntry['detail'] {
+    switch (change.kind) {
+      case 'create_entity':
+        insertEntity.run({ ...change.entity, nameKey: normaliseEntityName(change.entity.name) });
+        return null;
+      case 'record_source':
+        insertSource.run(change.source);
+        return null;
+      case 'record_fact': {
+        const { fact } = change;
+        // Read before the fact is written, while the fact it revises is still as it was.
+        const revisesFactId = findRevisedFactId(fact, changeSet);
+        insertFact.run({
+          id: fact.id,
+          namespace: fact.namespace,
+          subjectEntityId: fact.subjectEntityId,
+          predicate: fact.predicate,
+          objectEntityId: fact.object.kind === 'entity' ? fact.object.entityId : null,
+          objectValue: fact.object.kind === 'value' ? fact.object.value : null,
+          statement: fact.statement,
+          confidence: fact.confidence,
+          validFrom: fact.validFrom,
+          validTo: fact.validTo,
+          createdAt: fact.createdAt,
+        });
+        for (const sourceId of change.sourceIds) insertFactSource.run(fact.id, sourceId);
+        if (change.embedding instanceof Float32Array) {
+          insertEmbedding.run(
+            fact.id,
+            embeddingModel.model,
+            embeddingModel.dimensions,
+            toBlob(change.embedding),
+          );
+        } else {
+          const { copyFromFactId } = change.embedding;
+          const copied = copyEmbedding.run({
+            factId: fact.id,
+            copyFromFactId,
+            namespace: changeSet.namespace,
+          });
+          if (copied.changes !== 1) {
+            throw new RefusedChange(
+              `The fact ${copyFromFactId}, whose vector was to be copied, does not exist.`,
+            );
+          }
+        }
+        return revisesFactId === null ? null : { revisesFactId };
+      }
+      case 'attach_source':
+        insertFactSource.run(change.factId, change.sourceId);
+        return { sourceId: change.sourceId };
+      case 'invalidate_fact': {
+        const invalidated = invalidateFact.run({
+          id: change.factId,
+          namespace: changeSet.namespace,
+          invalidatedAt: changeSet.occurredAt,
+          supersededByFactId: change.supersededByFactId,
+        });
+        if (invalidated.changes !== 1) {
+          throw new RefusedChange(`The fact ${change.factId} does not exist or is no longer live.`);
+        }
+        return { supersededByFactId: change.supersededByFactId };
+      }
+      default: {
+        const unhandled: never = change;
+        return unhandled;
+      }
+    }
+  }
+
+  // BEGIN IMMEDIATE takes the write lock before the first read, so that no other process can
+  // commit between this commit's reads and its writes. better-sqlite3 starts one with the
+  // `immediate` form of a transaction function (its lib/methods/transaction.js).
+  const applyChangeSet = db.transaction((changeSet: ChangeSet): void => {
+    const details = changeSet.changes.map((change) => applyChange(change, changeSet));
+    // The audit entries are written after the rows, in the order of the changes: an entry
+    // points to the explaining source, which a later change of the same change set may record.
+    changeSet.changes.forEach((change, index) => {
+      const detail = details[index] ?? null;
+      insertAuditEntry.run({
+        namespace: changeSet.namespace,
+        operationId: changeSet.operationId,
+        operation: changeSet.operation,
+        action: ACTION_OF_CHANGE[change.kind],
+        ...targetOf(change),
+        trigger: changeSet.trigger,
+        reasonCode: changeSet.reasonCode,
+        sourceId: changeSet.explainedBySourceId,
+        detail: detail === null ? null : JSON.stringify(detail),
+        occurredAt: changeSet.occurredAt,
+      });
+    });
+  });
+
+  return (given) => {
+    const parsed = ChangeSetSchema.safeParse(given);
+    if (!parsed.success) {
+      const reasons = parsed.error.issues.map((issue) => issue.message).join(' ');
+      return err('invalid_input', `The change set is not valid. ${reasons}`);
+    }
+    try {
+      applyChangeSet.immediate(parsed.data);
+    } catch (cause) {
+      const reason = cause instanceof Error ? cause.message : String(cause);
+      return err('storage_failed', `The commit was rolled back and nothing was written. ${reason}`, {
+        cause,
+      });
+    }
+    return ok({ operationId: parsed.data.operationId, auditEntryCount: parsed.data.changes.length });
+  };
+}

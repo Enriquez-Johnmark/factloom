@@ -4,7 +4,7 @@ The SQLite adapter for the `MemoryStore` interface in `@factloom/core`, with its
 
 It imports `@factloom/core` only. It enforces the rules of the schema and makes no decisions about facts.
 
-**Status:** the first migration and the migration runner exist. The adapter itself does not yet, and the export in `src/index.ts` is still a placeholder.
+**Status:** `openSqliteMemoryStore` opens a file, applies the migrations and writes a change set with `commit`. Its read methods do not exist yet, so the storage contract suite does not run against it.
 
 - Design: [`docs/architecture/SCHEMA.md`](../../docs/architecture/SCHEMA.md)
 - Rules for this package: [`.claude/rules/data.md`](../../.claude/rules/data.md)
