@@ -61,7 +61,11 @@ The conventions are in `.claude/rules/` and are the only copy. Each loads when i
 
 ### Issue tracker
 
-Work is tracked in Markdown under `docs/roadmap/`, not in GitHub Issues. `docs/roadmap/ROADMAP.md` is the index. See `docs/agents/issue-tracker.md`.
+Work is tracked in Markdown under `docs/roadmap/`, not in GitHub Issues. `docs/roadmap/ROADMAP.md` is the index. See `docs/agents/issue-tracker.md`. That file also gives the order of steps for completing a work item, and `scripts/roadmap/` holds the two scripts that keep the index consistent.
+
+### Commit signing
+
+Commits are signed so that GitHub shows them as verified. The setup is lost with each new session. See `docs/agents/commit-signing.md` before the first commit.
 
 ### Domain docs
 
