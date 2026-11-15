@@ -81,6 +81,9 @@ describeMemoryStoreContract(async () => {
 
 ## Keep tests honest
 
+- When a bug is found, first write a test that fails because of it, then fix it. A storage bug goes into the contract suite.
+- A test that has never been seen to fail proves little. For a rule that matters, break the code once by hand, see the test fail, and undo it.
+
 - One behaviour per test. Arrange, act, assert, in that order.
 - Never skip, comment out or weaken a failing test to get a green run. Fix the code or fix the test's expectation, and say which.
 - Test files sit beside the code they test: `recall.ts` and `recall.test.ts`.
