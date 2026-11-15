@@ -272,7 +272,7 @@ describe('recordFacts', () => {
 });
 
 describe('buildRecordFactsChangeSet', () => {
-  it('orders the changes: the source, each new entity once, the facts, the restated facts', () => {
+  it('orders the changes: the source, the new entities, the facts, the restated facts', () => {
     const now = toTimestamp(new Date('2026-01-10T00:00:00.000Z'));
     const entity = { ...shopApi, namespace: NAMESPACE, createdAt: now };
     const source = { ...note(null), id: 'source-1', namespace: NAMESPACE, contentHash: null, createdAt: now };
@@ -290,8 +290,10 @@ describe('buildRecordFactsChangeSet', () => {
       operationId: 'operation-1',
       occurredAt: now,
       source,
-      newEntities: [entity, entity],
-      facts: [{ fact, vector: new Float32Array(16), singleValued: true }],
+      prepared: {
+        newEntities: [entity],
+        facts: [{ fact, vector: new Float32Array(16), singleValued: true }],
+      },
       restatedFactIds: ['fact-0'],
     });
 

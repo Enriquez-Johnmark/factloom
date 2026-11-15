@@ -1,11 +1,11 @@
-import type { Change, ChangeSet } from '../change-set.ts';
-import type { Domain } from '../domain.ts';
-import { type Entity, type Fact, type FactId, FactSchema, type Source, type SourceId } from '../fact.ts';
+import type { ChangeSet } from '../change-set.ts';
+import type { FactId, Source, SourceId } from '../fact.ts';
 import type { OperationDeps } from '../operation-deps.ts';
 import { err, ok, type Result } from '../result.ts';
 import type { Timestamp } from '../timestamp.ts';
-import { hashContent } from './hash-content.ts';
+import { buildSource } from './build-source.ts';
 import type { ChangeContext, FactDraft, NewSource } from './operation-inputs.ts';
+import { buildRecordChanges, type PreparedDrafts, prepareFactDrafts } from './prepare-fact-drafts.ts';
 
 export type RecordFactsInput = ChangeContext & {
   readonly source: NewSource;
@@ -15,8 +15,8 @@ export type RecordFactsInput = ChangeContext & {
 };
 
 /**
- * Builds the one change set of `recordFacts`: the source, each new entity once, each fact
- * with the source and its vector, then the source attached to each restated fact. Pure: every
+ * Builds the one change set of `recordFacts`: the source, each new entity, each fact with the
+ * source and its vector, then the source attached to each restated fact. Pure: every
  * identifier, time and vector is given.
  */
 export function buildRecordFactsChangeSet(parts: {
@@ -24,59 +24,24 @@ export function buildRecordFactsChangeSet(parts: {
   readonly operationId: string;
   readonly occurredAt: Timestamp;
   readonly source: Source;
-  readonly newEntities: readonly Entity[];
-  readonly facts: readonly {
-    readonly fact: Fact;
-    readonly vector: Float32Array;
-    readonly singleValued: boolean;
-  }[];
+  readonly prepared: PreparedDrafts;
   readonly restatedFactIds: readonly FactId[];
 }): ChangeSet {
-  const seenEntityIds = new Set<string>();
-  const entityChanges: Change[] = [];
-  for (const entity of parts.newEntities) {
-    if (seenEntityIds.has(entity.id)) continue;
-    seenEntityIds.add(entity.id);
-    entityChanges.push({ kind: 'create_entity', entity });
-  }
+  const sourceId = parts.source.id;
   return {
     namespace: parts.context.namespace,
     operationId: parts.operationId,
     operation: 'remember',
     trigger: parts.context.trigger,
     reasonCode: parts.context.reasonCode,
-    explainedBySourceId: parts.source.id,
+    explainedBySourceId: sourceId,
     occurredAt: parts.occurredAt,
     changes: [
       { kind: 'record_source', source: parts.source },
-      ...entityChanges,
-      ...parts.facts.map(
-        ({ fact, vector, singleValued }): Change => ({
-          kind: 'record_fact',
-          fact,
-          sourceIds: [parts.source.id],
-          embedding: vector,
-          singleValued,
-        }),
-      ),
-      ...parts.restatedFactIds.map(
-        (factId): Change => ({ kind: 'attach_source', factId, sourceId: parts.source.id }),
-      ),
+      ...buildRecordChanges(parts.prepared, sourceId),
+      ...parts.restatedFactIds.map((factId) => ({ kind: 'attach_source', factId, sourceId }) as const),
     ],
   };
-}
-
-/** Names what the domain does not have among the predicates and entity types of the drafts. */
-function findNamesOutsideDomain(drafts: readonly FactDraft[], domain: Domain): string[] {
-  const predicates = new Set(domain.predicates.map((predicate) => predicate.name));
-  const problems: string[] = [];
-  for (const draft of drafts) {
-    if (!predicates.has(draft.fact.predicate)) problems.push(`the predicate "${draft.fact.predicate}"`);
-    for (const entity of draft.newEntities) {
-      if (!domain.entityTypes.includes(entity.type)) problems.push(`the entity type "${entity.type}"`);
-    }
-  }
-  return [...new Set(problems)];
 }
 
 /**
@@ -94,78 +59,22 @@ export async function recordFacts(
       'There is nothing to record: give at least one fact, or one fact that the source restates.',
     );
   }
-  const outside = findNamesOutsideDomain(input.drafts, deps.domain);
-  if (outside.length > 0) {
-    const predicates = deps.domain.predicates.map((predicate) => predicate.name).join(', ');
-    return err(
-      'invalid_input',
-      `The domain "${deps.domain.name}" does not have ${outside.join(' or ')}. Its predicates are ${predicates}; its entity types are ${deps.domain.entityTypes.join(', ')}.`,
-    );
-  }
-
   const now = deps.now();
-  const namespace = input.namespace;
-  const facts: Fact[] = [];
-  for (const draft of input.drafts) {
-    const parsed = FactSchema.safeParse({
-      ...draft.fact,
-      id: deps.newId(),
-      namespace,
-      createdAt: now,
-      invalidatedAt: null,
-      supersededByFactId: null,
-    });
-    if (!parsed.success) {
-      const reasons = parsed.error.issues.map((issue) => issue.message).join(' ');
-      return err('invalid_input', `The fact "${draft.fact.statement}" is not valid. ${reasons}`);
-    }
-    facts.push(parsed.data);
-  }
+  const { namespace } = input;
+  const prepared = await prepareFactDrafts(deps, { namespace, drafts: input.drafts, createdAt: now });
+  if (!prepared.ok) return prepared;
+  const source = await buildSource(deps, { namespace, source: input.source, createdAt: now });
 
-  let vectors: readonly Float32Array[] = [];
-  if (facts.length > 0) {
-    const embedded = await deps.embedder.embed(
-      facts.map((fact) => fact.statement),
-      'statement',
-    );
-    if (!embedded.ok) return embedded;
-    if (embedded.value.length !== facts.length) {
-      return err(
-        'embedding_failed',
-        `The embedder returned ${embedded.value.length} vectors for ${facts.length} statements.`,
-      );
-    }
-    vectors = embedded.value;
-  }
-
-  const cardinalityOf = new Map(
-    deps.domain.predicates.map((predicate) => [predicate.name, predicate.cardinality]),
-  );
-  const source: Source = {
-    ...input.source,
-    id: deps.newId(),
-    namespace,
-    contentHash: input.source.content === null ? null : await hashContent(input.source.content),
-    createdAt: now,
-  };
-  const changeSet = buildRecordFactsChangeSet({
-    context: input,
-    operationId: deps.newId(),
-    occurredAt: now,
-    source,
-    newEntities: input.drafts.flatMap((draft) =>
-      draft.newEntities.map((entity): Entity => ({ ...entity, namespace, createdAt: now })),
-    ),
-    facts: facts.flatMap((fact, index) => {
-      const vector = vectors[index];
-      return vector === undefined
-        ? []
-        : [{ fact, vector, singleValued: cardinalityOf.get(fact.predicate) === 'single' }];
+  const committed = await deps.store.commit(
+    buildRecordFactsChangeSet({
+      context: input,
+      operationId: deps.newId(),
+      occurredAt: now,
+      source,
+      prepared: prepared.value,
+      restatedFactIds: input.restatedFactIds,
     }),
-    restatedFactIds: input.restatedFactIds,
-  });
-
-  const committed = await deps.store.commit(changeSet);
+  );
   if (!committed.ok) return committed;
-  return ok({ sourceId: source.id, factIds: facts.map((fact) => fact.id) });
+  return ok({ sourceId: source.id, factIds: prepared.value.facts.map(({ fact }) => fact.id) });
 }
