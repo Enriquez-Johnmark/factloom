@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-14:** the first feature code exists. 10 of 74 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-012, FL-018, FL-056, FL-067. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-15:** the first feature code exists. 10 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-012, FL-018, FL-056, FL-067. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -11,7 +11,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | Phase | Capability | Shown to be complete when | Work items |
 |---|---|---|---|
 | 0. Foundations and design proof | The workspace checks itself, the core model exists as types, and the "fact changed over time" scenarios exist as reviewed data. | `pnpm check` passes in continuous integration on Linux and macOS arm64 (FL-002). A forbidden import fails the check (FL-001). The storage contract suite passes against the in-memory store (FL-012, FL-067). The eleven timeline scenarios validate against their schema (FL-027). | 11 |
-| 1. Product 1 for code | Claude Code and Codex save and recall project memory through the MCP server, from one SQLite file, with as-of and known-at questions answered correctly. | The smoke test records a fact, restarts the server and recalls it (FL-037). The storage contract suite passes against SQLite (FL-014 to FL-017, FL-068). Every extraction case passes in replay: each required fact is extracted and no forbidden one is (FL-069). The owner has registered the server with both hosts on an Apple Silicon Mac (FL-038). The performance targets in REQ-35 are met within their stated tolerance (FL-066). | 35 |
+| 1. Product 1 for code | Claude Code and Codex save and recall project memory through the MCP server, from one SQLite file, with as-of and known-at questions answered correctly. | The smoke test records a fact, restarts the server and recalls it (FL-037). The storage contract suite passes against SQLite (FL-014 to FL-017, FL-068). Every extraction case passes in replay: each required fact is extracted and no forbidden one is (FL-069). The owner has registered the server with both hosts on an Apple Silicon Mac (FL-038). The performance targets in REQ-35 are met within their stated tolerance (FL-066). | 38 |
 | 2. Self-correction | New information that conflicts with a stored fact is resolved, or proposed for approval, at write time. Feedback is recorded and acted on. Content can be purged. | On the timeline scenarios in replay, the staleness rate and the false invalidation rate are 0 (FL-042). After a purge, the content cannot be read through any read method or query of the database (FL-061). Under the human-approval policy a change waits as a proposal until a person approves it with a command (FL-070). | 14 |
 | 3. Self-healing | A maintenance run verifies code facts against the repository without an LLM, merges duplicate entities, repairs anchors and archives unused facts. | On fixture repositories, with an LLM client that fails if called, a changed manifest version supersedes the stored fact (FL-062), and a deleted file or a missing function name flags it (FL-050, FL-071). A merge can be undone (FL-063). An archived fact is left out of recall and can be restored (FL-065, FL-073). | 14 |
 | 4. Generic core, Postgres and HTTP API | See [EPIC-10](epics/EPIC-10.md) | Defined when the phase is near | Not yet written |
@@ -28,7 +28,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [EPIC-04](epics/EPIC-04.md) | Remember | 0-1 | 9 | Pending |
 | [EPIC-05](epics/EPIC-05.md) | Recall | 1 | 6 | Pending |
 | [EPIC-06](epics/EPIC-06.md) | MCP server | 1 | 6 | Pending |
-| [EPIC-07](epics/EPIC-07.md) | Evaluation | 0-2 | 6 | Pending |
+| [EPIC-07](epics/EPIC-07.md) | Evaluation | 0-2 | 9 | Pending |
 | [EPIC-08](epics/EPIC-08.md) | Self-correction | 2 | 13 | Pending |
 | [EPIC-09](epics/EPIC-09.md) | Self-healing | 3 | 14 | Pending |
 | [EPIC-10](epics/EPIC-10.md) | Generic core, Postgres and HTTP API | 4 | Written when the phase is near | Pending |
@@ -92,6 +92,9 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-068](epics/EPIC-03.md#fl-068-sqlite-single-value-rule-error-mapping-and-two-writers-on-one-file) | SQLite single-value rule, error mapping and two writers on one file | EPIC-03 | FL-014, FL-067 | Pending |
 | [FL-069](epics/EPIC-04.md#fl-069-extraction-replay-run-and-recordings) | Extraction replay run and recordings | EPIC-04 | FL-023, FL-029, FL-028, FL-019 | Pending |
 | [FL-074](epics/EPIC-07.md#fl-074-token-and-tool-call-comparison-with-and-without-factloom) | Token and tool-call comparison with and without Factloom | EPIC-07 | FL-038 | Pending |
+| [FL-075](epics/EPIC-07.md#fl-075-property-based-tests-of-the-time-rules) | Property-based tests of the time rules | EPIC-07 | FL-056, FL-067 | Pending |
+| [FL-076](epics/EPIC-07.md#fl-076-differential-tests-between-the-in-memory-store-and-sqlite) | Differential tests between the in-memory store and SQLite | EPIC-07 | FL-075, FL-068, FL-016, FL-017 | Pending |
+| [FL-077](epics/EPIC-07.md#fl-077-mutation-testing-trial-on-core) | Mutation-testing trial on core | EPIC-07 | FL-008, FL-009, FL-010, FL-011 | Pending |
 
 ### Phase 2: Self-correction
 
@@ -198,6 +201,9 @@ flowchart LR
     FL029["FL-029"]
     FL066["FL-066"]
     FL074["FL-074"]
+    FL075["FL-075"]
+    FL076["FL-076"]
+    FL077["FL-077"]
   end
   FL001 --> FL002
   FL002 --> FL003
@@ -305,6 +311,16 @@ flowchart LR
   FL028 --> FL069
   FL019 --> FL069
   FL038 --> FL074
+  FL056 --> FL075
+  FL067 --> FL075
+  FL075 --> FL076
+  FL068 --> FL076
+  FL016 --> FL076
+  FL017 --> FL076
+  FL008 --> FL077
+  FL009 --> FL077
+  FL010 --> FL077
+  FL011 --> FL077
 ```
 
 ### Phases 2 and 3
@@ -453,10 +469,10 @@ Work items grouped by how many steps of prerequisites lie behind them. Every ite
 | 5 | FL-007, FL-018, FL-019, FL-026 |
 | 6 | FL-012, FL-027, FL-056 |
 | 7 | FL-008, FL-011, FL-014, FL-020, FL-028, FL-029, FL-031, FL-032, FL-067 |
-| 8 | FL-009, FL-010, FL-021, FL-041, FL-068 |
-| 9 | FL-015, FL-023, FL-025, FL-044 |
+| 8 | FL-009, FL-010, FL-021, FL-041, FL-068, FL-075 |
+| 9 | FL-015, FL-023, FL-025, FL-044, FL-077 |
 | 10 | FL-016, FL-017, FL-024, FL-046, FL-047, FL-069 |
-| 11 | FL-033, FL-034, FL-039, FL-045, FL-052, FL-061 |
+| 11 | FL-033, FL-034, FL-039, FL-045, FL-052, FL-061, FL-076 |
 | 12 | FL-049, FL-057, FL-058, FL-063, FL-072 |
 | 13 | FL-035, FL-055 |
 | 14 | FL-036, FL-042, FL-065, FL-066 |
@@ -482,11 +498,11 @@ The implementation reference and the validation evidence are filled in when a wo
 
 ## Consistency report
 
-Checked by script on 2026-11-14, over every epic file and the product documents.
+Checked by script on 2026-11-15, over every epic file and the product documents.
 
 | Check | Result |
 |---|---|
-| Work-item identifiers are unique and run from FL-001 to FL-074 with none missing | Pass |
+| Work-item identifiers are unique and run from FL-001 to FL-077 with none missing | Pass |
 | Every dependency names an existing work item | Pass |
 | The dependency graph has no cycle | Pass |
 | No work item depends on one in a later phase | Pass |
