@@ -7,6 +7,7 @@ import {
   type CommitReceipt,
   err,
   type Fact,
+  type Failure,
   normaliseEntityName,
   ok,
   type Result,
@@ -45,8 +46,24 @@ function targetOf(change: Change): {
   }
 }
 
-/** A row that a change needed and did not find. Thrown inside the transaction to roll it back. */
-class RefusedChange extends Error {}
+/** A refusal of one change. Thrown inside the transaction to roll it back, then returned. */
+class Refusal extends Error {
+  readonly failure: Failure;
+  constructor(failure: Failure) {
+    super(failure.error.message);
+    this.failure = failure;
+  }
+}
+
+function refuse(...args: Parameters<typeof err>): never {
+  throw new Refusal(err(...args));
+}
+
+type FactStateRow = {
+  readonly created_at: string;
+  readonly invalidated_at: string | null;
+  readonly superseded_by_fact_id: string | null;
+};
 
 type ObjectRow = {
   readonly subject_entity_id: string;
@@ -96,6 +113,46 @@ export function createCommit(
     `UPDATE fact SET invalidated_at = @invalidatedAt, superseded_by_fact_id = @supersededByFactId
      WHERE id = @id AND namespace = @namespace AND invalidated_at IS NULL`,
   );
+  // Lookups that decide a refusal. Each filters on the namespace, except the three that ask
+  // whether an identifier is used at all: identifiers are unique across namespaces.
+  const isEntityIdUsed = db.prepare<[string], unknown>('SELECT 1 FROM entity WHERE id = ?');
+  const isSourceIdUsed = db.prepare<[string], unknown>('SELECT 1 FROM source WHERE id = ?');
+  const isFactIdUsed = db.prepare<[string], unknown>('SELECT 1 FROM fact WHERE id = ?');
+  const hasEntityNamed = db.prepare<[string, string, string], unknown>(
+    'SELECT 1 FROM entity WHERE namespace = ? AND type = ? AND name_key = ?',
+  );
+  const hasEntity = db.prepare<[string, string], unknown>(
+    'SELECT 1 FROM entity WHERE id = ? AND namespace = ?',
+  );
+  const hasSource = db.prepare<[string, string], unknown>(
+    'SELECT 1 FROM source WHERE id = ? AND namespace = ?',
+  );
+  const hasFactSource = db.prepare<[string, string], unknown>(
+    'SELECT 1 FROM fact_source WHERE fact_id = ? AND source_id = ?',
+  );
+  const selectFactState = db.prepare<[string, string], FactStateRow>(
+    'SELECT created_at, invalidated_at, superseded_by_fact_id FROM fact WHERE id = ? AND namespace = ?',
+  );
+  // The single-value rule: other live facts with the same subject and predicate whose valid
+  // period overlaps. A missing bound is open, and periods that only touch do not overlap.
+  const selectOverlapping = db.prepare<
+    {
+      id: string;
+      namespace: string;
+      subject: string;
+      predicate: string;
+      validFrom: string | null;
+      validTo: string | null;
+    },
+    { readonly id: string }
+  >(
+    `SELECT o.id FROM fact o
+     WHERE o.namespace = @namespace AND o.subject_entity_id = @subject AND o.predicate = @predicate
+       AND o.invalidated_at IS NULL AND o.id <> @id
+       AND (o.valid_from IS NULL OR @validTo IS NULL OR o.valid_from < @validTo)
+       AND (@validFrom IS NULL OR o.valid_to IS NULL OR @validFrom < o.valid_to)
+     ORDER BY o.id`,
+  );
   const selectObject = db.prepare<[string, string], ObjectRow>(
     `SELECT subject_entity_id, predicate, object_entity_id, object_value
      FROM fact WHERE id = ? AND namespace = ?`,
@@ -134,17 +191,67 @@ export function createCommit(
     return null;
   }
 
+  /** Reads a fact that a change is about to touch, refusing one that is missing or not live. */
+  function requireLiveFact(factId: string, namespace: string): FactStateRow {
+    const state = selectFactState.get(factId, namespace);
+    if (state === undefined) return refuse('not_found', `The fact ${factId} does not exist.`);
+    if (state.invalidated_at !== null) {
+      const superseded = state.superseded_by_fact_id;
+      return refuse(
+        'already_invalidated',
+        superseded === null
+          ? `The fact ${factId} was invalidated and nothing superseded it.`
+          : `The fact ${factId} was invalidated and superseded by ${superseded}. Use that fact.`,
+        { relatedFactIds: superseded === null ? [] : [superseded] },
+      );
+    }
+    return state;
+  }
+
   /** Writes the rows of one change and returns the detail of its audit entry. */
   function applyChange(change: Change, changeSet: ChangeSet): AuditEntry['detail'] {
+    const { namespace } = changeSet;
     switch (change.kind) {
-      case 'create_entity':
-        insertEntity.run({ ...change.entity, nameKey: normaliseEntityName(change.entity.name) });
+      case 'create_entity': {
+        const { entity } = change;
+        const nameKey = normaliseEntityName(entity.name);
+        if (isEntityIdUsed.get(entity.id) !== undefined) {
+          refuse('already_exists', `The identifier ${entity.id} is already used by an entity.`);
+        }
+        if (hasEntityNamed.get(namespace, entity.type, nameKey) !== undefined) {
+          refuse(
+            'already_exists',
+            `An entity of type "${entity.type}" named "${entity.name}" already exists. Read it with findEntities and use it.`,
+          );
+        }
+        insertEntity.run({ ...entity, nameKey });
         return null;
+      }
       case 'record_source':
+        if (isSourceIdUsed.get(change.source.id) !== undefined) {
+          refuse('already_exists', `The identifier ${change.source.id} is already used by a source.`);
+        }
         insertSource.run(change.source);
         return null;
       case 'record_fact': {
         const { fact } = change;
+        if (isFactIdUsed.get(fact.id) !== undefined) {
+          refuse('already_exists', `The identifier ${fact.id} is already used by a fact.`);
+        }
+        if (hasEntity.get(fact.subjectEntityId, namespace) === undefined) {
+          refuse(
+            'not_found',
+            `The subject entity ${fact.subjectEntityId} of fact ${fact.id} does not exist.`,
+          );
+        }
+        if (fact.object.kind === 'entity' && hasEntity.get(fact.object.entityId, namespace) === undefined) {
+          refuse('not_found', `The object entity ${fact.object.entityId} of fact ${fact.id} does not exist.`);
+        }
+        for (const sourceId of change.sourceIds) {
+          if (hasSource.get(sourceId, namespace) === undefined) {
+            refuse('not_found', `The source ${sourceId} of fact ${fact.id} does not exist.`);
+          }
+        }
         // Read before the fact is written, while the fact it revises is still as it was.
         const revisesFactId = findRevisedFactId(fact, changeSet);
         insertFact.run({
@@ -170,32 +277,46 @@ export function createCommit(
           );
         } else {
           const { copyFromFactId } = change.embedding;
-          const copied = copyEmbedding.run({
-            factId: fact.id,
-            copyFromFactId,
-            namespace: changeSet.namespace,
-          });
+          const copied = copyEmbedding.run({ factId: fact.id, copyFromFactId, namespace });
           if (copied.changes !== 1) {
-            throw new RefusedChange(
-              `The fact ${copyFromFactId}, whose vector was to be copied, does not exist.`,
-            );
+            refuse('not_found', `The fact ${copyFromFactId}, whose vector was to be copied, does not exist.`);
           }
         }
         return revisesFactId === null ? null : { revisesFactId };
       }
       case 'attach_source':
+        requireLiveFact(change.factId, namespace);
+        if (hasSource.get(change.sourceId, namespace) === undefined) {
+          refuse('not_found', `The source ${change.sourceId} does not exist.`);
+        }
+        if (hasFactSource.get(change.factId, change.sourceId) !== undefined) {
+          refuse(
+            'already_exists',
+            `The source ${change.sourceId} is already attached to fact ${change.factId}.`,
+          );
+        }
         insertFactSource.run(change.factId, change.sourceId);
         return { sourceId: change.sourceId };
       case 'invalidate_fact': {
-        const invalidated = invalidateFact.run({
+        const state = requireLiveFact(change.factId, namespace);
+        if (change.supersededByFactId === change.factId) {
+          refuse('invalid_input', `The fact ${change.factId} cannot supersede itself.`);
+        }
+        if (
+          change.supersededByFactId !== null &&
+          selectFactState.get(change.supersededByFactId, namespace) === undefined
+        ) {
+          refuse('not_found', `The superseding fact ${change.supersededByFactId} does not exist.`);
+        }
+        if (changeSet.occurredAt < state.created_at) {
+          refuse('invalid_input', `The fact ${change.factId} cannot be invalidated before it was recorded.`);
+        }
+        invalidateFact.run({
           id: change.factId,
-          namespace: changeSet.namespace,
+          namespace,
           invalidatedAt: changeSet.occurredAt,
           supersededByFactId: change.supersededByFactId,
         });
-        if (invalidated.changes !== 1) {
-          throw new RefusedChange(`The fact ${change.factId} does not exist or is no longer live.`);
-        }
         return { supersededByFactId: change.supersededByFactId };
       }
       default: {
@@ -205,11 +326,41 @@ export function createCommit(
     }
   }
 
+  /**
+   * The single-value rule, checked on the result of the change set, inside its transaction:
+   * no fact it recorded for a single-valued predicate, and left live, may overlap another
+   * live fact with the same subject and predicate.
+   */
+  function refuseSingleValueConflict(changeSet: ChangeSet): void {
+    for (const change of changeSet.changes) {
+      if (change.kind !== 'record_fact' || !change.singleValued) continue;
+      const { fact } = change;
+      if (selectFactState.get(fact.id, changeSet.namespace)?.invalidated_at !== null) continue;
+      const overlapping = selectOverlapping.all({
+        id: fact.id,
+        namespace: changeSet.namespace,
+        subject: fact.subjectEntityId,
+        predicate: fact.predicate,
+        validFrom: fact.validFrom,
+        validTo: fact.validTo,
+      });
+      if (overlapping.length > 0) {
+        const ids = overlapping.map((row) => row.id);
+        refuse(
+          'conflict',
+          `The fact ${fact.id} overlaps in valid time with ${ids.join(', ')}, for the single-valued predicate "${fact.predicate}". End or invalidate the stored fact first.`,
+          { relatedFactIds: ids },
+        );
+      }
+    }
+  }
+
   // BEGIN IMMEDIATE takes the write lock before the first read, so that no other process can
   // commit between this commit's reads and its writes. better-sqlite3 starts one with the
   // `immediate` form of a transaction function (its lib/methods/transaction.js).
   const applyChangeSet = db.transaction((changeSet: ChangeSet): void => {
     const details = changeSet.changes.map((change) => applyChange(change, changeSet));
+    refuseSingleValueConflict(changeSet);
     // The audit entries are written after the rows, in the order of the changes: an entry
     // points to the explaining source, which a later change of the same change set may record.
     changeSet.changes.forEach((change, index) => {
@@ -238,6 +389,7 @@ export function createCommit(
     try {
       applyChangeSet.immediate(parsed.data);
     } catch (cause) {
+      if (cause instanceof Refusal) return cause.failure;
       const reason = cause instanceof Error ? cause.message : String(cause);
       return err('storage_failed', `The commit was rolled back and nothing was written. ${reason}`, {
         cause,

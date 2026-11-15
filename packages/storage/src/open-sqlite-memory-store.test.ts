@@ -1,10 +1,7 @@
 // Tests of opening a SQLite store and of the write path of commit. The store has no read
 // methods yet, so these tests read the rows with SQL through a second connection.
-import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { MemoryStore } from '@factloom/core';
-import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   at,
@@ -18,46 +15,16 @@ import {
 } from './memory-store-contract.ts';
 import { openConnection } from './open-connection.ts';
 import { openSqliteMemoryStore } from './open-sqlite-memory-store.ts';
+import { closeLater, closeTestStores, countRows, FIXTURE_MODEL, openOnFile } from './sqlite-test-store.ts';
 
-const TABLES = ['entity', 'source', 'fact', 'fact_source', 'fact_embedding', 'audit_log'] as const;
-const closers: (() => void)[] = [];
-
-/** Opens a store on a new temporary file, with a second connection for reading its rows. */
-function openOnFile(): { store: MemoryStore; rows: Database.Database; path: string } {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-store-'));
-  const path = join(directory, 'factloom.db');
-  const opened = openSqliteMemoryStore({ path, embeddingModel: 'fixture-model', embeddingDimensions: 4 });
-  if (!opened.ok) throw new Error(opened.error.message);
-  const store = opened.value;
-  const rows = new Database(path, { readonly: true });
-  closers.push(() => {
-    rows.close();
-    void store.close();
-    rmSync(directory, { recursive: true });
-  });
-  return { store, rows, path };
-}
-
-function countRows(rows: Database.Database): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const table of TABLES) {
-    // The table name is one of the fixed names above, never a value from outside.
-    const row = rows.prepare<[], { count: number }>(`SELECT count(*) AS count FROM ${table}`).get();
-    counts[table] = row?.count ?? -1;
-  }
-  return counts;
-}
-
-afterEach(() => {
-  for (const close of closers.splice(0)) close();
-});
+afterEach(closeTestStores);
 
 describe('openConnection', () => {
   it('a connection has foreign keys on, write-ahead logging and a busy timeout', () => {
     const { path } = openOnFile();
 
     const db = openConnection(path);
-    closers.unshift(() => db.close());
+    closeLater(() => db.close());
 
     expect(db.pragma('foreign_keys', { simple: true })).toBe(1);
     expect(db.pragma('journal_mode', { simple: true })).toBe('wal');
@@ -70,8 +37,8 @@ describe('openSqliteMemoryStore', () => {
   it('creates the schema in a new file and applies nothing when it is opened again', () => {
     const { rows, path } = openOnFile();
 
-    const again = openSqliteMemoryStore({ path, embeddingModel: 'fixture-model', embeddingDimensions: 4 });
-    if (again.ok) closers.unshift(() => void again.value.close());
+    const again = openSqliteMemoryStore({ path, ...FIXTURE_MODEL });
+    if (again.ok) closeLater(() => void again.value.close());
 
     expect(again.ok).toBe(true);
     expect(rows.prepare('SELECT number, name FROM schema_migration').all()).toEqual([
@@ -80,11 +47,7 @@ describe('openSqliteMemoryStore', () => {
   });
 
   it('opens a private database for the path :memory:', async () => {
-    const opened = openSqliteMemoryStore({
-      path: ':memory:',
-      embeddingModel: 'fixture-model',
-      embeddingDimensions: 4,
-    });
+    const opened = openSqliteMemoryStore({ path: ':memory:', ...FIXTURE_MODEL });
     if (!opened.ok) throw new Error(opened.error.message);
 
     await expect(writeTimeline(opened.value)).resolves.toBeUndefined();
@@ -94,7 +57,7 @@ describe('openSqliteMemoryStore', () => {
   it('returns storage_failed when the file cannot be opened', () => {
     const path = join(tmpdir(), 'factloom-no-such-directory', 'nested', 'factloom.db');
 
-    const opened = openSqliteMemoryStore({ path, embeddingModel: 'fixture-model', embeddingDimensions: 4 });
+    const opened = openSqliteMemoryStore({ path, ...FIXTURE_MODEL });
 
     expect(!opened.ok && opened.error.code).toBe('storage_failed');
   });
@@ -233,7 +196,7 @@ describe('commit on SQLite', () => {
       ),
     );
 
-    expect(!result.ok && result.error.code).toBe('storage_failed');
+    expect(!result.ok && result.error.code).toBe('already_invalidated');
     expect(countRows(rows)).toEqual(before);
   });
 
