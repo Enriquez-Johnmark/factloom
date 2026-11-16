@@ -72,7 +72,7 @@ Factloom can take new information and record it as entities and facts with a **s
 | FL-020 | Entity resolution by exact name | 1 | FL-007, FL-056 | Completed |
 | FL-021 | Extraction of facts from text | 1 | FL-018, FL-029, FL-056 | Completed |
 | FL-022 | Secret check that refuses a write | 1 | FL-004 | Completed |
-| FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Pending |
+| FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Completed |
 | FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Pending |
 | FL-024 | recordStructuredFacts use case | 1 | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 | Pending |
 | FL-025 | changeFact use case | 1 | FL-009, FL-010, FL-020, FL-022, FL-056 | Completed |
@@ -539,7 +539,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 |
 | Requirements | REQ-14, REQ-19, REQ-26, REQ-30 |
@@ -601,16 +601,35 @@ export declare function remember(
 - [`.claude/rules/architecture.md`](../../../.claude/rules/architecture.md): one use case per file, writes go through one door.
 
 **Acceptance criteria.**
-- [ ] Unit tests pass with these names, using `createTestDeps` and a scripted LLM: "records a new fact with the text as its source", "attaches the source to a live fact that is stated again and records no second fact", "skips a fact that conflicts with a stored fact and names the fact in the way", "skips both facts when two facts in one text conflict with each other", "records both values of a multi-valued predicate", "does not skip an unrelated fact about the same subject", "records an older fact whose valid period ends before the current one starts", "records one fact when the text states it twice", "returns two empty lists and writes nothing when nothing is extracted", "writes nothing when every fact is skipped", "creates no entity that only a skipped fact uses", "reuses an existing entity of another type when it is the only one with that name".
-- [ ] A test named "writes everything in one commit" remembers a text with one new fact and one restated fact and asserts that every audit entry written by the call shares one operation identifier.
-- [ ] A test named "refuses a text that contains a secret before calling the LLM" passes a client that fails on any call, and asserts `invalid_input` and an unchanged store.
-- [ ] A test named "returns llm_failed and writes nothing when extraction fails" passes.
-- [ ] Unit tests of the comparison function pass with these names: "a different object under a single-valued predicate conflicts", "the same entity or an equal value restates", "a period that only touches does not overlap".
-- [ ] `pnpm check` passes with no network access and no API key.
+- [x] Unit tests pass with these names, using `createTestDeps` and a scripted LLM: "records a new fact with the text as its source", "attaches the source to a live fact that is stated again and records no second fact", "skips a fact that conflicts with a stored fact and names the fact in the way", "skips both facts when two facts in one text conflict with each other", "records both values of a multi-valued predicate", "does not skip an unrelated fact about the same subject", "records an older fact whose valid period ends before the current one starts", "records one fact when the text states it twice", "returns two empty lists and writes nothing when nothing is extracted", "writes nothing when every fact is skipped", "creates no entity that only a skipped fact uses", "reuses an existing entity of another type when it is the only one with that name".
+- [x] A test named "writes everything in one commit" remembers a text with one new fact and one restated fact and asserts that every audit entry written by the call shares one operation identifier.
+- [x] A test named "refuses a text that contains a secret before calling the LLM" passes a client that fails on any call, and asserts `invalid_input` and an unchanged store.
+- [x] A test named "returns llm_failed and writes nothing when extraction fails" passes.
+- [x] Unit tests of the comparison function pass with these names: "a different object under a single-valued predicate conflicts", "the same entity or an equal value restates", "a period that only touches does not overlap".
+- [x] `pnpm check` passes with no network access and no API key.
 
 **Validation.** Unit tests in `graph-rag` with the in-memory store and a scripted LLM, on every check. The extraction cases of FL-029 run through this use case in FL-069, and the timeline scenarios in FL-039.
 
 **Completion evidence.** The commit, and the passing output of `pnpm check`.
+
+**Recorded evidence.** Done on 2026-11-16, in two commits: `feat(graph-rag): compare a new fact with its conflict candidates` and `feat(graph-rag): add the remember use case`. `remember` is exported from `@factloom/graph-rag` with `RememberDeps`, `RememberInput`, `RememberResult`, `RememberedFact`, `SkippedFact` and `SourceInput`.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, run under `unshare -rn` so that the process had no network, and with no API key in its environment, exited 0 and ended with:
+
+```text
+ Test Files  58 passed (58)
+      Tests  705 passed (705)
+```
+
+Each rule was broken by hand once and a test failed: the single-valued check of the comparison; its overlap check; the removal of repeats; the skip of conflicts within the text; the secret check; the reason code; and giving every draft all the new entities, which created an entity that only a skipped fact used. Removing the shortcut of functional requirement 8, no lookup for a new subject, failed no test: it saves a read and changes no outcome, and the testing rules forbid asserting on which store methods are called.
+
+Differences from the item:
+
+- `CONFLICT_CANDIDATE_LIMIT` is 50.
+- `SourceInput` is in its own file, `source-input.ts`, because `recordStructuredFacts` (FL-024) takes it too.
+- When two extracted facts restate the same stored fact, the source is attached once and the fact is listed once.
+- The test "creates no entity that only a skipped fact uses" records one fact and skips another in the same call, so that a commit is made and could create the skipped fact's entity.
+- Extra tests: the reason codes and trigger in the audit log, a secret in the source locator, an empty text or source kind, and four more cases of the comparison function.
 
 ### FL-069: Extraction replay run and recordings
 
