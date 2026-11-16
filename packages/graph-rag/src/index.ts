@@ -13,6 +13,8 @@ export { getFactHistory } from './get-fact-history.ts';
 export type { RecalledFact, RecallInput, RecallSettings } from './recall.ts';
 export { PROVISIONAL_RECALL_SETTINGS, recall, recallWithSettings } from './recall.ts';
 export type { RememberedFact } from './read-remembered-facts.ts';
+export type { RecordStructuredFactsInput } from './record-structured-facts.ts';
+export { recordStructuredFacts } from './record-structured-facts.ts';
 export type { RememberDeps, RememberInput, RememberResult, SkippedFact } from './remember.ts';
 export { remember } from './remember.ts';
 export { softwareDevelopmentDomain } from './software-development-domain.ts';
