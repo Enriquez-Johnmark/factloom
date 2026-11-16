@@ -306,6 +306,77 @@ describe('endFact', () => {
 
     expect(!result.ok && result.error.code).toBe('not_found');
   });
+
+  it('refuses a successor whose predicate the domain does not have, and changes nothing', async () => {
+    const memory = createMemory();
+    const factId = await record(
+      memory.on(RECORDED_ON),
+      draft('uses_database_version', 'PostgreSQL 14', TRUE_SINCE),
+    );
+
+    const result = await endFact(memory.on(LEARNED_ON), {
+      ...reportedEnded,
+      factId,
+      validTo: UPGRADED_ON,
+      source: note('We moved the queue to kafka.'),
+      successor: draft('uses_message_queue', 'kafka'),
+    });
+
+    expect(!result.ok && result.error.code).toBe('invalid_input');
+    expect(await listIds(memory.store, 'all')).toEqual([factId]);
+  });
+
+  it('returns conflict when a later end would overlap another live fact', async () => {
+    // PostgreSQL 14 until 15 March, then PostgreSQL 16. Moving the end of 14 to June would
+    // make the two overlap for a single-valued predicate.
+    const memory = createMemory();
+    const deps = memory.on(RECORDED_ON);
+    const until = draft('uses_database_version', 'PostgreSQL 14', TRUE_SINCE);
+    const postgres14 = await record(deps, { ...until, fact: { ...until.fact, validTo: UPGRADED_ON } });
+    const postgres16 = await record(
+      deps,
+      draft('uses_database_version', 'PostgreSQL 16', UPGRADED_ON),
+      false,
+    );
+
+    const result = await endFact(memory.on(LEARNED_ON), {
+      ...reportedEnded,
+      factId: postgres14,
+      validTo: day('2026-06-01'),
+      source: note('PostgreSQL 14 ran until June.'),
+      successor: null,
+    });
+
+    expect(!result.ok && result.error.code).toBe('conflict');
+    expect(!result.ok && result.error.relatedFactIds).toEqual([postgres16]);
+    expect((await listIds(memory.store, 'live')).sort()).toEqual([postgres14, postgres16].sort());
+  });
+
+  it('ends a fact whose predicate the domain no longer has', async () => {
+    const memory = createMemory();
+    const factId = await record(memory.on(RECORDED_ON), draft('runs_ci_on', 'Node 22'));
+    let count = 0;
+    const withoutThePredicate = createTestDeps({
+      now: LEARNED_ON,
+      domain: TEST_DOMAIN,
+      store: memory.store,
+      newId: () => {
+        count += 1;
+        return `later-${count}`;
+      },
+    });
+
+    const result = await endFact(withoutThePredicate, {
+      ...reportedEnded,
+      factId,
+      validTo: UPGRADED_ON,
+      source: note('We stopped running CI on Node 22.'),
+      successor: null,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(await listIds(memory.store, 'live')).toEqual(result.ok ? [result.value.endedFactId] : []);
+  });
 });
 
 describe('buildEndFactChangeSet', () => {

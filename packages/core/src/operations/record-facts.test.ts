@@ -3,7 +3,7 @@ import { createTestDeps } from '../create-test-deps.ts';
 import type { Embedder } from '../embedder.ts';
 import type { MemoryStore } from '../memory-store.ts';
 import type { OperationDeps } from '../operation-deps.ts';
-import { err } from '../result.ts';
+import { err, ok } from '../result.ts';
 import { toTimestamp } from '../timestamp.ts';
 import type { FactDraft, NewEntity, NewSource } from './operation-inputs.ts';
 import { buildRecordFactsChangeSet, type RecordFactsInput, recordFacts } from './record-facts.ts';
@@ -208,6 +208,23 @@ describe('recordFacts', () => {
     const deps = { ...createTestDeps(), embedder: failingEmbedder };
 
     const result = await recordFacts(deps, input({ drafts: [draft('depends_on', 'redis', [shopApi])] }));
+
+    expect(!result.ok && result.error.code).toBe('embedding_failed');
+    expect(await countEntitiesNamedShopApi(deps.store)).toBe(0);
+  });
+
+  it('records nothing when the embedder returns fewer vectors than statements', async () => {
+    const shortEmbedder: Embedder = {
+      model: 'short-embedder',
+      dimensions: 16,
+      embed: async (texts) => ok(texts.slice(1).map(() => new Float32Array(16).fill(0.25))),
+    };
+    const deps = { ...createTestDeps(), embedder: shortEmbedder };
+
+    const result = await recordFacts(
+      deps,
+      input({ drafts: [draft('depends_on', 'redis', [shopApi]), draft('depends_on', 'kafka')] }),
+    );
 
     expect(!result.ok && result.error.code).toBe('embedding_failed');
     expect(await countEntitiesNamedShopApi(deps.store)).toBe(0);

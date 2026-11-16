@@ -264,6 +264,64 @@ describe('invalidateFact', () => {
     expect(await listValues(memory.store, 'live')).toEqual(['Node 20']);
   });
 
+  it('keeps the end a replacement gives when it gives no start', async () => {
+    const memory = createMemory();
+    const factId = await record(
+      memory.on(RECORDED_ON),
+      draft('runs_ci_on', 'Node 20', { validFrom: day('2026-01-15'), validTo: day('2026-03-20') }),
+    );
+    const own = { validFrom: null, validTo: day('2026-02-01') };
+
+    await invalidateFact(memory.on(CORRECTED_ON), {
+      ...reportedWrong,
+      factId,
+      source: note('CI ran on Node 22 until February.'),
+      replacement: draft('runs_ci_on', 'Node 22', own),
+    });
+
+    const [replacement] = await list(memory.store, 'live');
+    expect(replacement?.fact).toMatchObject(own);
+  });
+
+  it('returns already_invalidated with no related fact for a fact that was retracted', async () => {
+    const memory = createMemory();
+    const factId = await record(memory.on(RECORDED_ON), draft('runs_ci_on', 'Node 20'));
+    const input = {
+      ...reportedWrong,
+      factId,
+      source: note('CI does not run on Node 20.'),
+      replacement: null,
+    };
+    const retracted = await invalidateFact(memory.on(CORRECTED_ON), input);
+    if (!retracted.ok) throw new Error(retracted.error.message);
+
+    const again = await invalidateFact(memory.on('2026-04-11'), input);
+
+    expect(!again.ok && again.error.code).toBe('already_invalidated');
+    expect(!again.ok && again.error.relatedFactIds).toEqual([]);
+  });
+
+  it('returns a storage failure as it is', async () => {
+    const memory = createMemory();
+    const factId = await record(memory.on(RECORDED_ON), draft('runs_ci_on', 'Node 20'));
+    const failingStore: MemoryStore = {
+      ...memory.store,
+      getFact: () =>
+        Promise.resolve({
+          ok: false,
+          error: { code: 'storage_failed', message: 'The disk is full.', relatedFactIds: [] },
+        }),
+    };
+
+    const result = await invalidateFact(
+      { ...memory.on(CORRECTED_ON), store: failingStore },
+      { ...reportedWrong, factId, source: note('Wrong.'), replacement: null },
+    );
+
+    expect(!result.ok && result.error.code).toBe('storage_failed');
+    expect(await listValues(memory.store, 'live')).toEqual(['Node 20']);
+  });
+
   it('changes nothing when the replacement conflicts with another live fact', async () => {
     const memory = createMemory();
     const deps = memory.on(RECORDED_ON);

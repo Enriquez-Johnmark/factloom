@@ -222,6 +222,53 @@ describe('findConflictCandidates', () => {
     expect(!reversed.ok && reversed.error.code).toBe('invalid_input');
   });
 
+  it('returns invalid_input for a period that ends where it starts', async () => {
+    const result = await findConflictCandidates(createTestDeps(), {
+      namespace: NAMESPACE,
+      subjectEntityId: shopApi.id,
+      predicate: 'uses_database_version',
+      validFrom: UPGRADED_ON,
+      validTo: UPGRADED_ON,
+      limit: 10,
+    });
+
+    expect(!result.ok && result.error.code).toBe('invalid_input');
+  });
+
+  it('returns the newest candidate when the limit is 1', async () => {
+    const memory = createMemory();
+    await record(memory.on('2026-01-10'), draft('depends_on', 'redis', {}, [shopApi]));
+    const newest = await record(memory.on('2026-02-10'), draft('depends_on', 'postgres'));
+
+    expect(await findIds(memory.on('2026-05-01'), { predicate: 'depends_on', limit: 1 })).toEqual([newest]);
+  });
+
+  it('returns a storage failure as it is', async () => {
+    const deps = createTestDeps();
+    const failing: OperationDeps = {
+      ...deps,
+      store: {
+        ...deps.store,
+        listFacts: () =>
+          Promise.resolve({
+            ok: false,
+            error: { code: 'storage_failed', message: 'The disk is full.', relatedFactIds: [] },
+          }),
+      },
+    };
+
+    const result = await findConflictCandidates(failing, {
+      namespace: NAMESPACE,
+      subjectEntityId: shopApi.id,
+      predicate: 'uses_database_version',
+      validFrom: null,
+      validTo: null,
+      limit: 10,
+    });
+
+    expect(!result.ok && result.error.code).toBe('storage_failed');
+  });
+
   it('writes nothing', async () => {
     const memory = await createUpgradedMemory();
     const readMemory = async () => {
