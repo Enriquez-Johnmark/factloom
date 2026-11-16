@@ -72,7 +72,7 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 | FL-026 | Local embedder with bge-small-en-v1.5 | 1 | FL-002, FL-006 | Pending |
 | FL-030 | Rank fusion as a pure function | 1 | FL-004 | Completed |
 | FL-031 | recall use case | 1 | FL-007, FL-030, FL-056 | Pending |
-| FL-032 | getFactHistory use case | 1 | FL-007, FL-056 | Pending |
+| FL-032 | getFactHistory use case | 1 | FL-007, FL-056 | Completed |
 | FL-033 | Retrieval eval: harness and data | 1 | FL-008, FL-016, FL-017, FL-026, FL-031 | Pending |
 | FL-057 | Lane weights chosen by measurement | 1 | FL-033 | Pending |
 
@@ -302,7 +302,7 @@ export declare function recall(
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-007, FL-056 |
 | Requirements | REQ-09 |
@@ -352,14 +352,43 @@ export declare function getFactHistory(
 - [ADR 0011](../../architecture/adr/0011-namespace-on-every-row.md).
 
 **Acceptance criteria.**
-- [ ] Unit tests pass with these names: "returns a single fact with the audit entry of its recording", "returns both facts of a succession in order of valid time", "returns the same entries whichever fact of the chain is given", "returns the wrong fact and its correction with the entry that links them", "returns a retracted fact with the entry of its invalidation", "includes a fact for the same subject and single-valued predicate that no link reaches", "returns only linked facts for a multi-valued predicate", "puts a fact with an unknown start first", "returns each fact with its sources", "returns not_found for a fact in another namespace".
-- [ ] Unit tests pass with these names: "returns the explanation of a correction with the entry that records it", "returns the explanation of a retraction although its source is linked to no fact", "returns no explanation for an entry that names no source".
-- [ ] A test named "writes nothing" asserts an unchanged store after the call.
-- [ ] `pnpm check` passes.
+- [x] Unit tests pass with these names: "returns a single fact with the audit entry of its recording", "returns both facts of a succession in order of valid time", "returns the same entries whichever fact of the chain is given", "returns the wrong fact and its correction with the entry that links them", "returns a retracted fact with the entry of its invalidation", "includes a fact for the same subject and single-valued predicate that no link reaches", "returns only linked facts for a multi-valued predicate", "puts a fact with an unknown start first", "returns each fact with its sources", "returns not_found for a fact in another namespace".
+- [x] Unit tests pass with these names: "returns the explanation of a correction with the entry that records it", "returns the explanation of a retraction although its source is linked to no fact", "returns no explanation for an entry that names no source".
+- [x] A test named "writes nothing" asserts an unchanged store after the call.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests in `graph-rag` with the in-memory store, with memory built by change sets committed to the store, on every check.
 
 **Completion evidence.** The commit, and the passing output of `pnpm check`.
+
+**Recorded evidence.** Completed on 2026-11-16, in the commit `feat(graph-rag): add the getFactHistory use case`. The code is `packages/graph-rag/src/get-fact-history.ts`, with its tests beside it. `getFactHistory` is exported from `@factloom/graph-rag` with the types `GetFactHistoryInput`, `FactHistoryEntry` and `ExplainedAuditEntry`, which `INTERFACES.md` lists under "Use cases" and which no other package defined.
+
+What differs from the work item as written:
+
+- A succession through `endFact` revises the original by invalidating it and recording an ended copy, and records the successor with no supersession link to either. "returns both facts of a succession in order of valid time" therefore returns three facts: the invalidated original, the ended copy and the successor. The successor is reached by functional requirement 4, because the test predicate is single-valued; for a multi-valued predicate a succession's successor is not part of the history.
+- `MemoryStore.listAuditEntries` does not promise an order, so the use case sorts each fact's audit entries by `occurredAt` and then by identifier. Both stores already return them in identifier order.
+- The facts that requirement 4 adds are not walked for links of their own: they share the subject and predicate, so the same read already returns their chains.
+- Three tests besides the named ones: "returns no explanation when the explaining source has no content", "ends when the supersession links form a cycle" and "returns a storage failure as it is". The cycle test uses a store that reports a cycle in both `getFact` and `listFacts`, because the commit rules cannot produce one.
+- "writes nothing" compares every fact of the namespace, with its sources, and every fact's audit entries, before and after the call. `MemoryStore` has no method that lists every entity or source, so those are compared only through the facts.
+- The read limit, `HISTORY_READ_LIMIT`, is 1000. A history with more linked facts would be cut short without a sign; paging is a non-goal.
+
+Nine changes, each made by hand and each restored, made a test fail: dropping the backward links, dropping the forward link, dropping the single-value timeline, applying the timeline to every predicate, putting an unknown start last, taking the explanation only from the fact's own sources, ordering audit entries newest first, ignoring a storage failure, and removing the set of facts already reached. The last did not fail with an assertion: the walk never ended, and the run was stopped by `timeout` after 120 seconds. A first version of the cycle test reported the cycle only through `getFact`, and the walk ended without the set; the test was changed to report it through `listFacts` as well before this was recorded.
+
+Not run: the use case against the SQLite store. The tests use the in-memory store, as the validation line says; the scenario runner (FL-039) reads history from SQLite.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 112 files. No fixes applied.
+$ biome lint .
+Checked 112 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  36 passed (36)
+      Tests  514 passed (514)
+```
 
 ### FL-033: Retrieval eval: harness and data
 
