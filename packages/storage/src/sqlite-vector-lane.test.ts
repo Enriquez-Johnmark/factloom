@@ -13,7 +13,7 @@ import {
   writeTimeline,
 } from './memory-store-contract.ts';
 import { openSqliteMemoryStore } from './open-sqlite-memory-store.ts';
-import { closeLater, closeTestStores, countRows, FIXTURE_MODEL, openOnFile } from './sqlite-test-store.ts';
+import { closeLater, closeTestStores, countRows, openOnFile } from './sqlite-test-store.ts';
 
 afterEach(closeTestStores);
 
