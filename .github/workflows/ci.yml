@@ -9,7 +9,7 @@ on:
     branches: [main]
   # Monday 04:17 UTC: the weekly run of the eval job and its benchmark (FL-066).
   schedule:
-    - cron: '17 4 * * 1'
+    - cron: "17 4 * * 1"
   workflow_dispatch:
     inputs:
       job:
