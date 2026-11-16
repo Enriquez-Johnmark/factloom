@@ -68,7 +68,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-034 | Server configuration and composition root | 1 | FL-014, FL-015, FL-016, FL-017, FL-026 | Pending |
+| FL-034 | Server configuration and composition root | 1 | FL-014, FL-015, FL-016, FL-017, FL-026 | Completed |
 | FL-058 | recall tool end to end | 1 | FL-008, FL-034, FL-031 | Pending |
 | FL-035 | remember and record_fact tools | 1 | FL-019, FL-058, FL-023, FL-024 | Pending |
 | FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-018, FL-035, FL-058, FL-025, FL-032 | Pending |
@@ -79,7 +79,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-014, FL-015, FL-016, FL-017, FL-026 |
 | Requirements | REQ-10, REQ-11, REQ-12, REQ-25 |
@@ -130,18 +130,54 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 - [`.claude/rules/typescript.md`](../../../.claude/rules/typescript.md): data from outside is parsed by a schema at the edge.
 
 **Acceptance criteria.**
-- [ ] Tests of configuration pass with these names: "uses the default database path when none is given", "fails without a namespace and says why", "accepts a missing API key".
-- [ ] A test named "the instructions fit the limit" asserts that the string is not empty and has at most 1,000 characters.
-- [ ] A test named "gives its instructions when a client connects", with a server built from fakes and a client connected in process, asserts that the initialise result carries the instructions string.
-- [ ] A test named "starts over stdio on a new SQLite file" starts `node` on `main.ts` as a child process with a temporary `FACTLOOM_DB` and a namespace, completes the initialise exchange over stdio, closes standard input, and asserts exit code 0 and that the database file exists.
-- [ ] The same test asserts that every line the child wrote to standard output parses as a JSON-RPC message.
-- [ ] A test named "exits when no namespace is configured" starts the child without `FACTLOOM_NAMESPACE` and asserts an exit code other than 0 and a message on standard error.
-- [ ] A test named "exits when the database was built with another embedding model" prepares a database whose embedding rows name another model, starts the child on it, and asserts an exit code other than 0 and `embedding_model_mismatch` on standard error.
-- [ ] `pnpm check` passes with no network access and no embedding model in the cache.
+- [x] Tests of configuration pass with these names: "uses the default database path when none is given", "fails without a namespace and says why", "accepts a missing API key".
+- [x] A test named "the instructions fit the limit" asserts that the string is not empty and has at most 1,000 characters.
+- [x] A test named "gives its instructions when a client connects", with a server built from fakes and a client connected in process, asserts that the initialise result carries the instructions string.
+- [x] A test named "starts over stdio on a new SQLite file" starts `node` on `main.ts` as a child process with a temporary `FACTLOOM_DB` and a namespace, completes the initialise exchange over stdio, closes standard input, and asserts exit code 0 and that the database file exists.
+- [x] The same test asserts that every line the child wrote to standard output parses as a JSON-RPC message.
+- [x] A test named "exits when no namespace is configured" starts the child without `FACTLOOM_NAMESPACE` and asserts an exit code other than 0 and a message on standard error.
+- [x] A test named "exits when the database was built with another embedding model" prepares a database whose embedding rows name another model, starts the child on it, and asserts an exit code other than 0 and `embedding_model_mismatch` on standard error.
+- [x] `pnpm check` passes with no network access and no embedding model in the cache.
 
 **Validation.** Unit tests of configuration and of the server-creating function with fakes and an in-process client. Tests over stdio with a child process and the SQLite adapter. All on every check. None of them loads the embedding model: the server answers the initialise request before the model is loaded (functional requirement 5).
 
 **Completion evidence.** The commit, with the registry check in its message. The passing output of `pnpm check`.
+
+**Recorded evidence.** Completed on 2026-11-16, in four commits: `build(mcp-server): add the MCP SDK 2.4.0, server and client`, `feat(mcp-server): add the configuration, the composition root and the stdio server frame`, `ci: run the server from source with a namespace and a temporary database`, and `fix(mcp-server): build the configuration test's key at run time, as the secret check requires`. The code is in `apps/mcp-server/src`: `read-configuration.ts`, `server-instructions.ts`, `create-factloom-server.ts`, `serve-factloom.ts` and `main.ts`, with tests beside them.
+
+The SDK version. `npm view @modelcontextprotocol/server version` and `npm view @modelcontextprotocol/client version` on 2026-11-16 gave 2.4.0, the `latest` dist-tag of the version 2 line and the version the research verified. The first commit's message records the check. The server is a dependency of `apps/mcp-server`, the client a development dependency.
+
+What differs from the work item as written:
+
+- The instructions name the five tools of `MCP-TOOLS.md`, which the next items add, so that the frame's text does not change when they do. This item registers none.
+- The logger is a function that takes one line, `Logger` in `create-factloom-server.ts`; `main.ts` builds the one that writes to standard error, with the prefix `factloom: `.
+- A tool is a function that registers itself on the server with the dependencies, `RegisterTool`. A test besides the named ones, "registers each tool it is given", covers the list.
+- A variable that is set but empty counts as not set. The namespace is checked with `NamespaceSchema` from `core`.
+- The shutdown listens for the end of standard input, closes the connection and the store, and exits with code 0. Without the explicit exit the process also ends with code 0, because nothing else keeps it alive once the transport closes, as the SDK's documentation says; removing the exit by hand failed no test. The exit is kept so that a loaded model's runtime cannot keep the process alive; that is not tested. That the store is closed is tested: "starts over stdio on a new SQLite file" asserts that no `-wal` file is left, which closing the last connection removes. Removing the close by hand failed that test.
+- Functional requirement 5, answering before the model is loaded, is not shown by a test. An assertion that no model directory appears under the child's home directory was tried and dropped: with the child's environment reduced to `PATH` and `HOME`, the sandbox's proxy is unset and a download fails silently, so the assertion passed even with the model loaded before serving. The embedder of FL-026 loads on the first call by construction, and no call happens in `main.ts`.
+- The continuous integration step "Run the app from source" ran `main.ts` with no configuration. It now gives a namespace, a database in the runner's temporary directory and an empty standard input, and the server must exit with code 0.
+- The placeholder `packages.ts` and its test are kept. Its comment says the composition root replaces it; `main.ts` no longer uses it, and removing a test was left to the owner.
+- The first push failed in continuous integration, on all four jobs: the scan of tracked files of FL-022 found a credential name assigned a quoted literal in the configuration test, https://github.com/Enriquez-Johnmark/factloom/actions/runs/43817406807. The local check had passed because it ran before the new files were tracked. The test's key is now joined at run time. The check worked as it should.
+
+Eight changes, each made by hand and each restored, made a test fail: a log line on standard output, a start-up line on standard output, stopping with code 0, another default path, a default namespace, exit code 1 when standard input closes, no instructions, and the store not closed. Removing the explicit exit did not, as above.
+
+Not run: the server with a real host, which is FL-038, and `pnpm check` with the network cut off.
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed, including the step that runs the server from source: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43817588780.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, with every new file tracked. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 132 files. No fixes applied.
+$ biome lint .
+Checked 132 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  44 passed (44)
+      Tests  593 passed (593)
+```
 
 ### FL-058: recall tool end to end
 
