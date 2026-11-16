@@ -18,6 +18,10 @@ catalog:
   # Mutation testing of core, run by hand with `pnpm mutate:core`, never by `pnpm check` (FL-077). Development only.
   "@stryker-mutator/core": 10.1.1
   "@stryker-mutator/vitest-runner": 10.1.1
+  # The MCP server SDK, version 2, used only by apps/mcp-server. See ADR 0016.
+  "@modelcontextprotocol/server": 2.4.0
+  # The MCP client SDK, for the server's tests only. Development only.
+  "@modelcontextprotocol/client": 2.4.0
   # Formatter and linter, including the import rules between packages.
   "@biomejs/biome": 2.6.7
   # Types for better-sqlite3, which ships none. Development only. See Q-82 on its version.
