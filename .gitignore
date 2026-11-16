@@ -7,6 +7,8 @@
 node_modules/
 
 # Build and test output
+# Stryker's working directory, with its backup of the files a mutation run changes in place.
+.stryker-tmp/
 # The embedding model files that `pnpm eval` downloads, in .cache/models.
 .cache/
 dist/
