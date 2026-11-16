@@ -15,7 +15,7 @@
     "check:lint": "biome lint .",
     "check:types": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "eval": "vitest run --config vitest.eval.config.ts --passWithNoTests",
+    "eval": "vitest run --config vitest.eval.config.ts --passWithNoTests --reporter=verbose",
     "format": "biome format --write ."
   },
   "devDependencies": {
