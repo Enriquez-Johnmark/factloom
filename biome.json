@@ -74,8 +74,8 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@factloom/storage", "@factloom/*/**", "**/src/**"],
-                    "message": "graph-rag must not import @factloom/storage, and imports other packages by name only. It reaches storage through the MemoryStore interface in core."
+                    "group": ["@factloom/storage", "@factloom/maintenance", "@factloom/*/**", "**/src/**"],
+                    "message": "graph-rag must not import @factloom/storage or @factloom/maintenance, and imports other packages by name only. It reaches storage through the MemoryStore interface in core."
                   },
                   {
                     "group": [
@@ -95,6 +95,36 @@
       }
     },
     {
+      "includes": ["packages/maintenance/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@factloom/storage", "@factloom/graph-rag", "@factloom/*/**", "**/src/**"],
+                    "message": "maintenance must not import @factloom/storage or @factloom/graph-rag, and imports other packages by name only. It changes memory only through the fact operations in core."
+                  },
+                  {
+                    "group": [
+                      "better-sqlite3",
+                      "sqlite-vec",
+                      "@modelcontextprotocol/*",
+                      "@anthropic-ai/*",
+                      "@huggingface/*"
+                    ],
+                    "message": "maintenance must not import a database, LLM, embedding or MCP library."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["packages/storage/**"],
       "linter": {
         "rules": {
@@ -104,8 +134,8 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@factloom/graph-rag", "@factloom/*/**", "**/src/**"],
-                    "message": "storage must not import @factloom/graph-rag, and imports other packages by name only."
+                    "group": ["@factloom/graph-rag", "@factloom/maintenance", "@factloom/*/**", "**/src/**"],
+                    "message": "storage must not import @factloom/graph-rag or @factloom/maintenance, and imports other packages by name only."
                   },
                   {
                     "group": ["@modelcontextprotocol/*", "@anthropic-ai/*", "@huggingface/*"],
