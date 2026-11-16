@@ -7,6 +7,7 @@ import {
   type Result,
 } from '@factloom/core';
 import type { Database, Statement } from 'better-sqlite3';
+import { buildKeywordQuery } from './build-keyword-query.ts';
 import {
   type AuditRow,
   type EntityRow,
@@ -73,8 +74,9 @@ export type SqliteReads = {
   readonly listAuditEntries: (
     query: Parameters<MemoryStore['listAuditEntries']>[0],
   ) => ReturnType<typeof toAuditEntry>[];
-  /** Completes fact rows into facts with their subject, object entity and sources. */
-  readonly withSources: (rows: readonly FactRow[], namespace: string) => FactWithSources[];
+  readonly searchFactsByKeyword: (
+    query: Parameters<MemoryStore['searchFactsByKeyword']>[0],
+  ) => Result<readonly FactWithSources[]>;
 };
 
 /**
@@ -113,6 +115,15 @@ export function createReads(db: Database): SqliteReads {
             source_id, detail, occurred_at
      FROM audit_log WHERE namespace = ? AND target_kind = ? AND target_id = ? ORDER BY id`,
   );
+  // The keyword lane: statements that hold any term of the query, best match first. bm25()
+  // is smaller for a better match. The namespace and the time predicate are in the same
+  // query as the MATCH, so the limit counts only facts that pass them.
+  const selectByKeyword = db.prepare<[Record<string, unknown>], FactRow>(
+    `SELECT ${FACT_COLUMNS}
+     FROM fact_fts JOIN fact f ON f.rowid = fact_fts.rowid
+     WHERE fact_fts MATCH @match AND f.namespace = @namespace AND ${TIME_PREDICATE}
+     ORDER BY bm25(fact_fts), f.rowid DESC LIMIT @limit`,
+  );
   const listStatements = new Map<string, Statement<[Record<string, unknown>], FactRow>>();
 
   // Three queries for any number of facts: the facts are given, then their entities, then their sources.
@@ -144,8 +155,6 @@ export function createReads(db: Database): SqliteReads {
   };
 
   return {
-    withSources,
-
     findEntities(query) {
       const nameKey = normaliseEntityName(query.name);
       const rows =
@@ -187,6 +196,20 @@ export function createReads(db: Database): SqliteReads {
         parameters.knownAt = query.time.knownAt;
       }
       return ok(withSources(statement.all(parameters), query.namespace));
+    },
+
+    searchFactsByKeyword(query) {
+      if (!Number.isInteger(query.limit) || query.limit < 1) return invalidLimit();
+      const match = buildKeywordQuery(query.text);
+      if (match === null) return ok([]);
+      const rows = selectByKeyword.all({
+        match,
+        namespace: query.namespace,
+        validAt: query.time.validAt,
+        knownAt: query.time.knownAt,
+        limit: query.limit,
+      });
+      return ok(withSources(rows, query.namespace));
     },
 
     getSource(query) {

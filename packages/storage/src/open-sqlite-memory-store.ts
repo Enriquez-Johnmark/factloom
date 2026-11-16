@@ -19,7 +19,7 @@ export type SqliteMemoryStoreOptions = {
 
 function notBuiltYet(method: string): Promise<Failure> {
   return Promise.resolve(
-    err('storage_failed', `The SQLite store cannot ${method} yet: its search lanes are not built.`),
+    err('storage_failed', `The SQLite store cannot ${method} yet: its vector lane is not built.`),
   );
 }
 
@@ -65,7 +65,7 @@ export function openSqliteMemoryStore(options: SqliteMemoryStoreOptions): Result
       getFact: (query) => read(() => ok(reads.getFact(query))),
       listFacts: (query) => read(() => reads.listFacts(query)),
       searchFactsByVector: () => notBuiltYet('search by vector'),
-      searchFactsByKeyword: () => notBuiltYet('search by keyword'),
+      searchFactsByKeyword: (query) => read(() => reads.searchFactsByKeyword(query)),
       getSource: (query) => read(() => ok(reads.getSource(query))),
       listAuditEntries: (query) => read(() => ok(reads.listAuditEntries(query))),
       close: () => {
