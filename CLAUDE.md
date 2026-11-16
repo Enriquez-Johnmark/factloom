@@ -67,6 +67,10 @@ Work is tracked in Markdown under `docs/roadmap/`, not in GitHub Issues. `docs/r
 
 Commits are signed so that GitHub shows them as verified. The setup is lost with each new session. See `docs/agents/commit-signing.md` before the first commit.
 
+### Model choice
+
+When a stronger model than the everyday one is worth using: at the end of a phase, when the plan did not foresee something, when a bug survives two attempts. See `docs/agents/model-choice.md`.
+
 ### Domain docs
 
 Single context: `GLOSSARY.md` at the root, decision records in `docs/architecture/adr/`. See `docs/agents/domain.md`.
