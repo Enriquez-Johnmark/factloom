@@ -13,9 +13,7 @@ import {
   type Result,
 } from '@factloom/core';
 import type { Database } from 'better-sqlite3';
-
-/** The embedding model a database holds vectors of. Written to every embedding row. */
-export type EmbeddingModel = { readonly model: string; readonly dimensions: number };
+import { type EmbeddingModel, toBlob } from './embedding-model.ts';
 
 const ACTION_OF_CHANGE: { readonly [Kind in Change['kind']]: AuditAction } = {
   create_entity: 'entity.created',
@@ -71,11 +69,6 @@ type ObjectRow = {
   readonly object_entity_id: string | null;
   readonly object_value: string | null;
 };
-
-/** The bytes of a vector's 32-bit floats, the form `vec_distance_cosine()` reads. */
-function toBlob(vector: Float32Array): Buffer {
-  return Buffer.from(vector.buffer, vector.byteOffset, vector.byteLength);
-}
 
 /**
  * Builds the `commit` of a SQLite store. Every statement is prepared once, here, and reused
@@ -269,6 +262,12 @@ export function createCommit(
         });
         for (const sourceId of change.sourceIds) insertFactSource.run(fact.id, sourceId);
         if (change.embedding instanceof Float32Array) {
+          if (change.embedding.length !== embeddingModel.dimensions) {
+            refuse(
+              'embedding_model_mismatch',
+              `The vector of fact ${fact.id} has ${change.embedding.length} dimensions, but this memory holds vectors of ${embeddingModel.dimensions}.`,
+            );
+          }
           insertEmbedding.run(
             fact.id,
             embeddingModel.model,

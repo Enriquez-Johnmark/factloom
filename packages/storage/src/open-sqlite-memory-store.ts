@@ -1,8 +1,9 @@
 import { join } from 'node:path';
-import { err, type Failure, type MemoryStore, ok, type Result, toTimestamp } from '@factloom/core';
+import { err, type MemoryStore, ok, type Result, toTimestamp } from '@factloom/core';
 import type { Database } from 'better-sqlite3';
 import { createCommit } from './create-commit.ts';
 import { createReads } from './create-reads.ts';
+import { findEmbeddingModelMismatch } from './embedding-model.ts';
 import { openConnection } from './open-connection.ts';
 import { runMigrations } from './run-migrations.ts';
 
@@ -16,12 +17,6 @@ export type SqliteMemoryStoreOptions = {
   /** The size of that model's vectors. */
   readonly embeddingDimensions: number;
 };
-
-function notBuiltYet(method: string): Promise<Failure> {
-  return Promise.resolve(
-    err('storage_failed', `The SQLite store cannot ${method} yet: its vector lane is not built.`),
-  );
-}
 
 /** Runs a read and turns what the driver or a row mapper throws into `storage_failed`. */
 function read<Value>(run: () => Result<Value>): Promise<Result<Value>> {
@@ -54,17 +49,20 @@ export function openSqliteMemoryStore(options: SqliteMemoryStoreOptions): Result
       db.close();
       return migrated;
     }
-    const commit = createCommit(db, {
-      model: options.embeddingModel,
-      dimensions: options.embeddingDimensions,
-    });
-    const reads = createReads(db);
+    const embeddingModel = { model: options.embeddingModel, dimensions: options.embeddingDimensions };
+    const mismatch = findEmbeddingModelMismatch(db, embeddingModel);
+    if (mismatch !== null) {
+      db.close();
+      return mismatch;
+    }
+    const commit = createCommit(db, embeddingModel);
+    const reads = createReads(db, embeddingModel);
     const store: MemoryStore = {
       commit: (changeSet) => Promise.resolve(commit(changeSet)),
       findEntities: (query) => read(() => ok(reads.findEntities(query))),
       getFact: (query) => read(() => ok(reads.getFact(query))),
       listFacts: (query) => read(() => reads.listFacts(query)),
-      searchFactsByVector: () => notBuiltYet('search by vector'),
+      searchFactsByVector: (query) => read(() => reads.searchFactsByVector(query)),
       searchFactsByKeyword: (query) => read(() => reads.searchFactsByKeyword(query)),
       getSource: (query) => read(() => ok(reads.getSource(query))),
       listAuditEntries: (query) => read(() => ok(reads.listAuditEntries(query))),

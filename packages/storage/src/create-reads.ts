@@ -8,6 +8,7 @@ import {
 } from '@factloom/core';
 import type { Database, Statement } from 'better-sqlite3';
 import { buildKeywordQuery } from './build-keyword-query.ts';
+import { type EmbeddingModel, toBlob } from './embedding-model.ts';
 import {
   type AuditRow,
   type EntityRow,
@@ -74,6 +75,9 @@ export type SqliteReads = {
   readonly listAuditEntries: (
     query: Parameters<MemoryStore['listAuditEntries']>[0],
   ) => ReturnType<typeof toAuditEntry>[];
+  readonly searchFactsByVector: (
+    query: Parameters<MemoryStore['searchFactsByVector']>[0],
+  ) => Result<readonly FactWithSources[]>;
   readonly searchFactsByKeyword: (
     query: Parameters<MemoryStore['searchFactsByKeyword']>[0],
   ) => Result<readonly FactWithSources[]>;
@@ -85,7 +89,7 @@ export type SqliteReads = {
  * The functions throw what the driver throws and `UnreadableRow`; the caller turns both
  * into `storage_failed`.
  */
-export function createReads(db: Database): SqliteReads {
+export function createReads(db: Database, embeddingModel: EmbeddingModel): SqliteReads {
   const selectEntitiesByName = db.prepare<[string, string], EntityRow>(
     'SELECT id, namespace, type, name, created_at FROM entity WHERE namespace = ? AND name_key = ? ORDER BY rowid',
   );
@@ -123,6 +127,15 @@ export function createReads(db: Database): SqliteReads {
      FROM fact_fts JOIN fact f ON f.rowid = fact_fts.rowid
      WHERE fact_fts MATCH @match AND f.namespace = @namespace AND ${TIME_PREDICATE}
      ORDER BY bm25(fact_fts), f.rowid DESC LIMIT @limit`,
+  );
+  // The vector lane: an exact scan of the embeddings of the facts that pass the namespace
+  // and the time predicate, nearest first. The filter is in the same query as the distance,
+  // so the limit counts only facts that pass it: the nearest rows can all be superseded copies.
+  const selectByVector = db.prepare<[Record<string, unknown>], FactRow>(
+    `SELECT ${FACT_COLUMNS}
+     FROM fact f JOIN fact_embedding e ON e.fact_id = f.id
+     WHERE f.namespace = @namespace AND ${TIME_PREDICATE}
+     ORDER BY vec_distance_cosine(e.embedding, @vector), f.rowid LIMIT @limit`,
   );
   const listStatements = new Map<string, Statement<[Record<string, unknown>], FactRow>>();
 
@@ -196,6 +209,24 @@ export function createReads(db: Database): SqliteReads {
         parameters.knownAt = query.time.knownAt;
       }
       return ok(withSources(statement.all(parameters), query.namespace));
+    },
+
+    searchFactsByVector(query) {
+      if (!Number.isInteger(query.limit) || query.limit < 1) return invalidLimit();
+      if (query.vector.length !== embeddingModel.dimensions) {
+        return err(
+          'invalid_input',
+          `The query vector has ${query.vector.length} dimensions, but this memory holds vectors of ${embeddingModel.dimensions}.`,
+        );
+      }
+      const rows = selectByVector.all({
+        vector: toBlob(query.vector),
+        namespace: query.namespace,
+        validAt: query.time.validAt,
+        knownAt: query.time.knownAt,
+        limit: query.limit,
+      });
+      return ok(withSources(rows, query.namespace));
     },
 
     searchFactsByKeyword(query) {
