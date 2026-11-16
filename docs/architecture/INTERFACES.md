@@ -510,6 +510,40 @@ export declare function purgeContent(
 
 Each phase 2 operation adds what it needs: a `Change` kind, an `Operation` name, `AuditAction` values and reason codes. `reviseValidTime` needs none, because it is made of existing changes. Adding a kind does not change the existing ones.
 
+### Conflict judge
+
+Phase 2. The judge decides; a use case acts on its verdicts with the operations above. The type is in `core`, so that `graph-rag` can receive a judge as a dependency without importing `maintenance`, which implements it as `judgeConflicts` (FL-041).
+
+```ts
+/** How many candidates a caller asks findConflictCandidates for when it passes them to a judge. */
+export const JUDGE_CANDIDATE_LIMIT = 10;
+
+export type ConflictVerdict =
+  | { readonly kind: 'duplicate' }
+  | { readonly kind: 'succession'; readonly changedAt: Timestamp }
+  | { readonly kind: 'correction' }
+  | { readonly kind: 'unrelated' };
+
+export type ConflictJudgeInput = {
+  readonly fact: NewFact;
+  /** The name of the fact's object entity, for the prompt. Null when the object is a value. */
+  readonly objectEntityName: string | null;
+  readonly sourceText: string;
+  readonly observedAt: Timestamp;
+  readonly cardinality: 'single' | 'multi';
+  /** As findConflictCandidates returns them. */
+  readonly candidates: readonly FactWithSources[];
+};
+
+/** One verdict per candidate, in the order of the candidates, or llm_failed. Changes nothing. */
+export type ConflictJudge = (input: ConflictJudgeInput) => Promise<Result<readonly ConflictVerdict[]>>;
+```
+
+- **Rules before the LLM.** No candidates give no verdicts. A candidate whose object equals the new fact's is a `duplicate`: the same entity, or values equal in the normalised form of `normaliseEntityName`. Under a multi-valued predicate, a candidate with another object is `unrelated`, and so is a candidate whose valid period does not overlap the new fact's. Only the candidates left, of a single-valued predicate, go to the LLM, all in one call with `task: 'conflict_detection'`, each named by an integer index.
+- **Code computes the moment of change.** A `succession` carries the new fact's `validFrom` when it is known, and otherwise the time the source was observed.
+- **No guessing.** A failed call, an answer outside the schema, an index out of range, a repeated index or a candidate left out give `llm_failed`, never a verdict.
+- **`JUDGE_CANDIDATE_LIMIT` is 10**, the number of similar memories retrieved in the experiments of the Mem0 paper ([contradiction detection research](../research/technical/contradiction-detection.md), finding 10). It bounds one LLM call. Phase 1's `remember` reads up to 50 candidates for its own two rules; FL-042 decides how the two limits meet when it wires the judge in.
+
 ### Phase 3
 
 ```ts

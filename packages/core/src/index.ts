@@ -48,6 +48,8 @@ export {
   TimeFilterSchema,
 } from './fact.ts';
 export type { LlmClient, LlmTask } from './llm-client.ts';
+export type { ConflictJudge, ConflictJudgeInput, ConflictVerdict } from './conflict-judge.ts';
+export { JUDGE_CANDIDATE_LIMIT } from './conflict-judge.ts';
 export { normaliseEntityName } from './entity-name.ts';
 export { createInMemoryStore } from './in-memory-store.ts';
 export type { MemoryStore } from './memory-store.ts';
