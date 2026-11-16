@@ -16,6 +16,7 @@
     "check:types": "tsc -p tsconfig.json",
     "test": "vitest run",
     "eval": "vitest run --config vitest.eval.config.ts --passWithNoTests --reporter=verbose",
+    "eval:retrieval": "node apps/mcp-server/src/print-retrieval-eval.ts",
     "format": "biome format --write .",
     "mutate:core": "stryker run stryker.config.json"
   },
