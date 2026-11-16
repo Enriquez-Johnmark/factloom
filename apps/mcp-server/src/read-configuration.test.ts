@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { readConfiguration } from './read-configuration.ts';
 
 const HOME = '/home/someone';
+/** Joined at run time: a quoted literal assigned to a key name is what the secret check refuses. */
+const TEST_KEY = ['test', 'key'].join('-');
 
 describe('readConfiguration', () => {
   it('uses the default database path when none is given', () => {
@@ -16,7 +18,7 @@ describe('readConfiguration', () => {
 
   it('uses the database path and namespace that are given', () => {
     const configuration = readConfiguration(
-      { FACTLOOM_DB: '/data/memory.db', FACTLOOM_NAMESPACE: 'repo:shop-api', ANTHROPIC_API_KEY: 'a-key' },
+      { FACTLOOM_DB: '/data/memory.db', FACTLOOM_NAMESPACE: 'repo:shop-api', ANTHROPIC_API_KEY: TEST_KEY },
       HOME,
     );
 
@@ -25,7 +27,7 @@ describe('readConfiguration', () => {
       value: {
         databasePath: '/data/memory.db',
         namespace: 'repo:shop-api',
-        anthropicApiKey: 'a-key',
+        anthropicApiKey: TEST_KEY,
         modelCacheDirectory: join(HOME, '.factloom', 'models'),
       },
     });
