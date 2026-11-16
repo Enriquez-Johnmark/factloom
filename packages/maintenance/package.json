@@ -7,6 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@factloom/core": "workspace:*"
+    "@factloom/core": "workspace:*",
+    "zod": "catalog:"
   }
 }

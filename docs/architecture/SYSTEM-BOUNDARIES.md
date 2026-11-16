@@ -77,9 +77,9 @@ The SQL, the migration runner and the row mappers are internal. So is the storag
 
 | Group | Exports |
 |---|---|
-| Scaffold | `maintenanceBuiltOn`, a placeholder that proves the package is imported by name. The conflict judge of FL-041 replaces it |
+| Conflict judge | `judgeConflicts`, with `JudgeConflictsDeps`: it implements `ConflictJudge` from `core` (FL-041) |
 
-It builds no `ChangeSet`, calls no `MemoryStore.commit` and contains no SQL: every change it makes is a call to a fact operation in `core`.
+Its prompt and the schema of the model's answer are internal. It builds no `ChangeSet`, calls no `MemoryStore.commit` and contains no SQL: every change it makes is a call to a fact operation in `core`.
 
 ### `apps/mcp-server`
 
