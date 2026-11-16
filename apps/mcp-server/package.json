@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@anthropic-ai/sdk": "catalog:",
     "@factloom/core": "workspace:*",
     "@factloom/graph-rag": "workspace:*",
     "@factloom/storage": "workspace:*",

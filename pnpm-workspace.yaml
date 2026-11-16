@@ -4,6 +4,8 @@ packages:
 
 # Every shared version is pinned here, once, and exactly. A package.json refers to it with "catalog:".
 catalog:
+  # The Anthropic API client, used only by apps/mcp-server for the LlmClient. It releases often, so it is pinned and upgraded on purpose.
+  "@anthropic-ai/sdk": 1.8.0
   # Formatter and linter, including the import rules between packages.
   "@biomejs/biome": 2.6.7
   # Types for better-sqlite3, which ships none. Development only. See Q-82 on its version.
