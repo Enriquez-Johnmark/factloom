@@ -15,7 +15,7 @@ folders next to this file; "spike" is `spikes/sqlite-vec-fts5/` at the repositor
 
 ## Triage of section A
 
-Added on 2026-11-15. Section A lists 82 questions, which reads as more unfinished work than it is. Each row now has a "Triage" cell that says what happens to it. The triage is a recommendation by the author of this file, not a verification: a row that is "Not pursued" or "Decided" is still unverified, and the rule above still applies to it.
+Added on 2026-11-15. Section A lists 83 questions, which reads as more unfinished work than it is. Each row now has a "Triage" cell that says what happens to it. The triage is a recommendation by the author of this file, not a verification: a row that is "Not pursued" or "Decided" is still unverified, and the rule above still applies to it.
 
 | Triage | Count | What it means |
 |---|---|---|
@@ -26,7 +26,7 @@ Added on 2026-11-15. Section A lists 82 questions, which reads as more unfinishe
 | On upgrade | 3 | Checked when a dependency or the supported Node.js range changes |
 | Later phase | 16 | Matters only from phase 2 onwards. Left until that phase starts |
 | Not pursued | 25 | Details of other products, benchmarks and prices. They informed the direction, which is chosen. No document may make a claim that depends on one |
-| Owner | 10 | Needs the owner: a run on the owner's machine, or a fact only the owner has |
+| Owner | 11 | Needs the owner: a run on the owner's machine, or a fact only the owner has |
 | Open | 2 | A design question still to settle, in the named work item |
 
 ### What needs the owner
@@ -38,6 +38,7 @@ Added on 2026-11-15. Section A lists 82 questions, which reads as more unfinishe
 | Q-20 | Say whether "go to definition" lands in `src` in the editor | Any time |
 | Q-34 | Say which API tier the Anthropic organisation is on | Before FL-069 |
 | Q-80 | Read the provider's terms on using a subscription from a third-party program. Until then the design assumes an API key is needed for `remember` | Before the README says otherwise |
+| Q-83 | Say whether the Anthropic key given to cloud sessions is a real key, and of which type | Any time |
 
 ## A. Unverified claims
 
@@ -128,6 +129,7 @@ Silicon); all research ran on Linux x64 with Node.js v22.23.4.
 | Q-80 | Can a Claude or ChatGPT subscription be used by a third-party program for its own model calls, or is an API key always required? | Decides whether `remember` can ever work without an API key. The design assumes a key is required. | Read the providers' current terms and SDK documentation. | [MCP-TOOLS.md](../architecture/MCP-TOOLS.md) | Owner: read the provider's terms. Until then the design assumes an API key is needed for `remember` |
 | Q-81 | npm 11.19.1 warned on install that `better-sqlite3@13.1.1` "has install scripts not yet covered by allowScripts" (`install: node-gyp rebuild`). The package declares no install script; npm infers one from its `binding.gyp`. The install took five seconds and the module loaded, so the prebuilt binary was used. Does the warning ever become a failure, for example on a platform with no prebuilt binary, or under a stricter npm setting? | A user who installs the published server with npm will see this warning. | Reproduce in the clean-install job (work item FL-003) with npm and with pnpm, and read npm's documentation for `allowScripts`. | [spike README](../../spikes/fact-schema/README.md) | Work item FL-003 |
 | Q-82 | `better-sqlite3` 13.1.1 ships no type declarations. The workspace uses `@types/better-sqlite3` 9.6.0, the newest on the npm registry on 2026-11-15 (`npm view @types/better-sqlite3 version`), whose version number does not follow the driver's. Do its declarations match the driver's 13.x API everywhere Factloom uses it? | A wrong declaration would let a call type-check and fail at run time. | Each call the storage adapter makes is run by its tests, so a mismatch in a used call fails `pnpm check`. Compare the declarations with the driver's API documentation when the driver is upgraded. | `packages/storage` | On upgrade: compare the declarations with the driver when either is upgraded |
+| Q-83 | Do Anthropic API keys exist in a form other than the two that the Gitleaks rules `anthropic-api-key` and `anthropic-admin-api-key` describe (`sk-ant-api03-` or `sk-ant-admin01-`, then 93 characters, then `AA`)? On 2026-11-16 the key supplied to a cloud session was checked against the pattern without being printed: it begins with `sk-ant-`, has the same length and ends with `AA`, but has a three-letter type segment, so the pattern does not match it. That key may be a substitute value that the environment's proxy replaces, not a key format the provider issues. | The secret check of FL-022 uses the Gitleaks pattern, so a key of another form would be recorded instead of refused. | The owner says whether the key given to cloud sessions is a real key, and of which type; or Anthropic's documentation describes its key formats. A real format is added to the `anthropic_api_key` patterns with one test. | `packages/graph-rag/src/check-for-secrets.ts` | Owner: say what the key given to cloud sessions is |
 
 ## B. Decisions left to the architecture stage
 
