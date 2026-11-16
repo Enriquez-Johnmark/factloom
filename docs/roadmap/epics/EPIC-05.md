@@ -70,7 +70,7 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-026 | Local embedder with bge-small-en-v1.5 | 1 | FL-002, FL-006 | Pending |
-| FL-030 | Rank fusion as a pure function | 1 | FL-004 | Pending |
+| FL-030 | Rank fusion as a pure function | 1 | FL-004 | Completed |
 | FL-031 | recall use case | 1 | FL-007, FL-030, FL-056 | Pending |
 | FL-032 | getFactHistory use case | 1 | FL-007, FL-056 | Pending |
 | FL-033 | Retrieval eval: harness and data | 1 | FL-008, FL-016, FL-017, FL-026, FL-031 | Pending |
@@ -152,7 +152,7 @@ By default the library keeps its cache inside `node_modules` (research, section 
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-004 |
 | Requirements | REQ-05 |
@@ -190,13 +190,38 @@ By default the library keeps its cache inside `node_modules` (research, section 
 - [ADR 0017](../../architecture/adr/0017-rank-fusion-in-typescript-with-time-filtering-in-each-lane.md).
 
 **Acceptance criteria.**
-- [ ] Tests pass with these names: "returns one list in its own order", "ranks a fact found by two lanes above a fact found by one at the same rank", "gives a lane with a higher weight more say", "ignores a lane with weight zero", "leaves out a fact found only by a lane with weight zero", "breaks a tie by the earlier lane and then the better rank", "counts a repeated fact once at its better rank", "returns an empty list for no lanes", "returns invalid_input for a negative weight", "returns invalid_input for a constant that is not above zero".
-- [ ] One test computes the scores of a three-list example by hand in a comment and asserts each score to six decimal places.
-- [ ] `pnpm check` passes.
+- [x] Tests pass with these names: "returns one list in its own order", "ranks a fact found by two lanes above a fact found by one at the same rank", "gives a lane with a higher weight more say", "ignores a lane with weight zero", "leaves out a fact found only by a lane with weight zero", "breaks a tie by the earlier lane and then the better rank", "counts a repeated fact once at its better rank", "returns an empty list for no lanes", "returns invalid_input for a negative weight", "returns invalid_input for a constant that is not above zero".
+- [x] One test computes the scores of a three-list example by hand in a comment and asserts each score to six decimal places.
+- [x] `pnpm check` passes.
 
 **Validation.** Direct unit tests with no fakes, on every check.
 
 **Completion evidence.** The commit, and the passing output of `pnpm check`.
+
+**Recorded evidence.** Completed on 2026-11-16, in the commit `feat(graph-rag): add weighted reciprocal rank fusion`. The code is `packages/graph-rag/src/fuse-ranks.ts`, with its tests beside it. The function is not exported from the package.
+
+How two choices the requirements leave open were made:
+
+- **A list with weight 0 has no say in the order of equal scores either.** Requirement 5 says it is ignored, and requirement 4 orders equal scores by the earliest list. A test covers a zero-weight list given first.
+- **A weight or a constant that is not a finite number** is `invalid_input`, as a negative one is.
+
+The three-list example in the tests gives the four scores to nine decimal places in a comment. They were computed a second time outside the test, with Python, and agree.
+
+With the first rank numbered from 0 and the tie-break replaced by the order of the identifiers, each by hand, four tests failed; both were restored.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 108 files. No fixes applied.
+$ biome lint .
+Checked 108 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  34 passed (34)
+      Tests  479 passed (479)
+```
 
 ### FL-031: recall use case
 
