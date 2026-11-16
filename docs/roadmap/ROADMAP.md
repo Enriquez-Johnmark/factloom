@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-16:** the first feature code exists. 27 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-020, FL-022, FL-025, FL-030, FL-031, FL-032, FL-056, FL-067, FL-068, FL-075. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-16:** the first feature code exists. 28 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-020, FL-022, FL-025, FL-030, FL-031, FL-032, FL-056, FL-067, FL-068, FL-075, FL-076. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -93,7 +93,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-069](epics/EPIC-04.md#fl-069-extraction-replay-run-and-recordings) | Extraction replay run and recordings | EPIC-04 | FL-023, FL-029, FL-028, FL-019 | Pending |
 | [FL-074](epics/EPIC-07.md#fl-074-token-and-tool-call-comparison-with-and-without-factloom) | Token and tool-call comparison with and without Factloom | EPIC-07 | FL-038 | Pending |
 | [FL-075](epics/EPIC-07.md#fl-075-property-based-tests-of-the-time-rules) | Property-based tests of the time rules | EPIC-07 | FL-056, FL-067 | Completed |
-| [FL-076](epics/EPIC-07.md#fl-076-differential-tests-between-the-in-memory-store-and-sqlite) | Differential tests between the in-memory store and SQLite | EPIC-07 | FL-075, FL-068, FL-016, FL-017 | Pending |
+| [FL-076](epics/EPIC-07.md#fl-076-differential-tests-between-the-in-memory-store-and-sqlite) | Differential tests between the in-memory store and SQLite | EPIC-07 | FL-075, FL-068, FL-016, FL-017 | Completed |
 | [FL-077](epics/EPIC-07.md#fl-077-mutation-testing-trial-on-core) | Mutation-testing trial on core | EPIC-07 | FL-008, FL-009, FL-010, FL-011 | Pending |
 
 ### Phase 2: Self-correction
