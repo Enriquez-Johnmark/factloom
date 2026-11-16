@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-16:** the first feature code exists. 31 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-022, FL-025, FL-026, FL-030, FL-031, FL-032, FL-056, FL-067, FL-068, FL-075, FL-076, FL-077. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-16:** the first feature code exists. 32 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-022, FL-025, FL-026, FL-030, FL-031, FL-032, FL-034, FL-056, FL-067, FL-068, FL-075, FL-076, FL-077. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -81,7 +81,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-031](epics/EPIC-05.md#fl-031-recall-use-case) | recall use case | EPIC-05 | FL-007, FL-030, FL-056 | Completed |
 | [FL-032](epics/EPIC-05.md#fl-032-getfacthistory-use-case) | getFactHistory use case | EPIC-05 | FL-007, FL-056 | Completed |
 | [FL-033](epics/EPIC-05.md#fl-033-retrieval-eval-harness-and-data) | Retrieval eval: harness and data | EPIC-05 | FL-008, FL-016, FL-017, FL-026, FL-031 | Pending |
-| [FL-034](epics/EPIC-06.md#fl-034-server-configuration-and-composition-root) | Server configuration and composition root | EPIC-06 | FL-014, FL-015, FL-016, FL-017, FL-026 | Pending |
+| [FL-034](epics/EPIC-06.md#fl-034-server-configuration-and-composition-root) | Server configuration and composition root | EPIC-06 | FL-014, FL-015, FL-016, FL-017, FL-026 | Completed |
 | [FL-035](epics/EPIC-06.md#fl-035-remember-and-recordfact-tools) | remember and record_fact tools | EPIC-06 | FL-019, FL-058, FL-023, FL-024 | Pending |
 | [FL-036](epics/EPIC-06.md#fl-036-invalidatefact-and-getfacthistory-tools) | invalidate_fact and get_fact_history tools | EPIC-06 | FL-018, FL-035, FL-058, FL-025, FL-032 | Pending |
 | [FL-037](epics/EPIC-06.md#fl-037-smoke-test-over-stdio-with-a-restart) | Smoke test over stdio with a restart | EPIC-06 | FL-002, FL-035, FL-036 | Pending |
