@@ -75,7 +75,7 @@ Factloom can take new information and record it as entities and facts with a **s
 | FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Pending |
 | FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Pending |
 | FL-024 | recordStructuredFacts use case | 1 | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 | Pending |
-| FL-025 | changeFact use case | 1 | FL-009, FL-010, FL-020, FL-022, FL-056 | Pending |
+| FL-025 | changeFact use case | 1 | FL-009, FL-010, FL-020, FL-022, FL-056 | Completed |
 
 ### FL-018: Software development domain: entity types and predicates
 
@@ -675,7 +675,7 @@ export declare function recordStructuredFacts(
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-009, FL-010, FL-020, FL-022, FL-056 |
 | Requirements | Supports REQ-06 and REQ-08; REQ-19 |
@@ -731,12 +731,42 @@ export declare function changeFact(
 - [`.claude/rules/architecture.md`](../../../.claude/rules/architecture.md).
 
 **Acceptance criteria.**
-- [ ] Unit tests pass with these names: "corrects a wrong fact and links it to the replacement", "gives the correction the valid period of the fact it corrects when none is given", "keeps the valid period a correction gives", "retracts a wrong fact when no replacement is given", "ends a fact at the given moment and records its successor from that moment", "ends a fact now when no moment is given", "ends a fact with no successor", "stores the explanation as the content of a source and not in the audit log", "returns already_invalidated with the superseding fact when the fact is no longer live", "returns not_found for a fact in another namespace", "returns conflict when the replacement overlaps another live fact", "returns invalid_input when an end is given for a wrong fact", "refuses an explanation that contains a secret and writes nothing".
-- [ ] The test about the explanation asserts that the audit entries of the call carry the reason code and the source identifier, and that no audit entry contains the explanation.
-- [ ] A test named "makes one commit either way" asserts, for a correction and for a succession, that every audit entry written by the call shares one operation identifier.
-- [ ] A test asserts that the number of fact rows never falls: after each call above, every fact that existed before still exists.
-- [ ] `pnpm check` passes.
+- [x] Unit tests pass with these names: "corrects a wrong fact and links it to the replacement", "gives the correction the valid period of the fact it corrects when none is given", "keeps the valid period a correction gives", "retracts a wrong fact when no replacement is given", "ends a fact at the given moment and records its successor from that moment", "ends a fact now when no moment is given", "ends a fact with no successor", "stores the explanation as the content of a source and not in the audit log", "returns already_invalidated with the superseding fact when the fact is no longer live", "returns not_found for a fact in another namespace", "returns conflict when the replacement overlaps another live fact", "returns invalid_input when an end is given for a wrong fact", "refuses an explanation that contains a secret and writes nothing".
+- [x] The test about the explanation asserts that the audit entries of the call carry the reason code and the source identifier, and that no audit entry contains the explanation.
+- [x] A test named "makes one commit either way" asserts, for a correction and for a succession, that every audit entry written by the call shares one operation identifier.
+- [x] A test asserts that the number of fact rows never falls: after each call above, every fact that existed before still exists.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests in `graph-rag` with the in-memory store and a fixed clock, on every check.
 
 **Completion evidence.** The commit, and the passing output of `pnpm check`.
+
+**Recorded evidence.** Completed on 2026-11-16, in the commit `feat(graph-rag): add the changeFact use case`. The code is `packages/graph-rag/src/change-fact.ts`, with its tests beside it. `changeFact` is exported from `@factloom/graph-rag` with the type `ChangeFactInput`, and with `StructuredFactInput`, which this item is the first to need. It is in its own file, `structured-fact-input.ts`, because `remember` (FL-023) and `recordStructuredFacts` (FL-024) take it too.
+
+What differs from the work item as written:
+
+- Of the checks in functional requirement 1, the use case makes three itself: an empty explanation (empty after trimming white space), an end given for a wrong fact, and an entity type the domain does not have. The type check comes before resolution, because resolution may reuse an existing entity of another type, which the fact operation cannot then see. An unknown predicate and a confidence outside 0 to 1 are refused with `invalid_input` by the fact operation itself (`prepareFactDrafts`, shared by the fact operations since FL-009), whose message lists the domain's predicates and entity types. A first version checked both in the use case as well; removing each by hand failed no test, so the copies were removed. The tests for both cases still pass.
+- The function that resolves the replacement's entities and builds its draft is in `change-fact.ts`. FL-024 needs the same step and can move it to its own file then; today it has one use.
+- The test that fact rows never fall is "never removes a fact row": it applies a correction, a retraction, a succession and a revision in turn, and after each asserts that every fact that existed before still exists. The other tests do not repeat that assertion.
+- "ends a fact now when no moment is given" gives a successor, so it also shows that a successor with no start begins now.
+- `MemoryStore` cannot list every audit entry, so the tests collect the audit entries of every fact, entity and source that the facts reach, and of every source an entry names.
+- Technical requirement 2, one fact operation called once, is not asserted on calls, which the testing rules forbid. "makes one commit either way" shows it through the one operation identifier.
+- Four tests besides the named ones: "never removes a fact row", "returns invalid_input for an empty explanation, an unknown type or predicate, or a confidence outside 0 to 1", "lists the allowed values when a type or predicate is unknown", and "refuses a replacement that contains a secret".
+
+Ten changes, each made by hand and each restored, made a test fail: no secret check, the secret check on the explanation only, an end accepted for a wrong fact, an empty explanation accepted, the entity type check skipped, the wrong reason code, the end always at now, a report that a fact is no longer true treated as wrong, the explanation not kept, and the replacement not read back after the commit.
+
+Not run: the use case against the SQLite store, and the `invalidate_fact` tool that calls it (FL-036).
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 117 files. No fixes applied.
+$ biome lint .
+Checked 117 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  38 passed (38)
+      Tests  553 passed (553)
+```
