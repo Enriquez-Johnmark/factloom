@@ -69,7 +69,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-034 | Server configuration and composition root | 1 | FL-014, FL-015, FL-016, FL-017, FL-026 | Completed |
-| FL-058 | recall tool end to end | 1 | FL-008, FL-034, FL-031 | Pending |
+| FL-058 | recall tool end to end | 1 | FL-008, FL-034, FL-031 | Completed |
 | FL-035 | remember and record_fact tools | 1 | FL-019, FL-058, FL-023, FL-024 | Pending |
 | FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-018, FL-035, FL-058, FL-025, FL-032 | Pending |
 | FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Pending |
@@ -183,7 +183,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-008, FL-034, FL-031 |
 | Requirements | REQ-03, REQ-04, REQ-10 |
@@ -235,16 +235,47 @@ $ vitest run
 - [`.claude/rules/typescript.md`](../../../.claude/rules/typescript.md): data from outside is parsed by a schema at the edge.
 
 **Acceptance criteria.**
-- [ ] Input fuzz test passes for the `recall` tool: for generated inputs of any JSON shape, the handler returns a tool result, either a success or an error with `invalid_input`, and never throws or ends the server. The generator and its seed are those of FL-075 if that item is done, and a fixed list of malformed inputs otherwise. FL-035 and FL-036 apply the same test to their tools.
-- [ ] Tests of the tool, with a server built from the in-memory store and the fake embedder and a client connected in process, pass with these names: "lists recall with a description on every input field", "declares an output schema and the read-only annotation", "returns the same facts as structured content and as text", "returns current facts when no date is given", "accepts a calendar date as the as-of date", "returns a fact withdrawn since the known-at date with its invalidation", "returns invalid_input for a malformed date", "returns each source without its content", "starts an error text with the error code".
-- [ ] Unit tests of the translations pass with these names: "translates a fact with an entity as its object", "translates a fact with a value as its object", "puts the related fact identifiers after the message of an error".
-- [ ] A test named "answers recall over stdio from a SQLite file" records one fact in a temporary database through `recordFacts` (FL-008) with the SQLite store and the fake embedder, starts `node` on the test entry as a child process with that database and a namespace, calls `recall` over stdio, and finds the fact in the result.
-- [ ] The same test asserts that every line the child wrote to standard output parses as a JSON-RPC message.
-- [ ] `pnpm check` passes with no network access and no embedding model in the cache.
+- [x] Input fuzz test passes for the `recall` tool: for generated inputs of any JSON shape, the handler returns a tool result, either a success or an error with `invalid_input`, and never throws or ends the server. The generator and its seed are those of FL-075 if that item is done, and a fixed list of malformed inputs otherwise. FL-035 and FL-036 apply the same test to their tools.
+- [x] Tests of the tool, with a server built from the in-memory store and the fake embedder and a client connected in process, pass with these names: "lists recall with a description on every input field", "declares an output schema and the read-only annotation", "returns the same facts as structured content and as text", "returns current facts when no date is given", "accepts a calendar date as the as-of date", "returns a fact withdrawn since the known-at date with its invalidation", "returns invalid_input for a malformed date", "returns each source without its content", "starts an error text with the error code".
+- [x] Unit tests of the translations pass with these names: "translates a fact with an entity as its object", "translates a fact with a value as its object", "puts the related fact identifiers after the message of an error".
+- [x] A test named "answers recall over stdio from a SQLite file" records one fact in a temporary database through `recordFacts` (FL-008) with the SQLite store and the fake embedder, starts `node` on the test entry as a child process with that database and a namespace, calls `recall` over stdio, and finds the fact in the result.
+- [x] The same test asserts that every line the child wrote to standard output parses as a JSON-RPC message.
+- [x] `pnpm check` passes with no network access and no embedding model in the cache.
 
 **Validation.** Unit tests with fakes and an in-process client. One test over stdio with a child process, the SQLite adapter and the fake embedder. All on every check.
 
 **Completion evidence.** The commit, and the passing output of `pnpm check`.
+
+**Recorded evidence.** Completed on 2026-11-16, in two commits: `build(mcp-server): add fast-check for the input fuzz test of the tools` and `feat(mcp-server): add the recall tool with the shared translations and a test entry over stdio`. The tool is `apps/mcp-server/src/recall-tool.ts`. The translations are `to-fact-output.ts`, `read-optional-date.ts`, `to-tool-error.ts` and `to-tool-success.ts`. The test entry is `serve-with-fake-embedder.ts`. All have their tests beside them, and `main.ts` registers the tool.
+
+What differs from the work item as written:
+
+- **The fuzz test.** The generator of FL-075 builds sequences of changes to memory, not tool inputs, so the test uses its library, fast-check 4.10.2, and its seed, 20261115, with 200 generated inputs of three shapes: arguments that pass the tool's schema with any text in the date fields, the tool's own fields set to values of any JSON type, and objects with any other keys. Input that the schema refuses is answered by the SDK with its own message, "Input validation error ...", as `MCP-TOOLS.md` says under "Errors"; the test accepts that or an error that starts with `invalid_input`. After the run the server still lists its tool. A first version had only the last two shapes and almost never reached the handler: a handler that threw on an empty date passed it. With the first shape added, the same change failed and shrank to `{"question":" ","as_of":""}`.
+- The translation of a fact is `toFactOutput`, for any fact with its sources, because the later tools return facts that were not recalled; `recall` adds the score. Returning a success as structured content and as the same text is a fourth small function, `toToolSuccess`, which the later tools reuse too.
+- An entity object whose entity a store did not read is given as type `entity` with the identifier as its name. A store always reads it, and no test covers that branch.
+- The helpers that run a server entry as a child process moved into `src/testing/server-process.ts`, shared by `main.test.ts` and the new test over stdio. `main.test.ts` now also asks `tools/list` and expects `recall`, so that what `main.ts` registers is tested, not only what the test entry registers.
+- Six tests besides the named ones: three of `readOptionalDate`, "gives only the code and the message when no fact is related", the fuzz test's name "answers input of any shape with a tool result and keeps serving", and the tool list of `main.ts` within "starts over stdio on a new SQLite file".
+- The default limit of 10 is not asserted by a test.
+
+Eleven changes, each made by hand and each restored, made a test fail: a source returned with its content, `recorded_at` taken from valid time, an entity object given as its identifier, no code in the error text, the related facts before the message, no text content, a malformed date read as absent, `known_at` ignored, the tool not read-only, `main.ts` registering no tool, and, once the fuzz test was strengthened, a handler that throws on an empty date.
+
+Not run: the tool with a real host (FL-038), and `pnpm check` with the network cut off; it ran with every new file staged, and no test loads the model.
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43820981310.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, with every new file staged. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 153 files. No fixes applied.
+$ biome lint .
+Checked 153 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  52 passed (52)
+      Tests  620 passed (620)
+```
 
 ### FL-035: remember and record_fact tools
 
