@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-16:** the first feature code exists. 22 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-020, FL-056, FL-067, FL-068, FL-075. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-16:** the first feature code exists. 23 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-020, FL-030, FL-056, FL-067, FL-068, FL-075. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -77,7 +77,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-026](epics/EPIC-05.md#fl-026-local-embedder-with-bge-small-en-v15) | Local embedder with bge-small-en-v1.5 | EPIC-05 | FL-002, FL-006 | Pending |
 | [FL-028](epics/EPIC-07.md#fl-028-record-and-replay-wrapper-for-the-llm-client) | Record-and-replay wrapper for the LLM client | EPIC-07 | FL-006, FL-027 | Pending |
 | [FL-029](epics/EPIC-07.md#fl-029-extraction-cases) | Extraction cases | EPIC-07 | FL-018, FL-027 | Pending |
-| [FL-030](epics/EPIC-05.md#fl-030-rank-fusion-as-a-pure-function) | Rank fusion as a pure function | EPIC-05 | FL-004 | Pending |
+| [FL-030](epics/EPIC-05.md#fl-030-rank-fusion-as-a-pure-function) | Rank fusion as a pure function | EPIC-05 | FL-004 | Completed |
 | [FL-031](epics/EPIC-05.md#fl-031-recall-use-case) | recall use case | EPIC-05 | FL-007, FL-030, FL-056 | Pending |
 | [FL-032](epics/EPIC-05.md#fl-032-getfacthistory-use-case) | getFactHistory use case | EPIC-05 | FL-007, FL-056 | Pending |
 | [FL-033](epics/EPIC-05.md#fl-033-retrieval-eval-harness-and-data) | Retrieval eval: harness and data | EPIC-05 | FL-008, FL-016, FL-017, FL-026, FL-031 | Pending |
