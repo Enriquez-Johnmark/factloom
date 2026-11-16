@@ -2,10 +2,19 @@ packages:
   - packages/*
   - apps/*
 
+# Install scripts that are not run. onnxruntime-node's only downloads CUDA provider binaries from a
+# NuGet feed; the CPU binaries for every supported platform are in the package. protobufjs's is not
+# needed to load the embedding model.
+allowBuilds:
+  onnxruntime-node: false
+  protobufjs: false
+
 # Every shared version is pinned here, once, and exactly. A package.json refers to it with "catalog:".
 catalog:
   # The Anthropic API client, used only by apps/mcp-server for the LlmClient. It releases often, so it is pinned and upgraded on purpose.
   "@anthropic-ai/sdk": 1.8.0
+  # The local embedding model runtime (Transformers.js), used only by apps/mcp-server for the Embedder. See ADR 0014.
+  "@huggingface/transformers": 4.3.2
   # Formatter and linter, including the import rules between packages.
   "@biomejs/biome": 2.6.7
   # Types for better-sqlite3, which ships none. Development only. See Q-82 on its version.

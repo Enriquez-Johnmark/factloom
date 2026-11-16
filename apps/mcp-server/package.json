@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",
+    "@huggingface/transformers": "catalog:",
     "@factloom/core": "workspace:*",
     "@factloom/graph-rag": "workspace:*",
     "@factloom/storage": "workspace:*",
