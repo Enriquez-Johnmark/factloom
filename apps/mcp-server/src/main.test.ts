@@ -55,7 +55,15 @@ describe('the server over stdio', () => {
     expect(messages[0]).toMatchObject({ id: 1, result: { instructions: SERVER_INSTRUCTIONS } });
     expect(messages[1]).toMatchObject({
       id: 2,
-      result: { tools: [{ name: 'recall' }, { name: 'remember' }, { name: 'record_fact' }] },
+      result: {
+        tools: [
+          { name: 'recall' },
+          { name: 'remember' },
+          { name: 'record_fact' },
+          { name: 'invalidate_fact' },
+          { name: 'get_fact_history' },
+        ],
+      },
     });
   }, 30_000);
 

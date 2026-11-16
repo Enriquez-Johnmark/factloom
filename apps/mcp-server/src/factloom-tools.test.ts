@@ -21,25 +21,35 @@ async function listTools() {
 const PropertiesSchema = z.record(z.string(), z.object({ description: z.string().min(1) }));
 
 describe('the tools of the server', () => {
-  it('lists three tools in order with their annotations', async () => {
+  it('lists the five tools in order with their annotations', async () => {
     const tools = await listTools();
 
     // The annotations of MCP-TOOLS.md, "Annotations".
+    const writes = { readOnlyHint: false, destructiveHint: false, idempotentHint: false };
     expect(tools.map((tool) => [tool.name, tool.annotations])).toEqual([
       ['recall', { readOnlyHint: true, openWorldHint: false }],
-      [
-        'remember',
-        { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-      ],
-      [
-        'record_fact',
-        { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-      ],
+      ['remember', { ...writes, openWorldHint: true }],
+      ['record_fact', { ...writes, openWorldHint: false }],
+      ['invalidate_fact', { ...writes, openWorldHint: false }],
+      ['get_fact_history', { readOnlyHint: true, openWorldHint: false }],
     ]);
     for (const tool of tools) {
       expect(tool.outputSchema, tool.name).toBeDefined();
       expect(() => PropertiesSchema.parse(tool.inputSchema.properties), tool.name).not.toThrow();
     }
+  });
+
+  it('describes every field of the replacement of invalidate_fact', async () => {
+    const tools = await listTools();
+    const invalidate = tools.find((tool) => tool.name === 'invalidate_fact');
+
+    const replacement = z
+      .object({ properties: PropertiesSchema })
+      .parse(z.record(z.string(), z.unknown()).parse(invalidate?.inputSchema.properties).replacement);
+
+    expect(Object.keys(replacement.properties).sort()).toEqual(
+      ['confidence', 'object', 'predicate', 'statement', 'subject', 'valid_from', 'valid_to'].sort(),
+    );
   });
 
   it('describes the predicate of record_fact with every predicate of the domain', async () => {
