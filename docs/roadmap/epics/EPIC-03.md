@@ -73,7 +73,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 | FL-068 | SQLite single-value rule, error mapping and two writers on one file | 1 | FL-014, FL-067 | Completed |
 | FL-015 | SQLite structural reads with the time predicate | 1 | FL-014, FL-068 | Completed |
 | FL-016 | Keyword lane on FTS5 | 1 | FL-015 | Completed |
-| FL-017 | Vector lane on a plain table, with model checking | 1 | FL-002, FL-015 | Pending |
+| FL-017 | Vector lane on a plain table, with model checking | 1 | FL-002, FL-015 | Completed |
 
 ### FL-012: Storage contract suite: fixture, time, reads, commit and refusals
 
@@ -827,7 +827,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-002, FL-015 |
 | Requirements | REQ-03, REQ-04, REQ-05, REQ-11, REQ-27 |
@@ -876,14 +876,53 @@ A database holds vectors from one model, and the adapter refuses to start with a
 - [Data rules](../../../.claude/rules/data.md), "Vectors".
 
 **Acceptance criteria.**
-- [ ] The contract group "vector lane" of FL-067, V1 to V6, passes against the SQLite adapter and still passes against the in-memory store. With this, all four groups run against SQLite with no group turned off, and the count of passing cases for each store is recorded.
-- [ ] Adapter test "returns current facts when every nearer vector belongs to a superseded copy" passes: a fact is ended and its copy ended again, so three rows share one vector; a query for now with a limit of 1 returns the one that is current.
-- [ ] Adapter test "refuses to open a database built with another model" passes, and "refuses to open a database built with another number of dimensions" passes, both with `embedding_model_mismatch`.
-- [ ] Adapter test "opens an empty database with any model" passes.
-- [ ] Adapter test "gives a copied fact the vector of the fact it copies" passes: the two embedding rows hold equal bytes, model and dimensions.
-- [ ] Adapter test "does not copy a vector across namespaces" passes with `not_found`.
-- [ ] `pnpm check` exits 0 on Linux and on macOS arm64 in the workflow of FL-002. The address of that run is recorded: it is the first run of `sqlite-vec`'s distance function on Apple Silicon inside the workspace.
+- [x] The contract group "vector lane" of FL-067, V1 to V6, passes against the SQLite adapter and still passes against the in-memory store. With this, all four groups run against SQLite with no group turned off, and the count of passing cases for each store is recorded.
+- [x] Adapter test "returns current facts when every nearer vector belongs to a superseded copy" passes: a fact is ended and its copy ended again, so three rows share one vector; a query for now with a limit of 1 returns the one that is current.
+- [x] Adapter test "refuses to open a database built with another model" passes, and "refuses to open a database built with another number of dimensions" passes, both with `embedding_model_mismatch`.
+- [x] Adapter test "opens an empty database with any model" passes.
+- [x] Adapter test "gives a copied fact the vector of the fact it copies" passes: the two embedding rows hold equal bytes, model and dimensions.
+- [x] Adapter test "does not copy a vector across namespaces" passes with `not_found`.
+- [x] `pnpm check` exits 0 on Linux and on macOS arm64 in the workflow of FL-002. The address of that run is recorded: it is the first run of `sqlite-vec`'s distance function on Apple Silicon inside the workspace.
 
 **Validation.** Contract tests against both stores; adapter tests in `storage`.
 
 **Completion evidence.** The commit, the passing `pnpm check` output with the contract case counts for both stores, and the address of the workflow run. Q-09 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) stays open until FL-066.
+
+**Recorded evidence.** Completed on 2026-11-16, in the commit `feat(storage): add the vector lane and the embedding model checks`, with `test(storage): remove an unused import from the vector lane tests` after it. The code is `packages/storage/src/embedding-model.ts`, the vector statement in `create-reads.ts`, and the checks in `create-commit.ts` and `open-sqlite-memory-store.ts`. The tests are `sqlite-vector-lane.test.ts` and the vector group in `sqlite-memory-store.contract.test.ts`.
+
+Contract cases that pass, with no group turned off for either store:
+
+| Group | In-memory store | SQLite store |
+|---|---|---|
+| Time, reads, commit and refusals | 41 | 41 |
+| Single-value rule and namespaces | 15 | 16, with P1 for two stores on one file |
+| Keyword lane | 5 | 5 |
+| Vector lane | 6 | 6 |
+| Total | 67 | 68 |
+
+Notes:
+
+- **Equal distances** are ordered by the row order of the fact, oldest first, which is what the in-memory store does.
+- **The check at open** reads the distinct model and dimensions in `fact_embedding` with one query. It does not look at the vectors themselves, so a row whose bytes do not match its recorded dimensions would not be noticed there.
+- **A query vector of another size** is refused before the query runs, by comparing its length with the dimensions the store was opened with.
+- The first push of this item left an unused import in the test file, which the lint step reported as a warning without failing the check. It was removed in the commit after.
+
+With the time predicate removed from the vector statement and the check at open disabled by hand, seven tests failed: V1 to V4, the superseded-copy test and the two refusals at open. Both were restored.
+
+No timing was taken, as the work item says. Q-09 stays open until FL-066.
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43786537244. It is the first run of `sqlite-vec`'s distance function on Apple Silicon inside the workspace.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 104 files. No fixes applied.
+$ biome lint .
+Checked 104 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  32 passed (32)
+      Tests  459 passed (459)
+```
