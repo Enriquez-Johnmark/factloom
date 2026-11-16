@@ -10,6 +10,7 @@ import { openSqliteMemoryStore } from '@factloom/storage';
 import type { Logger } from './create-factloom-server.ts';
 import { createLocalEmbedder } from './create-local-embedder.ts';
 import { readConfiguration } from './read-configuration.ts';
+import { registerRecallTool } from './recall-tool.ts';
 import { serveFactloom } from './serve-factloom.ts';
 
 const log: Logger = (message) => {
@@ -45,5 +46,5 @@ serveFactloom(
     newId: () => randomUUID(),
     log,
   },
-  [],
+  [registerRecallTool],
 );

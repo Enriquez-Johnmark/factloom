@@ -1,6 +1,5 @@
 // The server as a host runs it: `node main.ts` as a child process, spoken to over stdio. None
 // of these tests loads the embedding model: the server answers before it is needed.
-import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -8,6 +7,13 @@ import { parseDateInput } from '@factloom/core';
 import { openSqliteMemoryStore } from '@factloom/storage';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SERVER_INSTRUCTIONS } from './server-instructions.ts';
+import {
+  INITIALIZE_REQUEST,
+  INITIALIZED_NOTIFICATION,
+  parseOutputLines,
+  startServerProcess,
+  waitFor,
+} from './testing/server-process.ts';
 
 const MAIN = join(import.meta.dirname, 'main.ts');
 const directories: string[] = [];
@@ -22,85 +28,37 @@ function createTemporaryDirectory(): string {
   return directory;
 }
 
-type Finished = {
-  readonly code: number | null;
-  readonly standardOutput: string;
-  readonly standardError: string;
-};
-
-/**
- * Starts the server with the given variables and a home directory of its own, so that nothing
- * reaches the real one. Collects both outputs until the process ends.
- */
-function startServer(variables: Readonly<Record<string, string>>, home: string) {
-  const child: ChildProcess = spawn(process.execPath, [MAIN], {
-    env: { PATH: process.env.PATH ?? '', HOME: home, ...variables },
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
-  let standardOutput = '';
-  let standardError = '';
-  child.stdout?.on('data', (chunk: Buffer) => {
-    standardOutput += chunk.toString('utf8');
-  });
-  child.stderr?.on('data', (chunk: Buffer) => {
-    standardError += chunk.toString('utf8');
-  });
-  const finished = new Promise<Finished>((resolve) => {
-    child.on('exit', (code) => resolve({ code, standardOutput, standardError }));
-  });
-  return { child, finished, readStandardOutput: () => standardOutput };
-}
-
-/** Waits until a predicate holds, checking every 20 ms, for at most the given time. */
-async function waitFor(holds: () => boolean, timeout: number): Promise<void> {
-  const start = Date.now();
-  while (!holds()) {
-    if (Date.now() - start > timeout) throw new Error('Timed out waiting for the server.');
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  }
-}
-
-function send(child: ChildProcess, message: unknown): void {
-  child.stdin?.write(`${JSON.stringify(message)}\n`);
-}
-
 describe('the server over stdio', () => {
   it('starts over stdio on a new SQLite file', async () => {
     const directory = createTemporaryDirectory();
     const databasePath = join(directory, 'memory', 'factloom.db');
-    const { child, finished, readStandardOutput } = startServer(
+    const server = startServerProcess(
+      MAIN,
       { FACTLOOM_DB: databasePath, FACTLOOM_NAMESPACE: 'repo:shop-api' },
       directory,
     );
 
-    send(child, {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-11-25',
-        capabilities: {},
-        clientInfo: { name: 'test', version: '0.0.0' },
-      },
-    });
-    await waitFor(() => readStandardOutput().includes('"id":1'), 15_000);
-    send(child, { jsonrpc: '2.0', method: 'notifications/initialized' });
-    child.stdin?.end();
-    const { code, standardOutput } = await finished;
+    server.send(INITIALIZE_REQUEST);
+    await waitFor(() => server.readStandardOutput().includes('"id":1'), 15_000);
+    server.send(INITIALIZED_NOTIFICATION);
+    server.send({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} });
+    await waitFor(() => server.readStandardOutput().includes('"id":2'), 15_000);
+    server.close();
+    const { code, standardOutput } = await server.finished;
 
     expect(code).toBe(0);
     expect(existsSync(databasePath)).toBe(true);
     // Closing the last connection checkpoints the write-ahead log and removes its file.
     expect(existsSync(`${databasePath}-wal`)).toBe(false);
-    const lines = standardOutput.split('\n').filter((line) => line !== '');
-    const messages = lines.map((line) => JSON.parse(line));
+    const messages = parseOutputLines(standardOutput);
     for (const message of messages) expect(message).toMatchObject({ jsonrpc: '2.0' });
     expect(messages[0]).toMatchObject({ id: 1, result: { instructions: SERVER_INSTRUCTIONS } });
+    expect(messages[1]).toMatchObject({ id: 2, result: { tools: [{ name: 'recall' }] } });
   }, 30_000);
 
   it('exits when no namespace is configured', async () => {
     const directory = createTemporaryDirectory();
-    const { finished } = startServer({ FACTLOOM_DB: join(directory, 'factloom.db') }, directory);
+    const { finished } = startServerProcess(MAIN, { FACTLOOM_DB: join(directory, 'factloom.db') }, directory);
 
     const { code, standardError, standardOutput } = await finished;
 
@@ -113,7 +71,8 @@ describe('the server over stdio', () => {
     const directory = createTemporaryDirectory();
     const databasePath = join(directory, 'factloom.db');
     await writeFactWithAnotherModel(databasePath);
-    const { finished } = startServer(
+    const { finished } = startServerProcess(
+      MAIN,
       { FACTLOOM_DB: databasePath, FACTLOOM_NAMESPACE: 'repo:shop-api' },
       directory,
     );
