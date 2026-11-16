@@ -55,8 +55,13 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Check
         run: pnpm check
+      # Starts the server with a new database and an empty standard input: it opens SQLite,
+      # finds standard input closed, and must exit with code 0.
       - name: Run the app from source
-        run: node apps/mcp-server/src/main.ts
+        run: node apps/mcp-server/src/main.ts < /dev/null
+        env:
+          FACTLOOM_DB: ${{ runner.temp }}/factloom.db
+          FACTLOOM_NAMESPACE: repo:ci
 
   spikes:
     name: spikes (macOS arm64)
