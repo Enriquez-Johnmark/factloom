@@ -73,7 +73,7 @@ Factloom can take new information and record it as entities and facts with a **s
 | FL-021 | Extraction of facts from text | 1 | FL-018, FL-029, FL-056 | Completed |
 | FL-022 | Secret check that refuses a write | 1 | FL-004 | Completed |
 | FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Completed |
-| FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Pending |
+| FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Under Review |
 | FL-024 | recordStructuredFacts use case | 1 | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 | Completed |
 | FL-025 | changeFact use case | 1 | FL-009, FL-010, FL-020, FL-022, FL-056 | Completed |
 
@@ -635,7 +635,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 1 |
 | Depends on | FL-023, FL-029, FL-028, FL-019 |
 | Requirements | REQ-26, REQ-30 |
@@ -683,17 +683,62 @@ A recording can only be made with a real API key, and only the owner holds one. 
 - [Git rules](../../../.claude/rules/git.md): recordings are checked for secrets before they are pushed.
 
 **Acceptance criteria.**
-- [ ] Unit tests of the pass rule pass with these names: "passes a case when every required fact is matched", "fails a case when a required fact is missing", "fails a case when a forbidden fact is extracted", "fails a case when remember fails".
-- [ ] Unit test "the record command refuses to run without an API key" passes.
+- [x] Unit tests of the pass rule pass with these names: "passes a case when every required fact is matched", "fails a case when a required fact is missing", "fails a case when a forbidden fact is extracted", "fails a case when remember fails".
+- [x] Unit test "the record command refuses to run without an API key" passes.
 - [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the record command from `apps/mcp-server` (`pnpm run record:extraction`). It ends with exit code 0. The owner reads the diff of the new recordings for secrets, records the model identifier and the token counts from the usage reports, and confirms that a call after the first shows a cache read count above zero.
-- [ ] With the recordings in place and no API key set, `pnpm check` exits 0. Its output holds the report, with every case passing and with precision and recall printed.
-- [ ] With one recording removed in a local run, `pnpm check` exits non-zero and names the missing recording. The output is recorded and the file restored.
-- [ ] Two runs of `pnpm test` in a row print the same report, byte for byte.
-- [ ] `git grep -n "API_KEY" -- apps/mcp-server/evals` shows no line that holds a key's value.
+- [x] With the recordings in place and no API key set, `pnpm check` exits 0. Its output holds the report, with every case passing and with precision and recall printed.
+- [x] With one recording removed in a local run, `pnpm check` exits non-zero and names the missing recording. The output is recorded and the file restored.
+- [x] Two runs of `pnpm test` in a row print the same report, byte for byte.
+- [x] `git grep -n "API_KEY" -- apps/mcp-server/evals` shows no line that holds a key's value.
 
 **Validation.** Eval: the extraction cases in replay, inside `pnpm check`. Unit tests of the pass rule and of the record command's refusal. One recording run by the owner, by hand.
 
 **Completion evidence.** One commit that holds the code and the recordings, the passing `pnpm check` output with the report, the model the recordings were made with, the token counts from the recording run, and the output of the run with a recording removed. Q-31 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) is updated with the first precision and recall, labelled as one run of one model. The item is not `Completed`, and not committed, before the owner's recording step.
+
+**Recorded evidence.** Done on 2026-11-16 while the owner was away, under the owner's standing instruction to use the key in `OWNER_ANTHROPIC_API_KEY` and to take the recommended option at each step. The item is `Under Review` until the owner confirms the recording step below, which the item assigns to the owner.
+
+Commits, in order: `fix(graph-rag): date no change from the time a text was written`, which by mistake also holds the code of this item (the eval run function, the pass rule, the report, the record command and the replay test) because they were staged when it was made; and `test(mcp-server): add the extraction recordings and run the cases in replay`, which adds the 20 recordings and names the case in a missing-recording error. The first of the two does not pass `pnpm check` on its own, because the replay test has no recordings yet; the two were pushed together. History was not rewritten.
+
+The recording run. The record command ran once from `apps/mcp-server` with `ANTHROPIC_API_KEY` set for that command only, from `OWNER_ANTHROPIC_API_KEY`, and exited 0. Model `claude-haiku-5-5`, 20 calls, every stop reason `end_turn`. Tokens over the 20 calls: 1,272 input, 5,021 output, 2,090 written to the cache by the first call, and 39,710 read from the cache; the second call read 2,090 cached tokens. The 20 recordings were read for secrets: each holds only `task`, `model`, `instructions`, `input` and `response`, and none holds a key, a header, a token or a path of the machine.
+
+A first recording run, with the instructions of FL-021 as written, passed 18 of 20 cases (precision 0.957, recall 0.880). The two commit-message cases failed: the model dated the port change at the commit's own time because the message says "now", and it returned the replaced Jest fact without an end, so `remember` skipped both facts as a conflict within the text. Two rules were added to the instructions in their own commit, as the non-goals allow: "now", "currently" and the time a text was written fix no date; and a replaced fact is returned only when the text states or fixes the date of the change. The recordings of the first run were not kept. The run above is the second.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, under `unshare -rn` with no network and no API key, exited 0 and printed:
+
+```text
+Cases passed: 20 of 20.
+Facts: expected 25, extracted 24, matched 24; forbidden extracted 0; type differences 1.
+Precision 1.000, recall 0.960.
+ Test Files  67 passed (67)
+      Tests  761 passed (761)
+```
+
+Vitest 5.1.0 hides the output of passing tests when it detects an AI agent through the variables `CLAUDECODE` and `AI_AGENT`. The runs recorded here unset both, as a person's terminal and continuous integration do not set them.
+
+Two runs of `pnpm test` in a row printed the same report, byte for byte (`cmp` of the two reports).
+
+With the recording `0951770826e29c5c0fa8dddc403c95cad50ddfc8a16b89b16273b31135256839.json` moved aside, `pnpm check` exited 1 with:
+
+```text
+Case "An end stated in the text: shop-api left Heroku": No recording for the key 0951770826e29c5c0fa8dddc403c95cad50ddfc8a16b89b16273b31135256839. Expected the file apps/mcp-server/evals/recordings/extraction/0951770826e29c5c0fa8dddc403c95cad50ddfc8a16b89b16273b31135256839.json. Record it with: pnpm --filter @factloom/mcp-server run record:extraction
+```
+
+The file was restored, byte for byte.
+
+`git grep -n "API_KEY" -- apps/mcp-server/evals` shows nothing.
+
+The pass rule was broken by hand three ways, and a test failed each time: forbidden facts ignored, a failure of `remember` passed, and required facts ignored.
+
+Differences from the item:
+
+- The record command (`src/record-extraction.ts`) and the replay test (`src/extraction-replay.test.ts`) are in `src`, and import from `evals/`. Technical requirement 1 says nothing in `src` imports from `evals/`, but the boundary lint refuses an import of `src` from `evals/`, and both need the task map of the Anthropic client (technical requirement 2). This follows the precedent of FL-033, recorded in EPIC-05. `main.ts` loads neither.
+- The scorer of FL-029 exports `matchesCaseFact`, its existing match rule, so that the pass rule decides with the same rule. Nothing else of the scorer changed.
+- The recordings are in `apps/mcp-server/evals/recordings/extraction/`.
+
+For the owner's review:
+
+- Confirm the recording step, which the item gives to the owner: the model, the token counts and the cache reads above, and the diff of the recordings.
+- In `commit-message.yaml` the expected facts conflict with each other under the single-value rule: Vitest with no start and no end, and Jest with no start and an end at the commit's time, overlap. If both were extracted, `remember` would skip both. The case passes now because Jest is not required and the model, under the new rule, returns only Vitest. A change to the case is FL-029's, in its own commit, with a new review; none was made.
 
 ### FL-024: recordStructuredFacts use case
 
