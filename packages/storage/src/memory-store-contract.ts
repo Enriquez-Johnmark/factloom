@@ -707,12 +707,16 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
     );
     expect(entry?.detail).toEqual({ revisesFactId: 'uses-redis' });
   });
-  test('C10: a replacement with another object kind, subject or predicate names no revised fact', async () => {
+  test('C10: a replacement with another object, object kind, subject or predicate names no revised fact', async () => {
     // Each wrong fact is replaced by one that keeps as much of it as possible and differs in
     // one part, so that only a copy with the same subject, predicate and object counts as a revision.
     const depends = (id: string, value: string, fields: Partial<Fact> = {}) =>
       fact(id, 'depends_on', value, { createdAt: at('2026-06-01'), ...fields });
     const replacements: readonly { readonly wrong: Fact; readonly right: Fact }[] = [
+      {
+        wrong: depends('dep-keydb', '', { object: { kind: 'entity', entityId: 'e-keydb' } }),
+        right: depends('dep-valkey', '', { object: { kind: 'entity', entityId: 'e-valkey' } }),
+      },
       {
         wrong: depends('dep-jest', 'vitest'),
         right: depends('dep-vitest', '', { object: { kind: 'entity', entityId: 'e-vitest' } }),
@@ -730,6 +734,8 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
       changeSet('op-c10', '2026-06-01', [
         { kind: 'create_entity', entity: entity('e-vitest', 'vitest', 'dependency') },
         { kind: 'create_entity', entity: entity('e-other', 'other') },
+        { kind: 'create_entity', entity: entity('e-keydb', 'keydb', 'dependency') },
+        { kind: 'create_entity', entity: entity('e-valkey', 'valkey', 'dependency') },
         ...replacements.map(({ wrong }) => recordFact(wrong, { singleValued: false })),
       ]),
     );
