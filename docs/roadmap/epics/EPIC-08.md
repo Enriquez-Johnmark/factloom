@@ -80,7 +80,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-040 | Create the maintenance package and its boundary rules | 2 | FL-001 | Pending |
+| FL-040 | Create the maintenance package and its boundary rules | 2 | FL-001 | Completed |
 | FL-041 | Conflict judge | 2 | FL-040, FL-011, FL-019, FL-027, FL-028 | Pending |
 | FL-042 | Automatic correction inside remember | 2 | FL-035, FL-041, FL-039 | Pending |
 | FL-043 | Proposed changes: storage and operations | 2 | FL-042 | Pending |
@@ -98,7 +98,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-001 |
 | Requirements | REQ-24, REQ-28 |
@@ -137,15 +137,84 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 - [ADR 0003](../../architecture/adr/0003-dependencies-point-inward-with-manual-injection.md).
 
 **Acceptance criteria.**
-- [ ] `pnpm check` passes with the new package present.
-- [ ] Adding `import '@factloom/storage'` to a source file of the package makes `pnpm check` fail at the lint step. `pnpm check` stops at the first failure (FL-001), so the type check is shown separately: with the same import and the dependency not declared in the package's `package.json`, the type check stage run on its own also fails. The import is then removed.
-- [ ] Adding `import '@factloom/graph-rag'` to a source file of the package makes `pnpm check` fail. The import is then removed.
-- [ ] Adding `import '@factloom/maintenance'` to a source file of `@factloom/graph-rag` makes `pnpm check` fail. The import is then removed.
-- [ ] `SYSTEM-BOUNDARIES.md` lists the package in the import table and in "Public API of each package".
+- [x] `pnpm check` passes with the new package present.
+- [x] Adding `import '@factloom/storage'` to a source file of the package makes `pnpm check` fail at the lint step. `pnpm check` stops at the first failure (FL-001), so the type check is shown separately: with the same import and the dependency not declared in the package's `package.json`, the type check stage run on its own also fails. The import is then removed.
+- [x] Adding `import '@factloom/graph-rag'` to a source file of the package makes `pnpm check` fail. The import is then removed.
+- [x] Adding `import '@factloom/maintenance'` to a source file of `@factloom/graph-rag` makes `pnpm check` fail. The import is then removed.
+- [x] `SYSTEM-BOUNDARIES.md` lists the package in the import table and in "Public API of each package".
 
 **Validation.** `pnpm check`, run four times: once clean and once with each forbidden import.
 
 **Completion evidence.** The commit, and the failing output of each of the three forbidden-import runs.
+
+**Recorded evidence.** Completed on 2026-11-16 on Linux x64 with Node.js v22.23.4 and pnpm 12.18.0, in four commits: `build: add maintenance package`, `build: add import rules for the maintenance package`, `docs: add the maintenance package to the system boundaries` and `docs: add the maintenance package to the architecture`. Each failing proof below was added, run and removed; none was committed.
+
+The package follows FL-001: its `package.json` declares `@factloom/core` only and exports only `src/index.ts`, and its one test checks a placeholder export, `maintenanceBuiltOn`, which FL-041 replaces. [ADR 0001](../../architecture/adr/0001-typescript-pnpm-monorepo-with-four-packages.md) says each later package "is created when its phase starts", so no new decision record was needed.
+
+`pnpm check` with the package present:
+
+```text
+$ pnpm run check:format && pnpm run check:lint && pnpm run check:types && pnpm run test
+$ biome format .
+Checked 243 files in 47ms. No fixes applied.
+$ biome lint .
+Checked 243 files in 79ms. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ RUN  v5.1.0 <repo>
+ Test Files  70 passed (70)
+      Tests  770 passed (770)
+exit code: 0
+```
+
+The one info is `lint/complexity/useIndexOf` in `packages/storage/src/change-sequence-generator.ts`, present before this item.
+
+Forbidden imports. Each stops the check at the lint stage and names the rule; for the three the item names, the type check run on its own also fails, because the dependency is not declared:
+
+```text
+added to packages/maintenance/src/index.ts: import '@factloom/storage';
+$ biome lint .
+packages/maintenance/src/index.ts:1:8 lint/style/noRestrictedImports
+  × maintenance must not import @factloom/storage or @factloom/graph-rag, and imports other packages by name only. It changes memory only through the fact operations in core.
+Found 1 error.
+exit code: 1
+$ pnpm run check:types
+packages/maintenance/src/index.ts(1,8): error TS2882: Cannot find module or type declarations for side-effect import of '@factloom/storage'.
+exit code: 1
+
+added to packages/maintenance/src/index.ts: import '@factloom/graph-rag';
+$ biome lint .
+packages/maintenance/src/index.ts:1:8 lint/style/noRestrictedImports
+  × maintenance must not import @factloom/storage or @factloom/graph-rag, and imports other packages by name only. It changes memory only through the fact operations in core.
+Found 1 error.
+exit code: 1
+$ pnpm run check:types
+packages/maintenance/src/index.ts(1,8): error TS2882: Cannot find module or type declarations for side-effect import of '@factloom/graph-rag'.
+exit code: 1
+
+added to packages/graph-rag/src/index.ts: import '@factloom/maintenance';
+$ biome lint .
+packages/graph-rag/src/index.ts:1:8 lint/style/noRestrictedImports
+  × graph-rag must not import @factloom/storage or @factloom/maintenance, and imports other packages by name only. It reaches storage through the MemoryStore interface in core.
+Found 1 error.
+exit code: 1
+$ pnpm run check:types
+packages/graph-rag/src/index.ts(1,8): error TS2882: Cannot find module or type declarations for side-effect import of '@factloom/maintenance'.
+exit code: 1
+```
+
+Three further proofs, beyond the item: `import '@factloom/maintenance'` in `packages/storage/src/index.ts`, `import 'better-sqlite3'` and the deep import `import '@factloom/core/src/index.ts'` in `packages/maintenance/src/index.ts`. Each failed the lint stage with exit code 1, naming the storage rule, the rule against a database, LLM, embedding or MCP library, and the maintenance rule respectively. `core` already forbids every other `@factloom` package, so it needed no change.
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the last of the four commits: https://github.com/Johnmark-Tech/factloom/actions/runs/43977632964.
+
+Differences from the item:
+
+- `zod` is allowed by the import table but not declared, as FL-001 declared none in `graph-rag`'s scaffold; the first work item that uses it declares it.
+- `apps/mcp-server` does not declare the package yet. The import table allows it; the first work item that imports it from the app declares it.
+- [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md) also gains a row in "What crosses each boundary".
+
+Not run: a forbidden import with its dependency declared in the package's `package.json`. The lint rule does not read `package.json`, and FL-001 ran that case for `core`.
 
 ### FL-041: Conflict judge
 
