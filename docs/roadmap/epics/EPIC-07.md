@@ -769,6 +769,8 @@ $ vitest run
       Tests  554 passed (554)
 ```
 
+Follow-up on 2026-11-16, in the commit `fix(storage): give the differential test a time limit of its own`. A later workflow run, https://github.com/Enriquez-Johnmark/factloom/actions/runs/43800490944, failed on the job for Linux with Node.js 22: "Error: Test timed out in 5000ms" for "the in-memory store and SQLite give the same answers". The test takes about five seconds here, at Vitest's default limit, and had passed in the run recorded above by a small margin. It now has a limit of its own, 60 seconds, as a named constant. The number of sequences, the seed and every assertion are unchanged. The next runs passed: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43800626684.
+
 ### FL-077: Mutation-testing trial on core
 
 | | |
