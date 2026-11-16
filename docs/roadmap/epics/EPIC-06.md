@@ -71,7 +71,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-034 | Server configuration and composition root | 1 | FL-014, FL-015, FL-016, FL-017, FL-026 | Completed |
 | FL-058 | recall tool end to end | 1 | FL-008, FL-034, FL-031 | Completed |
 | FL-035 | remember and record_fact tools | 1 | FL-019, FL-058, FL-023, FL-024 | Completed |
-| FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-018, FL-035, FL-058, FL-025, FL-032 | Pending |
+| FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-018, FL-035, FL-058, FL-025, FL-032 | Completed |
 | FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Pending |
 | FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Pending |
 
@@ -361,7 +361,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-018, FL-035, FL-058, FL-025, FL-032 |
 | Requirements | REQ-09, REQ-10 |
@@ -405,15 +405,33 @@ Differences from the item:
 - [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "Errors" and "Annotations".
 
 **Acceptance criteria.**
-- [ ] Tests of `invalidate_fact`, with the in-memory store, pass with these names: "corrects a fact and returns the replacement's identifier", "retracts a fact and returns no replacement", "ends a fact at the given date and records the replacement from that date", "ends a fact now when no date is given", "returns already_invalidated with the superseding fact for a fact that was revised", "returns not_found for an unknown fact", "returns invalid_input for a malformed end date".
-- [ ] Tests of `get_fact_history` pass with these names: "returns both facts of a succession with the changes of each", "returns each change with its operation, reason code and explanation", "returns the reason given to invalidate_fact as the explanation of the change", "returns a null explanation for a change that names no source", "returns not_found for an unknown fact".
-- [ ] A test named "lists the five tools in order with their annotations" asserts the five names in order, the annotation values of the table in `MCP-TOOLS.md` for every tool, an output schema on each, and a description on every input field including the fields of `replacement`.
-- [ ] A test asserts that after a correction made through `invalidate_fact`, `recall` with no date returns the replacement and not the wrong fact, and `recall` with a `known_at` date before the correction returns the wrong fact with `invalidated_at` and `superseded_by_fact_id` set.
-- [ ] `pnpm check` passes.
+- [x] Tests of `invalidate_fact`, with the in-memory store, pass with these names: "corrects a fact and returns the replacement's identifier", "retracts a fact and returns no replacement", "ends a fact at the given date and records the replacement from that date", "ends a fact now when no date is given", "returns already_invalidated with the superseding fact for a fact that was revised", "returns not_found for an unknown fact", "returns invalid_input for a malformed end date".
+- [x] Tests of `get_fact_history` pass with these names: "returns both facts of a succession with the changes of each", "returns each change with its operation, reason code and explanation", "returns the reason given to invalidate_fact as the explanation of the change", "returns a null explanation for a change that names no source", "returns not_found for an unknown fact".
+- [x] A test named "lists the five tools in order with their annotations" asserts the five names in order, the annotation values of the table in `MCP-TOOLS.md` for every tool, an output schema on each, and a description on every input field including the fields of `replacement`.
+- [x] A test asserts that after a correction made through `invalidate_fact`, `recall` with no date returns the replacement and not the wrong fact, and `recall` with a `known_at` date before the correction returns the wrong fact with `invalidated_at` and `superseded_by_fact_id` set.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests with fakes and an in-process client, on every check. Both tools run over stdio in the smoke test (FL-037).
 
 **Completion evidence.** The commit, and the passing output of `pnpm check`.
+
+**Recorded evidence.** Done on 2026-11-16, in the commit `feat(mcp-server): add the invalidate_fact and get_fact_history tools`.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, run under `unshare -rn` with no network and no API key, exited 0 and ended with:
+
+```text
+ Test Files  64 passed (64)
+      Tests  753 passed (753)
+```
+
+Each rule was broken by hand once and a test failed: the reason passed as the explanation, the identifier of the replacement, `ended_at`, the explanation of a change in the history, and the destructive annotation.
+
+Differences from the item:
+
+- The tests reach memory only through the tools: a fact is recorded with `record_fact`, changed with `invalidate_fact`, and read with `recall` and `get_fact_history`, on a helper (`testing/tool-session.ts`) that connects a client to all five tools for each call, with an LLM that fails the test if it is called.
+- The description on every field of `replacement` is asserted by its own test, "describes every field of the replacement of invalidate_fact", beside "lists the five tools in order with their annotations".
+- The stdio test of FL-058 now expects the five tools in order.
+- Extra test: a malformed date in the replacement names the field `replacement.valid_from`.
 
 ### FL-037: Smoke test over stdio with a restart
 
