@@ -68,7 +68,7 @@ Factloom can take new information and record it as entities and facts with a **s
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-018 | Software development domain: entity types and predicates | 0 | FL-006 | Completed |
-| FL-019 | Anthropic LLM client | 1 | FL-006 | Pending |
+| FL-019 | Anthropic LLM client | 1 | FL-006 | Completed |
 | FL-020 | Entity resolution by exact name | 1 | FL-007, FL-056 | Completed |
 | FL-021 | Extraction of facts from text | 1 | FL-018, FL-029, FL-056 | Pending |
 | FL-022 | Secret check that refuses a write | 1 | FL-004 | Completed |
@@ -172,7 +172,7 @@ The coverage table is held as data in the test, one row per fact a scenario case
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-006 |
 | Requirements | REQ-26, REQ-12 |
@@ -225,14 +225,57 @@ The coverage table is held as data in the test, one row per fact a scenario case
 - [`.claude/rules/git.md`](../../../.claude/rules/git.md): the repository is public, and no secret is committed.
 
 **Acceptance criteria.**
-- [ ] Unit tests with these names pass: "returns the parsed object when the response matches the schema", "returns llm_failed when the response does not match the schema", "returns llm_failed when the model refuses", "returns llm_failed when the response stops at the token limit", "returns llm_failed when the SDK throws", "returns llm_failed without a request when no key is configured", "uses the model configured for the task", "marks the instructions for caching and sends the input after them".
-- [ ] A test named "never exposes the API key" builds the client with a marker key, forces each failure above, and asserts that the marker is absent from the full printed form of every returned error, including `cause`, and from everything passed to the logger.
-- [ ] `pnpm check` passes with no network access and no `ANTHROPIC_API_KEY` set.
-- [ ] By hand, once: with `ANTHROPIC_API_KEY` set, the owner runs `pnpm run check:llm` from `apps/mcp-server` and records the two usage reports. The second report shows a cache read count above zero.
+- [x] Unit tests with these names pass: "returns the parsed object when the response matches the schema", "returns llm_failed when the response does not match the schema", "returns llm_failed when the model refuses", "returns llm_failed when the response stops at the token limit", "returns llm_failed when the SDK throws", "returns llm_failed without a request when no key is configured", "uses the model configured for the task", "marks the instructions for caching and sends the input after them".
+- [x] A test named "never exposes the API key" builds the client with a marker key, forces each failure above, and asserts that the marker is absent from the full printed form of every returned error, including `cause`, and from everything passed to the logger.
+- [x] `pnpm check` passes with no network access and no `ANTHROPIC_API_KEY` set.
+- [x] By hand, once: with `ANTHROPIC_API_KEY` set, the owner runs `pnpm run check:llm` from `apps/mcp-server` and records the two usage reports. The second report shows a cache read count above zero.
 
 **Validation.** Unit tests with a fake SDK call, on every check. One live run by hand.
 
 **Completion evidence.** The commit, with the registry check for the SDK version in its message. The passing output of `pnpm check`. The two usage reports from the live run, recorded under Q-33 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md).
+
+**Recorded evidence.** Completed on 2026-11-16, in three commits: `build(mcp-server): add @anthropic-ai/sdk 1.8.0 for the LLM client`, `feat(mcp-server): add the Anthropic LLM client and its live check`, and `docs(research): record the first usage reports under Q-33`. The code is `apps/mcp-server/src/create-anthropic-llm-client.ts`, with its tests beside it, and the live check is `apps/mcp-server/src/check-llm.ts`, run by the package script `check:llm`.
+
+The SDK version. `npm view @anthropic-ai/sdk version` on 2026-11-16 gave 1.8.0, the `latest` dist-tag, published 2026-11-10 and the version the research verified. It is pinned exactly in the catalog and is a dependency of `apps/mcp-server` only; the first commit's message records the check.
+
+What differs from the work item as written:
+
+- **`messages.create`, not `messages.parse`.** The request asks for structured output with `output_config.format` built by the SDK's `zodOutputFormat`, as section 3 of the research describes, but it is sent with `create`. In SDK 1.8.0, `parse` validates inside the SDK and throws on a response it cannot read (`lib/parser.js`), which loses the stop reason and the usage of a refusal or of a response cut off at the token limit. The client therefore checks the stop reason first and then validates the text with the original Zod schema itself, which is the check `parse` makes.
+- The default model, `claude-haiku-5-5` for all three tasks, is copied from section 2 of the research and cited in a comment beside the map. The commit message does not cite it, as functional requirement 2 asks; the comment carries the citation instead.
+- `MAX_OUTPUT_TOKENS` is 16,000, the value the Claude API guidance for the TypeScript SDK gives as the default for a non-streaming request. The research's own call used 2,000; the bound is far above an extraction response either way.
+- Thinking and effort are left at the model's defaults. Choosing them is open questions Q-31 and Q-32.
+- The SDK call that the factory takes receives the key with each request, `{ apiKey, params }`, so the factory alone decides that no request is made without a key. The real one, `createAnthropicMessageSender`, creates one SDK client per key on first use.
+- The logger is a function that takes a typed report. A call whose SDK request throws has no usage, and nothing is reported for it.
+- No error carries a `cause`, and an SDK error is described only by its HTTP status or its class name. The SDK's error messages and the Zod issues are not passed on, because they can quote the request or the model's output: a strict object's error names an unrecognised key.
+- Two tests besides the named ones: "returns llm_failed when the response is not JSON" and "reports the task, the model, the stop reason and the token counts of each call".
+- The live run was made in the session, with the key the owner supplied for this work, rather than by the owner at their own terminal.
+
+Ten changes, each made by hand and each restored, made a test fail: the thrown error passed on as `cause`, the Zod issues passed on as the message, no check of `refusal`, no check of `max_tokens`, a request sent without a key, one model for every task, no cache breakpoint, no usage report, and the response trusted without the schema. The Zod issues at first failed no test, because Zod 4 does not repeat input values in its messages; the leak test gained a response with an unrecognised key, and the change then failed it.
+
+The live check, `pnpm run check:llm` from `apps/mcp-server` with `ANTHROPIC_API_KEY` set, on 2026-11-16. The second call read the whole cached prefix:
+
+```text
+{"task":"extraction","model":"claude-haiku-5-5","stopReason":"end_turn","inputTokens":20,"outputTokens":18,"cacheReadTokens":0,"cacheWriteTokens":2114}
+{"task":"extraction","model":"claude-haiku-5-5","stopReason":"end_turn","inputTokens":23,"outputTokens":19,"cacheReadTokens":2114,"cacheWriteTokens":0}
+```
+
+With no key set, the same command printed "check:llm failed: No Anthropic API key is configured, so no model can be asked. Set ANTHROPIC_API_KEY." and exited 1 without a request.
+
+Not verified: that `pnpm check` passes with the network cut off. It was run with `ANTHROPIC_API_KEY` unset; no test builds the real SDK call, and every test passes a fake.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4 and `ANTHROPIC_API_KEY` unset. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 121 files. No fixes applied.
+$ biome lint .
+Checked 121 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  40 passed (40)
+      Tests  565 passed (565)
+```
 
 ### FL-020: Entity resolution by exact name
 
