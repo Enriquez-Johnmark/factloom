@@ -676,6 +676,84 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
       value: [],
     });
   });
+  test('C9: an ended copy of a fact whose object is an entity names the fact it revises', async () => {
+    const usesRedis = fact('uses-redis', 'depends_on', '', {
+      object: { kind: 'entity', entityId: 'e-redis' },
+      createdAt: at('2026-06-01'),
+    });
+    const recorded = await store.commit(
+      changeSet('op-c9a', '2026-06-01', [
+        { kind: 'create_entity', entity: entity('e-redis', 'redis', 'dependency') },
+        recordFact(usesRedis, { singleValued: false }),
+      ]),
+    );
+    const revised = await store.commit(
+      changeSet(
+        'op-c9b',
+        '2026-06-02',
+        [
+          recordFact(
+            { ...usesRedis, id: 'uses-redis-ended', validTo: at('2026-06-01'), createdAt: at('2026-06-02') },
+            { embedding: { copyFromFactId: 'uses-redis' }, singleValued: false },
+          ),
+          { kind: 'invalidate_fact', factId: 'uses-redis', supersededByFactId: 'uses-redis-ended' },
+        ],
+        { operation: 'revision', reasonCode: 'reported_ended' },
+      ),
+    );
+    expect([recorded.ok, revised.ok]).toEqual([true, true]);
+    const [entry] = (await auditEntries(store, 'fact', 'uses-redis-ended')).filter(
+      (one) => one.action === 'fact.recorded',
+    );
+    expect(entry?.detail).toEqual({ revisesFactId: 'uses-redis' });
+  });
+  test('C10: a replacement with another object kind, subject or predicate names no revised fact', async () => {
+    // Each wrong fact is replaced by one that keeps as much of it as possible and differs in
+    // one part, so that only a copy with the same subject, predicate and object counts as a revision.
+    const depends = (id: string, value: string, fields: Partial<Fact> = {}) =>
+      fact(id, 'depends_on', value, { createdAt: at('2026-06-01'), ...fields });
+    const replacements: readonly { readonly wrong: Fact; readonly right: Fact }[] = [
+      {
+        wrong: depends('dep-jest', 'vitest'),
+        right: depends('dep-vitest', '', { object: { kind: 'entity', entityId: 'e-vitest' } }),
+      },
+      {
+        wrong: depends('dep-lodash', 'lodash'),
+        right: depends('dep-lodash-other', 'lodash', { subjectEntityId: 'e-other' }),
+      },
+      {
+        wrong: depends('dep-moment', 'moment'),
+        right: fact('note-moment', 'has_note', 'moment', { createdAt: at('2026-06-01') }),
+      },
+    ];
+    const created = await store.commit(
+      changeSet('op-c10', '2026-06-01', [
+        { kind: 'create_entity', entity: entity('e-vitest', 'vitest', 'dependency') },
+        { kind: 'create_entity', entity: entity('e-other', 'other') },
+        ...replacements.map(({ wrong }) => recordFact(wrong, { singleValued: false })),
+      ]),
+    );
+    expect(created.ok).toBe(true);
+
+    for (const [index, { wrong, right }] of replacements.entries()) {
+      const corrected = await store.commit(
+        changeSet(
+          `op-c10-${index}`,
+          '2026-06-02',
+          [
+            recordFact({ ...right, createdAt: at('2026-06-02') }, { singleValued: false }),
+            { kind: 'invalidate_fact', factId: wrong.id, supersededByFactId: right.id },
+          ],
+          { operation: 'correction', reasonCode: 'reported_wrong' },
+        ),
+      );
+      expect(corrected.ok, right.id).toBe(true);
+      const [entry] = (await auditEntries(store, 'fact', right.id)).filter(
+        (one) => one.action === 'fact.recorded',
+      );
+      expect(entry?.detail, right.id).toBeNull();
+    }
+  });
 
   // --- Refusals: each leaves memory unchanged ---
   const refuses = (
@@ -902,6 +980,23 @@ function registerSingleValueRuleAndNamespaces(
       ['pg16-corrected'],
     );
   });
+  cases.test(
+    'A5: a fact that its own change set records and invalidates is not held to the rule',
+    async () => {
+      const result = await commit(
+        [
+          recordFact(databaseFact('pg17', 'PostgreSQL 17', '2026-06-01', null)),
+          { kind: 'invalidate_fact', factId: 'pg17', supersededByFactId: null },
+        ],
+        { operation: 'retraction', reasonCode: 'reported_wrong' },
+      );
+      expect(result.ok).toBe(true);
+      expect((await listFactIds(cases.store(), 'live', { predicate: DATABASE })).sort()).toEqual([
+        'pg14-ended',
+        'pg16',
+      ]);
+    },
+  );
   cases.test('A4: an open-ended fact for the same subject and another predicate is accepted', async () => {
     expect(
       (await commit([recordFact(fact('port', 'listens_on_port', '5432', { createdAt: at('2026-06-01') }))]))
