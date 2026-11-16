@@ -16,10 +16,13 @@
     "check:types": "tsc -p tsconfig.json",
     "test": "vitest run",
     "eval": "vitest run --config vitest.eval.config.ts --passWithNoTests --reporter=verbose",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "mutate:core": "stryker run stryker.config.json"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@stryker-mutator/core": "catalog:",
+    "@stryker-mutator/vitest-runner": "catalog:",
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

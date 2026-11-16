@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vitest.config.ts",
+    "related": true
+  },
+  "mutate": [
+    "packages/core/src/**/*.ts",
+    "!packages/core/src/**/*.test.ts",
+    "!packages/core/src/create-fake-embedder.ts",
+    "!packages/core/src/create-scripted-llm.ts",
+    "!packages/core/src/create-test-deps.ts"
+  ],
+  "reporters": ["clear-text", "progress"],
+  "coverageAnalysis": "perTest",
+  "concurrency": 3,
+  "inPlace": true,
+  "plugins": ["@stryker-mutator/vitest-runner"]
+}

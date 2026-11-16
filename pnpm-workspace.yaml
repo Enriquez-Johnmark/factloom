@@ -15,6 +15,9 @@ catalog:
   "@anthropic-ai/sdk": 1.8.0
   # The local embedding model runtime (Transformers.js), used only by apps/mcp-server for the Embedder. See ADR 0014.
   "@huggingface/transformers": 4.3.2
+  # Mutation testing of core, run by hand with `pnpm mutate:core`, never by `pnpm check` (FL-077). Development only.
+  "@stryker-mutator/core": 10.1.1
+  "@stryker-mutator/vitest-runner": 10.1.1
   # Formatter and linter, including the import rules between packages.
   "@biomejs/biome": 2.6.7
   # Types for better-sqlite3, which ships none. Development only. See Q-82 on its version.
