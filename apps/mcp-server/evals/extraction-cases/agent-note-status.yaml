@@ -1,0 +1,12 @@
+# A terse note recording a decision's status.
+name: "An agent note: the SQLite decision is accepted"
+kinds: [agent-note, value-object]
+observed_at: 2026-01-30
+text: "decision 'use SQLite first' -> accepted (team call 2026-01-29)."
+expected:
+  - subject: { type: decision, name: use SQLite first }
+    predicate: has_status
+    object: { value: accepted }
+    valid_from: 2026-01-29
+    valid_to: null
+    required: true

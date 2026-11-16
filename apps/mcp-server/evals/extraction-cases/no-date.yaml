@@ -1,0 +1,12 @@
+# No date: the start is unknown, so valid_from is null and not the day the text was written.
+name: "No date in the text: the port of the local Redis"
+kinds: [no-date, value-object, one-plain-fact]
+observed_at: 2026-02-14
+text: The local Redis listens on port 6379.
+expected:
+  - subject: { type: dependency, name: Redis }
+    predicate: listens_on_port
+    object: { value: "6379" }
+    valid_from: null
+    valid_to: null
+    required: true

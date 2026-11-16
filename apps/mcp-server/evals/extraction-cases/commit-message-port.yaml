@@ -1,0 +1,15 @@
+# A commit message that changes a value, with a ticket number that is not a fact.
+name: "A commit message: the local PostgreSQL port changes"
+kinds: [commit-message, value-object]
+observed_at: 2026-03-03T09:15:00.000Z
+text: |
+  fix(dev): point local PostgreSQL at 5432
+
+  The compose file now exposes PostgreSQL on 5432. Refs OPS-118.
+expected:
+  - subject: { type: dependency, name: PostgreSQL }
+    predicate: listens_on_port
+    object: { value: "5432" }
+    valid_from: null
+    valid_to: null
+    required: true

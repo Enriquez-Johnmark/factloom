@@ -1,0 +1,12 @@
+# The text says when a fact stopped being true: valid_to is set and the start is unknown.
+name: "An end stated in the text: shop-api left Heroku"
+kinds: [end-stated, date-in-text, value-object]
+observed_at: 2026-03-01
+text: From 1 February 2026, shop-api is no longer deployed to Heroku.
+expected:
+  - subject: { type: repository, name: shop-api }
+    predicate: deploys_to
+    object: { value: Heroku }
+    valid_from: null
+    valid_to: 2026-02-01
+    required: true

@@ -1,0 +1,18 @@
+# "Three days ago" is resolved against the moment the text was written, 20 April 2026.
+name: "A relative date: the port of the queue changed three days ago"
+kinds: [relative-date, value-object]
+observed_at: 2026-04-20T08:00:00.000Z
+text: Three days ago RabbitMQ started listening on port 5673 instead of 5672.
+expected:
+  - subject: { type: dependency, name: RabbitMQ }
+    predicate: listens_on_port
+    object: { value: "5673" }
+    valid_from: 2026-04-17
+    valid_to: null
+    required: true
+  - subject: { type: dependency, name: RabbitMQ }
+    predicate: listens_on_port
+    object: { value: "5672" }
+    valid_from: null
+    valid_to: 2026-04-17
+    required: false

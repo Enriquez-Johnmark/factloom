@@ -1,0 +1,17 @@
+# A plan is not a fact about the present: nothing may be extracted from it.
+name: "A plan: an intended move to Kubernetes"
+kinds: [plan]
+observed_at: 2026-04-02
+text: We plan to move shop-api to Kubernetes in June.
+expected: []
+forbidden:
+  - subject: { type: repository, name: shop-api }
+    predicate: deploys_to
+    object: { value: Kubernetes }
+    valid_from: null
+    valid_to: null
+  - subject: { type: repository, name: shop-api }
+    predicate: deploys_to
+    object: { value: Kubernetes }
+    valid_from: 2026-06-01
+    valid_to: null

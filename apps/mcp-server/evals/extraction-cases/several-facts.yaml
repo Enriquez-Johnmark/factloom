@@ -1,0 +1,24 @@
+# Three facts about one repository in a single sentence.
+name: "Several facts: how billing-worker is built and deployed"
+kinds: [several-facts, no-date, entity-object, value-object]
+observed_at: 2026-03-04
+text: billing-worker installs its packages with pnpm, runs its tests with Jest and is deployed to Render.
+expected:
+  - subject: { type: repository, name: billing-worker }
+    predicate: uses_package_manager
+    object: { type: dependency, name: pnpm }
+    valid_from: null
+    valid_to: null
+    required: true
+  - subject: { type: repository, name: billing-worker }
+    predicate: uses_test_framework
+    object: { type: dependency, name: Jest }
+    valid_from: null
+    valid_to: null
+    required: true
+  - subject: { type: repository, name: billing-worker }
+    predicate: deploys_to
+    object: { value: Render }
+    valid_from: null
+    valid_to: null
+    required: true

@@ -1,0 +1,12 @@
+# The text gives the date: the fact starts on that date, not on the day it was written.
+name: "A date in the text: shop-api has been on Fly.io since February"
+kinds: [date-in-text, value-object, one-plain-fact]
+observed_at: 2026-03-10
+text: Since 3 February 2026, shop-api has been deployed to Fly.io.
+expected:
+  - subject: { type: repository, name: shop-api }
+    predicate: deploys_to
+    object: { value: Fly.io }
+    valid_from: 2026-02-03
+    valid_to: null
+    required: true

@@ -1,0 +1,22 @@
+# A commit message: a conventional subject line and a short body, with no date.
+name: "A commit message: docs-site moves its tests to Vitest"
+kinds: [commit-message, entity-object]
+observed_at: 2026-02-11T15:42:00.000Z
+text: |
+  test(docs-site): run unit tests with vitest
+
+  Replaces the jest setup. The jest config and its dependencies are removed.
+expected:
+  - subject: { type: repository, name: docs-site }
+    predicate: uses_test_framework
+    object: { type: dependency, name: Vitest }
+    valid_from: null
+    valid_to: null
+    required: true
+  # The body says Jest was used before; when it stopped is the commit's own time at the latest.
+  - subject: { type: repository, name: docs-site }
+    predicate: uses_test_framework
+    object: { type: dependency, name: Jest }
+    valid_from: null
+    valid_to: 2026-02-11T15:42:00.000Z
+    required: false

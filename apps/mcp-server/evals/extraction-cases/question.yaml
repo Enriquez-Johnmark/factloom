@@ -1,0 +1,17 @@
+# A question states nothing: neither framework may be extracted.
+name: "A question: which test framework does shop-api use"
+kinds: [question-or-hypothetical]
+observed_at: 2026-03-20
+text: Does shop-api use Jest or Vitest for its tests?
+expected: []
+forbidden:
+  - subject: { type: repository, name: shop-api }
+    predicate: uses_test_framework
+    object: { type: dependency, name: Jest }
+    valid_from: null
+    valid_to: null
+  - subject: { type: repository, name: shop-api }
+    predicate: uses_test_framework
+    object: { type: dependency, name: Vitest }
+    valid_from: null
+    valid_to: null

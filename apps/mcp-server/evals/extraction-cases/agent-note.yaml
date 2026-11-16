@@ -1,0 +1,24 @@
+# A terse note an agent leaves for itself: fragments, no full sentences.
+name: "An agent note: shop-api setup, in fragments"
+kinds: [agent-note, several-facts, entity-object, value-object]
+observed_at: 2026-04-06
+text: "shop-api: pkg mgr pnpm; tests vitest; deploy fly.io."
+expected:
+  - subject: { type: repository, name: shop-api }
+    predicate: uses_package_manager
+    object: { type: dependency, name: pnpm }
+    valid_from: null
+    valid_to: null
+    required: true
+  - subject: { type: repository, name: shop-api }
+    predicate: uses_test_framework
+    object: { type: dependency, name: Vitest }
+    valid_from: null
+    valid_to: null
+    required: true
+  - subject: { type: repository, name: shop-api }
+    predicate: deploys_to
+    object: { value: Fly.io }
+    valid_from: null
+    valid_to: null
+    required: true

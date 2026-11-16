@@ -1,0 +1,18 @@
+# A predicate that holds several values at once, given two values in one sentence.
+name: "A multi-valued predicate: two conventions of shop-api"
+kinds: [multi-valued-two-values, entity-object]
+observed_at: 2026-01-24
+text: shop-api follows conventional commits and trunk-based development.
+expected:
+  - subject: { type: repository, name: shop-api }
+    predicate: follows_convention
+    object: { type: convention, name: conventional commits }
+    valid_from: null
+    valid_to: null
+    required: true
+  - subject: { type: repository, name: shop-api }
+    predicate: follows_convention
+    object: { type: convention, name: trunk-based development }
+    valid_from: null
+    valid_to: null
+    required: true

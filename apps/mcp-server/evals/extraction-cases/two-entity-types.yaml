@@ -1,0 +1,18 @@
+# One thing, squash merges, named as a convention and then as a decision.
+name: "Two entity types: squash merges as a convention and as a decision"
+kinds: [two-entity-types, entity-object, value-object]
+observed_at: 2026-02-09
+text: billing-worker follows the convention of squash merges. The decision on squash merges has the status accepted.
+expected:
+  - subject: { type: repository, name: billing-worker }
+    predicate: follows_convention
+    object: { type: convention, name: squash merges }
+    valid_from: null
+    valid_to: null
+    required: true
+  - subject: { type: decision, name: squash merges }
+    predicate: has_status
+    object: { value: accepted }
+    valid_from: null
+    valid_to: null
+    required: true

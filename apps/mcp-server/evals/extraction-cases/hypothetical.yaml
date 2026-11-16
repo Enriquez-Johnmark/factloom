@@ -1,0 +1,12 @@
+# A hypothetical states nothing: the package manager it imagines may not be extracted.
+name: "A hypothetical: what moving billing-worker to Bun would allow"
+kinds: [question-or-hypothetical]
+observed_at: 2026-03-23
+text: If we moved billing-worker to Bun as its package manager, we could drop the separate install step.
+expected: []
+forbidden:
+  - subject: { type: repository, name: billing-worker }
+    predicate: uses_package_manager
+    object: { type: dependency, name: Bun }
+    valid_from: null
+    valid_to: null

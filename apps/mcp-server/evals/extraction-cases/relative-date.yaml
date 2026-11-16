@@ -1,0 +1,19 @@
+# "Yesterday" is resolved against the moment the text was written, 16 March 2026.
+name: "A relative date: docs-site switched to pnpm yesterday"
+kinds: [relative-date, entity-object]
+observed_at: 2026-03-16T10:00:00.000Z
+text: Yesterday we switched docs-site from npm to pnpm.
+expected:
+  - subject: { type: repository, name: docs-site }
+    predicate: uses_package_manager
+    object: { type: dependency, name: pnpm }
+    valid_from: 2026-03-15
+    valid_to: null
+    required: true
+  # The text also says that npm was used until the switch.
+  - subject: { type: repository, name: docs-site }
+    predicate: uses_package_manager
+    object: { type: dependency, name: npm }
+    valid_from: null
+    valid_to: 2026-03-15
+    required: false

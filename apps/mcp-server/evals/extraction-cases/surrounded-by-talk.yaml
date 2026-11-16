@@ -1,0 +1,21 @@
+# One fact in the middle of talk that holds none.
+name: "Surrounded by talk: a port mentioned while debugging"
+kinds: [surrounded-by-talk, value-object]
+observed_at: 2026-03-25
+text: >-
+  I spent the morning chasing a flaky test and it turned out to be a timezone issue in the fixture.
+  For what it is worth, the local Elasticsearch listens on port 9201, not the default.
+  Anyway, I will open a ticket for the fixture and pick it up tomorrow.
+expected:
+  - subject: { type: dependency, name: Elasticsearch }
+    predicate: listens_on_port
+    object: { value: "9201" }
+    valid_from: null
+    valid_to: null
+    required: true
+forbidden:
+  - subject: { type: dependency, name: Elasticsearch }
+    predicate: listens_on_port
+    object: { value: "9200" }
+    valid_from: null
+    valid_to: null

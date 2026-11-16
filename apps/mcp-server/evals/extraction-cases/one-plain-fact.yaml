@@ -1,0 +1,12 @@
+# One fact, stated plainly, with no date: the start is unknown.
+name: "One plain fact: the test framework of shop-api"
+kinds: [one-plain-fact, no-date, entity-object]
+observed_at: 2026-03-02
+text: shop-api uses Vitest for its tests.
+expected:
+  - subject: { type: repository, name: shop-api }
+    predicate: uses_test_framework
+    object: { type: dependency, name: Vitest }
+    valid_from: null
+    valid_to: null
+    required: true

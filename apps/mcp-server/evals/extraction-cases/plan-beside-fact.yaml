@@ -1,0 +1,18 @@
+# A current fact and a plan in one text: only the current fact is extracted.
+name: "A plan: docs-site may leave Netlify next quarter"
+kinds: [plan, value-object]
+observed_at: 2026-05-11
+text: docs-site is deployed to Netlify. Next quarter we intend to move it to Cloudflare Pages.
+expected:
+  - subject: { type: repository, name: docs-site }
+    predicate: deploys_to
+    object: { value: Netlify }
+    valid_from: null
+    valid_to: null
+    required: true
+forbidden:
+  - subject: { type: repository, name: docs-site }
+    predicate: deploys_to
+    object: { value: Cloudflare Pages }
+    valid_from: null
+    valid_to: null

@@ -1,0 +1,6 @@
+# Conversation with nothing to remember.
+name: "No fact: thanks and a note about lunch"
+kinds: [no-fact]
+observed_at: 2026-03-18
+text: Thanks, that worked. I will look at the failing build after lunch.
+expected: []

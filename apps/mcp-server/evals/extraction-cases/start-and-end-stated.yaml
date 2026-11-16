@@ -1,0 +1,12 @@
+# Both ends of a fact are given, and both are in the past.
+name: "An end stated in the text: billing-worker used Mocha for ten months"
+kinds: [end-stated, date-in-text, entity-object]
+observed_at: 2026-02-20
+text: billing-worker ran its tests with Mocha from 1 March 2025 and stopped on 1 January 2026.
+expected:
+  - subject: { type: repository, name: billing-worker }
+    predicate: uses_test_framework
+    object: { type: dependency, name: Mocha }
+    valid_from: 2025-03-01
+    valid_to: 2026-01-01
+    required: true
