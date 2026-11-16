@@ -1,6 +1,7 @@
-// The recall tool over stdio, from the tool call down to a SQLite file. It starts the test
-// entry, which serves the server of main.ts with the fake embedder, so no model is needed.
-import { mkdtempSync, rmSync } from 'node:fs';
+// The server over stdio, from the tool call down to a SQLite file, as a host starts it. It
+// starts the test entry, which serves the server of main.ts with the fake embedder, so no
+// model is needed, and passes no API key.
+import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFakeEmbedder, createTestDeps, recordFacts } from '@factloom/core';
@@ -101,4 +102,124 @@ describe('the recall tool over stdio', () => {
       expect.objectContaining({ fact_id: factId, statement: 'The shop API keeps its sessions in redis.' }),
     );
   }, 30_000);
+});
+
+const ResponseSchema = z.object({ jsonrpc: z.literal('2.0'), id: z.number() }).loose();
+const ToolResultSchema = z.object({
+  isError: z.boolean().optional(),
+  structuredContent: z.unknown().optional(),
+  content: z.array(z.object({ type: z.string(), text: z.string() })),
+});
+
+/**
+ * One server process on a database file: it is initialised, each request is sent once the
+ * one before it has been answered, and standard input is then closed. Returns the answers by
+ * request, every line of standard output, the exit code, and when `tools/list` was answered.
+ */
+async function runServerSession(directory: string, requests: readonly { method: string; params: unknown }[]) {
+  const startedAt = Date.now();
+  const server = startServerProcess(
+    ENTRY,
+    { FACTLOOM_DB: join(directory, 'factloom.db'), FACTLOOM_NAMESPACE: NAMESPACE },
+    directory,
+  );
+  const responseTo = (id: number) =>
+    parseOutputLines(server.readStandardOutput())
+      .map((line) => ResponseSchema.safeParse(line))
+      .find((parsed) => parsed.success && parsed.data.id === id)?.data;
+  server.send(INITIALIZE_REQUEST);
+  await waitFor(() => responseTo(1) !== undefined, 15_000);
+  server.send(INITIALIZED_NOTIFICATION);
+  const answers: unknown[] = [];
+  const answeredAt: number[] = [];
+  for (const [index, request] of requests.entries()) {
+    const id = index + 2;
+    server.send({ jsonrpc: '2.0', id, ...request });
+    await waitFor(() => responseTo(id) !== undefined, 15_000);
+    answeredAt.push(Date.now() - startedAt);
+    answers.push(responseTo(id)?.result);
+  }
+  server.close();
+  const finished = await server.finished;
+  return { answers, answeredAt, ...finished };
+}
+
+const callTool = (name: string, args: Record<string, unknown>) => ({
+  method: 'tools/call',
+  params: { name, arguments: args },
+});
+
+const RECORDED_FACT = {
+  subject: { type: 'repository', name: 'shop-api' },
+  predicate: 'deploys_to',
+  object: { value: 'Fly.io' },
+  statement: 'shop-api is deployed to Fly.io.',
+};
+const QUESTION = { question: 'Where is shop-api deployed?' };
+
+describe('the server over stdio', () => {
+  it('the server keeps a recorded fact across a restart', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'factloom-smoke-'));
+    directories.push(directory);
+
+    const first = await runServerSession(directory, [
+      { method: 'tools/list', params: {} },
+      callTool('record_fact', RECORDED_FACT),
+      callTool('remember', { text: 'shop-api is deployed to Fly.io.' }),
+    ]);
+
+    expect(first.code).toBe(0);
+    const [listed, recorded, remembered] = first.answers;
+    expect(
+      z
+        .object({ tools: z.array(z.object({ name: z.string() })) })
+        .parse(listed)
+        .tools.map((tool) => tool.name),
+    ).toEqual(['recall', 'remember', 'record_fact', 'invalidate_fact', 'get_fact_history']);
+    // The host research names 10 seconds as one host's default start-up limit.
+    expect(first.answeredAt[0]).toBeLessThan(10_000);
+    const fact = z
+      .object({ fact: z.object({ fact_id: z.string(), outcome: z.string() }) })
+      .parse(ToolResultSchema.parse(recorded).structuredContent).fact;
+    expect(fact.outcome).toBe('recorded');
+    const rememberResult = ToolResultSchema.parse(remembered);
+    expect(rememberResult.isError).toBe(true);
+    expect(rememberResult.content[0]?.text).toMatch(/^llm_failed: /);
+
+    const second = await runServerSession(directory, [
+      callTool('recall', QUESTION),
+      callTool('get_fact_history', { fact_id: fact.fact_id }),
+      callTool('invalidate_fact', {
+        fact_id: fact.fact_id,
+        because: 'was_wrong',
+        reason: 'A test of retraction.',
+      }),
+      callTool('recall', QUESTION),
+    ]);
+
+    expect(second.code).toBe(0);
+    const [recalled, history, invalidated, recalledAfter] = second.answers.map((answer) =>
+      ToolResultSchema.parse(answer),
+    );
+    const factIds = (result: z.infer<typeof ToolResultSchema> | undefined) =>
+      z
+        .object({ facts: z.array(z.object({ fact_id: z.string() })) })
+        .parse(result?.structuredContent)
+        .facts.map((found) => found.fact_id);
+    expect(factIds(recalled)).toContain(fact.fact_id);
+    const entries = z
+      .object({ entries: z.array(z.object({ changes: z.array(z.object({ action: z.string() })) })) })
+      .parse(history?.structuredContent).entries;
+    expect(entries.map((entry) => entry.changes.map((change) => change.action))).toEqual([['fact.recorded']]);
+    expect(invalidated?.isError).toBeUndefined();
+    expect(factIds(recalledAfter)).not.toContain(fact.fact_id);
+
+    for (const line of [
+      ...parseOutputLines(first.standardOutput),
+      ...parseOutputLines(second.standardOutput),
+    ]) {
+      expect(line).toMatchObject({ jsonrpc: '2.0' });
+    }
+    for (const name of readdirSync(directory)) expect(name).toMatch(/^factloom\.db(-wal|-shm|-journal)?$/);
+  }, 60_000);
 });
