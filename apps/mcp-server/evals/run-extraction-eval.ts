@@ -11,7 +11,14 @@ import { type ExtractedFact, type ExtractFacts, runExtractionCases } from './sco
 export async function runExtractionEval(cases: readonly ExtractionCase[], extract: ExtractFacts) {
   const outcomes: Result<readonly ExtractedFact[]>[] = [];
   const report = await runExtractionCases(cases, async (text, observedAt) => {
-    const outcome = await extract(text, observedAt);
+    // The runner calls the step once per case, in order, so the next outcome is this case's.
+    const name = cases[outcomes.length]?.name ?? 'unknown';
+    let outcome: Result<readonly ExtractedFact[]>;
+    try {
+      outcome = await extract(text, observedAt);
+    } catch (cause) {
+      throw new Error(`Case "${name}": ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
+    }
     outcomes.push(outcome);
     return outcome;
   });
