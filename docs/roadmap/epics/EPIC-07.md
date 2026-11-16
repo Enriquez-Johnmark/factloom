@@ -74,7 +74,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 |---|---|---|---|---|
 | FL-027 | Timeline scenarios as reviewed data | 0 | FL-006, FL-018 | Completed |
 | FL-028 | Record-and-replay wrapper for the LLM client | 1 | FL-006, FL-027 | Completed |
-| FL-029 | Extraction cases | 1 | FL-018, FL-027 | Under Review |
+| FL-029 | Extraction cases | 1 | FL-018, FL-027 | Completed |
 | FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Pending |
 | FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Pending |
 | FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Pending |
@@ -298,7 +298,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-018, FL-027 |
 | Requirements | REQ-30 |
@@ -368,14 +368,14 @@ Differences from the item:
 - [x] Unit test "counts a forbidden fact that was extracted" passes.
 - [x] Unit test "reports a failed extraction as a failure and no extracted facts" passes.
 - [x] Test "every case with an expected fact marks one as required" passes, and the schema rejects an expected fact with no `required` field, on an inline example.
-- [ ] Review by the owner: the owner reads each case and checks the expected facts, and which of them are required, against the text. The owner records, per file, "reviewed" and the date in the completion evidence.
+- [x] Review by the owner: the owner reads each case and checks the expected facts, and which of them are required, against the text. The owner records, per file, "reviewed" and the date in the completion evidence.
 - [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `apps/mcp-server/evals/` for the scorer, with a stub function; a validation test of the data; the owner's review. The run through `remember`, in replay, is FL-069.
 
 **Completion evidence.** The commit, the passing `pnpm check` output, the number of cases per kind, and the owner's review record.
 
-**Recorded evidence.** Everything except the owner's review was done on 2026-11-16, in the commit `test(mcp-server): add extraction cases and their scorer`. The item is `Under Review` until the owner has read the 20 case files.
+**Recorded evidence.** Everything except the owner's review was done on 2026-11-16, in the commit `test(mcp-server): add extraction cases and their scorer`. The owner approved the cases on 2026-11-16.
 
 `pnpm check`, on Linux x64 with Node.js v22.23.4, ended with:
 
@@ -407,30 +407,30 @@ The validation test printed 20 case files, and this number of cases per kind. A 
 
 Each rule was broken by hand once and a test failed: the `valid_from` of the match key, the normalisation of the subject name, the count of forbidden facts, the failure flag of a failed extraction, the check that one expected fact is required, the check against the domain, and the entity type count.
 
-Owner's review. Each file is in `apps/mcp-server/evals/extraction-cases/`. For each, check the expected facts, and which of them are required, against the text.
+Owner's review. The owner approved FL-029 on 2026-11-16, in the working session, with the message "approve FL-029", after the last change to the files on 2026-11-16. The approval was given once for all 20 files and for the choices listed below the table; it is recorded here per file as the acceptance criterion asks. Each file is in `apps/mcp-server/evals/extraction-cases/`. For each, check the expected facts, and which of them are required, against the text.
 
 | File | Reviewed | Date |
 |---|---|---|
-| `agent-note-status.yaml` | Pending | |
-| `agent-note.yaml` | Pending | |
-| `commit-message-port.yaml` | Pending | |
-| `commit-message.yaml` | Pending | |
-| `date-in-text.yaml` | Pending | |
-| `end-stated.yaml` | Pending | |
-| `hypothetical.yaml` | Pending | |
-| `multi-valued.yaml` | Pending | |
-| `no-date.yaml` | Pending | |
-| `no-fact.yaml` | Pending | |
-| `one-plain-fact.yaml` | Pending | |
-| `plan-beside-fact.yaml` | Pending | |
-| `plan.yaml` | Pending | |
-| `question.yaml` | Pending | |
-| `relative-date-days-ago.yaml` | Pending | |
-| `relative-date.yaml` | Pending | |
-| `several-facts.yaml` | Pending | |
-| `start-and-end-stated.yaml` | Pending | |
-| `surrounded-by-talk.yaml` | Pending | |
-| `two-entity-types.yaml` | Pending | |
+| `agent-note-status.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `agent-note.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `commit-message-port.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `commit-message.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `date-in-text.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `end-stated.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `hypothetical.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `multi-valued.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `no-date.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `no-fact.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `one-plain-fact.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `plan-beside-fact.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `plan.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `question.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `relative-date-days-ago.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `relative-date.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `several-facts.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `start-and-end-stated.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `surrounded-by-talk.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `two-entity-types.yaml` | Reviewed, approved by the owner | 2026-11-16 |
 
 Choices made where the item left one, for the owner to confirm in the review:
 
