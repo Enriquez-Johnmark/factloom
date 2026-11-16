@@ -74,7 +74,7 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 | FL-031 | recall use case | 1 | FL-007, FL-030, FL-056 | Completed |
 | FL-032 | getFactHistory use case | 1 | FL-007, FL-056 | Completed |
 | FL-033 | Retrieval eval: harness and data | 1 | FL-008, FL-016, FL-017, FL-026, FL-031 | Completed |
-| FL-057 | Lane weights chosen by measurement | 1 | FL-033 | Pending |
+| FL-057 | Lane weights chosen by measurement | 1 | FL-033 | Completed |
 
 ### FL-026: Local embedder with bge-small-en-v1.5
 
@@ -606,7 +606,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-033 |
 | Requirements | REQ-05 |
@@ -649,13 +649,29 @@ $ vitest run
 - [`.claude/rules/engineering-principles.md`](../../../.claude/rules/engineering-principles.md), "Accuracy": a measured result is labelled confirmed and cites the run.
 
 **Acceptance criteria.**
-- [ ] `pnpm eval:retrieval` exits with code 0 and prints one row for each variant in requirement 1, with recall@1, recall@5 and MRR@10, and the same three numbers for each question group.
-- [ ] A test named "the default settings meet the bar" passes under `pnpm eval`. It asserts that recall@1 with the defaults is not below recall@1 for the vector lane alone, both computed in the same run, and that the numbers for the defaults lie within the stated tolerance of those recorded in the ADR. If the ADR records an exception under requirement 3, the first assertion is replaced by the two recorded numbers with the tolerance, and the ADR section that gives the reason is named in the test.
-- [ ] The eval job of FL-002, started by hand, passes with that test. Its address is recorded, and the platform it names equals the one in the ADR.
-- [ ] The new ADR exists, is listed in `DECISIONS.md`, and its numbers equal the output of `pnpm eval:retrieval` on the named platform at the same commit.
-- [ ] The unit tests of `recall` (FL-031) still pass with the new default settings.
-- [ ] `pnpm check` passes.
+- [x] `pnpm eval:retrieval` exits with code 0 and prints one row for each variant in requirement 1, with recall@1, recall@5 and MRR@10, and the same three numbers for each question group.
+- [x] A test named "the default settings meet the bar" passes under `pnpm eval`. It asserts that recall@1 with the defaults is not below recall@1 for the vector lane alone, both computed in the same run, and that the numbers for the defaults lie within the stated tolerance of those recorded in the ADR. If the ADR records an exception under requirement 3, the first assertion is replaced by the two recorded numbers with the tolerance, and the ADR section that gives the reason is named in the test.
+- [x] The eval job of FL-002, started by hand, passes with that test. Its address is recorded, and the platform it names equals the one in the ADR.
+- [x] The new ADR exists, is listed in `DECISIONS.md`, and its numbers equal the output of `pnpm eval:retrieval` on the named platform at the same commit.
+- [x] The unit tests of `recall` (FL-031) still pass with the new default settings.
+- [x] `pnpm check` passes.
 
 **Validation.** The eval command, run to choose the defaults. The test of the bar under `pnpm eval` and in the eval job, with the real embedder, a SQLite database and no LLM.
 
 **Completion evidence.** The commit or commits: the variants, the changed default settings, the new ADR. The printed table of `pnpm eval:retrieval` with its platform. The passing output of `pnpm check` and the address of the eval job run. The rows Q-27 and Q-28 as revised.
+
+**Recorded evidence.** Done on 2026-11-16, in four commits: `test(mcp-server): fix the lane-weight variants of the retrieval eval` (the 26 variants, fixed before the first run, and `pnpm eval:retrieval` added to `pnpm eval`), `feat(graph-rag): set the recall defaults chosen by measurement`, `docs: add ADR 0020 on the recall defaults`, and `docs: record the lane-weight results in Q-27 and Q-28`.
+
+The variants were measured in the eval job, run https://github.com/Enriquez-Johnmark/factloom/actions/runs/43920596116 (Linux x64, `ubuntu-24.04`, Node.js v22.23.4, the embedding model at revision `ea104dacec62c0de699686887e3f920caeb4f3e3`). `pnpm eval:retrieval` printed one row for each of the 26 variants and each question group, and exited 0; the overall rows are the table of [ADR 0020](../../architecture/adr/0020-recall-defaults-chosen-by-measurement.md), and a local run on the session's Linux x64 machine gave the same overall numbers.
+
+Chosen defaults: vector 1, keyword 0.5, graph 0, fusion constant 1, lanes of 50. recall@1 0.825, recall@5 0.887, MRR@10 0.849, against 0.800, 0.900 and 0.840 for the vector lane alone. The acceptance bar is met without an exception.
+
+The test "the default settings meet the bar" passed in the eval job at the commit of the ADR, run https://github.com/Enriquez-Johnmark/factloom/actions/runs/43921443202, on the same platform. With the fusion constant set back to 60 in a local run, it failed with `expected 0.675 to be greater than or equal to 0.8`; the file was restored.
+
+The unit tests of `recall` (FL-031) pass with the new defaults. `pnpm check` exits 0 with 769 tests.
+
+Differences from the item:
+
+- The constant is renamed from `PROVISIONAL_RECALL_SETTINGS` to `DEFAULT_RECALL_SETTINGS`, in `graph-rag`, the eval, its test and [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md), because the values are no longer provisional. Its type and the signature of `recall` are unchanged.
+- The test of the bar also holds MRR@10 within the tolerance of 0.025, besides recall@1 and recall@5.
+- The earlier eval test "the retrieval eval runs with the provisional settings" is replaced by the test of the bar.
