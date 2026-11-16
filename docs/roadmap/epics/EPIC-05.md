@@ -71,7 +71,7 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 |---|---|---|---|---|
 | FL-026 | Local embedder with bge-small-en-v1.5 | 1 | FL-002, FL-006 | Pending |
 | FL-030 | Rank fusion as a pure function | 1 | FL-004 | Completed |
-| FL-031 | recall use case | 1 | FL-007, FL-030, FL-056 | Pending |
+| FL-031 | recall use case | 1 | FL-007, FL-030, FL-056 | Completed |
 | FL-032 | getFactHistory use case | 1 | FL-007, FL-056 | Completed |
 | FL-033 | Retrieval eval: harness and data | 1 | FL-008, FL-016, FL-017, FL-026, FL-031 | Pending |
 | FL-057 | Lane weights chosen by measurement | 1 | FL-033 | Pending |
@@ -227,7 +227,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-007, FL-030, FL-056 |
 | Requirements | REQ-03, REQ-04, REQ-05 |
@@ -288,15 +288,44 @@ export declare function recall(
 - [`.claude/rules/testing.md`](../../../.claude/rules/testing.md), "Time cases are explicit".
 
 **Acceptance criteria.**
-- [ ] Unit tests pass with these names, each stating its as-of date and its known-at date: "returns only current facts when no date is given", "does not return an invalidated fact when no date is given", "does not return an ended fact when no date is given", "returns the fact that was true on the as-of date", "returns a fact with an unknown start for any earlier as-of date", "does not return a fact at the instant its valid time ends", "returns what was believed on the known-at date, including a fact invalidated since", "uses the known-at date as the as-of date when only the known-at date is given", "answers what was believed on one date about another date".
-- [ ] Unit tests pass with these names: "returns no more facts than the limit", "returns an empty list when nothing matches", "returns each fact with its sources and a score", "returns a fact that only the graph lane finds", "does not return a fact from another namespace", "returns invalid_input for an empty question", "returns embedding_failed when the question cannot be embedded".
-- [ ] The graph lane test calls the internal function with a lane list length of 1, so that the fact is found by neither of the other lanes.
-- [ ] A test named "writes nothing" asserts that the store holds the same facts, sources and audit entries after a call as before.
-- [ ] `pnpm check` passes.
+- [x] Unit tests pass with these names, each stating its as-of date and its known-at date: "returns only current facts when no date is given", "does not return an invalidated fact when no date is given", "does not return an ended fact when no date is given", "returns the fact that was true on the as-of date", "returns a fact with an unknown start for any earlier as-of date", "does not return a fact at the instant its valid time ends", "returns what was believed on the known-at date, including a fact invalidated since", "uses the known-at date as the as-of date when only the known-at date is given", "answers what was believed on one date about another date".
+- [x] Unit tests pass with these names: "returns no more facts than the limit", "returns an empty list when nothing matches", "returns each fact with its sources and a score", "returns a fact that only the graph lane finds", "does not return a fact from another namespace", "returns invalid_input for an empty question", "returns embedding_failed when the question cannot be embedded".
+- [x] The graph lane test calls the internal function with a lane list length of 1, so that the fact is found by neither of the other lanes.
+- [x] A test named "writes nothing" asserts that the store holds the same facts, sources and audit entries after a call as before.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests in `graph-rag` with the in-memory store, the fake embedder and a fixed clock, on every check. Quality against real lanes is measured in FL-033.
 
 **Completion evidence.** The commit, and the passing output of `pnpm check`.
+
+**Recorded evidence.** Completed on 2026-11-16, in the commit `feat(graph-rag): add the recall use case with its graph lane`. The code is `packages/graph-rag/src/recall.ts`, with its tests beside it. `recall` is exported from `@factloom/graph-rag` with the types `RecallInput` and `RecalledFact`. The internal function, `recallWithSettings`, takes a `RecallSettings` argument and is exported from its module only; FL-033 adds it to the package.
+
+What differs from the work item as written:
+
+- **Technical requirement 2 and the third acceptance criterion contradict each other when read together.** The graph lane test needs a lane list length of 1 and a result of at least two facts, so its limit is above 1, and requirement 2 then asks each lane for the limit. Every fact the vector lane finds also seeds the graph lane, so a fact found only by the graph lane can never outrank what the vector lane fills the list with. The owner had agreed in advance to the recommended way out, which is taken here: requirement 2 is read as part of the provisional settings, so the exported `recall` asks the lanes for the larger of 50 and the limit, and `recallWithSettings` uses the lane list length it is given. FL-033 can then vary the lane length on its own, which open question Q-27 needs. A test, "asks each lane for as many facts as the limit when the limit is larger than 50", covers the rule through `recall`.
+- The graph lane's list is not cut to the lane list length; only `GRAPH_LANE_READ_LIMIT`, 200, bounds it, as functional requirement 5 says. The facts that seed it come from the vector and keyword lanes whatever their weights, so a lane with weight 0 still seeds the graph lane.
+- A question that is empty after trimming white space is `invalid_input`, and so is a limit that is not a whole number.
+- The in-memory vector lane returns every fact that passes the time filter, nearest first. The time tests therefore assert the whole set of facts returned, in any order, and "returns an empty list when nothing matches" uses a known-at date before anything was recorded.
+- Four tests besides the named ones: "returns invalid_input for a limit below 1", "returns a storage failure as it is" (for each of the three store reads), "asks each lane for as many facts as the limit when the limit is larger than 50", and "ranks the graph lane by entities touched, then by the most recently recorded". The last calls the graph lane, `searchFactsByGraph`, directly, because its order does not show in the fused result; it is exported from its module only.
+- "writes nothing" compares every fact of the namespace with its sources, every fact's audit entries, and the source each entry names.
+
+Sixteen changes, each made by hand and each restored, made a test fail: the as-of date defaulting to now, the known-at date ignored, a graph lane that finds nothing, the graph lane read without the time filter, the graph lane ordered fewest entities first, and oldest first, the graph weight ignored, the limit not applied, `recall` keeping the lanes at 50, an empty question accepted, and a failure of the embedder, of the vector lane, of the keyword lane and of the graph lane's read each ignored. Two of them, `recall` keeping the lanes at 50 and the keyword lane's failure ignored, passed at first: the 55-fact test's question matched every statement by keyword, and the storage test failed only `listFacts`. Both tests were strengthened before this was recorded, and both changes then failed.
+
+Not run: recall against the SQLite lanes, and any measure of its quality. Both are FL-033.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 114 files. No fixes applied.
+$ biome lint .
+Checked 114 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  37 passed (37)
+      Tests  535 passed (535)
+```
 
 ### FL-032: getFactHistory use case
 
