@@ -293,7 +293,7 @@ Besides the eight named tests, one test covers a storage failure being returned 
 
 "Writes nothing" counts the entities with `findEntities` for the two names the call mentions, because `MemoryStore` has no method that lists every entity.
 
-With the planned entities left out of the candidates, and with the rule for the only entity removed, each by hand, three tests failed; both were restored.
+With the planned entities left out of the candidates, and with the rule for the only entity removed, each by hand, two tests failed; both were restored.
 
 `pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
 
