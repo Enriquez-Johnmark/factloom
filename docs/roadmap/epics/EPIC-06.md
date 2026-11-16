@@ -70,7 +70,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 |---|---|---|---|---|
 | FL-034 | Server configuration and composition root | 1 | FL-014, FL-015, FL-016, FL-017, FL-026 | Completed |
 | FL-058 | recall tool end to end | 1 | FL-008, FL-034, FL-031 | Completed |
-| FL-035 | remember and record_fact tools | 1 | FL-019, FL-058, FL-023, FL-024 | Pending |
+| FL-035 | remember and record_fact tools | 1 | FL-019, FL-058, FL-023, FL-024 | Completed |
 | FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-018, FL-035, FL-058, FL-025, FL-032 | Pending |
 | FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Pending |
 | FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Pending |
@@ -281,7 +281,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-019, FL-058, FL-023, FL-024 |
 | Requirements | REQ-10, REQ-13, REQ-36 |
@@ -327,15 +327,35 @@ $ vitest run
 - [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "Errors" and "Annotations".
 
 **Acceptance criteria.**
-- [ ] Tests of `remember`, with the in-memory store and a scripted LLM, pass with these names: "records the extracted facts and returns them with their valid time", "returns a restated fact with the outcome restated", "returns a conflicting fact as skipped with the facts in the way", "returns two empty lists when nothing is extracted", "uses a note from the agent as the source when none is given", "says that record_fact needs no LLM when extraction fails", "returns llm_failed when no API key is configured".
-- [ ] Tests of `record_fact`, with a client that fails on any LLM call, pass with these names: "records a fact with no LLM call", "accepts calendar dates for the valid period", "uses confidence 1 when none is given", "returns the outcome restated for a fact that is already live", "returns conflict with the stored fact for a second value of a single-valued predicate", "lists the allowed predicates for an unknown predicate".
-- [ ] A test named "lists three tools in order with their annotations" asserts the order, the annotation values of `MCP-TOOLS.md`, an output schema on each tool and a description on every input field.
-- [ ] A test asserts that the description of `predicate` contains every predicate name of the domain.
-- [ ] `pnpm check` passes with no `ANTHROPIC_API_KEY` set and no network call to the LLM provider.
+- [x] Tests of `remember`, with the in-memory store and a scripted LLM, pass with these names: "records the extracted facts and returns them with their valid time", "returns a restated fact with the outcome restated", "returns a conflicting fact as skipped with the facts in the way", "returns two empty lists when nothing is extracted", "uses a note from the agent as the source when none is given", "says that record_fact needs no LLM when extraction fails", "returns llm_failed when no API key is configured".
+- [x] Tests of `record_fact`, with a client that fails on any LLM call, pass with these names: "records a fact with no LLM call", "accepts calendar dates for the valid period", "uses confidence 1 when none is given", "returns the outcome restated for a fact that is already live", "returns conflict with the stored fact for a second value of a single-valued predicate", "lists the allowed predicates for an unknown predicate".
+- [x] A test named "lists three tools in order with their annotations" asserts the order, the annotation values of `MCP-TOOLS.md`, an output schema on each tool and a description on every input field.
+- [x] A test asserts that the description of `predicate` contains every predicate name of the domain.
+- [x] `pnpm check` passes with no `ANTHROPIC_API_KEY` set and no network call to the LLM provider.
 
 **Validation.** Unit tests with fakes and an in-process client, on every check. `record_fact` runs over stdio in the smoke test (FL-037). `remember` with a real key is run by the owner in FL-038.
 
 **Completion evidence.** The commit, and the passing output of `pnpm check`.
+
+**Recorded evidence.** Done on 2026-11-16, in the commit `feat(mcp-server): add the remember and record_fact tools`.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, run under `unshare -rn` with no network and with neither `ANTHROPIC_API_KEY` nor any other key in its environment, exited 0 and ended with:
+
+```text
+ Test Files  62 passed (62)
+      Tests  738 passed (738)
+```
+
+Each rule was broken by hand once and a test failed: the `record_fact` hint on `llm_failed`, the default source kind, the default confidence, the mapping of `valid_to`, the open-world annotation of `remember`, and the list of predicates in the description of `predicate`.
+
+Differences from the item:
+
+- The list of tools is one constant, `FACTLOOM_TOOLS` in `factloom-tools.ts`, that `main.ts` and the stdio test entry both register, so the order of requirement 10 is set in one place and tested there.
+- The test of FL-058 "starts over stdio on a new SQLite file" asserted that `tools/list` returns `recall` alone. Its expectation now lists the three tools in order, as requirement 10 says.
+- The descriptions of `predicate` and the entity `type` fields are generated from the domain the server is given, `deps.domain`; the composition root gives `softwareDevelopmentDomain`.
+- The fields of one fact (`fact-input-schema.ts`) and of a source (`source-input-schema.ts`) are their own modules, because `invalidate_fact` (FL-036) takes the same fact fields for its replacement.
+- `main.ts` logs each LLM call's task, model, token counts and stop reason to standard error, through the `logUsage` of FL-019. The key is passed to the Anthropic client only.
+- Extra tests: a given source is kept, an object that is an entity, an unreadable date names its field, and an unknown entity type lists the allowed ones.
 
 ### FL-036: invalidate_fact and get_fact_history tools
 
