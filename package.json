@@ -15,10 +15,11 @@
     "check:lint": "biome lint .",
     "check:types": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "eval": "vitest run --config vitest.eval.config.ts --passWithNoTests --reporter=verbose",
+    "eval": "vitest run --config vitest.eval.config.ts --passWithNoTests --reporter=verbose && pnpm run bench",
     "eval:retrieval": "node apps/mcp-server/src/print-retrieval-eval.ts",
     "format": "biome format --write .",
-    "mutate:core": "stryker run stryker.config.json"
+    "mutate:core": "stryker run stryker.config.json",
+    "bench": "node apps/mcp-server/src/run-benchmark.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
