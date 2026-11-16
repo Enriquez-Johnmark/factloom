@@ -11,7 +11,7 @@ export { changeFact } from './change-fact.ts';
 export type { ExplainedAuditEntry, FactHistoryEntry, GetFactHistoryInput } from './get-fact-history.ts';
 export { getFactHistory } from './get-fact-history.ts';
 export type { RecalledFact, RecallInput, RecallSettings } from './recall.ts';
-export { PROVISIONAL_RECALL_SETTINGS, recall, recallWithSettings } from './recall.ts';
+export { DEFAULT_RECALL_SETTINGS, recall, recallWithSettings } from './recall.ts';
 export type { RememberedFact } from './read-remembered-facts.ts';
 export type { RecordStructuredFactsInput } from './record-structured-facts.ts';
 export { recordStructuredFacts } from './record-structured-facts.ts';

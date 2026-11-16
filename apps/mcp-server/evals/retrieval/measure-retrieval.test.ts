@@ -1,7 +1,7 @@
 // The harness with the fake embedder of core, so that it runs in `pnpm check`. The real
 // embedder runs in src/retrieval.eval.test.ts, under `pnpm eval`.
 import { createFakeEmbedder } from '@factloom/core';
-import { PROVISIONAL_RECALL_SETTINGS } from '@factloom/graph-rag';
+import { DEFAULT_RECALL_SETTINGS } from '@factloom/graph-rag';
 import { describe, expect, it } from 'vitest';
 import {
   loadStatements,
@@ -16,7 +16,7 @@ describe('the retrieval eval harness', () => {
     const embedder = createFakeEmbedder();
     const cases = readRetrievalCases();
     const memory = await loadStatements(embedder, cases);
-    const vectorOnly = { ...PROVISIONAL_RECALL_SETTINGS, laneWeights: { vector: 1, keyword: 0, graph: 0 } };
+    const vectorOnly = { ...DEFAULT_RECALL_SETTINGS, laneWeights: { vector: 1, keyword: 0, graph: 0 } };
 
     for (const query of cases.queries) {
       const embedded = await embedder.embed([query.text], 'question');

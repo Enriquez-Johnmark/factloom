@@ -36,13 +36,14 @@ export type RecallSettings = {
 };
 
 /**
- * Provisional values, chosen by measurement in FL-057. Equal weights and k = 60 as in the
- * embedding spike; 50 is the largest limit the recall tool accepts.
+ * The default settings, chosen by measurement on the retrieval eval set (ADR 0020): the
+ * keyword lane at half the weight of the vector lane, the graph lane at weight 0, and a
+ * fusion constant of 1. 50 is the largest limit the recall tool accepts.
  */
-export const PROVISIONAL_RECALL_SETTINGS: RecallSettings = {
-  laneWeights: { vector: 1, keyword: 1, graph: 1 },
+export const DEFAULT_RECALL_SETTINGS: RecallSettings = {
+  laneWeights: { vector: 1, keyword: 0.5, graph: 0 },
   laneListLength: 50,
-  fusionConstant: 60,
+  fusionConstant: 1,
 };
 
 /** The most facts the graph lane reads, so an entity that most facts touch cannot make the read unbounded (Q-14). */
@@ -174,6 +175,6 @@ export async function recall(
   // A caller who asks for more facts than the lanes' usual length gets lanes that long. The
   // internal function takes its settings as given, so a test or the retrieval eval can set the
   // lane length on its own.
-  const laneListLength = Math.max(PROVISIONAL_RECALL_SETTINGS.laneListLength, input.limit);
-  return recallWithSettings(deps, input, { ...PROVISIONAL_RECALL_SETTINGS, laneListLength });
+  const laneListLength = Math.max(DEFAULT_RECALL_SETTINGS.laneListLength, input.limit);
+  return recallWithSettings(deps, input, { ...DEFAULT_RECALL_SETTINGS, laneListLength });
 }

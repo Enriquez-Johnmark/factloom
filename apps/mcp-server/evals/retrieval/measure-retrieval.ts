@@ -11,7 +11,7 @@ import {
   type OperationDeps,
   recordFacts,
 } from '@factloom/core';
-import { PROVISIONAL_RECALL_SETTINGS, type RecallSettings, recallWithSettings } from '@factloom/graph-rag';
+import { DEFAULT_RECALL_SETTINGS, type RecallSettings, recallWithSettings } from '@factloom/graph-rag';
 import { openSqliteMemoryStore } from '@factloom/storage';
 import { QUESTION_GROUPS, type RetrievalCases } from './retrieval-cases.ts';
 import { averageScores, type RetrievalScores, scoreQuestion } from './retrieval-metrics.ts';
@@ -36,7 +36,7 @@ export type NamedSettings = { readonly name: string; readonly settings: RecallSe
 function variant(vector: number, keyword: number, graph: number, fusionConstant: number): NamedSettings {
   return {
     name: `vector ${vector}, keyword ${keyword}, graph ${graph}, k ${fusionConstant}`,
-    settings: { ...PROVISIONAL_RECALL_SETTINGS, laneWeights: { vector, keyword, graph }, fusionConstant },
+    settings: { ...DEFAULT_RECALL_SETTINGS, laneWeights: { vector, keyword, graph }, fusionConstant },
   };
 }
 
