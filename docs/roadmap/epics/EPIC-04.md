@@ -441,7 +441,7 @@ What differs from the work item as written:
 - detect-secrets allows any word characters after the credential name. Here the name must end with the keyword, so `tokenize = "unicode61"` in the spikes is not refused. A name such as `secretKey` is therefore not a credential name. `token` is added to the detect-secrets names, from the keywords of the Gitleaks rule `generic-api-key`.
 - Requirement 5 needs no extra code: the detect-secrets value must start with a word character, so `"$NAME"`, `"${NAME}"` and `"<placeholder>"` are not values.
 - The scan of the tracked files skips the agent skills copied from other repositories, the folders that `skills-lock.json` lists. One of them, `typescript-advanced-types`, has an example that assigns a five-letter literal to a password field, which requirement 4 makes a match and the acceptance criterion forbids. The owner chose to skip the copies rather than narrow the pattern. Every other tracked file is scanned, this item's own files and this evidence block included. The scan caught a first draft of this block, which quoted that example.
-- The Anthropic pattern is the Gitleaks one, which knows two key types. The key supplied to this cloud session has a third type segment and does not match it. This was checked with booleans only; the key was not printed. It is Q-83 in `OPEN-QUESTIONS.md`, for the owner.
+- The Anthropic pattern accepts any type segment of lower-case letters and digits, where the Gitleaks rules name only `api03` and `admin01`. See the follow-up below.
 - Besides the named tests, two more cover requirement 1: "returns ok when no field contains a secret" and "reports the first field that contains a secret".
 
 Five changes, each made by hand and each restored, made a test fail: removing the GitHub pattern (three tests), putting the field's value in the message, removing the word-character lookahead (the variable-reference test and the repository scan), restoring the detect-secrets suffix after the name (the repository scan), and reporting the last matching field instead of the first.
@@ -460,6 +460,16 @@ $ tsc -p tsconfig.json
 $ vitest run
  Test Files  35 passed (35)
       Tests  496 passed (496)
+```
+
+Follow-up on 2026-11-16, in the commit `fix(graph-rag): refuse Anthropic API keys of any type segment`. As first committed, the Anthropic pattern was the Gitleaks one, which names two type segments. The key supplied to the cloud session had a third, so it was not refused; this was found with booleans only, and the key was not printed. It was recorded as Q-83, and the owner confirmed that the key is an API key issued by the Claude Platform. The pattern now accepts any type segment of lower-case letters and digits, and keeps the Gitleaks prefix, length and ending. The test "refuses an Anthropic API key whose type segment the Gitleaks rules do not name" fails when the Gitleaks segments are restored by hand; it was restored. The session's key is now refused, again checked with a boolean only. Q-83 is closed in the commit `docs(research): close Q-83 on Anthropic key formats`.
+
+`pnpm check` after the follow-up, on Linux x64 with Node.js v22.23.4:
+
+```text
+$ vitest run
+ Test Files  35 passed (35)
+      Tests  497 passed (497)
 ```
 
 ### FL-023: remember use case, tested with a scripted LLM
