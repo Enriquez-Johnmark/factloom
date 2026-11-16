@@ -10,6 +10,7 @@ import {
   recordFacts,
   type Timestamp,
 } from '@factloom/core';
+import { softwareDevelopmentDomain } from '@factloom/graph-rag';
 import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
 import fc from 'fast-check';
@@ -119,7 +120,16 @@ afterEach(async () => {
 async function connect(store: MemoryStore, newId: () => string, now = NOW): Promise<Client> {
   const deps = createTestDeps({ now, store, newId });
   const server = createFactloomServer(
-    { store, embedder: deps.embedder, namespace: NAMESPACE, now: deps.now, newId, log: () => {} },
+    {
+      store,
+      embedder: deps.embedder,
+      domain: softwareDevelopmentDomain,
+      llm: deps.llm,
+      namespace: NAMESPACE,
+      now: deps.now,
+      newId,
+      log: () => {},
+    },
     [registerRecallTool],
   );
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();

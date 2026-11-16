@@ -6,11 +6,17 @@ import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import { toTimestamp } from '@factloom/core';
+import { softwareDevelopmentDomain } from '@factloom/graph-rag';
 import { openSqliteMemoryStore } from '@factloom/storage';
+import {
+  createAnthropicLlmClient,
+  createAnthropicMessageSender,
+  DEFAULT_LLM_MODELS,
+} from './create-anthropic-llm-client.ts';
 import type { Logger } from './create-factloom-server.ts';
+import { FACTLOOM_TOOLS } from './factloom-tools.ts';
 import { createLocalEmbedder } from './create-local-embedder.ts';
 import { readConfiguration } from './read-configuration.ts';
-import { registerRecallTool } from './recall-tool.ts';
 import { serveFactloom } from './serve-factloom.ts';
 
 const log: Logger = (message) => {
@@ -25,7 +31,7 @@ function stop(message: string): never {
 
 const configuration = readConfiguration(process.env, homedir());
 if (!configuration.ok) stop(configuration.error.message);
-const { databasePath, namespace, modelCacheDirectory } = configuration.value;
+const { databasePath, namespace, modelCacheDirectory, anthropicApiKey } = configuration.value;
 
 mkdirSync(dirname(databasePath), { recursive: true });
 // The model is loaded on the first embedding, not here, so the server answers the host at once.
@@ -37,14 +43,27 @@ const opened = openSqliteMemoryStore({
 });
 if (!opened.ok) stop(`${opened.error.code}: ${opened.error.message}`);
 
+// The key goes to the Anthropic client and nowhere else. A call's usage is logged without it.
+const llm = createAnthropicLlmClient({
+  apiKey: anthropicApiKey,
+  models: DEFAULT_LLM_MODELS,
+  logUsage: (report) =>
+    log(
+      `${report.task} on ${report.model}: ${report.inputTokens} input tokens, ${report.outputTokens} output tokens, stop reason ${report.stopReason ?? 'none'}.`,
+    ),
+  sendMessage: createAnthropicMessageSender(),
+});
+
 serveFactloom(
   {
     store: opened.value,
     embedder,
+    domain: softwareDevelopmentDomain,
+    llm,
     namespace,
     now: () => toTimestamp(new Date()),
     newId: () => randomUUID(),
     log,
   },
-  [registerRecallTool],
+  FACTLOOM_TOOLS,
 );

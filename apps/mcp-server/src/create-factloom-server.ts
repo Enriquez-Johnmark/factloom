@@ -1,4 +1,4 @@
-import type { Embedder, MemoryStore, Namespace, Timestamp } from '@factloom/core';
+import type { Domain, Embedder, LlmClient, MemoryStore, Namespace, Timestamp } from '@factloom/core';
 import { McpServer } from '@modelcontextprotocol/server';
 import { SERVER_INSTRUCTIONS } from './server-instructions.ts';
 
@@ -9,6 +9,10 @@ export type Logger = (message: string) => void;
 export type ServerDeps = {
   readonly store: MemoryStore;
   readonly embedder: Embedder;
+  /** The domain the server's memory is about: its entity types and predicates. */
+  readonly domain: Domain;
+  /** Used only by `remember`, to extract facts from text. */
+  readonly llm: LlmClient;
   readonly namespace: Namespace;
   readonly now: () => Timestamp;
   readonly newId: () => string;

@@ -1,6 +1,7 @@
 import { createTestDeps } from '@factloom/core';
 import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
+import { softwareDevelopmentDomain } from '@factloom/graph-rag';
 import { describe, expect, it } from 'vitest';
 import { createFactloomServer, type ServerDeps } from './create-factloom-server.ts';
 import { SERVER_INSTRUCTIONS } from './server-instructions.ts';
@@ -10,6 +11,8 @@ function createFakeDeps(): ServerDeps {
   return {
     store: deps.store,
     embedder: deps.embedder,
+    domain: softwareDevelopmentDomain,
+    llm: deps.llm,
     namespace: 'repo:shop-api',
     now: deps.now,
     newId: deps.newId,

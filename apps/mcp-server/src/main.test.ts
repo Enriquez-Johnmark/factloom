@@ -53,7 +53,10 @@ describe('the server over stdio', () => {
     const messages = parseOutputLines(standardOutput);
     for (const message of messages) expect(message).toMatchObject({ jsonrpc: '2.0' });
     expect(messages[0]).toMatchObject({ id: 1, result: { instructions: SERVER_INSTRUCTIONS } });
-    expect(messages[1]).toMatchObject({ id: 2, result: { tools: [{ name: 'recall' }] } });
+    expect(messages[1]).toMatchObject({
+      id: 2,
+      result: { tools: [{ name: 'recall' }, { name: 'remember' }, { name: 'record_fact' }] },
+    });
   }, 30_000);
 
   it('exits when no namespace is configured', async () => {
