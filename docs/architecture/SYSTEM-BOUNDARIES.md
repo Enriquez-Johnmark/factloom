@@ -7,14 +7,19 @@ Which package may import which, how that is enforced, and what each package's pu
 | Package | May import | Must not import |
 |---|---|---|
 | `@factloom/core` | `zod` | Any other `@factloom` package. Any database, LLM, embedding or MCP library. A test framework, in its source files |
-| `@factloom/graph-rag` | `@factloom/core`, `zod` | `@factloom/storage`. Any database, LLM, embedding or MCP library |
-| `@factloom/storage` | `@factloom/core`, `better-sqlite3`, `sqlite-vec` | `@factloom/graph-rag`. Any LLM, embedding or MCP library |
+| `@factloom/graph-rag` | `@factloom/core`, `zod` | `@factloom/storage`, `@factloom/maintenance`. Any database, LLM, embedding or MCP library |
+| `@factloom/storage` | `@factloom/core`, `better-sqlite3`, `sqlite-vec` | `@factloom/graph-rag`, `@factloom/maintenance`. Any LLM, embedding or MCP library |
+| `@factloom/maintenance` | `@factloom/core`, `zod` | `@factloom/storage`, `@factloom/graph-rag`. Any database, LLM, embedding or MCP library |
 | `apps/mcp-server` | Every `@factloom` package, the MCP SDK, the Anthropic SDK, the embedding library, `zod` | Nothing is forbidden, but it holds no rules about facts |
 
 ```
-apps/mcp-server ──► graph-rag ──► core ◄── storage
-        └──────────────────────────────────────┘
+apps/mcp-server ──► graph-rag ─────► core ◄── storage
+     │  │                             ▲          ▲
+     │  └──────► maintenance ─────────┘          │
+     └───────────────────────────────────────────┘
 ```
+
+`maintenance` is product 2. It changes memory only through the fact operations in `core`, so it cannot import the storage adapter at all.
 
 Two further rules:
 
@@ -29,7 +34,7 @@ Three mechanisms, so that a forbidden import fails without anyone remembering th
 2. **Lint.** Planned: a lint rule per package forbids importing the packages and libraries in the "must not import" column, and forbids deep imports into another package. This catches the case where someone adds a dependency to `package.json` to make an import work.
 3. **One public entry.** Each `package.json` exports only its `index.ts`. No package has a second entry.
 
-The lint rules were run in the scaffold on 2026-11-14, in the no-build workspace: a forbidden import in each of the three packages, a forbidden import with its dependency declared, a deep import by package name and a deep import by relative path each failed the check, and each was then removed. The recorded output is in work item [FL-001](../roadmap/epics/EPIC-01.md).
+The lint rules were run in the scaffold on 2026-11-14, in the no-build workspace: a forbidden import in each of the three packages, a forbidden import with its dependency declared, a deep import by package name and a deep import by relative path each failed the check, and each was then removed. The recorded output is in work item [FL-001](../roadmap/epics/EPIC-01.md). The rules for `maintenance` were run the same way on 2026-11-16: an import of `@factloom/storage`, of `@factloom/graph-rag`, of `better-sqlite3` and a deep import from inside it, and an import of it from `graph-rag` and from `storage`, each failed the check. The recorded output is in work item [FL-040](../roadmap/epics/EPIC-08.md).
 
 ## Public API of each package
 
@@ -67,6 +72,14 @@ Rank fusion and entity resolution are internal.
 
 The SQL, the migration runner and the row mappers are internal. So is the storage contract suite, `describeMemoryStoreContract`: this package runs it against the in-memory store from `core` and against the SQLite adapter. The suite moves to a shared place when a second adapter exists.
 
+### `@factloom/maintenance`
+
+| Group | Exports |
+|---|---|
+| Scaffold | `maintenanceBuiltOn`, a placeholder that proves the package is imported by name. The conflict judge of FL-041 replaces it |
+
+It builds no `ChangeSet`, calls no `MemoryStore.commit` and contains no SQL: every change it makes is a call to a fact operation in `core`.
+
 ### `apps/mcp-server`
 
 An application, not a library. It exports nothing. Its entry point is `src/main.ts`, which reads configuration, builds the store, the LLM client and the embedder, and passes them to the use cases behind each tool.
@@ -78,6 +91,7 @@ An application, not a library. It exports nothing. Its entry point is `src/main.
 | Agent | `mcp-server` | Tool input as JSON, checked by a Zod schema |
 | `mcp-server` | `graph-rag` | Plain immutable data and the dependencies the use case needs |
 | `graph-rag` | `core` | Calls to fact operations and to the three interfaces |
+| `maintenance` | `core` | Calls to fact operations and to the three interfaces |
 | `core` | `storage` | `ChangeSet` values and queries, through `MemoryStore` |
 | `storage` | SQLite | SQL. Nothing above `storage` sees a row or a statement |
 
