@@ -72,7 +72,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-027 | Timeline scenarios as reviewed data | 0 | FL-006, FL-018 | Under Review |
+| FL-027 | Timeline scenarios as reviewed data | 0 | FL-006, FL-018 | Completed |
 | FL-028 | Record-and-replay wrapper for the LLM client | 1 | FL-006, FL-027 | Pending |
 | FL-029 | Extraction cases | 1 | FL-018, FL-027 | Pending |
 | FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Pending |
