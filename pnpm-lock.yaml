@@ -281,6 +281,9 @@ importers:
       '@factloom/core':
         specifier: workspace:*
         version: link:../core
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
 
   packages/storage:
     dependencies:
