@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { type Domain, err, ok, parseDateInput, type Result } from '@factloom/core';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
@@ -94,4 +96,21 @@ export function parseExtractionCase(yamlText: string, domain: Domain): Result<Ex
   const outside = findCaseNamesOutsideDomain(parsed.data, domain);
   if (outside.length > 0) return err('invalid_input', `The case names ${outside.join('; ')}.`);
   return ok(parsed.data);
+}
+
+/** Where the extraction case files are. */
+export const EXTRACTION_CASES_DIRECTORY = join(import.meta.dirname, 'extraction-cases');
+
+/** Reads every case file of a directory, in file name order, or says which file is not valid. */
+export function loadExtractionCases(directory: string, domain: Domain): Result<ExtractionCase[]> {
+  const cases: ExtractionCase[] = [];
+  const fileNames = readdirSync(directory)
+    .filter((name) => name.endsWith('.yaml'))
+    .sort();
+  for (const fileName of fileNames) {
+    const parsed = parseExtractionCase(readFileSync(join(directory, fileName), 'utf8'), domain);
+    if (!parsed.ok) return err('invalid_input', `${fileName}: ${parsed.error.message}`);
+    cases.push(parsed.value);
+  }
+  return ok(cases);
 }

@@ -53,6 +53,11 @@ function matchKey(fact: CaseFact): string {
   ]);
 }
 
+/** Whether an extracted fact matches an expected one, by the rule the scorer counts with. */
+export function matchesCaseFact(expected: CaseFact, extracted: CaseFact): boolean {
+  return matchKey(expected) === matchKey(extracted);
+}
+
 function sameTypes(expected: CaseFact, extracted: CaseFact): boolean {
   const objectType = (fact: CaseFact): string | null => ('type' in fact.object ? fact.object.type : null);
   return expected.subject.type === extracted.subject.type && objectType(expected) === objectType(extracted);

@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check:llm": "node src/check-llm.ts"
+    "check:llm": "node src/check-llm.ts",
+    "record:extraction": "node src/record-extraction.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",

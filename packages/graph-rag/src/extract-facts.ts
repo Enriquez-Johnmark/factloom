@@ -65,10 +65,10 @@ Rules:
 - The object of a fact is an entity, with a type and a name, or a value such as a version, a port, a command or a target.
 - The statement is one sentence that can be read on its own, without the text.
 - confidence is from 0 to 1: how sure the text makes you that the fact is true.
-- valid_from is the date the fact became true, and valid_to the date it stopped. Give a date only when the text states it or a relative date in the text fixes it; otherwise give null. Never give a date the text does not support.
+- valid_from is the date the fact became true, and valid_to the date it stopped. Give a date only when the text states it or a relative date in the text fixes it; otherwise give null. Never give a date the text does not support. Words such as "now" or "currently" fix no date, and neither does the moment the text was written, such as the time of a commit.
 - Resolve a relative date, such as "yesterday" or "three days ago", against the reference time given with the text.
 - When the text gives only a month or a year, use the first day of that period.
-- When the text says that something replaced something else, also return the replaced fact, with valid_to the date of the change.
+- When the text says that something replaced something else on a date it states or fixes, also return the replaced fact, with valid_to that date. When it gives no date for the change, return only the new fact.
 - Write dates as calendar dates, such as 2026-03-15, or as full UTC timestamps.`;
 
 /**
