@@ -80,7 +80,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Pending |
 | FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Completed |
 | FL-076 | Differential tests between the in-memory store and SQLite | 1 | FL-075, FL-068, FL-016, FL-017 | Completed |
-| FL-077 | Mutation-testing trial on core | 1 | FL-008, FL-009, FL-010, FL-011 | Pending |
+| FL-077 | Mutation-testing trial on core | 1 | FL-008, FL-009, FL-010, FL-011 | Completed |
 
 ### FL-027: Timeline scenarios as reviewed data
 
@@ -775,7 +775,7 @@ Follow-up on 2026-11-16, in the commit `fix(storage): give the differential test
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-008, FL-009, FL-010, FL-011 |
 | Requirements | REQ-38 |
@@ -813,10 +813,86 @@ Follow-up on 2026-11-16, in the commit `fix(storage): give the differential test
 - [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md): `core` imports no test framework in its source.
 
 **Acceptance criteria.**
-- [ ] The work item records which tools were checked, with the page that states their support, and the outcome.
-- [ ] If a tool ran: the number of changes made, killed and surviving is recorded, and every surviving change in the listed functions has a new test or a written reason.
-- [ ] `pnpm check` exits 0 and does not start the tool.
+- [x] The work item records which tools were checked, with the page that states their support, and the outcome.
+- [x] If a tool ran: the number of changes made, killed and surviving is recorded, and every surviving change in the listed functions has a new test or a written reason.
+- [x] `pnpm check` exits 0 and does not start the tool.
 
 **Validation.** The tool's own report, and the tests added because of it.
 
 **Completion evidence.** The commit or commits, the recorded outcome, and the tool's summary if it ran.
+
+**Recorded evidence.** Completed on 2026-11-16. **Outcome: the tool ran, and its surviving changes in the listed functions were handled.** The commits: `build: add StrykerJS 10.1.1 for a mutation run of core`, `chore: ignore the working directory of a mutation run`, `test(core): close the gaps in the fact operations that the mutation run found`, `test(storage): add contract cases for revised copies and a fact invalidated in its own change set`, and `test(storage): add a correction from one entity object to another to contract case C10`.
+
+**The tools checked.**
+
+| Tool | Version on 2026-11-16 | What states its support | Result |
+|---|---|---|---|
+| `@stryker-mutator/core` | 10.1.1, `latest` (`npm view`) | `engines: node >=22.0.0` | Runs on Node.js v22.23.4 |
+| `@stryker-mutator/vitest-runner` | 10.1.1, `latest` | Peer range `vitest >=2.0.0`; https://stryker-mutator.io/docs/stryker-js/vitest-runner/ ("Since v7.0") names no upper bound | Runs with Vitest 5.1.0 |
+| `@stryker-mutator/typescript-checker` | 10.1.1, `latest` | Peer range `typescript >=3.6` | Not installed: it uses the TypeScript compiler API, which TypeScript 7.0.2 does not ship (below) |
+
+**What it took to run, all confirmed by running:**
+
+- A sandboxed run fails before any test with `TypeError: ts.parseConfigFileTextToJson is not a function`. Stryker's tsconfig preprocessor loads `typescript`, and the TypeScript 7.0.2 package exports two keys and no compiler API. The documented `inPlace` mode skips the preprocessor. It also suits this workspace: in a sandbox copy, `packages/storage` would import `@factloom/core` through the original workspace links and test the unmutated core. In place, Stryker backs the files up in `.stryker-tmp` and restores them; after each run `git status` showed no change.
+- pnpm does not place the runner where Stryker's default plugin pattern looks, so the configuration names `@stryker-mutator/vitest-runner` in `plugins`.
+- The configuration is `stryker.config.json`, and the command is `pnpm mutate:core`. `pnpm check` does not start it: its output has no line from Stryker.
+
+**The first run,** on `packages/core/src` without the test files and the three test helpers, with the tests of `vitest.config.ts` related to each mutated file, which include the storage contract suite and the property and differential tests. 1,244 mutants in 23 files, 10 minutes 27 seconds on four cores, 19.87 tests per mutant on average:
+
+```text
+File                          |  total | covered | # killed | # timeout | # survived | # no cov | # errors |
+All files                     |  84.73 |   87.32 |     1053 |         1 |        153 |       37 |        0 |
+ valid-period.ts              | 100.00 |  100.00 |       62 |         0 |          0 |        0 |        0 |
+```
+
+`valid-period.ts`, which holds `periodsOverlap` and `matchesTimeFilter`, killed every mutant. `parseDateInput` itself had no survivor; five survived in `isTimestamp` and `TimestampSchema`, which it uses.
+
+**The survivors in the listed functions** (the fact operations, the single-value check and the audit detail of the in-memory store's commit, and the timestamp functions), by mutant number in the report, and what was done:
+
+New tests, each of which kills the mutants named, checked in the second run:
+
+- `findConflictCandidates`: "returns the newest candidate when the limit is 1" (892), "returns invalid_input for a period that ends where it starts" (907), "returns a storage failure as it is" (916).
+- `invalidateFact`: "keeps the end a replacement gives when it gives no start" (961), "returns already_invalidated with no related fact for a fact that was retracted" (1088, 1090), "returns a storage failure as it is" (1071).
+- `endFact`: "refuses a successor whose predicate the domain does not have, and changes nothing" (866), "returns conflict when a later end would overlap another live fact" (868, 870, 875, 878), "ends a fact whose predicate the domain no longer has" (877).
+- `recordFacts`: "records nothing when the embedder returns fewer vectors than statements" (1040, 1042, 1043).
+- The contract suite, run against both stores: "C9: an ended copy of a fact whose object is an entity names the fact it revises" (218, 221, 222, 224 to 226, 228, 229), "C10: a replacement with another object, object kind, subject or predicate names no revised fact" (227, 243, 257 to 260, 263, 265), "A5: a fact that its own change set records and invalidates is not held to the rule" (475, 476, 479). Both stores pass all three; the counts of registered cases in the two contract test files rose with them, from 41 to 43 and from 15 and 16 to 16 and 17.
+
+Written reasons:
+
+- **Message text** (StringLiteral and the like: 896, 911, 853, 987, 993, 1014, 1015, 1023, 1024, 1026, 1044, 1076, 1081 to 1085, 1109, 1176, 1177, 512, 513). The testing rules assert error codes, not message text. 1081 to 1083 only choose between two messages.
+- **Equivalent, because a later check gives the same result.** `endFact`'s check that the end is after the start (844, 846, 847, 849, 851): the store refuses an empty or reversed period with the same `invalid_input`, and nothing is written. `findConflictCandidates` with one bound `null` (901, 902, 904): comparing a timestamp with `null` is always false. The full-form and calendar-date patterns without an anchor (1133, 1148): the round trip or the anchored full form still refuses the text. A value that is not a string (1173): it never equals its own round trip.
+- **Equivalent, because the case cannot arise.** One draft gives exactly one prepared fact (884, 930, 977, 1050, 1052). Both uses of an empty successor list filter it by kind (808). A duplicate key in a `Map` is set to the same value (999). `listFacts` already returns newest first, so sorting again changes nothing (917, 920). A change other than `record_fact` has no `singleValued` (470). Every recorded fact exists after the changes apply (477). The entity identifier is the primary key across namespaces, so two facts with the same subject are in one namespace (497). The `default` branch of `detailOf` is unreachable by its type (285, 286). An entity object and a value object compare unequal on every path (219, 220, 223, 230, 232, 233, 236).
+- **Equivalent for every change set the fact operations build** (247 to 249, 252, 261): each holds at most one invalidation, of a fact stored before the commit and linked to the recorded fact. A change set built by hand that records two facts and invalidates one by the other would reach them.
+- **Not testable without asserting on a call** (1035): the purpose `statement` sent to the embedder. The fake embedder ignores the purpose by design, and the testing rules forbid asserting which arguments a call received.
+
+**The second run,** with the new tests and before the case for 227: 1,244 mutants, 10 minutes 8 seconds.
+
+```text
+File                          |  total | covered | # killed | # timeout | # survived | # no cov | # errors |
+All files                     |  87.54 |   89.26 |     1088 |         1 |        131 |       24 |        0 |
+```
+
+Mutant 227, a correction from one entity object to another, still survived; C10 gained that replacement, and a run of `pnpm mutate:core --mutate 'packages/core/src/in-memory-store.ts:84-112'` then killed it.
+
+What differs from the work item as written:
+
+- None of the new tests failed against the code as it was: the run found gaps in the tests and no defect in `core`.
+- The mutants outside the listed functions were not handled: in the second run, 73 survived and 21 were not covered. They are in `fact.ts` (13), `change-set.ts` (5 survived, 2 not covered), `domain.ts` (2), `audit.ts` (1), and the rest of `in-memory-store.ts` (52 survived, 19 not covered: 28 in `applyChange`, which checks each change, 36 in the reads and the two lanes, 7 in small helpers). Whether to handle them is for the owner, with whether to run the tool on `storage`.
+- The tool is kept, pinned in the catalog, because it found gaps that the contract suite, the property tests and the differential test had all missed. The tests it led to are what remains of value if it is removed later.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, with `.cache/models` present. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 125 files. No fixes applied.
+$ biome lint .
+Checked 125 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  41 passed (41)
+      Tests  583 passed (583)
+```
+
+The workflow runs for these commits passed on Linux and macOS arm64: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43802767744 and https://github.com/Enriquez-Johnmark/factloom/actions/runs/43804148703.
+
