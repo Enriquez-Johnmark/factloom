@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-16:** the first feature code exists. 34 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-022, FL-025, FL-026, FL-030, FL-031, FL-032, FL-033, FL-034, FL-056, FL-058, FL-067, FL-068, FL-075, FL-076, FL-077. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-16:** the first feature code exists. 35 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-022, FL-025, FL-026, FL-027, FL-030, FL-031, FL-032, FL-033, FL-034, FL-056, FL-058, FL-067, FL-068, FL-075, FL-076, FL-077. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -49,7 +49,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-007](epics/EPIC-02.md#fl-007-memorystore-interface-and-the-in-memory-store-commit-and-structural-reads) | MemoryStore interface and the in-memory store: commit and structural reads | EPIC-02 | FL-006 | Completed |
 | [FL-012](epics/EPIC-03.md#fl-012-storage-contract-suite-fixture-time-reads-commit-and-refusals) | Storage contract suite: fixture, time, reads, commit and refusals | EPIC-03 | FL-007 | Completed |
 | [FL-018](epics/EPIC-04.md#fl-018-software-development-domain-entity-types-and-predicates) | Software development domain: entity types and predicates | EPIC-04 | FL-006 | Completed |
-| [FL-027](epics/EPIC-07.md#fl-027-timeline-scenarios-as-reviewed-data) | Timeline scenarios as reviewed data | EPIC-07 | FL-006, FL-018 | Under Review |
+| [FL-027](epics/EPIC-07.md#fl-027-timeline-scenarios-as-reviewed-data) | Timeline scenarios as reviewed data | EPIC-07 | FL-006, FL-018 | Completed |
 | [FL-056](epics/EPIC-02.md#fl-056-in-memory-search-lanes-and-test-helpers) | In-memory search lanes and test helpers | EPIC-02 | FL-007 | Completed |
 | [FL-067](epics/EPIC-03.md#fl-067-storage-contract-suite-single-value-rule-namespaces-and-search-lanes) | Storage contract suite: single-value rule, namespaces and search lanes | EPIC-03 | FL-012, FL-056 | Completed |
 
