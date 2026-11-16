@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "check:llm": "node src/check-llm.ts"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",
     "@factloom/core": "workspace:*",
