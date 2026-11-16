@@ -71,7 +71,7 @@ Factloom can take new information and record it as entities and facts with a **s
 | FL-019 | Anthropic LLM client | 1 | FL-006 | Pending |
 | FL-020 | Entity resolution by exact name | 1 | FL-007, FL-056 | Completed |
 | FL-021 | Extraction of facts from text | 1 | FL-018, FL-029, FL-056 | Pending |
-| FL-022 | Secret check that refuses a write | 1 | FL-004 | Pending |
+| FL-022 | Secret check that refuses a write | 1 | FL-004 | Completed |
 | FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Pending |
 | FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Pending |
 | FL-024 | recordStructuredFacts use case | 1 | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 | Pending |
@@ -379,7 +379,7 @@ The extraction cases of FL-029 exist first. Their expected facts are the target 
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-004 |
 | Requirements | REQ-19 |
@@ -421,15 +421,46 @@ The extraction cases of FL-029 exist first. Their expected facts are the target 
 - [`.claude/rules/git.md`](../../../.claude/rules/git.md), "The repository is public".
 
 **Acceptance criteria.**
-- [ ] For each kind in requirement 4, a test named "refuses a text that contains a <kind>" passes and asserts the code `invalid_input`.
-- [ ] A test named "names the kind and the field and never repeats the secret" asserts, for every kind, that the full printed form of the error contains the kind and the field name and does not contain the assembled secret or any eight-character slice of it.
-- [ ] Tests named "accepts a commit hash", "accepts a UUID", "accepts a content hash", "accepts the name of a variable without a value" and "accepts an assignment from a variable reference" pass.
-- [ ] A command that runs every pattern over the tracked files of the repository reports no match. The command is part of this item's tests.
-- [ ] `pnpm check` passes.
+- [x] For each kind in requirement 4, a test named "refuses a text that contains a <kind>" passes and asserts the code `invalid_input`.
+- [x] A test named "names the kind and the field and never repeats the secret" asserts, for every kind, that the full printed form of the error contains the kind and the field name and does not contain the assembled secret or any eight-character slice of it.
+- [x] Tests named "accepts a commit hash", "accepts a UUID", "accepts a content hash", "accepts the name of a variable without a value" and "accepts an assignment from a variable reference" pass.
+- [x] A command that runs every pattern over the tracked files of the repository reports no match. The command is part of this item's tests.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests in `graph-rag`, on every check. The use of the check before any LLM call or commit is tested in FL-023, FL-024 and FL-025.
 
 **Completion evidence.** The commit, with the sources of the patterns cited in the code. The passing output of `pnpm check`.
+
+**Recorded evidence.** Completed on 2026-11-16, in the commit `feat(graph-rag): add the secret check that refuses a write`. The code is `packages/graph-rag/src/check-for-secrets.ts`, with its tests beside it. The function, `checkForSecrets`, is not exported from the package. The open question found while writing it is in the commit `docs(research): add Q-83 on Anthropic key formats the secret check misses`.
+
+The patterns come from two rule sets, each cited in the code with its licence, the commit it was read at and the access date: Gitleaks (MIT), for the private key, AWS, GitHub, Anthropic, OpenAI and Slack kinds, and detect-secrets (Apache License 2.0), for `url_credentials` and `credential_assignment`. Gitleaks rules end with a group that is written here as a lookahead, which matches the same texts. Several Gitleaks rules make up one kind: five for `github_token`, eight for `slack_token`.
+
+What differs from the work item as written:
+
+- `credential_assignment` takes the assignment forms that detect-secrets applies to text of unknown file type, which all require a quoted value. An unquoted literal, such as `DB_PASSWORD=` followed by a bare word, is not refused; a provider-prefixed key in that position is still refused by its own kind. The quote-optional forms were tried over the tracked files first and matched ordinary code and prose, such as a variable assigned from a function call.
+- detect-secrets allows any word characters after the credential name. Here the name must end with the keyword, so `tokenize = "unicode61"` in the spikes is not refused. A name such as `secretKey` is therefore not a credential name. `token` is added to the detect-secrets names, from the keywords of the Gitleaks rule `generic-api-key`.
+- Requirement 5 needs no extra code: the detect-secrets value must start with a word character, so `"$NAME"`, `"${NAME}"` and `"<placeholder>"` are not values.
+- The scan of the tracked files skips the agent skills copied from other repositories, the folders that `skills-lock.json` lists. One of them, `typescript-advanced-types`, has an example that assigns a five-letter literal to a password field, which requirement 4 makes a match and the acceptance criterion forbids. The owner chose to skip the copies rather than narrow the pattern. Every other tracked file is scanned, this item's own files and this evidence block included. The scan caught a first draft of this block, which quoted that example.
+- The Anthropic pattern is the Gitleaks one, which knows two key types. The key supplied to this cloud session has a third type segment and does not match it. This was checked with booleans only; the key was not printed. It is Q-83 in `OPEN-QUESTIONS.md`, for the owner.
+- Besides the named tests, two more cover requirement 1: "returns ok when no field contains a secret" and "reports the first field that contains a secret".
+
+Five changes, each made by hand and each restored, made a test fail: removing the GitHub pattern (three tests), putting the field's value in the message, removing the word-character lookahead (the variable-reference test and the repository scan), restoring the detect-secrets suffix after the name (the repository scan), and reporting the last matching field instead of the first.
+
+Not run: the patterns against real credentials of each provider. The samples are assembled from fragments in the test, to the shape each rule describes. The scan test runs `git ls-files`, so it was waited for in continuous integration: the workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43793155280.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 110 files. No fixes applied.
+$ biome lint .
+Checked 110 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  35 passed (35)
+      Tests  496 passed (496)
+```
 
 ### FL-023: remember use case, tested with a scripted LLM
 
