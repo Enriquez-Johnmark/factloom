@@ -202,6 +202,8 @@ $ vitest run
 
 The workflow runs on Linux and macOS arm64 for these commits passed: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43800626684 and https://github.com/Enriquez-Johnmark/factloom/actions/runs/43800667762. The run for the commit that added the embedder failed on the differential test of FL-076, which timed out and is recorded there.
 
+Follow-up on 2026-11-16, in the commit `fix: leave the embedding model cache out of the format and lint checks`. With `.cache/models` present, after a run of `pnpm eval`, `pnpm check` failed: Biome checked the model's `config.json` and `tokenizer.json`, because it does not read `.gitignore` here. The check recorded above ran with `.cache/models` moved away, as the fourth acceptance criterion asks, and so did not show it. `biome.json` now leaves `.cache` out, and `pnpm check` passes with the cache present: "Tests 583 passed (583)" on 2026-11-16, after FL-077's tests.
+
 ### FL-030: Rank fusion as a pure function
 
 | | |
