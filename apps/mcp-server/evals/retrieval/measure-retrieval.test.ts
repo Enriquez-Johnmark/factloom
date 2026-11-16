@@ -11,6 +11,13 @@ import {
 } from './measure-retrieval.ts';
 import { readRetrievalCases } from './retrieval-cases.ts';
 
+/**
+ * The time limit of the test that measures every entry of the settings. It takes about 3 seconds
+ * here, and timed out at the default limit of 5 seconds on a Linux runner in continuous
+ * integration (run 43977211366).
+ */
+const TIME_LIMIT = 60_000;
+
 describe('the retrieval eval harness', () => {
   it('a lane with weight zero contributes no fact', async () => {
     const embedder = createFakeEmbedder();
@@ -37,17 +44,25 @@ describe('the retrieval eval harness', () => {
     await memory.deps.store.close();
   });
 
-  it('reports every group for every entry of the settings', async () => {
-    const rows = await measureRetrieval(createFakeEmbedder(), readRetrievalCases(), RETRIEVAL_EVAL_SETTINGS);
+  it(
+    'reports every group for every entry of the settings',
+    async () => {
+      const rows = await measureRetrieval(
+        createFakeEmbedder(),
+        readRetrievalCases(),
+        RETRIEVAL_EVAL_SETTINGS,
+      );
 
-    expect(rows.map((row) => `${row.settings}/${row.group}/${row.questions}`)).toEqual(
-      RETRIEVAL_EVAL_SETTINGS.flatMap(({ name }) => [
-        `${name}/all/40`,
-        `${name}/paraphrase/15`,
-        `${name}/keyword/10`,
-        `${name}/why/10`,
-        `${name}/hard/5`,
-      ]),
-    );
-  });
+      expect(rows.map((row) => `${row.settings}/${row.group}/${row.questions}`)).toEqual(
+        RETRIEVAL_EVAL_SETTINGS.flatMap(({ name }) => [
+          `${name}/all/40`,
+          `${name}/paraphrase/15`,
+          `${name}/keyword/10`,
+          `${name}/why/10`,
+          `${name}/hard/5`,
+        ]),
+      );
+    },
+    TIME_LIMIT,
+  );
 });
