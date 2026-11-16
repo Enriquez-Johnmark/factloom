@@ -39,7 +39,7 @@ export type RecallSettings = {
  * Provisional values, chosen by measurement in FL-057. Equal weights and k = 60 as in the
  * embedding spike; 50 is the largest limit the recall tool accepts.
  */
-const PROVISIONAL_RECALL_SETTINGS: RecallSettings = {
+export const PROVISIONAL_RECALL_SETTINGS: RecallSettings = {
   laneWeights: { vector: 1, keyword: 1, graph: 1 },
   laneListLength: 50,
   fusionConstant: 60,
