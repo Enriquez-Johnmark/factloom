@@ -72,7 +72,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-058 | recall tool end to end | 1 | FL-008, FL-034, FL-031 | Completed |
 | FL-035 | remember and record_fact tools | 1 | FL-019, FL-058, FL-023, FL-024 | Completed |
 | FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-018, FL-035, FL-058, FL-025, FL-032 | Completed |
-| FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Pending |
+| FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Completed |
 | FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Pending |
 
 ### FL-034: Server configuration and composition root
@@ -437,7 +437,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-002, FL-035, FL-036 |
 | Requirements | REQ-11, REQ-12, REQ-36 |
@@ -481,13 +481,26 @@ Differences from the item:
 - [`.claude/rules/testing.md`](../../../.claude/rules/testing.md): never skip or weaken a failing test.
 
 **Acceptance criteria.**
-- [ ] A test named "the server keeps a recorded fact across a restart" passes and covers requirements 1 to 6.
-- [ ] `pnpm check` passes with no network access and no embedding model in the cache.
-- [ ] `pnpm check` passes on Linux and on macOS arm64 in the workflow of FL-002. The address of that run is recorded.
+- [x] A test named "the server keeps a recorded fact across a restart" passes and covers requirements 1 to 6.
+- [x] `pnpm check` passes with no network access and no embedding model in the cache.
+- [x] `pnpm check` passes on Linux and on macOS arm64 in the workflow of FL-002. The address of that run is recorded.
 
 **Validation.** The smoke test, on every check, on both platforms of continuous integration.
 
 **Completion evidence.** The commit. The passing output of `pnpm check` locally and the two passing continuous integration runs.
+
+**Recorded evidence.** Done on 2026-11-16, in the commit `test(mcp-server): add the stdio smoke test with a restart` (394f4ed). The test is "the server keeps a recorded fact across a restart", in `apps/mcp-server/src/serve-with-fake-embedder.test.ts`, beside the stdio test of FL-058. It speaks raw JSON-RPC lines through the helpers of `testing/server-process.ts`, and gives the child process the temporary directory as its home, so that a stray file there would fail the last assertion.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, run under `unshare -rn` with no network and no API key, and with the local model cache `.cache` moved out of the working tree for the run, exited 0 and ended with:
+
+```text
+ Test Files  64 passed (64)
+      Tests  754 passed (754)
+```
+
+Continuous integration on that commit passed every check job, on Linux and on macOS arm64, each with Node 22 and Node 26: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43916974103
+
+The entry was broken by hand twice and the test failed each time: the store opened on `:memory:` in place of the file, which lost the fact at the restart, and a line of plain text written to standard output.
 
 ### FL-038: Registration guide for Claude Code and Codex, confirmed on Apple Silicon
 
