@@ -92,10 +92,11 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
-      # The embedding model is downloaded on the first run and kept between runs.
+      # The embedding model is downloaded on the first run and kept between runs, in
+      # .cache/models in the checkout, where the eval tests keep it. No test writes to the home directory.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.factloom/models
+          path: .cache/models
           key: factloom-models-${{ runner.os }}
       - name: Show the environment
         run: |
