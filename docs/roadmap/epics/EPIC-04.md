@@ -74,7 +74,7 @@ Factloom can take new information and record it as entities and facts with a **s
 | FL-022 | Secret check that refuses a write | 1 | FL-004 | Completed |
 | FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Completed |
 | FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Pending |
-| FL-024 | recordStructuredFacts use case | 1 | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 | Pending |
+| FL-024 | recordStructuredFacts use case | 1 | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 | Completed |
 | FL-025 | changeFact use case | 1 | FL-009, FL-010, FL-020, FL-022, FL-056 | Completed |
 
 ### FL-018: Software development domain: entity types and predicates
@@ -699,7 +699,7 @@ A recording can only be made with a real API key, and only the owner holds one. 
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 |
 | Requirements | REQ-13, REQ-14, REQ-19, REQ-36 |
@@ -745,13 +745,31 @@ export declare function recordStructuredFacts(
 - [`.claude/rules/architecture.md`](../../../.claude/rules/architecture.md).
 
 **Acceptance criteria.**
-- [ ] Unit tests pass with these names: "records a structured fact and creates its entities", "attaches the source to a live fact that is given again", "returns conflict and names the stored fact when a single-valued predicate already has another value", "records nothing when one of several facts conflicts", "returns conflict when two facts in one call conflict with each other", "returns invalid_input and lists the allowed predicates for an unknown predicate", "returns invalid_input and lists the allowed entity types for an unknown entity type", "returns invalid_input when the same fact is given twice", "refuses a statement that contains a secret and writes nothing", "writes everything in one commit".
-- [ ] Every test above runs with a client that fails on any LLM call.
-- [ ] `pnpm check` passes.
+- [x] Unit tests pass with these names: "records a structured fact and creates its entities", "attaches the source to a live fact that is given again", "returns conflict and names the stored fact when a single-valued predicate already has another value", "records nothing when one of several facts conflicts", "returns conflict when two facts in one call conflict with each other", "returns invalid_input and lists the allowed predicates for an unknown predicate", "returns invalid_input and lists the allowed entity types for an unknown entity type", "returns invalid_input when the same fact is given twice", "refuses a statement that contains a secret and writes nothing", "writes everything in one commit".
+- [x] Every test above runs with a client that fails on any LLM call.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests in `graph-rag` with the in-memory store, on every check.
 
 **Completion evidence.** The commit, and the passing output of `pnpm check`.
+
+**Recorded evidence.** Done on 2026-11-16, in two commits: `refactor(graph-rag): share fact planning and comparison between use cases`, which moves the planning, the comparison with memory and the read after the commit out of `remember` so that both use cases call them, and `feat(graph-rag): add the recordStructuredFacts use case`. `recordStructuredFacts` is exported from `@factloom/graph-rag` with `RecordStructuredFactsInput`.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, run under `unshare -rn` with no network and no API key, exited 0 and ended with:
+
+```text
+ Test Files  59 passed (59)
+      Tests  719 passed (719)
+```
+
+Every test uses `createTestDeps`, whose scripted LLM has no responses and throws on any call. The dependency type of the use case, `OperationDeps`, has no `LlmClient`.
+
+Each rule was broken by hand once and a test failed: the entity type check before resolution, the check for a fact given twice, the secret check, the check for two given facts that conflict, and the reason code. Removing the use case's own check for a conflict with a stored fact failed no test: the store's commit enforces the single-value rule and returns the same `conflict` with the same stored fact, so the check gives an earlier and clearer message, not a different outcome.
+
+Differences from the item:
+
+- An empty source kind is `invalid_input`, as in `remember`.
+- Extra tests: both values of a multi-valued predicate; a confidence outside 0 to 1, a period that ends before it starts and an empty list; an unknown entity type when an entity of that name already exists, which resolution would otherwise reuse; and the reason code `restated`.
 
 ### FL-025: changeFact use case
 
