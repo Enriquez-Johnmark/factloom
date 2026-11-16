@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-16:** the first feature code exists. 38 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-056, FL-058, FL-067, FL-068, FL-075, FL-076, FL-077. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-16:** the first feature code exists. 39 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-056, FL-058, FL-067, FL-068, FL-075, FL-076, FL-077. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -71,7 +71,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-020](epics/EPIC-04.md#fl-020-entity-resolution-by-exact-name) | Entity resolution by exact name | EPIC-04 | FL-007, FL-056 | Completed |
 | [FL-021](epics/EPIC-04.md#fl-021-extraction-of-facts-from-text) | Extraction of facts from text | EPIC-04 | FL-018, FL-029, FL-056 | Completed |
 | [FL-022](epics/EPIC-04.md#fl-022-secret-check-that-refuses-a-write) | Secret check that refuses a write | EPIC-04 | FL-004 | Completed |
-| [FL-023](epics/EPIC-04.md#fl-023-remember-use-case-tested-with-a-scripted-llm) | remember use case, tested with a scripted LLM | EPIC-04 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Pending |
+| [FL-023](epics/EPIC-04.md#fl-023-remember-use-case-tested-with-a-scripted-llm) | remember use case, tested with a scripted LLM | EPIC-04 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Completed |
 | [FL-024](epics/EPIC-04.md#fl-024-recordstructuredfacts-use-case) | recordStructuredFacts use case | EPIC-04 | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 | Pending |
 | [FL-025](epics/EPIC-04.md#fl-025-changefact-use-case) | changeFact use case | EPIC-04 | FL-009, FL-010, FL-020, FL-022, FL-056 | Completed |
 | [FL-026](epics/EPIC-05.md#fl-026-local-embedder-with-bge-small-en-v15) | Local embedder with bge-small-en-v1.5 | EPIC-05 | FL-002, FL-006 | Completed |
