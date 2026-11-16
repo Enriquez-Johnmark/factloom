@@ -73,7 +73,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-027 | Timeline scenarios as reviewed data | 0 | FL-006, FL-018 | Completed |
-| FL-028 | Record-and-replay wrapper for the LLM client | 1 | FL-006, FL-027 | Pending |
+| FL-028 | Record-and-replay wrapper for the LLM client | 1 | FL-006, FL-027 | Completed |
 | FL-029 | Extraction cases | 1 | FL-018, FL-027 | Under Review |
 | FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Pending |
 | FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Pending |
@@ -212,7 +212,7 @@ Choices made where the item left one, for the owner to confirm in the review:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-006, FL-027 |
 | Requirements | REQ-30 |
@@ -261,19 +261,38 @@ Choices made where the item left one, for the owner to confirm in the review:
 - [Git rules](../../../.claude/rules/git.md): never commit a secret.
 
 **Acceptance criteria.**
-- [ ] Unit test "replays a recorded response without calling the inner client" passes, with an inner client that throws when called.
-- [ ] Unit test "throws and names the missing recording when none exists" passes.
-- [ ] Unit test "records a response and then replays it" passes, in a temporary directory.
-- [ ] Unit test "uses another recording when the instructions change" passes, and the same for the input, the task, the schema and the model label: five cases.
-- [ ] Unit test "returns llm_failed when a recording no longer matches the schema" passes.
-- [ ] Unit test "writes nothing when the inner client fails" passes.
-- [ ] Unit test "writes the same bytes when the same response is recorded twice" passes.
-- [ ] Unit test "a recording holds only the task, the model label, the instructions, the input and the response" passes.
-- [ ] `pnpm check` exits 0 with the network unavailable to the test process.
+- [x] Unit test "replays a recorded response without calling the inner client" passes, with an inner client that throws when called.
+- [x] Unit test "throws and names the missing recording when none exists" passes.
+- [x] Unit test "records a response and then replays it" passes, in a temporary directory.
+- [x] Unit test "uses another recording when the instructions change" passes, and the same for the input, the task, the schema and the model label: five cases.
+- [x] Unit test "returns llm_failed when a recording no longer matches the schema" passes.
+- [x] Unit test "writes nothing when the inner client fails" passes.
+- [x] Unit test "writes the same bytes when the same response is recorded twice" passes.
+- [x] Unit test "a recording holds only the task, the model label, the instructions, the input and the response" passes.
+- [x] `pnpm check` exits 0 with the network unavailable to the test process.
 
 **Validation.** Unit tests in `apps/mcp-server/evals/`, on temporary directories, with an inner client written in the test.
 
 **Completion evidence.** The commit and the passing `pnpm check` output.
+
+**Recorded evidence.** Done on 2026-11-16, in the commit `test(mcp-server): add the record-and-replay wrapper for the LLM client`. The wrapper is `createRecordingLlmClient` in `apps/mcp-server/evals/create-recording-llm-client.ts`.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, run under `unshare -rn` so that the process had no network (a request to the npm registry from inside it failed), exited 0 and ended with:
+
+```text
+ Test Files  55 passed (55)
+      Tests  662 passed (662)
+```
+
+Each rule was broken by hand once and a test failed: replay calling the inner client; each of the five parts of the key left out, one at a time, failed exactly the test for that part; the schema check of a stored response; writing a recording after a failure; the sorting of the response's keys; and a missing recording returning a value instead of throwing.
+
+Differences from the item:
+
+- The wrapper takes a fifth argument, `recordCommand`, the command named in the error for a missing recording (functional requirement 2). No record command exists yet; FL-069 and FL-039 make the first, and pass it here.
+- A recording file that is not valid JSON, or not a recording, returns `llm_failed`, as a stored response that does not match the schema does.
+- The response is written with the keys of every object sorted, so that functional requirement 7's stable key order does not depend on the schema's field order. The five top-level fields are written in the order task, model, instructions, input, response; the model label is stored as `model`.
+- The schema test of functional requirement 3 uses a refinement, because a refinement is not part of the JSON Schema form: the key stays the same and the stored response no longer passes. Any other change to the schema gives a new key, and so a missing recording.
+
 
 ### FL-029: Extraction cases
 
