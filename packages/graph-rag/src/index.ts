@@ -7,3 +7,5 @@ import { corePackageName } from '@factloom/core';
 export const graphRagBuiltOn: readonly string[] = [corePackageName];
 
 export { softwareDevelopmentDomain } from './software-development-domain.ts';
+export type { ExplainedAuditEntry, FactHistoryEntry, GetFactHistoryInput } from './get-fact-history.ts';
+export { getFactHistory } from './get-fact-history.ts';
