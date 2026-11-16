@@ -250,7 +250,7 @@ What differs from the work item as written:
 - Two tests besides the named ones: "returns llm_failed when the response is not JSON" and "reports the task, the model, the stop reason and the token counts of each call".
 - The live run was made in the session, with the key the owner supplied for this work, rather than by the owner at their own terminal.
 
-Ten changes, each made by hand and each restored, made a test fail: the thrown error passed on as `cause`, the Zod issues passed on as the message, no check of `refusal`, no check of `max_tokens`, a request sent without a key, one model for every task, no cache breakpoint, no usage report, and the response trusted without the schema. The Zod issues at first failed no test, because Zod 4 does not repeat input values in its messages; the leak test gained a response with an unrecognised key, and the change then failed it.
+Nine changes, each made by hand and each restored, made a test fail: the thrown error passed on as `cause`, the Zod issues passed on as the message, no check of `refusal`, no check of `max_tokens`, a request sent without a key, one model for every task, no cache breakpoint, no usage report, and the response trusted without the schema. The Zod issues at first failed no test, because Zod 4 does not repeat input values in its messages; the leak test gained a response with an unrecognised key, and the change then failed it.
 
 The live check, `pnpm run check:llm` from `apps/mcp-server` with `ANTHROPIC_API_KEY` set, on 2026-11-16. The second call read the whole cached prefix:
 
