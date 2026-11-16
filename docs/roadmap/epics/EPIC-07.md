@@ -76,7 +76,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-028 | Record-and-replay wrapper for the LLM client | 1 | FL-006, FL-027 | Completed |
 | FL-029 | Extraction cases | 1 | FL-018, FL-027 | Completed |
 | FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Pending |
-| FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Pending |
+| FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Completed |
 | FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Pending |
 | FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Completed |
 | FL-076 | Differential tests between the in-memory store and SQLite | 1 | FL-075, FL-068, FL-016, FL-017 | Completed |
@@ -537,7 +537,7 @@ The `remember` steps need LLM recordings, and a recording can only be made with 
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-002, FL-058, FL-035 |
 | Requirements | REQ-35 |
@@ -601,18 +601,58 @@ Hosted runners vary from run to run, so a 95th percentile measured there moves w
 - [Git rules](../../../.claude/rules/git.md): the workflow uses no secret, so the `remember` row is not measured in continuous integration.
 
 **Acceptance criteria.**
-- [ ] `pnpm bench` builds both namespaces and prints a table with: `recall` at the 50th and 95th percentile for 10,000 and for 100,000 facts; `record_fact` excluding embedding at the 50th and 95th percentile; server start; and the `remember` row.
-- [ ] The output names the machine, as in functional requirement 8.
-- [ ] With every budget met, `pnpm bench` exits 0. With the `recall` budget for 10,000 facts lowered to 1 ms in a local run, it exits non-zero and names that budget. The output is recorded and the budget restored.
-- [ ] Unit tests pass with these names: "gives the 95th percentile of a list of durations", "reports a value above its budget and its tolerance as missed", "warns and does not fail for a value above its budget within its tolerance", "does not budget the remember row".
-- [ ] A test named "builds the same namespace from the same seed" builds 100 facts twice and compares the fact identifiers and the first vector.
-- [ ] The eval job of FL-002, started by hand, shows the benchmark with its table. Its address is recorded. The workflow file shows that the job runs by hand and on a schedule and not on a push.
-- [ ] The first run is recorded in this work item: the table, the machine, and for each budget "met", "met after a change" with the change named, or "revised" with the owner's approval and the new number in REQ-35.
-- [ ] `pnpm check` still exits 0 and does not run the benchmark.
+- [x] `pnpm bench` builds both namespaces and prints a table with: `recall` at the 50th and 95th percentile for 10,000 and for 100,000 facts; `record_fact` excluding embedding at the 50th and 95th percentile; server start; and the `remember` row.
+- [x] The output names the machine, as in functional requirement 8.
+- [x] With every budget met, `pnpm bench` exits 0. With the `recall` budget for 10,000 facts lowered to 1 ms in a local run, it exits non-zero and names that budget. The output is recorded and the budget restored.
+- [x] Unit tests pass with these names: "gives the 95th percentile of a list of durations", "reports a value above its budget and its tolerance as missed", "warns and does not fail for a value above its budget within its tolerance", "does not budget the remember row".
+- [x] A test named "builds the same namespace from the same seed" builds 100 facts twice and compares the fact identifiers and the first vector.
+- [x] The eval job of FL-002, started by hand, shows the benchmark with its table. Its address is recorded. The workflow file shows that the job runs by hand and on a schedule and not on a push.
+- [x] The first run is recorded in this work item: the table, the machine, and for each budget "met", "met after a change" with the change named, or "revised" with the owner's approval and the new number in REQ-35.
+- [x] `pnpm check` still exits 0 and does not run the benchmark.
 
 **Validation.** The benchmark command, run locally and in the eval job. Unit tests of the percentile and budget functions on every check.
 
 **Completion evidence.** The commit, the address of the workflow run, the table of the first run with the machine it ran on, and the record of each budget's outcome. Q-09 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md) is updated with the timings on a file database.
+
+**Recorded evidence.** Done on 2026-11-16, in the commits `feat(mcp-server): add the performance benchmark`, `ci: run the eval job and its benchmark weekly`, `ci: format the schedule of the eval job`, and `docs: record the first file database timings in Q-09`. The benchmark's entry is `apps/mcp-server/src/run-benchmark.ts`; the budgets, the percentile, the table and the generator are in `apps/mcp-server/evals/benchmark/`.
+
+The first run, in the eval job of the workflow, started by hand: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43919467899 . The job's log holds this table; building 10,000 facts took 2.1 s and 100,000 facts 23.9 s.
+
+```text
+Machine:
+  Operating system: Linux 7.0.0-1017-azure
+  Processor: x64, AMD EPYC 9V74 80-Core Processor, 4 cores
+  Node.js v22.23.4, SQLite 3.54.1
+
+| Measure | Value (ms) | Budget (ms) | Tolerance | Outcome |
+|---|---|---|---|---|
+| recall, 10,000 facts, p50 | 91.9 | none | none | reported |
+| recall, 10,000 facts, p95 | 98.7 | 150 | 20% | met |
+| record_fact excluding embedding, 10,000 facts, p50 | 1.6 | none | none | reported |
+| record_fact excluding embedding, 10,000 facts, p95 | 6.0 | 50 | 20% | met |
+| remember, median (reported) | not measured: ANTHROPIC_API_KEY is not set | none | none | not measured |
+| server start, median of 5 | 553.1 | 2000 | 20% | met |
+| recall, 100,000 facts, p50 | 330.9 | none | none | reported |
+| recall, 100,000 facts, p95 | 350.4 | 500 | 20% | met |
+| record_fact excluding embedding, 100,000 facts, p50 | 3.3 | none | none | reported |
+| record_fact excluding embedding, 100,000 facts, p95 | 3.6 | 50 | 20% | met |
+
+Every budget is met.
+```
+
+Outcome of each budget of REQ-35 on that first run: `recall` on 10,000 facts, met; `recall` on 100,000 facts, met; `record_fact` excluding embedding, met; server start, met. No budget was revised and nothing was changed to meet one. The tolerance stays at 20 percent.
+
+A local run on the session's machine (Linux 6.18.44, x64, Intel Xeon at 2.10 GHz, 4 cores, Node.js v22.23.4, SQLite 3.54.1), with `ANTHROPIC_API_KEY` set for that command from the owner's key, met every budget: `recall` p95 52.7 ms on 10,000 facts and 278.0 ms on 100,000; `record_fact` p95 5.2 ms and 2.0 ms; server start 414.0 ms; `remember` 1,369.9 ms, reported. With the `recall` budget for 10,000 facts set to 1 ms in a local run, `pnpm bench` exited 1 and printed `| recall, 10,000 facts, p95 | 48.9 | 1 | 20% | missed |` and `Budgets missed: recall, 10,000 facts, p95.`; the file was restored, and `git diff` showed no change.
+
+The workflow file runs the eval job on `workflow_dispatch` with the input `eval` and on a weekly `schedule`, Monday 04:17 UTC; the job's condition excludes `push`. `pnpm eval` runs the vitest eval tests and then `pnpm bench`. `pnpm check` exits 0 and does not run the benchmark.
+
+Differences from the item:
+
+- The command's entry is in `apps/mcp-server/src`, not `evals/`, because it builds the local embedder and starts `main.ts`; the boundary lint keeps `evals/` from importing `src` (the precedent of FL-033).
+- Server start is measured with the child's home directory set to a temporary directory, so its model cache there is empty. The server loads the model on the first embedding and not at start (FL-058), so the start does not touch the cache either way.
+- The SQLite version is read by running `node` in `packages/storage`, where `better-sqlite3` is installed, so that no package gains an export.
+- The generator puts every fact under the multi-valued predicate `follows_convention`, so that no fact breaks the single-value rule; a fifth of the facts have an ended valid period and a tenth are invalidated.
+- Extra unit tests: a value at its budget is met, each budget missed is named, and the generator ends a fifth and invalidates a tenth.
 
 ### FL-074: Token and tool-call comparison with and without Factloom
 
