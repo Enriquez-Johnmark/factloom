@@ -2,10 +2,14 @@ name: CI
 
 # Runs `pnpm check` on every push to main, on Linux and on macOS arm64.
 # Two further jobs are started by hand from the Actions tab: the SQLite spikes on macOS arm64,
-# and `pnpm eval`, which runs the tests that need the real embedding model.
+# and `pnpm eval`, which runs the tests that need the real embedding model and the
+# performance benchmark. The eval job also runs once a week on a schedule, never on a push.
 on:
   push:
     branches: [main]
+  # Monday 04:17 UTC: the weekly run of the eval job and its benchmark (FL-066).
+  schedule:
+    - cron: '17 4 * * 1'
   workflow_dispatch:
     inputs:
       job:
@@ -87,7 +91,7 @@ jobs:
 
   eval:
     name: eval
-    if: github.event_name == 'workflow_dispatch' && inputs.job == 'eval'
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.job == 'eval')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
