@@ -48,8 +48,14 @@ export const softwareDevelopmentDomain: Domain = {
       cardinality: 'single',
     },
   ],
-  // An interim sentence. The work item that builds extraction replaces it.
-  extractionInstructions:
-    'Extract facts about the repository, using only the entity types and predicates listed for this domain.',
+  extractionInstructions: [
+    'The texts come from work on software: notes, commit messages, conversations with a coding agent.',
+    'A repository is a code base, named as its folder or package is named, such as shop-api.',
+    'A dependency is a library, a tool, a framework, a database or a service that a repository uses, such as Vitest, pnpm or PostgreSQL.',
+    'A convention is a way of working that a repository follows, such as conventional commits.',
+    'A decision is a choice the team made, named by what was chosen, such as "use SQLite first".',
+    'A deployment target, a port and a status are values, not entities. Write a port as its digits only.',
+    'Keep a name as the text writes it; do not expand or shorten it.',
+  ].join('\n'),
   correctionPolicy: 'automatic',
 };
