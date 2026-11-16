@@ -18,6 +18,7 @@ packages/
   core/         types, schemas, interfaces, the Result type, fact operations
   graph-rag/    product 1 use cases: remember, change a fact, recall, fact history
   storage/      the SQLite adapter for the storage interface
+  maintenance/  product 2: correction and healing, through fact operations only
 apps/
   mcp-server/   the MCP server, and the composition root
 ```
@@ -29,9 +30,10 @@ Dependencies point inward, and only `apps/mcp-server` knows which concrete imple
 | `@factloom/core` | Zod schemas and the types derived from them. The interfaces `MemoryStore`, `LlmClient` and `Embedder`. `Result` and the error codes. The fact operations: record, invalidate, end, find conflict candidates. An in-memory store and the other test helpers | SQL, an LLM SDK, an embedding library, a test framework, anything about MCP |
 | `@factloom/graph-rag` | The use cases `remember`, `recordStructuredFacts`, `changeFact`, `recall`, `getFactHistory`. Rank fusion. The software development **domain**, until a second domain exists | SQL, concrete clients |
 | `@factloom/storage` | `SqliteMemoryStore`, its SQL, and the migrations. The storage contract suite, until a second adapter exists | Decisions about facts. It enforces rules; it does not make choices |
+| `@factloom/maintenance` | Product 2: the conflict judge, the follow-up that acts on feedback, and the scheduled jobs. Only a placeholder export so far (FL-040) | SQL, a `ChangeSet`, a call to `MemoryStore.commit`, concrete clients. It changes memory only through the fact operations in `core` |
 | `apps/mcp-server` | Tool definitions and handlers. Configuration. The Anthropic `LlmClient` and the local `Embedder`. The wiring | Rules about facts |
 
-Packages added later, each when its phase starts: `packages/maintenance` for product 2, `packages/adapters` in phase 4, when the software development domain moves out of `graph-rag`, a Postgres adapter, and `apps/api`.
+`packages/maintenance` was added when phase 2 started. Packages added later, each when its phase starts: `packages/adapters` in phase 4, when the software development domain moves out of `graph-rag`, a Postgres adapter, and `apps/api`.
 
 ## How data flows
 
