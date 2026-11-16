@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-15:** the first feature code exists. 19 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-018, FL-056, FL-067, FL-068, FL-075. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-16:** the first feature code exists. 20 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-018, FL-056, FL-067, FL-068, FL-075. 1 is `Under Review`, waiting for the owner: FL-027. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -65,7 +65,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-013](epics/EPIC-03.md#fl-013-migration-runner-and-the-first-migration) | Migration runner and the first migration | EPIC-03 | FL-001, FL-004, FL-005 | Completed |
 | [FL-014](epics/EPIC-03.md#fl-014-sqlite-store-opening-connection-settings-and-commit) | SQLite store: opening, connection settings and commit | EPIC-03 | FL-002, FL-012, FL-013 | Completed |
 | [FL-015](epics/EPIC-03.md#fl-015-sqlite-structural-reads-with-the-time-predicate) | SQLite structural reads with the time predicate | EPIC-03 | FL-014, FL-068 | Completed |
-| [FL-016](epics/EPIC-03.md#fl-016-keyword-lane-on-fts5) | Keyword lane on FTS5 | EPIC-03 | FL-015 | Pending |
+| [FL-016](epics/EPIC-03.md#fl-016-keyword-lane-on-fts5) | Keyword lane on FTS5 | EPIC-03 | FL-015 | Completed |
 | [FL-017](epics/EPIC-03.md#fl-017-vector-lane-on-a-plain-table-with-model-checking) | Vector lane on a plain table, with model checking | EPIC-03 | FL-002, FL-015 | Pending |
 | [FL-019](epics/EPIC-04.md#fl-019-anthropic-llm-client) | Anthropic LLM client | EPIC-04 | FL-006 | Pending |
 | [FL-020](epics/EPIC-04.md#fl-020-entity-resolution-by-exact-name) | Entity resolution by exact name | EPIC-04 | FL-007, FL-056 | Pending |
