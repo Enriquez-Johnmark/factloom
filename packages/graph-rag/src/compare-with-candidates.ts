@@ -1,4 +1,5 @@
 import {
+  type FactDraft,
   type FactId,
   type FactObject,
   type FactWithSources,
@@ -47,4 +48,30 @@ export function compareWithCandidates(
   }
   const restated = overlapping.find((candidate) => isSameObject(candidate.fact.object, fact.object));
   return restated === undefined ? { kind: 'new' } : { kind: 'restates', factId: restated.fact.id };
+}
+
+/** Whether two drafts state the same thing: same subject, predicate and object, overlapping in time. */
+export function isSameFact(first: FactDraft, second: FactDraft): boolean {
+  return (
+    first.fact.subjectEntityId === second.fact.subjectEntityId &&
+    first.fact.predicate === second.fact.predicate &&
+    isSameObject(first.fact.object, second.fact.object) &&
+    periodsOverlap(first.fact, second.fact)
+  );
+}
+
+/** Whether two new facts break the single-value rule together. */
+export function conflictsWithEachOther(
+  first: { readonly draft: FactDraft; readonly singleValued: boolean },
+  second: { readonly draft: FactDraft },
+): boolean {
+  const a = first.draft.fact;
+  const b = second.draft.fact;
+  return (
+    first.singleValued &&
+    a.subjectEntityId === b.subjectEntityId &&
+    a.predicate === b.predicate &&
+    !isSameObject(a.object, b.object) &&
+    periodsOverlap(a, b)
+  );
 }
