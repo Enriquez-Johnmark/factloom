@@ -11,3 +11,6 @@ export type { ExplainedAuditEntry, FactHistoryEntry, GetFactHistoryInput } from 
 export { getFactHistory } from './get-fact-history.ts';
 export type { RecalledFact, RecallInput } from './recall.ts';
 export { recall } from './recall.ts';
+export type { StructuredFactInput } from './structured-fact-input.ts';
+export type { ChangeFactInput } from './change-fact.ts';
+export { changeFact } from './change-fact.ts';
