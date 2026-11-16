@@ -72,7 +72,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 | FL-014 | SQLite store: opening, connection settings and commit | 1 | FL-002, FL-012, FL-013 | Completed |
 | FL-068 | SQLite single-value rule, error mapping and two writers on one file | 1 | FL-014, FL-067 | Completed |
 | FL-015 | SQLite structural reads with the time predicate | 1 | FL-014, FL-068 | Completed |
-| FL-016 | Keyword lane on FTS5 | 1 | FL-015 | Pending |
+| FL-016 | Keyword lane on FTS5 | 1 | FL-015 | Completed |
 | FL-017 | Vector lane on a plain table, with model checking | 1 | FL-002, FL-015 | Pending |
 
 ### FL-012: Storage contract suite: fixture, time, reads, commit and refusals
@@ -738,7 +738,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-015 |
 | Requirements | REQ-03, REQ-04, REQ-05 |
@@ -781,19 +781,47 @@ $ vitest run
 - [Data rules](../../../.claude/rules/data.md): always bind parameters.
 
 **Acceptance criteria.**
-- [ ] The contract group "keyword lane" of FL-067, K1 to K5, passes against the SQLite adapter and still passes against the in-memory store.
-- [ ] Adapter test "applies the time filter before the limit" passes: with three facts that match a word, of which only the weakest match is current, a query for now with a limit of 1 returns that fact.
-- [ ] Adapter test "reads query operators as plain words" passes, with one case per character and word in functional requirement 5, each returning `ok`.
-- [ ] Adapter test "finds a statement by an identifier with an underscore" passes, with `user_repository`, and "finds a statement by a package name with a hyphen" passes, with `better-sqlite3`.
-- [ ] Adapter test "finds a fact when only some words of the question are in its statement" passes.
-- [ ] Adapter test "ranks a statement with more matching terms first" passes.
-- [ ] Adapter test "finds a copy made by ending a fact" passes: the ended copy written with the same statement is returned for an as-of date inside its period.
-- [ ] Unit tests of the query-building function pass, including "returns no query for text with no term".
-- [ ] `pnpm check` exits 0.
+- [x] The contract group "keyword lane" of FL-067, K1 to K5, passes against the SQLite adapter and still passes against the in-memory store.
+- [x] Adapter test "applies the time filter before the limit" passes: with three facts that match a word, of which only the weakest match is current, a query for now with a limit of 1 returns that fact.
+- [x] Adapter test "reads query operators as plain words" passes, with one case per character and word in functional requirement 5, each returning `ok`.
+- [x] Adapter test "finds a statement by an identifier with an underscore" passes, with `user_repository`, and "finds a statement by a package name with a hyphen" passes, with `better-sqlite3`.
+- [x] Adapter test "finds a fact when only some words of the question are in its statement" passes.
+- [x] Adapter test "ranks a statement with more matching terms first" passes.
+- [x] Adapter test "finds a copy made by ending a fact" passes: the ended copy written with the same statement is returned for an as-of date inside its period.
+- [x] Unit tests of the query-building function pass, including "returns no query for text with no term".
+- [x] `pnpm check` exits 0.
 
 **Validation.** Contract tests against both stores; adapter tests and unit tests in `storage`.
 
 **Completion evidence.** The commit and the passing `pnpm check` output.
+
+**Recorded evidence.** Completed on 2026-11-16, in two commits: `feat(storage): build a safe FTS5 query from free text` and `feat(storage): add the keyword lane on FTS5`. The code is `packages/storage/src/build-keyword-query.ts` and the keyword statement in `create-reads.ts`. The tests are `build-keyword-query.test.ts`, `sqlite-keyword-lane.test.ts` and the keyword group in `sqlite-memory-store.contract.test.ts`.
+
+K1 to K5 pass against SQLite and against the in-memory store. SQLite now runs 62 contract cases: 41, 16 and 5.
+
+How the query is built, and where it comes from:
+
+- The quoting rule was read in the FTS5 documentation on 2026-11-16, section 3.1, "FTS5 Strings" (https://www.sqlite.org/fts5.html): a string is enclosed in double quotes, and a double quote inside it is written twice. `AND`, `OR` and `NOT` are operators only as barewords, so a quoted one is a literal.
+- The text is split on white space. A term with no letter and no digit is dropped, because the tokeniser keeps nothing of it.
+- A term that the tokeniser splits into several tokens, such as `better-sqlite3` or `user_repository`, is matched as a phrase: its tokens in that order. That was observed in the tests on SQLite 3.54.1; the section of the documentation on phrases was not read.
+
+Besides the tests the work item names, the operator test also covers a caret and a text made only of operators, and one test covers a limit below 1 and a text with no term. With the quoting removed by hand, twelve tests failed; it was restored.
+
+Not examined, as the non-goals say: the tokeniser. The default tokeniser is in use, and open question Q-71 stays open for the retrieval eval.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 102 files. No fixes applied.
+$ biome lint .
+Checked 102 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  31 passed (31)
+      Tests  446 passed (446)
+```
 
 ### FL-017: Vector lane on a plain table, with model checking
 
