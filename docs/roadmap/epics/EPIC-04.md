@@ -69,7 +69,7 @@ Factloom can take new information and record it as entities and facts with a **s
 |---|---|---|---|---|
 | FL-018 | Software development domain: entity types and predicates | 0 | FL-006 | Completed |
 | FL-019 | Anthropic LLM client | 1 | FL-006 | Pending |
-| FL-020 | Entity resolution by exact name | 1 | FL-007, FL-056 | Pending |
+| FL-020 | Entity resolution by exact name | 1 | FL-007, FL-056 | Completed |
 | FL-021 | Extraction of facts from text | 1 | FL-018, FL-029, FL-056 | Pending |
 | FL-022 | Secret check that refuses a write | 1 | FL-004 | Pending |
 | FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Pending |
@@ -238,7 +238,7 @@ The coverage table is held as data in the test, one row per fact a scenario case
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-007, FL-056 |
 | Requirements | Supports REQ-13 and REQ-14 |
@@ -279,13 +279,35 @@ The coverage table is held as data in the test, one row per fact a scenario case
 - [ADR 0011](../../architecture/adr/0011-namespace-on-every-row.md): nothing is read across namespaces.
 
 **Acceptance criteria.**
-- [ ] Unit tests with these names pass, using the in-memory store: "reuses the only entity with that name whatever its type", "chooses the entity of the mentioned type when several share the name", "plans a new entity when several share the name and none has the mentioned type", "plans a new entity when no entity has the name", "treats names that differ only in case and spacing as the same", "resolves two mentions of one new name to one planned entity", "does not see an entity in another namespace", "writes nothing".
-- [ ] The last test asserts that the number of entities in the store is unchanged after the call.
-- [ ] `pnpm check` passes.
+- [x] Unit tests with these names pass, using the in-memory store: "reuses the only entity with that name whatever its type", "chooses the entity of the mentioned type when several share the name", "plans a new entity when several share the name and none has the mentioned type", "plans a new entity when no entity has the name", "treats names that differ only in case and spacing as the same", "resolves two mentions of one new name to one planned entity", "does not see an entity in another namespace", "writes nothing".
+- [x] The last test asserts that the number of entities in the store is unchanged after the call.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests in `graph-rag` with `createTestDeps`, on every check.
 
 **Completion evidence.** The commit, and the passing output of `pnpm check`.
+
+**Recorded evidence.** Completed on 2026-11-16, in the commit `feat(graph-rag): add entity resolution by exact name`. The code is `packages/graph-rag/src/resolve-entities.ts`, with its tests beside it. The function is not exported from the package.
+
+Besides the eight named tests, one test covers a storage failure being returned as it is. The test "resolves two mentions of one new name to one planned entity" also covers the same new name mentioned under a second type: the one planned entity is used, by rule 2.
+
+"Writes nothing" counts the entities with `findEntities` for the two names the call mentions, because `MemoryStore` has no method that lists every entity.
+
+With the planned entities left out of the candidates, and with the rule for the only entity removed, each by hand, three tests failed; both were restored.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 106 files. No fixes applied.
+$ biome lint .
+Checked 106 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  33 passed (33)
+      Tests  468 passed (468)
+```
 
 ### FL-021: Extraction of facts from text
 
