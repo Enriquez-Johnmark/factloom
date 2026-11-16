@@ -55,6 +55,7 @@ The test helpers are ordinary exports of the one `index.ts`. They import no test
 |---|---|
 | Use cases | `remember`, `recordStructuredFacts`, `changeFact`, `recall`, `getFactHistory`, with their input and output types |
 | Domain | `softwareDevelopmentDomain` |
+| Retrieval eval | `recallWithSettings`, with `RecallSettings` and `PROVISIONAL_RECALL_SETTINGS`: recall with explicit lane weights, lane list length and fusion constant, for the eval in `apps/mcp-server/evals/` (FL-033) |
 
 Rank fusion and entity resolution are internal.
 
