@@ -32,16 +32,28 @@ export const RETRIEVAL_EVAL_DOMAIN: Domain = {
 export type NamedSettings = { readonly name: string; readonly settings: RecallSettings };
 
 /** The entries of FL-033: the provisional settings, and each of the two first lanes alone. */
+/** One variant: lane weights and a fusion constant, with the lane list length of the settings given. */
+function variant(vector: number, keyword: number, graph: number, fusionConstant: number): NamedSettings {
+  return {
+    name: `vector ${vector}, keyword ${keyword}, graph ${graph}, k ${fusionConstant}`,
+    settings: { ...PROVISIONAL_RECALL_SETTINGS, laneWeights: { vector, keyword, graph }, fusionConstant },
+  };
+}
+
+/**
+ * The variants of FL-057, fixed before its first run: each lane alone; vector with keyword at
+ * equal weight, at 0.5 and at 0.25; each of those three with the graph lane at 0, 0.25, 0.5 and
+ * 1; and every hybrid variant with a fusion constant of 60 and of 1, so that the defaults
+ * chosen from them are measured with both.
+ */
 export const RETRIEVAL_EVAL_SETTINGS: readonly NamedSettings[] = [
-  { name: 'provisional', settings: PROVISIONAL_RECALL_SETTINGS },
-  {
-    name: 'vector lane only',
-    settings: { ...PROVISIONAL_RECALL_SETTINGS, laneWeights: { vector: 1, keyword: 0, graph: 0 } },
-  },
-  {
-    name: 'keyword lane only',
-    settings: { ...PROVISIONAL_RECALL_SETTINGS, laneWeights: { vector: 0, keyword: 1, graph: 0 } },
-  },
+  { name: 'vector lane only', settings: variant(1, 0, 0, 60).settings },
+  { name: 'keyword lane only', settings: variant(0, 1, 0, 60).settings },
+  ...[60, 1].flatMap((fusionConstant) =>
+    [1, 0.5, 0.25].flatMap((keyword) =>
+      [0, 0.25, 0.5, 1].map((graph) => variant(1, keyword, graph, fusionConstant)),
+    ),
+  ),
 ];
 
 export type RetrievalRow = {

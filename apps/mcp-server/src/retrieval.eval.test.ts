@@ -15,7 +15,9 @@ const cacheDirectory = join(import.meta.dirname, '..', '..', '..', '.cache', 'mo
 
 describe('the retrieval eval with the real embedder', () => {
   it('the retrieval eval runs with the provisional settings', async () => {
-    const provisional = RETRIEVAL_EVAL_SETTINGS.filter(({ name }) => name === 'provisional');
+    const provisional = RETRIEVAL_EVAL_SETTINGS.filter(
+      ({ name }) => name === 'vector 1, keyword 1, graph 1, k 60',
+    );
     const embedder = createLocalEmbedder({ cacheDirectory, allowDownload: true });
 
     const rows = await measureRetrieval(embedder, readRetrievalCases(), provisional);
@@ -26,6 +28,6 @@ describe('the retrieval eval with the real embedder', () => {
       expect(value).toBeGreaterThanOrEqual(0);
       expect(value).toBeLessThanOrEqual(1);
     }
-    expect(formatRetrievalTable(rows)).toContain('| provisional | 40 | all |');
+    expect(formatRetrievalTable(rows)).toContain('| vector 1, keyword 1, graph 1, k 60 | 40 | all |');
   }, 300_000);
 });
