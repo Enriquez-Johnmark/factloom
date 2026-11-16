@@ -7,6 +7,8 @@
 node_modules/
 
 # Build and test output
+# The embedding model files that `pnpm eval` downloads, in .cache/models.
+.cache/
 dist/
 *.tsbuildinfo
 coverage/
