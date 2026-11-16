@@ -25,6 +25,11 @@ import { FIXTURE_MODEL } from './sqlite-test-store.ts';
 /** Fixed, so that every run generates the same sequences. Change it to explore others. */
 const SEED = 20261116;
 const RUNS = 200;
+/**
+ * The test's own time limit. It takes about 5 seconds here, at the default limit, and timed out
+ * once on a Linux runner in continuous integration (run 43800490944).
+ */
+const TIME_LIMIT = 60_000;
 /** Large enough that no read in a generated sequence is cut short, so lanes compare as sets. */
 const UNLIMITED = 10_000;
 
@@ -189,17 +194,21 @@ async function applyToBoth(steps: readonly Step[], times: readonly TimeFilter[])
 }
 
 describe(`the in-memory store and SQLite, on ${RUNS} generated sequences with seed ${SEED}`, () => {
-  it('the in-memory store and SQLite give the same answers', async () => {
-    await fc.assert(
-      fc.asyncProperty(
-        sequenceArbitrary,
-        fc.array(timeFilterArbitrary, { minLength: 1, maxLength: 3 }),
-        async (steps, times) => applyToBoth(steps, times),
-      ),
-      { seed: SEED, numRuns: RUNS },
-    );
-    // Both outcomes must come up often, or agreeing on them proves less than it seems to.
-    expect(outcomes.accepted).toBeGreaterThan(RUNS);
-    expect(outcomes.refused).toBeGreaterThan(RUNS / 2);
-  });
+  it(
+    'the in-memory store and SQLite give the same answers',
+    async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          sequenceArbitrary,
+          fc.array(timeFilterArbitrary, { minLength: 1, maxLength: 3 }),
+          async (steps, times) => applyToBoth(steps, times),
+        ),
+        { seed: SEED, numRuns: RUNS },
+      );
+      // Both outcomes must come up often, or agreeing on them proves less than it seems to.
+      expect(outcomes.accepted).toBeGreaterThan(RUNS);
+      expect(outcomes.refused).toBeGreaterThan(RUNS / 2);
+    },
+    TIME_LIMIT,
+  );
 });
