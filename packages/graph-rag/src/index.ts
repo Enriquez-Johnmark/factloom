@@ -6,11 +6,20 @@ import { corePackageName } from '@factloom/core';
  */
 export const graphRagBuiltOn: readonly string[] = [corePackageName];
 
-export { softwareDevelopmentDomain } from './software-development-domain.ts';
+export type { ChangeFactInput } from './change-fact.ts';
+export { changeFact } from './change-fact.ts';
 export type { ExplainedAuditEntry, FactHistoryEntry, GetFactHistoryInput } from './get-fact-history.ts';
 export { getFactHistory } from './get-fact-history.ts';
 export type { RecalledFact, RecallInput, RecallSettings } from './recall.ts';
 export { PROVISIONAL_RECALL_SETTINGS, recall, recallWithSettings } from './recall.ts';
+export type {
+  RememberDeps,
+  RememberedFact,
+  RememberInput,
+  RememberResult,
+  SkippedFact,
+} from './remember.ts';
+export { remember } from './remember.ts';
+export { softwareDevelopmentDomain } from './software-development-domain.ts';
+export type { SourceInput } from './source-input.ts';
 export type { StructuredFactInput } from './structured-fact-input.ts';
-export type { ChangeFactInput } from './change-fact.ts';
-export { changeFact } from './change-fact.ts';
