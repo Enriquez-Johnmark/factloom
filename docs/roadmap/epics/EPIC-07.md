@@ -74,7 +74,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 |---|---|---|---|---|
 | FL-027 | Timeline scenarios as reviewed data | 0 | FL-006, FL-018 | Completed |
 | FL-028 | Record-and-replay wrapper for the LLM client | 1 | FL-006, FL-027 | Pending |
-| FL-029 | Extraction cases | 1 | FL-018, FL-027 | Pending |
+| FL-029 | Extraction cases | 1 | FL-018, FL-027 | Under Review |
 | FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Pending |
 | FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Pending |
 | FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Pending |
@@ -279,7 +279,7 @@ Choices made where the item left one, for the owner to confirm in the review:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 1 |
 | Depends on | FL-018, FL-027 |
 | Requirements | REQ-30 |
@@ -340,21 +340,90 @@ Choices made where the item left one, for the owner to confirm in the review:
 - [Git rules](../../../.claude/rules/git.md): texts are invented and hold no secret.
 
 **Acceptance criteria.**
-- [ ] Test "every extraction case matches the case schema and the domain" passes and reports the number of files, which is 18 or more.
-- [ ] Test "every listed kind of case is present" passes, from a tag on each case.
-- [ ] Unit test "counts a fact as matched when subject, predicate, object and dates agree" passes.
-- [ ] Unit test "does not match a fact whose valid_from differs" passes.
-- [ ] Unit test "matches across upper case and spacing" passes.
-- [ ] Unit test "reports precision and recall for the set" passes: with a stub extraction function that returns a known mix of right, wrong and missing facts over three inline cases, the report's numbers equal hand-computed values written in the test.
-- [ ] Unit test "counts a forbidden fact that was extracted" passes.
-- [ ] Unit test "reports a failed extraction as a failure and no extracted facts" passes.
-- [ ] Test "every case with an expected fact marks one as required" passes, and the schema rejects an expected fact with no `required` field, on an inline example.
+- [x] Test "every extraction case matches the case schema and the domain" passes and reports the number of files, which is 18 or more.
+- [x] Test "every listed kind of case is present" passes, from a tag on each case.
+- [x] Unit test "counts a fact as matched when subject, predicate, object and dates agree" passes.
+- [x] Unit test "does not match a fact whose valid_from differs" passes.
+- [x] Unit test "matches across upper case and spacing" passes.
+- [x] Unit test "reports precision and recall for the set" passes: with a stub extraction function that returns a known mix of right, wrong and missing facts over three inline cases, the report's numbers equal hand-computed values written in the test.
+- [x] Unit test "counts a forbidden fact that was extracted" passes.
+- [x] Unit test "reports a failed extraction as a failure and no extracted facts" passes.
+- [x] Test "every case with an expected fact marks one as required" passes, and the schema rejects an expected fact with no `required` field, on an inline example.
 - [ ] Review by the owner: the owner reads each case and checks the expected facts, and which of them are required, against the text. The owner records, per file, "reviewed" and the date in the completion evidence.
-- [ ] `pnpm check` exits 0.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests in `apps/mcp-server/evals/` for the scorer, with a stub function; a validation test of the data; the owner's review. The run through `remember`, in replay, is FL-069.
 
 **Completion evidence.** The commit, the passing `pnpm check` output, the number of cases per kind, and the owner's review record.
+
+**Recorded evidence.** Everything except the owner's review was done on 2026-11-16, in the commit `test(mcp-server): add extraction cases and their scorer`. The item is `Under Review` until the owner has read the 20 case files.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, ended with:
+
+```text
+ Test Files  54 passed (54)
+      Tests  647 passed (647)
+```
+
+The validation test printed 20 case files, and this number of cases per kind. A case is tagged with every kind it covers, so the counts add up to more than the number of files.
+
+| Kind | Cases |
+|---|---|
+| `one-plain-fact` | 3 |
+| `several-facts` | 2 |
+| `date-in-text` | 3 |
+| `relative-date` | 2 |
+| `no-date` | 3 |
+| `end-stated` | 2 |
+| `plan` | 2 |
+| `no-fact` | 1 |
+| `question-or-hypothetical` | 2 |
+| `entity-object` | 8 |
+| `value-object` | 11 |
+| `multi-valued-two-values` | 1 |
+| `two-entity-types` | 1 |
+| `commit-message` | 2 |
+| `agent-note` | 2 |
+| `surrounded-by-talk` | 1 |
+
+Each rule was broken by hand once and a test failed: the `valid_from` of the match key, the normalisation of the subject name, the count of forbidden facts, the failure flag of a failed extraction, the check that one expected fact is required, the check against the domain, and the entity type count.
+
+Owner's review. Each file is in `apps/mcp-server/evals/extraction-cases/`. For each, check the expected facts, and which of them are required, against the text.
+
+| File | Reviewed | Date |
+|---|---|---|
+| `agent-note-status.yaml` | Pending | |
+| `agent-note.yaml` | Pending | |
+| `commit-message-port.yaml` | Pending | |
+| `commit-message.yaml` | Pending | |
+| `date-in-text.yaml` | Pending | |
+| `end-stated.yaml` | Pending | |
+| `hypothetical.yaml` | Pending | |
+| `multi-valued.yaml` | Pending | |
+| `no-date.yaml` | Pending | |
+| `no-fact.yaml` | Pending | |
+| `one-plain-fact.yaml` | Pending | |
+| `plan-beside-fact.yaml` | Pending | |
+| `plan.yaml` | Pending | |
+| `question.yaml` | Pending | |
+| `relative-date-days-ago.yaml` | Pending | |
+| `relative-date.yaml` | Pending | |
+| `several-facts.yaml` | Pending | |
+| `start-and-end-stated.yaml` | Pending | |
+| `surrounded-by-talk.yaml` | Pending | |
+| `two-entity-types.yaml` | Pending | |
+
+Choices made where the item left one, for the owner to confirm in the review:
+
+- The fourteen kinds of functional requirement 4 are sixteen tags: "an object that is an entity, and an object that is a literal value" is two tags, `entity-object` and `value-object`, and "a commit-message style text and a terse agent-note style text" is two, `commit-message` and `agent-note`.
+- `follows_convention` takes a `convention` entity as its object, as in the FL-027 scenario "A known name mentioned under a different entity type". `uses_test_framework` and `uses_package_manager` take a `dependency` entity. `deploys_to`, `listens_on_port` and `has_status` take a value.
+- A switch ("from npm to pnpm") expects the old fact too, with `valid_to` the date of the switch, but marks it not required: the case exists to test the new fact.
+- In `commit-message.yaml`, the replaced Jest fact ends at the commit's own `observed_at`, the latest moment the text allows. It is not required.
+- A relative date resolves to the calendar day: "yesterday", written on 2026-03-16, is 2026-03-15.
+- `plan.yaml` forbids the planned fact both with no date and with the planned date, 2026-06-01.
+- `surrounded-by-talk.yaml` forbids port 9200, the default that the text says is not used.
+- A failed case counts as zero extracted, so it lowers recall and leaves precision alone. Totals are the sums of the counts over the cases, so a case whose precision or recall is not applicable adds nothing to that ratio.
+
 
 ### FL-039: Scenario runner
 
