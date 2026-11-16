@@ -67,6 +67,14 @@ describe('checkForSecrets', () => {
     });
   }
 
+  it('refuses an Anthropic API key whose type segment the Gitleaks rules do not name', () => {
+    const key = ['sk-', 'ant-', 'xyz', '-', filler(93), 'AA'].join('');
+    const result = checkForSecrets([{ name: 'text', value: noteWith(key) }]);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.message).toContain('anthropic_api_key');
+  });
+
   it('names the kind and the field and never repeats the secret', () => {
     for (const { kind } of SECRET_PATTERNS) {
       const secret = SAMPLES[kind];

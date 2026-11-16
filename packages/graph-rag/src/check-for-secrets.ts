@@ -97,8 +97,11 @@ export const SECRET_PATTERNS: readonly SecretPattern[] = [
   {
     kind: 'anthropic_api_key',
     description: 'an Anthropic API key',
-    // Gitleaks rules `anthropic-api-key` and `anthropic-admin-api-key`.
-    regexes: [/\bsk-ant-(?:api03|admin01)-[a-zA-Z0-9_-]{93}AA(?=[`'"\s;]|\\[nr]|$)/],
+    // Gitleaks rules `anthropic-api-key` and `anthropic-admin-api-key`, which name the type
+    // segments `api03` and `admin01`. Any segment of lower-case letters and digits is accepted:
+    // the owner confirmed on 2026-11-16 that a key issued by the Claude Platform has another
+    // one (Q-83 in docs/research/OPEN-QUESTIONS.md).
+    regexes: [/\bsk-ant-[a-z0-9]+-[a-zA-Z0-9_-]{93}AA(?=[`'"\s;]|\\[nr]|$)/],
   },
   {
     kind: 'openai_api_key',
