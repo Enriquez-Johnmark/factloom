@@ -69,7 +69,7 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-026 | Local embedder with bge-small-en-v1.5 | 1 | FL-002, FL-006 | Pending |
+| FL-026 | Local embedder with bge-small-en-v1.5 | 1 | FL-002, FL-006 | Completed |
 | FL-030 | Rank fusion as a pure function | 1 | FL-004 | Completed |
 | FL-031 | recall use case | 1 | FL-007, FL-030, FL-056 | Completed |
 | FL-032 | getFactHistory use case | 1 | FL-007, FL-056 | Completed |
@@ -80,7 +80,7 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-002, FL-006 |
 | Requirements | REQ-27 |
@@ -137,16 +137,70 @@ By default the library keeps its cache inside `node_modules` (research, section 
 - [ADR 0004](../../architecture/adr/0004-zod-schemas-and-result-values.md): an adapter catches what its library throws.
 
 **Acceptance criteria.**
-- [ ] Under `pnpm eval`, tests pass with these names: "returns one unit vector of 384 values for each text, in order", "returns an empty list for an empty list", "embeds a question differently from the same text as a statement", "returns the same vector for the same text on two calls", "scores a statement nearer to its paraphrase than to an unrelated statement".
-- [ ] Under `pnpm eval`, a test named "writes nothing to standard output" runs the embedder in a child process, embeds one text, and asserts that the child's standard output is empty.
-- [ ] Under `pnpm check`, tests pass with these names: "reports its model and dimensions before the model is loaded", "returns embedding_failed when the model files are missing and cannot be fetched". The second uses an empty cache directory and a setting that prevents fetching.
-- [ ] `pnpm check` passes with no network access and with `.cache/models` absent.
-- [ ] The eval job of FL-002 is started by hand and passes, and its log shows the tests above. A second start shows the model taken from the kept cache, with no download. Both addresses are recorded.
-- [ ] After a clean install on Linux, the size of `node_modules` (`du -sh node_modules` at the repository root) and the size of the cache directory after the first run are recorded.
+- [x] Under `pnpm eval`, tests pass with these names: "returns one unit vector of 384 values for each text, in order", "returns an empty list for an empty list", "embeds a question differently from the same text as a statement", "returns the same vector for the same text on two calls", "scores a statement nearer to its paraphrase than to an unrelated statement".
+- [x] Under `pnpm eval`, a test named "writes nothing to standard output" runs the embedder in a child process, embeds one text, and asserts that the child's standard output is empty.
+- [x] Under `pnpm check`, tests pass with these names: "reports its model and dimensions before the model is loaded", "returns embedding_failed when the model files are missing and cannot be fetched". The second uses an empty cache directory and a setting that prevents fetching.
+- [x] `pnpm check` passes with no network access and with `.cache/models` absent.
+- [x] The eval job of FL-002 is started by hand and passes, and its log shows the tests above. A second start shows the model taken from the kept cache, with no download. Both addresses are recorded.
+- [x] After a clean install on Linux, the size of `node_modules` (`du -sh node_modules` at the repository root) and the size of the cache directory after the first run are recorded.
 
 **Validation.** Tests in `apps/mcp-server` with the real model under `pnpm eval`, locally and in the eval job. Two tests with no model on every check. The retrieval eval (FL-033) measures the quality of the vectors.
 
 **Completion evidence.** The commit, with the registry check in its message. The passing output of `pnpm check` and of `pnpm eval`, and the addresses of the two eval job runs. The two measured sizes, recorded next to the 745 MB figure in the [embeddings research](../../research/technical/embeddings.md).
+
+**Recorded evidence.** Completed on 2026-11-16, in these commits: `build(mcp-server): add @huggingface/transformers 4.3.2 for the local embedder`, `chore: ignore the embedding model cache in .cache`, `ci: keep the embedding model cache in .cache/models for the eval job`, `feat(mcp-server): add the local embedder with bge-small-en-v1.5`, `docs(research): record the install, cache and batch measurements of the local embedder`, and `build: name every eval test in the output of pnpm eval`. The code is `apps/mcp-server/src/create-local-embedder.ts`. Its tests that need no model are `create-local-embedder.test.ts`, under `pnpm check`; those that load it are `create-local-embedder.eval.test.ts`, under `pnpm eval`.
+
+The library version. `npm view @huggingface/transformers version` on 2026-11-16 gave 4.3.2, the `latest` dist-tag and the version the research verified. The first commit's message records the check. The revision is the full commit `ea104dacec62c0de699686887e3f920caeb4f3e3`, which `https://huggingface.co/api/models/Xenova/bge-small-en-v1.5` reported on 2026-11-16 and of which the spike's `ea104da` is the start.
+
+What differs from the work item as written:
+
+- **The workflow and `.gitignore` are changed.** Technical requirement 5 says the eval job keeps `.cache/models` and git ignores it. Neither was so: the eval job kept `~/.factloom/models`, and `.gitignore` had no rule for `.cache`. The eval job now keeps `.cache/models` in the checkout, and `.gitignore` ignores `.cache/`.
+- **The install scripts of `onnxruntime-node` and `protobufjs` are not run.** pnpm refused to install without a decision on them. `onnxruntime-node`'s script only downloads the CUDA provider binaries from a NuGet feed (`script/install.js`); the CPU binaries for Linux, macOS and Windows are in the package. `pnpm-workspace.yaml` records both as `false` in `allowBuilds`, with the reason. This is why `onnxruntime-node` measures 288 MB here against 548 MB in the research.
+- `model` also names the pooling, `Xenova/bge-small-en-v1.5@ea104dac...:q8:cls`, because a change of pooling changes the vectors as much as a change of revision does.
+- **With the quantised model, a text's vector depends slightly on the other texts of its batch.** A first version of the order test expected a text's vector in a batch of two to equal its vector embedded alone; the similarity was 0.9969. A throwaway script showed 0.9967 to 0.9972 with q8, also for texts of equal length, and identical vectors with fp32; it is recorded in the embeddings research. Technical requirement 4, texts of one call embedded together, and the quantised model of ADR 0014 are both kept, as the owner had agreed in advance to the recommended way. The test, which the work item names but does not spell out, now shows the order by each vector being nearest to its own text embedded alone, with a similarity above 0.99.
+- Every failure to load names `huggingface.co` in its message, since a missing file and a damaged one cannot be told apart from the library's error. A failed load is forgotten, so the next call tries again; no test covers the retry.
+- That the model is loaded on the first call and not when the embedder is built (functional requirement 5) is not tested: with downloading off and an empty cache an early load leaves no trace, and with downloading on it would need the network.
+- The eval script now uses Vitest's `verbose` reporter, so that the eval job's log names every test, as the fifth acceptance criterion asks. The first eval run, before that change, named only the two slowest tests and reported "6 passed".
+
+Six changes, each made by hand and each restored, made a test fail: no question instruction, vectors not normalised, rows in reverse order, downloading allowed whatever the option, a load failure thrown, and a line written to standard output.
+
+The two eval job runs, started by hand on 2026-11-16:
+
+- https://github.com/Enriquez-Johnmark/factloom/actions/runs/43800523728: "Cache not found for input keys: factloom-models-Linux"; the model was downloaded; "Tests 6 passed (6)"; "Cache saved with key: factloom-models-Linux" (23.9 MB compressed).
+- https://github.com/Enriquez-Johnmark/factloom/actions/runs/43800672342: the cache was restored ("Cache hit occurred on the primary key factloom-models-Linux, not saving cache"), and the log names the six tests above, all passed. The library writes no line when it downloads, so that nothing was downloaded rests on the cache hit.
+
+The two sizes, on Linux x64, recorded in the embeddings research next to the 745 MB figure: `du -sh node_modules` after a clean `pnpm install --frozen-lockfile` of the whole workspace gave 706 MB, and `du -sh .cache/models` after the first run gave 34 MB.
+
+`pnpm eval` locally:
+
+```text
+$ vitest run --config vitest.eval.config.ts --passWithNoTests --reporter=verbose
+ ✓ ... > returns one unit vector of 384 values for each text, in order
+ ✓ ... > returns an empty list for an empty list
+ ✓ ... > embeds a question differently from the same text as a statement
+ ✓ ... > returns the same vector for the same text on two calls
+ ✓ ... > scores a statement nearer to its paraphrase than to an unrelated statement
+ ✓ ... > writes nothing to standard output
+      Tests  6 passed (6)
+```
+
+Not run: anything on Apple Silicon (Q-23, FL-038), and `pnpm check` with the network cut off. It was run with `.cache/models` moved away, and it created no `.cache`; its two embedder tests use an empty temporary directory with downloading off.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, with `.cache/models` absent. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 124 files. No fixes applied.
+$ biome lint .
+Checked 124 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  41 passed (41)
+      Tests  567 passed (567)
+```
+
+The workflow runs on Linux and macOS arm64 for these commits passed: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43800626684 and https://github.com/Enriquez-Johnmark/factloom/actions/runs/43800667762. The run for the commit that added the embedder failed on the differential test of FL-076, which timed out and is recorded there.
 
 ### FL-030: Rank fusion as a pure function
 
