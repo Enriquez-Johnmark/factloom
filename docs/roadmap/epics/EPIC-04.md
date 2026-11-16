@@ -70,7 +70,7 @@ Factloom can take new information and record it as entities and facts with a **s
 | FL-018 | Software development domain: entity types and predicates | 0 | FL-006 | Completed |
 | FL-019 | Anthropic LLM client | 1 | FL-006 | Completed |
 | FL-020 | Entity resolution by exact name | 1 | FL-007, FL-056 | Completed |
-| FL-021 | Extraction of facts from text | 1 | FL-018, FL-029, FL-056 | Pending |
+| FL-021 | Extraction of facts from text | 1 | FL-018, FL-029, FL-056 | Completed |
 | FL-022 | Secret check that refuses a write | 1 | FL-004 | Completed |
 | FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Pending |
 | FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Pending |
@@ -356,7 +356,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-018, FL-029, FL-056 |
 | Requirements | REQ-26, REQ-31 |
@@ -407,16 +407,36 @@ The extraction cases of FL-029 exist first. Their expected facts are the target 
 - [`.claude/rules/testing.md`](../../../.claude/rules/testing.md), "Evals": responses are replayed from recordings.
 
 **Acceptance criteria.**
-- [ ] A test named "the extraction schema stays inside the structured output limits" walks the JSON Schema form of the schema built from `softwareDevelopmentDomain` and asserts: no recursion, no object with open keys, no optional property, and a count of union-typed and nullable properties at or below the cap cited from the research.
-- [ ] Unit tests with a scripted LLM pass with these names: "maps each extracted fact to a structured fact", "converts a calendar date to the start of that day in UTC", "leaves the start of valid time unknown when the response gives none", "returns an empty list when the model finds nothing", "returns llm_failed when the client fails", "sends the reference time in the input and not in the instructions".
-- [ ] Unit tests with a scripted LLM pass with these names, each scripted from the expected facts of an FL-029 case of that kind: "takes the date stated in the text as the start of valid time", "gives no start when the text has no date", "returns no fact for a plan", "passes on a date the model resolved from a relative date".
-- [ ] A test named "the instructions are the same bytes on every call" calls the function twice with different texts and asserts equal `instructions` and different `input`.
-- [ ] A test named "the instructions name every entity type and predicate of the domain" passes.
-- [ ] `pnpm check` passes with no network access.
+- [x] A test named "the extraction schema stays inside the structured output limits" walks the JSON Schema form of the schema built from `softwareDevelopmentDomain` and asserts: no recursion, no object with open keys, no optional property, and a count of union-typed and nullable properties at or below the cap cited from the research.
+- [x] Unit tests with a scripted LLM pass with these names: "maps each extracted fact to a structured fact", "converts a calendar date to the start of that day in UTC", "leaves the start of valid time unknown when the response gives none", "returns an empty list when the model finds nothing", "returns llm_failed when the client fails", "sends the reference time in the input and not in the instructions".
+- [x] Unit tests with a scripted LLM pass with these names, each scripted from the expected facts of an FL-029 case of that kind: "takes the date stated in the text as the start of valid time", "gives no start when the text has no date", "returns no fact for a plan", "passes on a date the model resolved from a relative date".
+- [x] A test named "the instructions are the same bytes on every call" calls the function twice with different texts and asserts equal `instructions` and different `input`.
+- [x] A test named "the instructions name every entity type and predicate of the domain" passes.
+- [x] `pnpm check` passes with no network access.
 
 **Validation.** Unit tests in `graph-rag` with a scripted LLM, on every check. The extraction cases of FL-029 against recorded model output are run in FL-069.
 
 **Completion evidence.** The commit. The passing output of `pnpm check`.
+
+**Recorded evidence.** Done on 2026-11-16, in three commits: `build(graph-rag): add zod for the extraction schema`, `feat(graph-rag): extract facts from text with one LLM call`, and `feat(graph-rag): write the extraction guidance of the software development domain`. The function is `extractFacts` in `packages/graph-rag/src/extract-facts.ts`; it is not exported from the package.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, run under `unshare -rn` so that the process had no network, exited 0 and ended with:
+
+```text
+ Test Files  56 passed (56)
+      Tests  680 passed (680)
+```
+
+The JSON Schema form of the schema built from `softwareDevelopmentDomain` is 1,547 bytes and has three union-typed or nullable properties (the object, `valid_from` and `valid_to`), against the cap of 16.
+
+Each rule was broken by hand once and a test failed: the reference time left out of the input; `valid_from` mapped from the wrong field; the object's kind mapped the wrong way round; an open object in the schema; an optional field in the schema; the date check removed; the bounds of confidence removed.
+
+Differences from the item:
+
+- `graph-rag` gains `zod` as a dependency, from the workspace catalog. [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md) already allows it.
+- `buildExtractionSchema` and `buildExtractionInstructions` are exported from their file, for the tests, and not from the package.
+- The shared rules say that when a text says something replaced something else, the replaced fact is also returned, with `valid_to` the date of the change. This is the shape the FL-029 cases expect, where the replaced fact is listed and not required.
+- The domain's guidance says which kinds of thing are entities and which are values, so that a port, a deployment target and a status are values, as the predicates' descriptions already say.
 
 ### FL-022: Secret check that refuses a write
 
