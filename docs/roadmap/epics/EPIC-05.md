@@ -73,7 +73,7 @@ Factloom answers a question with the facts that match it, filtered by time. By d
 | FL-030 | Rank fusion as a pure function | 1 | FL-004 | Completed |
 | FL-031 | recall use case | 1 | FL-007, FL-030, FL-056 | Completed |
 | FL-032 | getFactHistory use case | 1 | FL-007, FL-056 | Completed |
-| FL-033 | Retrieval eval: harness and data | 1 | FL-008, FL-016, FL-017, FL-026, FL-031 | Pending |
+| FL-033 | Retrieval eval: harness and data | 1 | FL-008, FL-016, FL-017, FL-026, FL-031 | Completed |
 | FL-057 | Lane weights chosen by measurement | 1 | FL-033 | Pending |
 
 ### FL-026: Local embedder with bge-small-en-v1.5
@@ -479,7 +479,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-008, FL-016, FL-017, FL-026, FL-031 |
 | Requirements | REQ-05 |
@@ -527,17 +527,80 @@ The work is in two items. This one builds the data, the harness and the metrics,
 - [`.claude/rules/engineering-principles.md`](../../../.claude/rules/engineering-principles.md), "Accuracy": a measured result is labelled confirmed and cites the run.
 
 **Acceptance criteria.**
-- [ ] `pnpm eval:retrieval` exits with code 0 and prints one row for each of the three entries in requirement 2, with recall@1, recall@5 and MRR@10, and the same three numbers for each question group.
-- [ ] Two runs of `pnpm eval:retrieval` in a row print identical tables.
-- [ ] A test named "the eval data keeps the labels of the spike" compares the statements, questions and labels with `spikes/embedding-retrieval/cases.json` and passes.
-- [ ] Unit tests of the metric functions pass, each against a hand-computed value written in the test: "counts a question as answered at rank 1 only when its fact is first", "gives the reciprocal of the rank of the first right fact", "gives 0 when no right fact is in the first ten".
-- [ ] A test named "a lane with weight zero contributes no fact" passes in `pnpm check`, with the fake embedder: with the keyword and graph weights at 0, the facts returned for a question equal those of the vector lane for the same limit.
-- [ ] A test named "the retrieval eval runs with the provisional settings" passes under `pnpm eval`.
-- [ ] `pnpm check` passes with no network access and no embedding model in the cache.
+- [x] `pnpm eval:retrieval` exits with code 0 and prints one row for each of the three entries in requirement 2, with recall@1, recall@5 and MRR@10, and the same three numbers for each question group.
+- [x] Two runs of `pnpm eval:retrieval` in a row print identical tables.
+- [x] A test named "the eval data keeps the labels of the spike" compares the statements, questions and labels with `spikes/embedding-retrieval/cases.json` and passes.
+- [x] Unit tests of the metric functions pass, each against a hand-computed value written in the test: "counts a question as answered at rank 1 only when its fact is first", "gives the reciprocal of the rank of the first right fact", "gives 0 when no right fact is in the first ten".
+- [x] A test named "a lane with weight zero contributes no fact" passes in `pnpm check`, with the fake embedder: with the keyword and graph weights at 0, the facts returned for a question equal those of the vector lane for the same limit.
+- [x] A test named "the retrieval eval runs with the provisional settings" passes under `pnpm eval`.
+- [x] `pnpm check` passes with no network access and no embedding model in the cache.
 
 **Validation.** The eval command, run by hand. The eval-time test under `pnpm eval` and in the eval job of FL-002, with the real embedder, a SQLite database and no LLM. The metric tests on every check.
 
 **Completion evidence.** The commit with the eval and its data. The printed table of `pnpm eval:retrieval`, with the machine it ran on. The passing output of `pnpm check` and of `pnpm eval`.
+
+**Recorded evidence.** Completed on 2026-11-16, in three commits: `feat(graph-rag): export recall with explicit settings for the retrieval eval`, `docs(architecture): list the retrieval eval's export of graph-rag`, and `feat(mcp-server): add the retrieval eval with its data, metrics and command`. The data, the harness and the metrics are in `apps/mcp-server/evals/retrieval/`; the command is `pnpm eval:retrieval`.
+
+**The provisional settings, measured.** `pnpm eval:retrieval` on Linux x64, Node.js v22.23.4, with `Xenova/bge-small-en-v1.5` at revision `ea104dac`, q8, from `.cache/models`, on 2026-11-16. It exited with code 0 in about five seconds, and a second run printed the same table. **Confirmed** (run here):
+
+```text
+| Settings | Questions | Group | recall@1 | recall@5 | MRR@10 |
+|---|---|---|---|---|---|
+| provisional | 40 | all | 0.475 | 0.713 | 0.576 |
+| provisional | 15 | paraphrase | 0.400 | 0.500 | 0.447 |
+| provisional | 10 | keyword | 0.500 | 1.000 | 0.703 |
+| provisional | 10 | why | 0.700 | 0.900 | 0.783 |
+| provisional | 5 | hard | 0.200 | 0.400 | 0.295 |
+| vector lane only | 40 | all | 0.800 | 0.900 | 0.840 |
+| vector lane only | 15 | paraphrase | 0.667 | 0.800 | 0.722 |
+| vector lane only | 10 | keyword | 1.000 | 1.000 | 1.000 |
+| vector lane only | 10 | why | 0.800 | 1.000 | 0.875 |
+| vector lane only | 5 | hard | 0.800 | 0.800 | 0.800 |
+| keyword lane only | 40 | all | 0.500 | 0.650 | 0.575 |
+| keyword lane only | 15 | paraphrase | 0.133 | 0.400 | 0.250 |
+| keyword lane only | 10 | keyword | 0.900 | 1.000 | 0.950 |
+| keyword lane only | 10 | why | 0.800 | 0.900 | 0.850 |
+| keyword lane only | 5 | hard | 0.200 | 0.200 | 0.253 |
+```
+
+The fusion of all three lanes at equal weight scores well below the vector lane alone: recall@1 0.475 against 0.800. Why, and which weights to choose, is FL-057; this item sets no bar. The vector lane alone is close to the spike's figures for the same model with the query instruction (0.800, 0.887 and 0.834 in its README), but not identical at recall@5 and MRR@10. The likely difference is that `recordFacts` embeds the 60 statements in one batch, where the spike embedded them one at a time, and the quantised model's vectors shift slightly with their batch (FL-026); that was not checked.
+
+What differs from the work item as written:
+
+- **The command entry and the eval-time test are in `apps/mcp-server/src`**, as `print-retrieval-eval.ts` and `retrieval.eval.test.ts`, with the data, the harness and the metrics in `evals/retrieval/`. Both need the real embedder, and the boundary lint of FL-001 refuses an import from `evals/` into `src/` (its pattern `**/src/**` also matches an app's own `src`). The live check of FL-019, `check-llm.ts`, sits in `src` for the same reason. The lint was not changed.
+- `@factloom/graph-rag` exports, besides `recallWithSettings`, its settings type `RecallSettings` and the constant `PROVISIONAL_RECALL_SETTINGS`, so that the eval does not repeat the provisional values. `SYSTEM-BOUNDARIES.md` lists all three, in a commit of its own.
+- The subject and object of each statement are in `cases.json`, written by hand before any run. 28 statements name an object entity; the others get the statement as a literal value. The entity types of the eval-only domain are `tool`, `component`, `practice` and `team`, and its one predicate, `states`, is multi-valued. Those choices shape what the graph lane finds, and FL-057 may want to read them before judging its weight.
+- Each run records all 60 statements with one call to `recordFacts`, in the order of the file, and asks for 10 facts per question.
+- Four tests besides the named ones: "gives every statement a subject, and an object only where it names one", "divides by the number of right facts when there are fewer than k", "averages each metric over the questions", and "reports every group for every entry of the settings".
+- "a lane with weight zero contributes no fact" compares, for every question, the facts that recall returns with the keyword and graph weights at 0 with the first ten of the vector lane, on SQLite with the fake embedder.
+
+Four changes, each made by hand and each restored, made a test fail: recall divided by k, the rank counted from 0, eleven positions read for MRR@10, and a label changed in the data. A fifth, a lane with weight zero still counted in the fusion, did not fail this item's test, because a weight of zero adds nothing to any score and the vector lane alone fills the first ten; it failed the two tests of FL-030 that cover it, "ignores a lane with weight zero" and "leaves out a fact found only by a lane with weight zero".
+
+`pnpm eval`, locally and in the eval job started by hand, https://github.com/Enriquez-Johnmark/factloom/actions/runs/43819309652, where the model came from the kept cache:
+
+```text
+ ✓ apps/mcp-server/src/retrieval.eval.test.ts > the retrieval eval with the real embedder > the retrieval eval runs with the provisional settings
+ Test Files  2 passed (2)
+      Tests  7 passed (7)
+```
+
+Not run: `pnpm check` with the network cut off; it ran with the new files tracked, and its eval tests use the fake embedder.
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43819297658.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4, with every new file staged. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 141 files. No fixes applied.
+$ biome lint .
+Checked 141 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  47 passed (47)
+      Tests  602 passed (602)
+```
 
 ### FL-057: Lane weights chosen by measurement
 
