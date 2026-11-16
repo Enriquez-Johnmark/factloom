@@ -79,7 +79,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Pending |
 | FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Pending |
 | FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Completed |
-| FL-076 | Differential tests between the in-memory store and SQLite | 1 | FL-075, FL-068, FL-016, FL-017 | Pending |
+| FL-076 | Differential tests between the in-memory store and SQLite | 1 | FL-075, FL-068, FL-016, FL-017 | Completed |
 | FL-077 | Mutation-testing trial on core | 1 | FL-008, FL-009, FL-010, FL-011 | Pending |
 
 ### FL-027: Timeline scenarios as reviewed data
@@ -673,7 +673,7 @@ How it is built, where the item left a choice:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-075, FL-068, FL-016, FL-017 |
 | Requirements | REQ-38 |
@@ -710,14 +710,64 @@ How it is built, where the item left a choice:
 - [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md): `core` imports no test framework in its source.
 
 **Acceptance criteria.**
-- [ ] Property test "the in-memory store and SQLite give the same answers" passes with the recorded number of sequences and seed.
-- [ ] Every difference found while writing the item is listed in the completion evidence with how it was settled.
-- [ ] Shown once by hand: with the time predicate of one store changed from `>` to `>=` at a period's end, the test fails. The output is recorded and the change undone.
-- [ ] `pnpm check` exits 0.
+- [x] Property test "the in-memory store and SQLite give the same answers" passes with the recorded number of sequences and seed.
+- [x] Every difference found while writing the item is listed in the completion evidence with how it was settled.
+- [x] Shown once by hand: with the time predicate of one store changed from `>` to `>=` at a period's end, the test fails. The output is recorded and the change undone.
+- [x] `pnpm check` exits 0.
 
 **Validation.** The differential property test, run by `pnpm check`; the by-hand proof that it can fail.
 
 **Completion evidence.** The commit, the passing output with seed and number of sequences, and the list of differences found and how each was settled.
+
+**Recorded evidence.** Completed on 2026-11-16, in the commit `test(storage): add differential tests between the in-memory store and SQLite`. The test is `packages/storage/src/memory-store-differential.test.ts`. It reuses the generator of FL-075, `change-sequence-generator.ts`, unchanged.
+
+The property test "the in-memory store and SQLite give the same answers" runs 200 generated sequences with the fixed seed 20261116. A sequence has 1 to 12 steps and 1 to 3 time filters. Each sequence opens a new SQLite store on `:memory:` and a new in-memory store, seeds both, and applies every step to both. After each commit it compares:
+
+- the result of the commit: success with its receipt, or the error code and the related facts, sorted;
+- `listFacts` with `'all'`, with `'live'`, and with each time filter, whole and in order;
+- for each time filter, the facts the vector lane and the keyword lane return for an unlimited query, as sets;
+- `getFact` for every fact and for a missing identifier, and `listFacts` by `supersededByFactId` for every fact;
+- `findEntities` for each subject, `getSource` for the source of every step so far and for a missing one;
+- `listAuditEntries` for every fact, subject and source.
+
+The test also asserts that the run produced more than 200 accepted and more than 100 refused commits, so that agreeing on both outcomes is not vacuous. Run alone, the file takes 4.7 seconds. With it, the test step of `pnpm check` took 6.2 seconds on this machine, and the whole check 8.0 seconds.
+
+**Differences found: none.** No difference between the two stores was found while writing the item, so none had to be settled and no case was added to the contract suite.
+
+What differs from the work item as written:
+
+- The components line names `packages/core` as well. The test lives in `packages/storage` only, because it needs both stores and `core` cannot import the SQLite adapter.
+- Functional requirement 3 did not apply: on the same sequence in one namespace, the two stores number audit entries identically, so they are compared by value.
+- The change set of each step is built from the facts the in-memory store holds. That `listFacts` with `'all'` agrees after every step is part of what is compared.
+- `listFacts` filtered by subject, by predicate or by `touchingEntityIds` is not compared, nor are lanes for query vectors and texts other than one of each. The scope lists neither.
+
+The proof that the test can fail. With the SQLite time predicate's end of valid time changed from `f.valid_to > @validAt` to `f.valid_to >= @validAt`, the test failed on the fifth sequence and shrank it to one fact ending on the as-of date. The change was then undone and the test passed again:
+
+```text
+Error: Property failed after 5 tests
+{ seed: 20261116, path: "4:0:0:0:4:7:6:6:6:7:7:1:0:1:0:0:1", endOnFailure: true }
+Counterexample: [[{"kind":"record","subject":0,"predicate":0,"value":0,"from":null,"to":0}],[{"validAt":"2025-01-01T00:00:00.000Z","knownAt":"2026-01-02T00:00:00.000Z"}]]
+Shrunk 16 time(s)
+Caused by: AssertionError: the SQLite store and the in-memory store differ on listFacts at {"validAt":"2025-01-01T00:00:00.000Z","knownAt":"2026-01-02T00:00:00.000Z"}: expected { ok: true, value: [ { …(4) } ] } to deeply equal { ok: true, value: [] }
+```
+
+Two further changes, each made by hand in the in-memory store and each restored, made the test fail: `listFacts` returning the oldest fact first ("differ on listFacts with 'all'"), and the keyword lane reading without the time filter ("differ on the keyword lane at ...").
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43799381889.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 118 files. No fixes applied.
+$ biome lint .
+Checked 118 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  39 passed (39)
+      Tests  554 passed (554)
+```
 
 ### FL-077: Mutation-testing trial on core
 
