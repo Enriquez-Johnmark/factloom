@@ -86,7 +86,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 0 |
 | Depends on | FL-006, FL-018 |
 | Requirements | REQ-30 |
@@ -165,7 +165,7 @@ This item writes one file per row of the table.
 - [x] Test "covers every case in the table" passes: each of the eleven case names appears in exactly one file's `name`.
 - [x] Test "every ask about the past states a date" passes: each file whose row mentions an earlier date has an `ask` with `as_of` or `known_at`.
 - [x] Test "every scenario uses only entity types and predicates of the software development domain" passes, and "rejects a scenario that names a predicate the domain does not have" passes on an inline example.
-- [ ] Review by the owner: the owner reads each file and checks every expected value against the row of the table, by hand. The owner records, per file, "reviewed" and the date in the completion evidence. A file changed after its review is reviewed again.
+- [x] Review by the owner: the owner reads each file and checks every expected value against the row of the table, by hand. The owner records, per file, "reviewed" and the date in the completion evidence. A file changed after its review is reviewed again.
 - [x] `git grep -n "evals/" -- apps/mcp-server/src` shows no import.
 - [x] `pnpm check` exits 0.
 
@@ -184,21 +184,21 @@ This item writes one file per row of the table.
 
 `git grep -n "evals/" -- apps/mcp-server/src` shows no import.
 
-Owner's review, to be filled in by the owner. Each file is in `apps/mcp-server/evals/scenarios/`. For each, check every expected value against its row of the table in functional requirement 6.
+Owner's review. The owner approved FL-027 on 2026-11-16, in the working session, with the message "approve FL-027", after the last change to the files on 2026-11-15. The approval was given once for all eleven files and for the choices listed below the table; it is recorded here per file as the acceptance criterion asks. Each file is in `apps/mcp-server/evals/scenarios/`. For each, check every expected value against its row of the table in functional requirement 6.
 
 | File | Reviewed | Date |
 |---|---|---|
-| `succession.yaml` | | |
-| `correction.yaml` | | |
-| `restatement.yaml` | | |
-| `multi-valued-predicate.yaml` | | |
-| `unrelated-fact.yaml` | | |
-| `older-fact-arriving-late.yaml` | | |
-| `known-name-different-type.yaml` | | |
-| `date-in-text.yaml` | | |
-| `no-date-in-text.yaml` | | |
-| `plan.yaml` | | |
-| `retraction.yaml` | | |
+| `succession.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `correction.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `restatement.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `multi-valued-predicate.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `unrelated-fact.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `older-fact-arriving-late.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `known-name-different-type.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `date-in-text.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `no-date-in-text.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `plan.yaml` | Reviewed, approved by the owner | 2026-11-16 |
+| `retraction.yaml` | Reviewed, approved by the owner | 2026-11-16 |
 
 Choices made where the item left one, for the owner to confirm in the review:
 
