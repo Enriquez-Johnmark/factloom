@@ -30,7 +30,7 @@ catalog:
   "@types/node": 22.19.0
   # SQLite driver, synchronous, with FTS5 built in. Version 13.1.1 is the one the spikes ran.
   better-sqlite3: 13.1.1
-  # Property-based testing: generates sequences of changes to check the rules of memory. Development only.
+  # Property-based testing: generated sequences of changes, and generated tool inputs. Development only.
   fast-check: 4.10.2
   # Vector distance functions for SQLite, loaded as an extension. The version the spikes ran.
   sqlite-vec: 0.1.9

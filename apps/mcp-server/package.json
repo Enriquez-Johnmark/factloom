@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "catalog:",
+    "fast-check": "catalog:",
     "yaml": "catalog:"
   }
 }
