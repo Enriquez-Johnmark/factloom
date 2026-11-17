@@ -1,6 +1,7 @@
 // What every MemoryStore must do. The same cases run against the in-memory store of
 // @factloom/core and against each storage adapter, so that they cannot drift apart.
-// The suite calls only MemoryStore methods and builds every change set by hand.
+// The suite calls only MemoryStore methods and builds every change set by hand, except the
+// purge cases, which run purgeContent of core: what they test is what it leaves readable.
 import type {
   AuditEntry,
   Change,
@@ -13,7 +14,7 @@ import type {
   TimeFilter,
   Timestamp,
 } from '@factloom/core';
-import { parseDateInput } from '@factloom/core';
+import { parseDateInput, purgeContent } from '@factloom/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 /** The groups of the suite. An adapter under construction turns them on one by one. */
@@ -1066,6 +1067,234 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
   refuses('G6: a second feedback with the same identifier returns already_exists', 'already_exists', () =>
     changeSet('op-g6', '2026-06-01', [feedbackOn('pg16'), feedbackOn('node22')], given),
   );
+
+  // --- Purge (FL-061) ---
+  // k-1 recorded from s-key, whose text and locator hold the marker; k-1 ended as k-1e with
+  // the note s-rotated; k-1e corrected by k-2 from s-fix, which quotes the marker. The
+  // fixture's facts and sources are the unrelated ones.
+  const MARKER = 'ZEBRA7731';
+  const DEPLOY_KEY = 'has_deploy_key';
+  const keySource = (id: string, day: string, content: string, contentHash: string | null): Change => ({
+    kind: 'record_source',
+    source: {
+      ...source(id, day, content),
+      contentHash,
+      locator: id === 's-key' ? `notes/${MARKER}.md` : null,
+    },
+  });
+  const keyFact = (id: string, value: string, day: string, validTo: string | null) =>
+    fact(id, DEPLOY_KEY, value, {
+      statement: `The deploy key is ${value}`,
+      createdAt: at(day),
+      validTo: validTo === null ? null : at(validTo),
+    });
+  const buildSecret = async (): Promise<void> => {
+    const commits = [
+      changeSet('op-key-1', '2026-05-01', [
+        keySource('s-key', '2026-05-01', `The deploy key is ${MARKER}.`, 'h-key'),
+        recordFact(keyFact('k-1', MARKER, '2026-05-01', null), {
+          sourceIds: ['s-key'],
+          embedding: new Float32Array([0, 0, 0, 1]),
+        }),
+      ]),
+      changeSet(
+        'op-key-2',
+        '2026-05-10',
+        [
+          keySource('s-rotated', '2026-05-10', 'The key was rotated on 1 May.', null),
+          recordFact(keyFact('k-1e', MARKER, '2026-05-10', '2026-05-01'), {
+            sourceIds: ['s-key', 's-rotated'],
+            embedding: { copyFromFactId: 'k-1' },
+          }),
+          { kind: 'invalidate_fact', factId: 'k-1', supersededByFactId: 'k-1e' },
+        ],
+        { operation: 'revision', reasonCode: 'reported_ended', explainedBySourceId: 's-rotated' },
+      ),
+      changeSet(
+        'op-key-3',
+        '2026-05-20',
+        [
+          keySource('s-fix', '2026-05-20', `Correction: it was never ${MARKER}; it is KEY-B.`, 'h-fix'),
+          recordFact(keyFact('k-2', 'KEY-B', '2026-05-20', '2026-05-01'), {
+            sourceIds: ['s-fix'],
+            embedding: new Float32Array([0, 0, 1, 1]),
+          }),
+          { kind: 'invalidate_fact', factId: 'k-1e', supersededByFactId: 'k-2' },
+        ],
+        { operation: 'correction', reasonCode: 'reported_wrong', explainedBySourceId: 's-fix' },
+      ),
+    ];
+    for (const commit of commits) {
+      const result = await store.commit(commit);
+      if (!result.ok) throw new Error(result.error.message);
+    }
+  };
+  const purgeKey = (date = '2026-06-01', namespace = NAMESPACE) => {
+    let count = 0;
+    const newId = (): string => {
+      count += 1;
+      return `purge-${date}-${count}`;
+    };
+    return purgeContent(
+      { store, now: () => at(date), newId },
+      { namespace, trigger: 'person', reasonCode: 'secret_stored', sourceId: 's-key' },
+    );
+  };
+  const FACT_IDS = ['k-1', 'k-1e', 'k-2', 'pg14', 'pg14-ended', 'pg16', 'node20', 'node22'];
+  const SOURCE_IDS = ['s-key', 's-rotated', 's-fix', 's-1', 's-2', 's-3'];
+  /** Every read method of the store, called for every identifier the case involves. */
+  const readEverything = async (): Promise<unknown[]> => {
+    const now = { validAt: NOW, knownAt: NOW };
+    const results: unknown[] = [];
+    for (const factId of FACT_IDS) {
+      results.push(await store.getFact({ namespace: NAMESPACE, factId }));
+      results.push(
+        await store.listAuditEntries({ namespace: NAMESPACE, targetKind: 'fact', targetId: factId }),
+      );
+      results.push(await store.listFeedback({ namespace: NAMESPACE, factId }));
+      for (const time of ['all', 'live', now] as const) {
+        results.push(
+          await store.listFacts({
+            namespace: NAMESPACE,
+            subjectEntityId: null,
+            predicate: null,
+            touchingEntityIds: null,
+            supersededByFactId: factId,
+            time,
+            limit: 100,
+          }),
+        );
+      }
+    }
+    for (const sourceId of SOURCE_IDS) {
+      results.push(await store.getSource({ namespace: NAMESPACE, sourceId }));
+      results.push(
+        await store.listAuditEntries({ namespace: NAMESPACE, targetKind: 'source', targetId: sourceId }),
+      );
+    }
+    for (const time of [
+      'all',
+      'live',
+      now,
+      { validAt: at('2026-04-01'), knownAt: at('2026-05-15') },
+    ] as const) {
+      results.push(await listFactIds(store, time));
+      results.push(
+        await store.listFacts({
+          namespace: NAMESPACE,
+          subjectEntityId: 'e-repo',
+          predicate: DEPLOY_KEY,
+          touchingEntityIds: ['e-repo'],
+          supersededByFactId: null,
+          time,
+          limit: 100,
+        }),
+      );
+    }
+    results.push(await store.findEntities({ namespace: NAMESPACE, name: 'example', type: null }));
+    results.push(await store.listFactsOfSources({ namespace: NAMESPACE, sourceIds: SOURCE_IDS }));
+    results.push(await store.findSourcesByContentHash({ namespace: NAMESPACE, contentHash: 'h-key' }));
+    for (const time of [now, { validAt: at('2026-04-01'), knownAt: at('2026-05-15') }]) {
+      results.push(await store.searchFactsByKeyword({ namespace: NAMESPACE, text: MARKER, time, limit: 10 }));
+      results.push(
+        await store.searchFactsByVector({
+          namespace: NAMESPACE,
+          vector: new Float32Array([0, 0, 0, 1]),
+          time,
+          limit: 10,
+        }),
+      );
+    }
+    return results;
+  };
+  const containsMarker = (value: unknown): boolean =>
+    JSON.stringify(value).toLowerCase().includes(MARKER.toLowerCase());
+
+  test('U1: after a purge, no read method returns the purged text for any identifier involved', async () => {
+    await buildSecret();
+    expect(containsMarker(await readEverything())).toBe(true);
+
+    const purged = await purgeKey();
+
+    expect(purged.ok).toBe(true);
+    expect(containsMarker(await readEverything())).toBe(false);
+  });
+  test('U2: after a purge, neither lane returns a purged fact for a question made of the text', async () => {
+    await buildSecret();
+    const before = { validAt: at('2026-05-05'), knownAt: at('2026-05-05') };
+
+    await purgeKey();
+
+    const byKeyword = await store.searchFactsByKeyword({
+      namespace: NAMESPACE,
+      text: MARKER,
+      time: before,
+      limit: 10,
+    });
+    const byVector = await store.searchFactsByVector({
+      namespace: NAMESPACE,
+      vector: new Float32Array([0, 0, 0, 1]),
+      time: before,
+      limit: 10,
+    });
+    expect(byKeyword.ok && byKeyword.value).toEqual([]);
+    expect(byVector.ok && byVector.value.map(({ fact }) => fact.id)).not.toContain('k-1');
+  });
+  test('U3: a purge leaves the unrelated facts and sources unchanged, removes no row, and audits each purged row once', async () => {
+    await buildSecret();
+    const unrelated = async () =>
+      JSON.stringify([
+        await store.getFact({ namespace: NAMESPACE, factId: 'pg16' }),
+        await store.getFact({ namespace: NAMESPACE, factId: 'node22' }),
+        await store.getSource({ namespace: NAMESPACE, sourceId: 's-1' }),
+      ]);
+    const before = await unrelated();
+    const factRows = (await listFactIds(store, 'all')).length;
+
+    const purged = await purgeKey();
+
+    expect(await unrelated()).toBe(before);
+    expect((await listFactIds(store, 'all')).length).toBe(factRows);
+    if (!purged.ok) throw new Error(purged.error.message);
+    const purgeActions = [];
+    for (const factId of purged.value.purgedFactIds) {
+      purgeActions.push(
+        ...(await auditEntries(store, 'fact', factId)).filter((entry) => entry.action === 'fact.purged'),
+      );
+    }
+    for (const sourceId of purged.value.purgedSourceIds) {
+      purgeActions.push(
+        ...(await auditEntries(store, 'source', sourceId)).filter(
+          (entry) => entry.action === 'source.purged',
+        ),
+      );
+    }
+    expect([...purged.value.purgedFactIds].sort()).toEqual(['k-1', 'k-1e']);
+    expect([...purged.value.purgedSourceIds].sort()).toEqual(['s-fix', 's-key', 's-rotated']);
+    expect(purgeActions).toHaveLength(5);
+    expect(new Set(purgeActions.map((entry) => entry.operation))).toEqual(new Set(['purge']));
+    for (const sourceId of SOURCE_IDS) {
+      const found = await store.getSource({ namespace: NAMESPACE, sourceId });
+      expect(found.ok && found.value !== null, sourceId).toBe(true);
+    }
+  });
+  test('U4: purging an already purged source succeeds and writes no further audit entry', async () => {
+    await buildSecret();
+    await purgeKey();
+    const before = await auditEntries(store, 'source', 's-key');
+
+    const again = await purgeKey('2026-07-01');
+
+    expect(again.ok).toBe(true);
+    expect(await auditEntries(store, 'source', 's-key')).toEqual(before);
+  });
+  test('U5: purging a source of another namespace returns not_found', async () => {
+    await buildSecret();
+
+    const result = await purgeKey('2026-06-01', 'repo:other');
+
+    expect(result.ok ? null : result.error.code).toBe('not_found');
+  });
 
   /** A store holding only the first commit of the timeline, to read the receipt of the second. */
   async function createStoreWithFirstCommit(): Promise<MemoryStore> {

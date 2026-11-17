@@ -82,5 +82,7 @@ export type { AdjustConfidenceInput } from './operations/adjust-confidence.ts';
 export { adjustConfidence } from './operations/adjust-confidence.ts';
 export type { RecordFeedbackInput } from './operations/record-feedback.ts';
 export { recordFeedback } from './operations/record-feedback.ts';
+export type { PurgeContentInput } from './operations/purge-content.ts';
+export { purgeContent } from './operations/purge-content.ts';
 export type { FindConflictCandidatesInput } from './operations/find-conflict-candidates.ts';
 export { findConflictCandidates } from './operations/find-conflict-candidates.ts';
