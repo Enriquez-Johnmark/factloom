@@ -85,7 +85,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | FL-042 | Automatic correction inside remember | 2 | FL-035, FL-041, FL-039 | Pending |
 | FL-043 | Proposed changes: storage and operations | 2 | FL-042 | Pending |
 | FL-070 | Human-approval policy in remember, with a command to list, approve and reject | 2 | FL-043, FL-042, FL-034 | Pending |
-| FL-044 | reviseValidTime operation | 2 | FL-010 | Pending |
+| FL-044 | reviseValidTime operation | 2 | FL-010 | Completed |
 | FL-045 | Confidence history and adjustConfidence | 2 | FL-015, FL-016, FL-017 | Pending |
 | FL-046 | Feedback operation and migration | 2 | FL-015, FL-022 | Pending |
 | FL-059 | give_feedback tool | 2 | FL-046, FL-036, FL-058 | Pending |
@@ -552,7 +552,7 @@ The item was split to fit one session. It keeps the storage and the three operat
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-010 |
 | Requirements | REQ-02, REQ-06, REQ-15, REQ-24 |
@@ -592,17 +592,70 @@ The item was split to fit one session. It keeps the storage and the three operat
 - [ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md): changes apply in order, and the rule is checked after all of them.
 
 **Acceptance criteria.**
-- [ ] A unit test moves the date of a succession by revising both neighbours in one call. Afterwards, with fixed as-of dates on each side of the old and the new boundary, each date returns exactly one fact, and no date returns two.
-- [ ] The same test, asked with a known-at date before the revision, returns the old periods.
-- [ ] A unit test shows a revision that overlaps a third live fact returns `conflict` with that fact in `relatedFactIds`, and that no row was written.
-- [ ] Unit tests cover each refusal in functional requirement 4, asserting the error code.
-- [ ] A unit test passes with an embedder that fails if called.
-- [ ] A unit test shows `2n + 1` audit entries for `n` revisions, sharing one operation identifier, with operation `revision`.
-- [ ] A contract suite case passes against both stores: a change set that invalidates two neighbouring facts and records their copies with a moved boundary commits, and the same change set with only one of the two pairs fails with `conflict`.
+- [x] A unit test moves the date of a succession by revising both neighbours in one call. Afterwards, with fixed as-of dates on each side of the old and the new boundary, each date returns exactly one fact, and no date returns two.
+- [x] The same test, asked with a known-at date before the revision, returns the old periods.
+- [x] A unit test shows a revision that overlaps a third live fact returns `conflict` with that fact in `relatedFactIds`, and that no row was written.
+- [x] Unit tests cover each refusal in functional requirement 4, asserting the error code.
+- [x] A unit test passes with an embedder that fails if called.
+- [x] A unit test shows `2n + 1` audit entries for `n` revisions, sharing one operation identifier, with operation `revision`.
+- [x] A contract suite case passes against both stores: a change set that invalidates two neighbouring facts and records their copies with a moved boundary commits, and the same change set with only one of the two pairs fails with `conflict`.
 
 **Validation.** Unit tests with `createTestDeps` and the in-memory store. The contract suite against both stores. `pnpm check`.
 
 **Completion evidence.** The commit and the passing check output.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in two commits: `feat(core): add the reviseValidTime operation` (the operation, the reason code `period_corrected`, and the changes to [`INTERFACES.md`](../../architecture/INTERFACES.md), [`SCHEMA.md`](../../architecture/SCHEMA.md) and [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md)), and `test(storage): add a contract case for a moved boundary between neighbouring facts`.
+
+`reviseValidTime` is in `packages/core/src/operations/revise-valid-time.ts`. It refuses an empty list, a fact listed twice and a period that does not end after it starts. It then reads each fact as live, and builds one change set with operation `revision`: the source, then for each revision a `record_fact` of the copy followed by the `invalidate_fact` of the original that links to it. Each copy keeps the original's sources and gains the new one, has `{ copyFromFactId }` as its embedding, and is held to the single-value rule when the domain marks its predicate single-valued. The store checks the rule once, on the result.
+
+Unit tests, in `revise-valid-time.test.ts`, 14 in all:
+
+- **Moving a succession.** The date is moved from 15 March to 1 March by revising both neighbours in one call. Afterwards each of 28 February, 1 March, 10 March, 15 March and 20 March returns exactly one value. With a known-at date before the revision, 10 March still returns PostgreSQL 14.
+- **The rule.** Revising only the successor across the boundary returns `conflict` naming the ended fact. A revision that overlaps a third live fact, PostgreSQL 13, returns `conflict` with that fact and writes no row.
+- **The copies.** Each copy keeps its object, statement and confidence, and has the original's sources plus the new one. The copies are listed in the order of the input, and each original links to its copy.
+- **No embedding.** The revision passes with an embedder that throws if called.
+- **Audit.** Two revisions write 5 audit entries under one operation identifier, with operation `revision` and reason code `period_corrected`.
+- **Refusals.** An empty list, a fact listed twice and an empty period each give `invalid_input`; a missing fact `not_found`; a fact already revised `already_invalidated` with its copy. A list whose second fact is missing changes nothing.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| No check for an empty list | 1 |
+| No check for a fact listed twice | 1 |
+| The given period not applied | 4 |
+| The original's sources dropped from the copy | 1 |
+| No link from the original to its copy | 2 |
+| Operation `succession` instead of `revision` | 1 |
+| The in-memory store skips the single-value rule for a revision | Only contract case A6 |
+
+Removing the operation's own check of an empty period failed no test: the store's schema refuses the copy with `invalid_input` as well, so the outcome is the same. The check stays because it refuses before any read and names the fact.
+
+Contract case A6, in the group "single-value rule and namespaces", passes against the in-memory store and SQLite. It starts from the fixture's succession, PostgreSQL 14 until 15 March and PostgreSQL 16 from then. The change set that revises only PostgreSQL 16 to start on 1 March fails with `conflict` naming the ended fact, and writes nothing. The change set that revises both commits, and on 10 March only the revised PostgreSQL 16 is true. The counts of registered cases rise to 17 and 18.
+
+`pnpm check`:
+
+```text
+$ biome format .
+Checked 283 files. No fixes applied.
+$ biome lint .
+Checked 283 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  75 passed (75)
+      Tests  815 passed (815)
+```
+
+The one info is the `useIndexOf` note in `packages/storage/src/change-sequence-generator.ts`, present before this item.
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the second commit: https://github.com/Johnmark-Tech/factloom/actions/runs/43986654382.
+
+Differences from the item:
+
+- `INTERFACES.md` said that `reviseValidTime` needs no `Change` kind, `Operation` name, action or reason code. It now says that it adds only the reason code `period_corrected`, and that it is made of `record_fact` and `invalidate_fact` changes under the existing `revision` operation.
+- The input type of one revision is exported as `ValidTimeRevision`, beside `ReviseValidTimeInput`.
+- `embedding_failed` is not tested: the operation computes no vector, so it can come only from the store copying a vector that is missing, which contract case C5 covers.
 
 ### FL-045: Confidence history and adjustConfidence
 
