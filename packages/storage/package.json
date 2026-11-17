@@ -15,5 +15,15 @@
     "@types/better-sqlite3": "catalog:",
     "@types/node": "catalog:",
     "fast-check": "catalog:"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo",
+    "migrations"
+  ],
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js"
+    }
   }
 }

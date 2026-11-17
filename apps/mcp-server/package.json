@@ -24,5 +24,9 @@
     "better-sqlite3": "catalog:",
     "fast-check": "catalog:",
     "yaml": "catalog:"
-  }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ]
 }

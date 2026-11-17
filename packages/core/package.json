@@ -8,5 +8,14 @@
   },
   "dependencies": {
     "zod": "catalog:"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js"
+    }
   }
 }

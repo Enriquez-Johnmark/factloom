@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rewriteRelativeImportExtensions": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmitOnError": true,
+    "tsBuildInfoFile": "dist/tsconfig.build.tsbuildinfo"
+  },
+  "files": ["src/main.ts"],
+  "references": [
+    {
+      "path": "../../packages/core/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/storage/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/graph-rag/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/maintenance/tsconfig.build.json"
+    }
+  ]
+}

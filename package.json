@@ -19,7 +19,9 @@
     "eval:retrieval": "node apps/mcp-server/src/print-retrieval-eval.ts",
     "format": "biome format --write .",
     "mutate:core": "stryker run stryker.config.json",
-    "bench": "node apps/mcp-server/src/run-benchmark.ts"
+    "bench": "node apps/mcp-server/src/run-benchmark.ts",
+    "build": "tsc -b apps/mcp-server/tsconfig.build.json",
+    "pack:archives": "pnpm -r --filter \"./packages/*\" --filter \"./apps/*\" pack --pack-destination \"$PWD/dist/archives\""
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
