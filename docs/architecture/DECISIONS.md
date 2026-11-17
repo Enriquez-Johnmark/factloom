@@ -24,6 +24,7 @@ The index of architecture decision records. Each record is short: what was decid
 | [0018](adr/0018-apache-2-licence.md) | Apache-2.0 licence | Accepted |
 | [0019](adr/0019-writes-containing-a-secret-are-refused.md) | Writes that contain a recognisable secret are refused | Accepted |
 | [0020](adr/0020-recall-defaults-chosen-by-measurement.md) | Recall defaults chosen by measurement: vector 1, keyword 0.5, graph 0, k 1 | Accepted |
+| [0021](adr/0021-no-alias-table-merges-serve-as-aliases.md) | No alias table: merges serve as aliases | Accepted |
 
 ## How the research questions were settled
 
