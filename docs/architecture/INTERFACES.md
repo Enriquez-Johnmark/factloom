@@ -701,6 +701,22 @@ export declare function changeFact(
   },
 ): Promise<Result<{ readonly invalidatedFactId: FactId; readonly replacement: FactWithSources | null }>>;
 
+/** Phase 2. What followed from feedback; always 'none' until feedback is acted on (FL-060). */
+export type FeedbackFollowUp = 'confidence_raised' | 'confidence_lowered' | 'retracted' | 'ended' | 'none';
+
+/** Phase 2. Records that a recalled fact was found right, wrong or out of date. Changes no fact. */
+export declare function giveFeedback(
+  deps: Pick<OperationDeps, 'store' | 'now' | 'newId'>,
+  input: {
+    readonly namespace: Namespace;
+    readonly factId: FactId;
+    readonly signal: 'right' | 'wrong' | 'outdated';
+    /** Stored as the content of a source of kind 'agent_note'. Null or blank for none. */
+    readonly comment: string | null;
+    readonly trigger: Trigger;
+  },
+): Promise<Result<{ readonly feedbackId: string; readonly followUp: FeedbackFollowUp }>>;
+
 /** Answers a question with the matching facts, filtered by time. */
 export declare function recall(
   deps: Pick<OperationDeps, 'store' | 'embedder' | 'now'>,
@@ -732,7 +748,8 @@ export type FactHistoryEntry = FactWithSources & { readonly auditEntries: readon
 
 - **`remember`** asks the LLM for facts using the domain's entity types and predicates, which the extraction schema lists as closed sets. It resolves each entity by name, preferring an existing entity of any type when exactly one has that name. It then sorts the extracted facts with `findConflictCandidates`: a fact that restates a live one gains the source; a fact that conflicts with a stored fact, or with another fact from the same text, is returned in `skipped`; the rest are recorded. One call to `recordFacts` writes everything. A fact whose text gives no date has `validFrom: null`, meaning the start is unknown, so it is returned for any earlier as-of date.
 - **`recordStructuredFacts`** applies the same restatement rule, and returns `conflict` instead of skipping.
-- **Secrets are refused.** `remember`, `recordStructuredFacts` and `changeFact` check their text against a fixed list of secret patterns before anything is stored or sent to the LLM, and return `invalid_input` naming the kind of secret, never the secret.
+- **Secrets are refused.** `remember`, `recordStructuredFacts`, `changeFact` and `giveFeedback` check their text against a fixed list of secret patterns before anything is stored or sent to the LLM, and return `invalid_input` naming the kind of secret, never the secret.
+- **`giveFeedback`** checks the comment against the secret patterns and refuses it with `invalid_input` before anything is stored. Otherwise it calls `recordFeedback` once, with reason code `feedback_given` and the comment, if any, as the content of a source observed now. `followUp` says what product 2 did about it.
 - **`changeFact`** resolves the replacement's entities, then calls `invalidateFact` for `was_wrong` or `endFact` for `no_longer_true`. It is one commit either way.
 - **`recall`** runs the vector and keyword lanes, then the graph lane: the live facts that touch the entities the first two found, ranked by how many of those entities each fact touches and then by how recently it was recorded. The three ranked lists are merged by weighted reciprocal rank fusion, a pure function tested without a database. If only `knownAt` is given, `validAt` takes the same date, so the question means "what did Factloom believe was true then".
 - **`getFactHistory`** follows supersession links in both directions from the given fact, and reads each audit entry's explaining source with `getSource` to fill `explanation`. For a single-valued predicate it also includes every other fact for the same subject and predicate, which is the timeline of that value. Entries are ordered by valid time, then by recorded time.

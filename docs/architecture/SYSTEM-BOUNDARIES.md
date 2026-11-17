@@ -50,7 +50,7 @@ Each package exports only what another package needs. Everything else stays priv
 | Names | `normaliseEntityName`, so that every store matches entity names the same way |
 | Interfaces | `MemoryStore`, `LlmClient`, `Embedder` |
 | Fact operations, phase 1 | `recordFacts`, `invalidateFact`, `endFact`, `findConflictCandidates`, with `OperationDeps`, `ChangeContext`, `NewSource`, `NewEntity`, `NewFact`, `FactDraft` |
-| Fact operations, phase 2 | `reviseValidTime`, with `ReviseValidTimeInput` and `ValidTimeRevision`; `adjustConfidence`, with `AdjustConfidenceInput` |
+| Fact operations, phase 2 | `reviseValidTime`, with `ReviseValidTimeInput` and `ValidTimeRevision`; `adjustConfidence`, with `AdjustConfidenceInput`; `recordFeedback`, with `RecordFeedbackInput` |
 | Conflict judge, phase 2 | `ConflictJudge`, `ConflictJudgeInput`, `ConflictVerdict`, `JUDGE_CANDIDATE_LIMIT` |
 | Test helpers | `createInMemoryStore`, `createFakeEmbedder`, `createScriptedLlm`, `createTestDeps` |
 
@@ -60,7 +60,7 @@ The test helpers are ordinary exports of the one `index.ts`. They import no test
 
 | Group | Exports |
 |---|---|
-| Use cases | `remember`, `recordStructuredFacts`, `changeFact`, `recall`, `getFactHistory`, with their input and output types |
+| Use cases | `remember`, `recordStructuredFacts`, `changeFact`, `recall`, `getFactHistory`, and from phase 2 `giveFeedback`, with their input and output types |
 | Domain | `softwareDevelopmentDomain` |
 | Retrieval eval | `recallWithSettings`, with `RecallSettings` and `DEFAULT_RECALL_SETTINGS`: recall with explicit lane weights, lane list length and fusion constant, for the eval in `apps/mcp-server/evals/` (FL-033) |
 
