@@ -1,0 +1,13 @@
+# A short name for a language.
+name: "A short name for a language"
+expected: same
+first:
+  name: "JS"
+  type: dependency
+  facts:
+    - "The build scripts are plain JS."
+second:
+  name: "JavaScript"
+  type: dependency
+  facts:
+    - "The scripts folder holds JavaScript run with Node."

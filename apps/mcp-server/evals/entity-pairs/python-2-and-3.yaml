@@ -1,0 +1,13 @@
+# Two versions of one product, kept apart.
+name: "Two versions of one product, kept apart"
+expected: different
+first:
+  name: "Python 2"
+  type: dependency
+  facts:
+    - "The legacy import script still runs on Python 2."
+second:
+  name: "Python 3"
+  type: dependency
+  facts:
+    - "All new tools run on Python 3.12."

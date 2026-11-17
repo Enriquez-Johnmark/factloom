@@ -1,0 +1,13 @@
+# A product written two ways.
+name: "A product written two ways"
+expected: same
+first:
+  name: "GitHub Actions"
+  type: dependency
+  facts:
+    - "CI runs on GitHub Actions."
+second:
+  name: "GH Actions"
+  type: dependency
+  facts:
+    - "The release workflow is a GH Actions workflow."

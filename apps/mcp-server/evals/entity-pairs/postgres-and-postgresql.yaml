@@ -1,0 +1,15 @@
+# The example of the research: a short name and the full name of one database.
+name: "The example of the research: a short name and the full name of one database"
+expected: same
+first:
+  name: "Postgres"
+  type: dependency
+  facts:
+    - "shop-api stores its orders in Postgres."
+    - "Postgres listens on port 5432."
+second:
+  name: "PostgreSQL"
+  type: dependency
+  facts:
+    - "shop-api runs PostgreSQL 16."
+    - "The PostgreSQL backups run nightly."

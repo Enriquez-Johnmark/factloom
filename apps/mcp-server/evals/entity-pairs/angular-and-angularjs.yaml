@@ -1,0 +1,13 @@
+# Two generations of one framework, kept apart.
+name: "Two generations of one framework, kept apart"
+expected: different
+first:
+  name: "Angular"
+  type: dependency
+  facts:
+    - "The admin panel is written in Angular 18."
+second:
+  name: "AngularJS"
+  type: dependency
+  facts:
+    - "The old back office still runs AngularJS 1.8."

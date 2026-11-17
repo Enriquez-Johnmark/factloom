@@ -1,0 +1,13 @@
+# A library with and without its suffix.
+name: "A library with and without its suffix"
+expected: same
+first:
+  name: "React"
+  type: dependency
+  facts:
+    - "shop-web renders its pages with React."
+second:
+  name: "React.js"
+  type: dependency
+  facts:
+    - "shop-web upgraded React.js to 19."

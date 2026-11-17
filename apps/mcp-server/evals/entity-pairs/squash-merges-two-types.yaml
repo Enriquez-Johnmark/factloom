@@ -1,0 +1,13 @@
+# One thing recorded under two types.
+name: "One thing recorded under two types"
+expected: same
+first:
+  name: "squash merges"
+  type: convention
+  facts:
+    - "shop-api follows squash merges."
+second:
+  name: "Squash merges"
+  type: decision
+  facts:
+    - "The team decided on squash merges in March; the decision is accepted."

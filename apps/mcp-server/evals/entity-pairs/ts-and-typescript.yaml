@@ -1,0 +1,13 @@
+# A short name for a language.
+name: "A short name for a language"
+expected: same
+first:
+  name: "TS"
+  type: dependency
+  facts:
+    - "shop-api is written in TS."
+second:
+  name: "TypeScript"
+  type: dependency
+  facts:
+    - "shop-api compiles TypeScript with tsc."

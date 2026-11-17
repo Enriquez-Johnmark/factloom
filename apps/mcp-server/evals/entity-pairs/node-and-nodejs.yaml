@@ -1,0 +1,13 @@
+# A product's short name and its name with a suffix.
+name: "A product's short name and its name with a suffix"
+expected: same
+first:
+  name: "Node"
+  type: dependency
+  facts:
+    - "CI runs on Node 22."
+second:
+  name: "Node.js"
+  type: dependency
+  facts:
+    - "shop-api needs Node.js 22 or later."

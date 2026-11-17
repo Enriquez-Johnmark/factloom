@@ -1,0 +1,13 @@
+# A database and a tool named after it.
+name: "A database and a tool named after it"
+expected: different
+first:
+  name: "Postgres"
+  type: dependency
+  facts:
+    - "shop-api stores its orders in Postgres."
+second:
+  name: "Postgres Exporter"
+  type: dependency
+  facts:
+    - "The Postgres Exporter sends database metrics to Prometheus."

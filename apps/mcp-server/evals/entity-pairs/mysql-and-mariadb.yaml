@@ -1,0 +1,13 @@
+# A database and its fork.
+name: "A database and its fork"
+expected: different
+first:
+  name: "MySQL"
+  type: dependency
+  facts:
+    - "The legacy shop ran on MySQL 5.7."
+second:
+  name: "MariaDB"
+  type: dependency
+  facts:
+    - "The reporting replica runs MariaDB 11."

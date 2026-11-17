@@ -1,0 +1,13 @@
+# A repository name written two ways: stage 1 decides it.
+name: "A repository name written two ways: stage 1 decides it"
+expected: same
+first:
+  name: "shop-api"
+  type: repository
+  facts:
+    - "shop-api is deployed to Fly.io."
+second:
+  name: "Shop API"
+  type: repository
+  facts:
+    - "The Shop API serves the checkout."

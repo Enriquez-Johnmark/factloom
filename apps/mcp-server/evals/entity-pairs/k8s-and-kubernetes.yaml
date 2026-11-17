@@ -1,0 +1,13 @@
+# An abbreviation and its long form.
+name: "An abbreviation and its long form"
+expected: same
+first:
+  name: "k8s"
+  type: dependency
+  facts:
+    - "shop-api is deployed on k8s."
+second:
+  name: "Kubernetes"
+  type: dependency
+  facts:
+    - "The Kubernetes cluster runs three nodes."

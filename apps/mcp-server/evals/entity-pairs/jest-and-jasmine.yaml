@@ -1,0 +1,13 @@
+# Two test frameworks.
+name: "Two test frameworks"
+expected: different
+first:
+  name: "Jest"
+  type: dependency
+  facts:
+    - "billing-worker ran its tests with Jest."
+second:
+  name: "Jasmine"
+  type: dependency
+  facts:
+    - "The AngularJS back office is tested with Jasmine."

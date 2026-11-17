@@ -1,0 +1,13 @@
+# A framework written with and without its dot: stage 1 decides it.
+name: "A framework written with and without its dot: stage 1 decides it"
+expected: same
+first:
+  name: "Next.js"
+  type: dependency
+  facts:
+    - "The marketing site is built with Next.js."
+second:
+  name: "NextJS"
+  type: dependency
+  facts:
+    - "The NextJS app is deployed to Vercel."

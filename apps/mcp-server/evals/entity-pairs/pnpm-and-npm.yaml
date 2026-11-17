@@ -1,0 +1,13 @@
+# Two package managers.
+name: "Two package managers"
+expected: different
+first:
+  name: "pnpm"
+  type: dependency
+  facts:
+    - "shop-api installs its dependencies with pnpm."
+second:
+  name: "npm"
+  type: dependency
+  facts:
+    - "The spikes install with npm ci."

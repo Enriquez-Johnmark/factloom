@@ -1,0 +1,13 @@
+# A database and its desktop client.
+name: "A database and its desktop client"
+expected: different
+first:
+  name: "Redis"
+  type: dependency
+  facts:
+    - "shop-api caches sessions in Redis."
+second:
+  name: "RedisInsight"
+  type: dependency
+  facts:
+    - "Developers inspect the cache with RedisInsight."

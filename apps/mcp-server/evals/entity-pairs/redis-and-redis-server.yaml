@@ -1,0 +1,13 @@
+# A product and its server, used as one thing.
+name: "A product and its server, used as one thing"
+expected: same
+first:
+  name: "Redis"
+  type: dependency
+  facts:
+    - "shop-api caches sessions in Redis."
+second:
+  name: "Redis server"
+  type: dependency
+  facts:
+    - "The Redis server listens on port 6379."

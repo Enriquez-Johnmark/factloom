@@ -1,0 +1,13 @@
+# A library and a smaller look-alike.
+name: "A library and a smaller look-alike"
+expected: different
+first:
+  name: "React"
+  type: dependency
+  facts:
+    - "shop-web renders its pages with React."
+second:
+  name: "Preact"
+  type: dependency
+  facts:
+    - "The embeddable widget uses Preact to stay small."

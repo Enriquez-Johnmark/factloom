@@ -1,0 +1,13 @@
+# The example of the research: two different things both called Java.
+name: "The example of the research: two different things both called Java"
+expected: different
+first:
+  name: "Java"
+  type: dependency
+  facts:
+    - "The billing-worker is written in Java 21."
+second:
+  name: "Java"
+  type: repository
+  facts:
+    - "The Java repository holds the coffee-ordering bot for the office."

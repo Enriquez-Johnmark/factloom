@@ -7,7 +7,8 @@
     "check:llm": "node src/check-llm.ts",
     "record:extraction": "node src/record-extraction.ts",
     "record:judge": "node src/record-judge.ts",
-    "record:verification": "node src/record-verification.ts"
+    "record:verification": "node src/record-verification.ts",
+    "record:entities": "node src/record-entities.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",

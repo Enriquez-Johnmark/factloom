@@ -1,0 +1,13 @@
+# Two tools with similar names.
+name: "Two tools with similar names"
+expected: different
+first:
+  name: "Vite"
+  type: dependency
+  facts:
+    - "shop-web bundles with Vite."
+second:
+  name: "Vitest"
+  type: dependency
+  facts:
+    - "shop-api runs its tests with Vitest."

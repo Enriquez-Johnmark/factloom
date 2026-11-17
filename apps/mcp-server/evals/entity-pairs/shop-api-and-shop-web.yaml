@@ -1,0 +1,13 @@
+# Two repositories of one product.
+name: "Two repositories of one product"
+expected: different
+first:
+  name: "shop-api"
+  type: repository
+  facts:
+    - "shop-api is deployed to Fly.io."
+second:
+  name: "shop-web"
+  type: repository
+  facts:
+    - "shop-web is deployed to Netlify."

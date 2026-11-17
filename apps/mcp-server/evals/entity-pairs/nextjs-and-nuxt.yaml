@@ -1,0 +1,13 @@
+# Two frameworks with similar names.
+name: "Two frameworks with similar names"
+expected: different
+first:
+  name: "Next.js"
+  type: dependency
+  facts:
+    - "The marketing site is built with Next.js."
+second:
+  name: "Nuxt"
+  type: dependency
+  facts:
+    - "The old docs site was built with Nuxt."

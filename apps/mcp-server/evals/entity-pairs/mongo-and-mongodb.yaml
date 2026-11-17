@@ -1,0 +1,13 @@
+# A nickname and the product name.
+name: "A nickname and the product name"
+expected: same
+first:
+  name: "Mongo"
+  type: dependency
+  facts:
+    - "The analytics job reads events from Mongo."
+second:
+  name: "MongoDB"
+  type: dependency
+  facts:
+    - "MongoDB 7 holds the event store."
