@@ -1392,6 +1392,13 @@ Differences from the item:
 6. `docs: record the first data on entity matching in Q-56`;
 7. `docs(mcp-server): describe the similarity and LLM stages of duplicate detection`;
 
+and, after the set was grown to 50 pairs, four more:
+
+8. `fix(maintenance): keep + and # in the strict normalisation of entity names`;
+9. `test(mcp-server): grow the entity pair set to 50 pairs, recorded with the owner's key`;
+10. `docs(maintenance): record the 50-pair measurements beside the similarity threshold`;
+11. `docs: record the 50-pair measurements of entity matching in Q-56`;
+
 The item is `Under Review`: the owner reads each pair of the set and its expected answer, and records "reviewed" and the date. That criterion is the owner's and is not ticked.
 
 Built:
@@ -1407,32 +1414,40 @@ Built:
   - **A failed call** is counted as failed. A pair decided `same` is merged or reported as in FL-053.
 - **The wiring.** The composition root runs the name stage and then the similarity stage, made anew for each run, with the key's LLM or none.
 
-**The threshold.** `SIMILARITY_THRESHOLD` = 0.65. It was chosen from the name similarities of the pair set with `bge-small-en-v1.5`, measured before any LLM call:
+**The threshold.** `SIMILARITY_THRESHOLD` = 0.65. It was first chosen on 24 pairs, just below the lowest true pair (0.669), and measured again on 50 pairs with `bge-small-en-v1.5`, before any LLM call:
 
 | Pairs | Similarities |
 |---|---|
-| Expected the same, past stage 1 (9) | 0.669, 0.736, 0.756, 0.774, 0.845, 0.863, 0.878, 0.907, 0.923 |
-| Expected different, of one type (11) | 0.591, 0.595, 0.633, 0.718, 0.745, 0.762, 0.785, 0.826, 0.841, 0.848, 0.882 |
+| Expected the same, past stage 1, of one type (19) | 0.583, 0.654, 0.669, 0.685, 0.736, 0.741, 0.756, 0.758, 0.774, 0.785, 0.845, 0.863, 0.875, 0.878, 0.881, 0.883, 0.907, 0.910, 0.923 |
+| Expected different, of one type (23) | 0.591, 0.595, 0.633, 0.693, 0.718, 0.736, 0.745, 0.755, 0.762, 0.782, 0.785, 0.803, 0.826, 0.830, 0.840, 0.841, 0.844, 0.848, 0.862, 0.880, 0.882, 0.906, 0.946 |
 
-The two ranges overlap from 0.669 to 0.882, so a threshold on names cannot separate them, as the research expected. The threshold sits just below the lowest true pair. Every true pair then reaches the LLM, and the three least similar different pairs are filtered out.
+The two ranges overlap from 0.591 to 0.923, so a threshold on names cannot separate them, as the research expected; the LLM decides. The lowest true pair, OpenTelemetry and OTel at 0.583, is now below 0.65. Lowering the threshold to reach it was measured against the cost in calls: of the 3,196 pairs of unrelated names in the set, 57% score 0.57 or more, 13% score 0.65 or more and 1% score 0.75 or more. A threshold of 0.57 would send most pairs in a memory to the LLM, against a limit of 20 calls a run, so 0.65 is kept and the one under-merge accepted.
 
-**The pair set.** Twenty-four pairs in `apps/mcp-server/evals/entity-pairs/`, written by the agent. They include:
+**The pair set.** Fifty pairs in `apps/mcp-server/evals/entity-pairs/`, written by the agent, 25 expected the same and 25 different. They include:
 
 - the research's two examples, "Postgres" and "PostgreSQL", and two different things called "Java";
-- short names (TS, JS), an abbreviation and its long form (k8s, Kubernetes);
+- short names (TS, JS, TF, OTel), abbreviations and their long forms (k8s and Kubernetes, AWS S3 and Amazon S3, GCP and Google Cloud);
 - two versions of one product (Python 2 and 3, Angular and AngularJS);
-- one thing under two types (squash merges as a convention and a decision);
-- two pairs that stage 1 decides.
+- one thing under two types (squash merges as a convention and a decision), and two things of different types under one name (Mercury);
+- names that differ only in a sign that carries meaning (C, C++ and C#), and near names of different things (Java and JavaScript, Docker and Docker Hub, MongoDB and Mongoose);
+- five pairs that stage 1 decides.
 
-**The eval.** `entity-pairs.eval.test.ts` runs under `pnpm eval`, with the real embedder and the LLM replayed. With one recording removed, it failed with `No recording for the key …` and named the record command. The recordings were made in this session with the owner's key, set for the one command `pnpm run record:entities`: model `claude-haiku-5-5`, 19 calls, no key, token or password pattern in the files. The output:
+Writing the C pairs showed that the strict normalisation of FL-053 removed `+` and `#`, so that C, C++ and C# became one name and stage 1 would have merged them. Commit 8 keeps the two signs, with a test that C, C++, C# and F# give four names.
+
+**The eval.** `entity-pairs.eval.test.ts` runs under `pnpm eval`, with the real embedder and the LLM replayed. With one recording removed, it failed with `No recording for the key …` and named the record command. The recordings were made in this session with the owner's key, set for the one command `pnpm run record:entities`: model `claude-haiku-5-5`, 41 recordings (the 19 of the first set unchanged and 22 new), no key, token or password pattern in the files. The output on 50 pairs:
 
 ```text
-Stage 1, name: decided 2, over-merges 0.
-Stages 3 and 4, similarity and LLM: decided 10, over-merges 0.
-Under-merges, all stages: 0.
+Stage 1, name: decided 5, over-merges 0.
+Stages 3 and 4, similarity and LLM: decided 17, over-merges 0.
+Under-merges, all stages: 3.
 ```
 
-Of the 22 pairs past stage 1, 3 were below the threshold and 19 went to the LLM, the cross-type Java pair among them. The LLM answered `same` for the 10 true pairs and nothing else, and kept the two Javas apart. No stage 2 exists ([ADR 0021](../../architecture/adr/0021-no-alias-table-merges-serve-as-aliases.md)), so the eval runs three stages, not four. Q-56 is brought up to date with this data, and stays open until the set reaches about 50 pairs.
+On the first 24 pairs it was 2 and 10 decided, with no over-merge and no under-merge. The three under-merges on 50 pairs:
+
+- **OpenTelemetry and OTel**, 0.583, below the threshold;
+- **RabbitMQ and Rabbit**, 0.758, and **Terraform and TF**, 0.654, which the LLM answered `unsure`. They are reported as candidates, so a person sees them.
+
+Of the pairs expected different that reached the LLM, 20 of one type and the two cross-type pairs, it answered `same` for none. No stage 2 exists ([ADR 0021](../../architecture/adr/0021-no-alias-table-merges-serve-as-aliases.md)), so the eval runs three stages, not four. Q-56 is brought up to date with this data, and stays open until the owner has reviewed the pairs and real memory has been tried.
 
 Unit tests, with a hand-placed embedder, scripted LLMs and the in-memory store:
 
@@ -1457,7 +1472,7 @@ Rules broken by hand, each then restored:
 `pnpm check`:
 
 ```text
-      Tests  1120 passed (1120)
+      Tests  1121 passed (1121)
 ```
 
 The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the seventh commit: https://github.com/Johnmark-Tech/factloom/actions/runs/44029997298. The entity pair eval runs under `pnpm eval`, which the workflow runs only weekly or by hand; it was run here, on Linux x64, and not yet in the eval job.
@@ -1467,7 +1482,7 @@ Differences from the item:
 - **The recordings were made by the agent in this session**, with the owner's approval to use the key, the key set for that command only.
 - **Three stages, not four**, by ADR 0021.
 - **An `unsure` answer is reported** as a candidate, not passed silently, so that a person sees the uncertain pairs.
-- **The pair set has 24 pairs.** The research suggested about 50 for Q-56, so Q-56 stays open.
+- **The pair set has 50 pairs**, grown from the first 24 with the owner's approval to use the key again.
 
 ### FL-054: Anchor repair for moved and renamed files
 
