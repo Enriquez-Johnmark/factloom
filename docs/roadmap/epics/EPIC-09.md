@@ -95,7 +95,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-063 | Undo a merge and refuse a conflicting merge | 3 | FL-052 | Completed |
 | FL-053 | Duplicate entity detection by name | 3 | FL-048, FL-052, FL-063 | Pending |
 | FL-064 | Duplicate entity detection by similarity | 3 | FL-053, FL-028 | Pending |
-| FL-054 | Anchor repair for moved and renamed files | 3 | FL-050 | Pending |
+| FL-054 | Anchor repair for moved and renamed files | 3 | FL-050 | Completed |
 | FL-055 | Usage tracking | 3 | FL-015, FL-031, FL-058 | Under Review |
 | FL-065 | Archive and unarchive operations | 3 | FL-055, FL-058 | Pending |
 | FL-073 | Archived facts left out of recall, and the archiving job | 3 | FL-065, FL-048, FL-058 | Pending |
@@ -1097,7 +1097,7 @@ The original item was split in two. This one builds the job and its two stages t
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-050 |
 | Requirements | REQ-22, REQ-24 |
@@ -1141,18 +1141,83 @@ The original item was split in two. This one builds the job and its two stages t
 - [`INTERFACES.md`](../../architecture/INTERFACES.md): verification is recorded, not applied.
 
 **Acceptance criteria.**
-- [ ] Fixture "renamed": a fact anchored to a file that a later commit renames without changing it. After a maintenance run that includes FL-050's job and this one: the fact has the same identifier and is live; it has a second source with the new path and the `HEAD` commit; its latest verification is `confirmed`; `listOrphanedFacts` does not return it.
-- [ ] Fixture "renamed and edited": as above, with the file also changed in the renaming commit so that git still reports a rename. The latest verification is `inconclusive` and the fact is not on the orphaned list.
-- [ ] Fixture "renamed twice": the new source carries the final path.
-- [ ] Fixture "deleted": no source is attached, the fact is live, `listOrphanedFacts` returns it, and the report counts it as flagged.
-- [ ] A second run over the "renamed" fixture attaches no further source and writes no audit entry for the fact.
-- [ ] The number of fact rows is the same before and after every fixture run.
-- [ ] Every audit entry written by the job has trigger `maintenance` and reason code `anchor_moved`.
-- [ ] All fixture runs pass with an LLM client that fails if called.
+- [x] Fixture "renamed": a fact anchored to a file that a later commit renames without changing it. After a maintenance run that includes FL-050's job and this one: the fact has the same identifier and is live; it has a second source with the new path and the `HEAD` commit; its latest verification is `confirmed`; `listOrphanedFacts` does not return it.
+- [x] Fixture "renamed and edited": as above, with the file also changed in the renaming commit so that git still reports a rename. The latest verification is `inconclusive` and the fact is not on the orphaned list.
+- [x] Fixture "renamed twice": the new source carries the final path.
+- [x] Fixture "deleted": no source is attached, the fact is live, `listOrphanedFacts` returns it, and the report counts it as flagged.
+- [x] A second run over the "renamed" fixture attaches no further source and writes no audit entry for the fact.
+- [x] The number of fact rows is the same before and after every fixture run.
+- [x] Every audit entry written by the job has trigger `maintenance` and reason code `anchor_moved`.
+- [x] All fixture runs pass with an LLM client that fails if called.
 
 **Validation.** Unit tests of the job with the fake repository reader and the in-memory store. Fixture repository tests with the git implementation and the SQLite adapter on both CI platforms. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output on Linux and macOS arm64; the git commands used, each with its documentation citation.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4 and git 2.43.0, in five commits:
+
+1. `docs: settle in INTERFACES.md how a moved anchor is repaired`;
+2. `feat(core): add the reason code anchor_moved`;
+3. `feat(maintenance): add the anchor repair job, and the git lookup of where a file was renamed`;
+4. `feat(mcp-server): run the anchor repair after verification in maintenance`;
+5. `docs(mcp-server): describe the anchor repair job`.
+
+Technical requirement 1 is settled in `INTERFACES.md`, "A moved anchor is repaired by restatement". `recordFacts` accepts no drafts with the fact in `restatedFactIds`. That commits a `record_source` and an `attach_source` change under the operation `remember`, with trigger `maintenance` and the new reason code `anchor_moved`. The verification that follows carries the same reason code.
+
+Built:
+
+- **The job.** `repairMovedAnchors` in `@factloom/maintenance`:
+  - reads `HEAD` first, and fails before changing anything if the repository cannot be read;
+  - takes the facts from `listOrphanedFacts` that have a file anchor, which are exactly those whose latest verification is `source_missing`, because a purged source keeps no locator;
+  - follows renames, up to 10 steps, until a path exists at `HEAD`.
+- **A repair.** It attaches a source of kind `file` at the new path and the `HEAD` commit, with no content, and records `confirmed` or `inconclusive` from the content identifiers.
+- **No rename.** If git shows none, the fact is flagged with the reason `source_missing` and nothing changes.
+- **`findAnchor`** moved to its own file, shared by both jobs.
+- **The reader.** `RepositoryReader` gains `findRenamedPath`, one step of check 4.2.
+- **The order.** The job is registered after `verify_anchored_facts`, so a file found missing in a run is looked for in the same run.
+
+The git commands of check 4.2:
+
+| Step | Command | Documentation |
+|---|---|---|
+| The commit that removed the path | `git log --no-renames --diff-filter=D --format=%H -1 HEAD -- <path>` | git-log, https://git-scm.com/docs/git-log: `--diff-filter` with `D` selects deleted paths, `-n` limits the commits shown, `%H` is the commit hash, `-- <path>` shows "only commits that are enough to explain how the files that match the specified paths came to be". `--no-renames` turns rename detection off "even when the configuration file gives the default to do so" |
+| Where it went | `git show -M --name-status --format= <commit>` | git-show, https://git-scm.com/docs/git-show: for commits it shows "the log message and textual diff"; `-M` detects renames, with a default similarity index of 50%; the raw output format of git-diff (https://git-scm.com/docs/git-diff) gives a rename as `R` with a score, then the old and new path |
+
+`--no-renames` is an addition to the research's command. Without it, a user whose `diff.renames` setting differs could see the removal reported in another way. Where the documentation was read only as a summary of the page (the `--diff-filter`, `%H`, `-M` and `--name-status` wording), the behaviour was confirmed by running it: the reader's test on a fixture repository finds `renamed.md` for a renamed file, and nothing for a deleted file or one never removed. The empty `--format=` was not found in the pages read; it was confirmed by the same run, because the parsed lines start with the status letter.
+
+Tests:
+
+- **The job, with a fake reader and the in-memory store.** Four unit tests: a renamed file is repaired and confirmed, a file git shows no rename for is flagged, a fact not orphaned is left, and an unreadable repository fails the job.
+- **The fixtures of the acceptance criteria, with the git reader and the SQLite adapter, after FL-050's job in one maintenance run.**
+  - "renamed": same identifier, a second source with the new path and the `HEAD` commit, verifications `source_missing` then `confirmed`, off the orphaned list, fact rows unchanged, and the job's audit entries `fact.source_attached` and `fact.verified`, each with trigger `maintenance` and reason `anchor_moved`.
+  - "renamed and edited": `inconclusive`, off the orphaned list.
+  - "renamed twice": the new source has the final path.
+  - "deleted": no source, flagged, on the orphaned list, fact rows unchanged.
+  - A second run over "renamed": the same sources and the same audit entries.
+- **The fixture helpers** of FL-050's run test moved to `testing/maintenance-fixture.ts`, shared by both run tests.
+- **No LLM call.** Every run receives the dependencies of `createTestDeps`, whose LLM client fails if called.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| The job follows one rename only | "renamed twice" |
+| The job also skips facts whose latest verification is not `source_missing` | none, because `listOrphanedFacts` already returns only those; the check was removed as redundant |
+| The rename lookup leaves out `--diff-filter=D` | none: when a path is gone at `HEAD`, the last commit that touched it is the one that removed it. The filter stays as the research's command, as a guard |
+
+`pnpm check`:
+
+```text
+ Test Files  100 passed (100)
+      Tests  1030 passed (1030)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the fourth commit, with the git fixture tests on both: https://github.com/Johnmark-Tech/factloom/actions/runs/44004845502.
+
+Differences from the item:
+
+- **`--no-renames`** was added to the research's `git log` command, as above.
+- **The attached source has no content.** The file is the source, named by its path and commit.
 
 ### FL-055: Usage tracking
 
