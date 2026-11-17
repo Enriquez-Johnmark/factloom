@@ -9,6 +9,7 @@ import {
   archiveUnusedFacts,
   createLlmVerificationRung,
   createNameCheckRung,
+  createSimilarityStage,
   createStructuredValueRung,
   findDuplicateEntities,
   type MaintenanceJob,
@@ -54,7 +55,7 @@ export function buildMaintenanceJobs(
     readonly repository: RepositoryReader;
     /** How many days a fact must go unrecalled before it is archived. */
     readonly archiveAfterDays: number;
-    /** The LLM for the last verification rung, or null when no key is set. */
+    /** The LLM for the last verification rung and for entity matching, or null when no key is set. */
     readonly llm: LlmClient | null;
   },
 ): readonly MaintenanceJob[] {
@@ -65,10 +66,21 @@ export function buildMaintenanceJobs(
       run: () => verifyAnchoredFacts({ ...deps, rungs: buildVerificationRungs(deps.llm) }, { namespace }),
     },
     { name: 'repair_moved_anchors', run: () => repairMovedAnchors(deps, { namespace }) },
-    // FL-064 adds the embedding and LLM stages after the name stage.
     {
       name: 'find_duplicate_entities',
-      run: () => findDuplicateEntities({ ...deps, stages: [NAME_STAGE] }, { namespace }),
+      // The name stage of FL-053, then the similarity and LLM stages of FL-064, made anew for
+      // each run because they count their calls. With no key, similar pairs are only reported.
+      run: () =>
+        findDuplicateEntities(
+          {
+            ...deps,
+            stages: [
+              NAME_STAGE,
+              createSimilarityStage({ store: deps.store, embedder: deps.embedder, llm: deps.llm, namespace }),
+            ],
+          },
+          { namespace },
+        ),
     },
     {
       name: 'archive_unused_facts',
