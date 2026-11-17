@@ -307,6 +307,9 @@ export interface MemoryStore {
   /** Phase 2. The feedback on one fact, in the order it was given. */
   listFeedback(query: { readonly namespace: Namespace; readonly factId: FactId }): Promise<Result<readonly Feedback[]>>;
 
+  /** Phase 3. The verifications of one fact, in the order they were recorded. */
+  listVerifications(query: { readonly namespace: Namespace; readonly factId: FactId }): Promise<Result<readonly FactVerification[]>>;
+
   /**
    * Phase 3. Current facts at `currentAt` whose latest verification, or recording if none, is
    * before `notVerifiedSince`, least recently verified first; with `confidenceBelow`, also
