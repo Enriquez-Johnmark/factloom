@@ -1287,6 +1287,95 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
     (related) => expect(related).toEqual(['pg14-ended']),
   );
 
+  // --- Archived facts in the lanes, and unused facts (FL-073) ---
+  const archivePg16 = async () => {
+    const archived = await store.commit(changeSet('op-y', '2026-06-01', [archive('pg16')], archiving));
+    if (!archived.ok) throw new Error(archived.error.message);
+  };
+  const now = { validAt: NOW, knownAt: NOW };
+  const laneIds = async (excludeArchived: boolean, limit = 10) => {
+    const byKeyword = await store.searchFactsByKeyword({
+      namespace: NAMESPACE,
+      text: 'postgresql',
+      time: now,
+      limit,
+      excludeArchived,
+    });
+    const byVector = await store.searchFactsByVector({
+      namespace: NAMESPACE,
+      vector: new Float32Array([1, 0, 0, 0]),
+      time: now,
+      limit,
+      excludeArchived,
+    });
+    const touching = await store.listFacts({
+      namespace: NAMESPACE,
+      subjectEntityId: null,
+      predicate: null,
+      touchingEntityIds: ['e-repo'],
+      supersededByFactId: null,
+      time: now,
+      limit,
+      excludeArchived,
+    });
+    if (!byKeyword.ok || !byVector.ok || !touching.ok) throw new Error('A lane failed.');
+    return [byKeyword.value, byVector.value, touching.value].map((list) =>
+      list.map((found) => found.fact.id).sort(),
+    );
+  };
+
+  test('Y1: as of now, known at now, the lanes leave out an archived fact when asked to and return it otherwise, and getFact and listFacts by subject return it', async () => {
+    await archivePg16();
+
+    expect(await laneIds(true)).toEqual([[], ['node22'], ['node22']]);
+    expect(await laneIds(false)).toEqual([['pg16'], ['node22', 'pg16'], ['node22', 'pg16']]);
+    expect(await archivedAtOf('pg16')).toBe(at('2026-06-01'));
+    expect(await listFactIds(store, now, { subjectEntityId: 'e-repo', predicate: DATABASE })).toEqual([
+      'pg16',
+    ]);
+  });
+  test('Y2: with a limit of 1, the vector lane returns a fact that is not archived although an archived one is nearer: the filter runs before the limit', async () => {
+    await archivePg16();
+
+    const found = await store.searchFactsByVector({
+      namespace: NAMESPACE,
+      vector: new Float32Array([1, 0, 0, 0]),
+      time: now,
+      limit: 1,
+      excludeArchived: true,
+    });
+
+    expect(found.ok && found.value.map((result) => result.fact.id)).toEqual(['node22']);
+  });
+  test('Y3: listUnusedFacts returns current facts not recalled since the date, and none until usage tracking began by then', async () => {
+    const unused = async (unusedSince: string) => {
+      const listed = await store.listUnusedFacts({
+        namespace: NAMESPACE,
+        currentAt: NOW,
+        unusedSince: at(unusedSince),
+        limit: 10,
+      });
+      if (!listed.ok) throw new Error(listed.error.message);
+      return listed.value.map((found) => found.fact.id);
+    };
+    const beforeTracking = await unused('2026-07-01');
+    await store.recordFactUsage({
+      namespace: NAMESPACE,
+      factIds: ['pg14-ended'],
+      recalledAt: at('2026-06-01'),
+    });
+    await store.recordFactUsage({ namespace: NAMESPACE, factIds: ['node22'], recalledAt: at('2026-08-01') });
+
+    const afterTracking = await unused('2026-07-01');
+    const sinceBeforeTracking = await unused('2026-05-15');
+    await archivePg16();
+
+    expect(beforeTracking).toEqual([]);
+    expect(afterTracking).toEqual(['pg16']);
+    expect(sinceBeforeTracking).toEqual([]);
+    expect(await unused('2026-07-01')).toEqual([]);
+  });
+
   // --- Stale and orphaned facts (FL-049) ---
   // At NOW the current facts are pg16, recorded 2026-04-02, and node22, recorded 2026-05-01.
   // pg14-ended is live but ended; pg14 and node20 are invalidated.

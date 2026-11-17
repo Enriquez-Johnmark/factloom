@@ -13,6 +13,7 @@ const NO_FILTER: ListFactsShape = {
   hasPredicate: false,
   hasTouching: false,
   hasSupersededBy: false,
+  excludeArchived: false,
   time: 'live',
 };
 

@@ -39,7 +39,15 @@ export type ListFactsShape = {
   readonly hasTouching: boolean;
   readonly hasSupersededBy: boolean;
   readonly time: 'filter' | 'live' | 'all';
+  readonly excludeArchived: boolean;
 };
+
+/** For a fact row aliased `f`: it has no archiving in force (FL-065). */
+const NOT_ARCHIVED =
+  'NOT EXISTS (SELECT 1 FROM fact_archive a WHERE a.fact_id = f.id AND a.unarchived_at IS NULL)';
+
+/** In a lane: leave out archived facts when `@excludeArchived` is 1. */
+const ARCHIVE_FILTER = `(@excludeArchived = 0 OR ${NOT_ARCHIVED})`;
 
 /** The columns of a fact row, with the confidence that the read's time asks for. */
 function factColumns(confidence: string): string {
@@ -70,6 +78,7 @@ export function buildListFactsSql(shape: ListFactsShape): string {
   if (shape.hasSupersededBy) conditions.push('f.superseded_by_fact_id = @supersededByFactId');
   if (shape.time === 'live') conditions.push('f.invalidated_at IS NULL');
   if (shape.time === 'filter') conditions.push(TIME_PREDICATE);
+  if (shape.excludeArchived) conditions.push(NOT_ARCHIVED);
   const where = conditions.join('\n  AND ');
   // Newest first. Facts recorded at the same moment come in the reverse of their row order,
   // which never changes, so the order is the same on every run.
@@ -120,6 +129,9 @@ export type SqliteReads = {
   readonly listEntities: (
     query: Parameters<MemoryStore['listEntities']>[0],
   ) => Result<readonly ReturnType<typeof toEntity>[]>;
+  readonly listUnusedFacts: (
+    query: Parameters<MemoryStore['listUnusedFacts']>[0],
+  ) => Result<readonly FactWithSources[]>;
   readonly listVerifications: (
     query: Parameters<MemoryStore['listVerifications']>[0],
   ) => ReturnType<typeof toFactVerification>[];
@@ -200,7 +212,7 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
   const selectByKeyword = db.prepare<[Record<string, unknown>], FactRow>(
     `SELECT ${FACT_COLUMNS_AT_KNOWN_AT}
      FROM fact_fts JOIN fact f ON f.rowid = fact_fts.rowid
-     WHERE fact_fts MATCH @match AND f.namespace = @namespace AND ${TIME_PREDICATE}
+     WHERE fact_fts MATCH @match AND f.namespace = @namespace AND ${TIME_PREDICATE} AND ${ARCHIVE_FILTER}
      ORDER BY bm25(fact_fts), f.rowid DESC LIMIT @limit`,
   );
   // The vector lane: an exact scan of the embeddings of the facts that pass the namespace
@@ -209,7 +221,7 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
   const selectByVector = db.prepare<[Record<string, unknown>], FactRow>(
     `SELECT ${FACT_COLUMNS_AT_KNOWN_AT}
      FROM fact f JOIN fact_embedding e ON e.fact_id = f.id
-     WHERE f.namespace = @namespace AND ${TIME_PREDICATE}
+     WHERE f.namespace = @namespace AND ${TIME_PREDICATE} AND ${ARCHIVE_FILTER}
      ORDER BY vec_distance_cosine(e.embedding, @vector), f.rowid LIMIT @limit`,
   );
   const selectFactsOfSources = db.prepare<[string, string], FactRow>(
@@ -237,6 +249,15 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
   const selectEntityPage = db.prepare<{ namespace: string; after: string | null; limit: number }, EntityRow>(
     `SELECT id, namespace, type, name, created_at FROM entity
      WHERE namespace = @namespace AND (@after IS NULL OR id > @after) ORDER BY id LIMIT @limit`,
+  );
+  // Current, not archived, recorded before the date and not recalled since; nothing until usage
+  // tracking began on or before the date (FL-073).
+  const selectUnusedFacts = db.prepare<[Record<string, unknown>], FactRow>(
+    `SELECT ${FACT_COLUMNS_LATEST} FROM fact f
+     WHERE f.namespace = @namespace AND ${TIME_PREDICATE} AND f.created_at < @unusedSince AND ${NOT_ARCHIVED}
+       AND NOT EXISTS (SELECT 1 FROM fact_usage u WHERE u.fact_id = f.id AND u.last_recalled_at >= @unusedSince)
+       AND EXISTS (SELECT 1 FROM fact_usage_tracking t WHERE t.namespace = @namespace AND t.started_at <= @unusedSince)
+     ORDER BY f.created_at, f.rowid LIMIT @limit`,
   );
   const selectVerifications = db.prepare<[string, string], FactVerificationRow>(
     `SELECT id, namespace, fact_id, outcome, method, verified_at FROM fact_verification
@@ -322,6 +343,7 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
         hasTouching: query.touchingEntityIds !== null,
         hasSupersededBy: query.supersededByFactId !== null,
         time: typeof query.time === 'string' ? query.time : 'filter',
+        excludeArchived: query.excludeArchived === true,
       };
       const key = JSON.stringify(shape);
       let statement = listStatements.get(key);
@@ -357,6 +379,7 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
         validAt: query.time.validAt,
         knownAt: query.time.knownAt,
         limit: query.limit,
+        excludeArchived: query.excludeArchived === true ? 1 : 0,
       });
       return ok(withSources(rows, query.namespace));
     },
@@ -371,6 +394,7 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
         validAt: query.time.validAt,
         knownAt: query.time.knownAt,
         limit: query.limit,
+        excludeArchived: query.excludeArchived === true ? 1 : 0,
       });
       return ok(withSources(rows, query.namespace));
     },
@@ -410,6 +434,18 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
           .all({ namespace: query.namespace, after: query.afterEntityId, limit: query.limit })
           .map(toEntity),
       );
+    },
+
+    listUnusedFacts(query) {
+      if (!Number.isInteger(query.limit) || query.limit < 1) return invalidLimit();
+      const rows = selectUnusedFacts.all({
+        namespace: query.namespace,
+        validAt: query.currentAt,
+        knownAt: query.currentAt,
+        unusedSince: query.unusedSince,
+        limit: query.limit,
+      });
+      return ok(withSources(rows, query.namespace));
     },
 
     listVerifications(query) {

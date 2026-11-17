@@ -730,8 +730,13 @@ export function createInMemoryStore(): MemoryStore {
   };
 
   /** The facts of a namespace that pass the time filter, in the order they were recorded. */
-  const factsInTime = (namespace: Namespace, time: TimeFilter): Fact[] =>
-    [...state.facts.values()].filter((fact) => fact.namespace === namespace && matchesTimeFilter(fact, time));
+  const factsInTime = (namespace: Namespace, time: TimeFilter, excludeArchived = false): Fact[] =>
+    [...state.facts.values()].filter(
+      (fact) =>
+        fact.namespace === namespace &&
+        matchesTimeFilter(fact, time) &&
+        !(excludeArchived && findOpenArchive(state, fact.id) !== undefined),
+    );
 
   /** Turns ranked facts into what a lane returns, best first, after the time filter and up to the limit. */
   const rankedResults = (
@@ -815,6 +820,7 @@ export function createInMemoryStore(): MemoryStore {
         if (fact.namespace !== query.namespace) return false;
         if (subjects !== null && !subjects.has(fact.subjectEntityId)) return false;
         if (query.predicate !== null && fact.predicate !== query.predicate) return false;
+        if (query.excludeArchived === true && findOpenArchive(state, fact.id) !== undefined) return false;
         if (query.supersededByFactId !== null && fact.supersededByFactId !== query.supersededByFactId)
           return false;
         if (touching !== null) {
@@ -855,7 +861,7 @@ export function createInMemoryStore(): MemoryStore {
           ),
         );
       }
-      const ranked = factsInTime(query.namespace, query.time).flatMap((fact) => {
+      const ranked = factsInTime(query.namespace, query.time, query.excludeArchived).flatMap((fact) => {
         const vector = state.vectors.get(fact.id);
         return vector === undefined ? [] : [{ fact, rank: cosineDistance(query.vector, vector) }];
       });
@@ -865,7 +871,7 @@ export function createInMemoryStore(): MemoryStore {
     searchFactsByKeyword(query) {
       if (!isValidLimit(query.limit)) return Promise.resolve(invalidLimit());
       const wanted = new Set(wordsOf(query.text));
-      const ranked = factsInTime(query.namespace, query.time).flatMap((fact) => {
+      const ranked = factsInTime(query.namespace, query.time, query.excludeArchived).flatMap((fact) => {
         // A purged fact has no keyword entry.
         if (fact.purgedAt !== null) return [];
         const statementWords = new Set(wordsOf(fact.statement));
@@ -962,6 +968,26 @@ export function createInMemoryStore(): MemoryStore {
         .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
         .slice(0, query.limit);
       return Promise.resolve(ok(structuredClone(page)));
+    },
+
+    listUnusedFacts(query) {
+      if (!isValidLimit(query.limit)) return Promise.resolve(invalidLimit());
+      // No fact is taken as unused before a whole period of counting has passed.
+      const trackingStart = usageTrackingStart.get(query.namespace);
+      if (trackingStart === undefined || trackingStart > query.unusedSince) return Promise.resolve(ok([]));
+      const current = { validAt: query.currentAt, knownAt: query.currentAt };
+      const results = factsInTime(query.namespace, current, true)
+        .filter((fact) => {
+          if (fact.createdAt >= query.unusedSince) return false;
+          const usage = factUsage.get(fact.id);
+          return usage === undefined || usage.lastRecalledAt < query.unusedSince;
+        })
+        .slice(0, query.limit)
+        .flatMap((fact) => {
+          const result = withSources(fact, null);
+          return result === null ? [] : [result];
+        });
+      return Promise.resolve(ok(results));
     },
 
     listVerifications(query) {

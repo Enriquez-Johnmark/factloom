@@ -52,6 +52,8 @@ export interface MemoryStore {
     /** A time filter; 'live' for every live fact at any valid time; 'all' for every row, invalidated ones included. */
     readonly time: TimeFilter | 'live' | 'all';
     readonly limit: number;
+    /** Phase 3. Leave out archived facts, before the limit. For a question about now (FL-073). */
+    readonly excludeArchived?: boolean;
   }): Promise<Result<readonly FactWithSources[]>>;
 
   /** Vector lane. Nearest first. The time filter is applied before the limit. */
@@ -60,6 +62,8 @@ export interface MemoryStore {
     readonly vector: Float32Array;
     readonly time: TimeFilter;
     readonly limit: number;
+    /** Phase 3. Leave out archived facts, before the limit. For a question about now (FL-073). */
+    readonly excludeArchived?: boolean;
   }): Promise<Result<readonly FactWithSources[]>>;
 
   /** Keyword lane. Best match first. The time filter is applied before the limit. */
@@ -68,6 +72,8 @@ export interface MemoryStore {
     readonly text: string;
     readonly time: TimeFilter;
     readonly limit: number;
+    /** Phase 3. Leave out archived facts, before the limit. For a question about now (FL-073). */
+    readonly excludeArchived?: boolean;
   }): Promise<Result<readonly FactWithSources[]>>;
 
   /** One source by identifier. Fact history uses it to show the explanation of a change. */
@@ -133,6 +139,18 @@ export interface MemoryStore {
     readonly afterEntityId: EntityId | null;
     readonly limit: number;
   }): Promise<Result<readonly Entity[]>>;
+
+  /**
+   * Phase 3. Current facts at `currentAt`, not archived, recorded before `unusedSince` and not
+   * recalled since then, oldest first. Empty until usage tracking began on or before
+   * `unusedSince`, so that a fact is never taken as unused before its usage was counted.
+   */
+  listUnusedFacts(query: {
+    readonly namespace: Namespace;
+    readonly currentAt: Timestamp;
+    readonly unusedSince: Timestamp;
+    readonly limit: number;
+  }): Promise<Result<readonly FactWithSources[]>>;
 
   /** Phase 3. The verifications of one fact, in the order they were recorded. */
   listVerifications(query: {

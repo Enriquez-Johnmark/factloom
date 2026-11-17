@@ -279,18 +279,21 @@ interface RefMemoryStore {
     readonly supersededByFactId: RefFactId | null;
     readonly time: RefTimeFilter | 'live' | 'all';
     readonly limit: number;
+    readonly excludeArchived?: boolean;
   }): Promise<Result<readonly RefFactWithSources[]>>;
   searchFactsByVector(query: {
     readonly namespace: RefNamespace;
     readonly vector: Float32Array;
     readonly time: RefTimeFilter;
     readonly limit: number;
+    readonly excludeArchived?: boolean;
   }): Promise<Result<readonly RefFactWithSources[]>>;
   searchFactsByKeyword(query: {
     readonly namespace: RefNamespace;
     readonly text: string;
     readonly time: RefTimeFilter;
     readonly limit: number;
+    readonly excludeArchived?: boolean;
   }): Promise<Result<readonly RefFactWithSources[]>>;
   getSource(query: {
     readonly namespace: RefNamespace;
@@ -329,6 +332,12 @@ interface RefMemoryStore {
     readonly afterEntityId: RefEntityId | null;
     readonly limit: number;
   }): Promise<Result<readonly RefEntity[]>>;
+  listUnusedFacts(query: {
+    readonly namespace: RefNamespace;
+    readonly currentAt: Timestamp;
+    readonly unusedSince: Timestamp;
+    readonly limit: number;
+  }): Promise<Result<readonly RefFactWithSources[]>>;
   listVerifications(query: {
     readonly namespace: RefNamespace;
     readonly factId: RefFactId;
