@@ -71,6 +71,7 @@ Rank fusion and entity resolution are internal.
 | Group | Exports |
 |---|---|
 | Adapter | `openSqliteMemoryStore(options)`, which returns a `Result<MemoryStore>` after applying pending migrations. The options are the file path and the embedding model's name and dimensions |
+| Purge, phase 2 | `clearFreedPages(path)`, which runs `VACUUM` and `wal_checkpoint(TRUNCATE)` on a file after a purge, with no store open on it, and says whether the checkpoint finished |
 
 The SQL, the migration runner and the row mappers are internal. So is the storage contract suite, `describeMemoryStoreContract`: this package runs it against the in-memory store from `core` and against the SQLite adapter. The suite moves to a shared place when a second adapter exists.
 
