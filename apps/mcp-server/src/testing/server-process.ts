@@ -1,6 +1,7 @@
 // Helpers for the tests that run a server entry as a child process and speak to it over
 // stdio, as a host does. Not a test file. They import no test framework.
 import { type ChildProcess, spawn } from 'node:child_process';
+import { z } from 'zod';
 
 export type FinishedServer = {
   readonly code: number | null;
@@ -68,4 +69,53 @@ export function parseOutputLines(standardOutput: string): unknown[] {
     .split('\n')
     .filter((line) => line !== '')
     .map((line): unknown => JSON.parse(line));
+}
+
+const ResponseSchema = z.object({ jsonrpc: z.literal('2.0'), id: z.number() }).loose();
+
+/**
+ * Runs one server process as a host does: it is initialised, each request is sent once the
+ * one before it has been answered, and standard input is then closed. Returns the answer to
+ * each request, both outputs, the exit code, and how long after the start each answer came.
+ * Throws, with what the server wrote to standard error, if it stops or a request takes longer
+ * than `timeout` milliseconds.
+ */
+export async function runServerRequests(session: {
+  readonly entry: string;
+  readonly variables: Readonly<Record<string, string>>;
+  readonly home: string;
+  readonly requests: readonly { readonly method: string; readonly params: unknown }[];
+  readonly timeout: number;
+}) {
+  const startedAt = Date.now();
+  const server = startServerProcess(session.entry, session.variables, session.home);
+  let finished: FinishedServer | null = null;
+  void server.finished.then((result) => {
+    finished = result;
+  });
+  const responseTo = (id: number) =>
+    parseOutputLines(server.readStandardOutput())
+      .map((line) => ResponseSchema.safeParse(line))
+      .find((parsed) => parsed.success && parsed.data.id === id)?.data;
+  const awaitResponse = async (id: number) => {
+    await waitFor(() => responseTo(id) !== undefined || finished !== null, session.timeout);
+    const response = responseTo(id);
+    if (response === undefined) {
+      throw new Error(`The server stopped before answering request ${id}: ${finished?.standardError ?? ''}`);
+    }
+    return response;
+  };
+  server.send(INITIALIZE_REQUEST);
+  await awaitResponse(1);
+  server.send(INITIALIZED_NOTIFICATION);
+  const answers: unknown[] = [];
+  const answeredAt: number[] = [];
+  for (const [index, request] of session.requests.entries()) {
+    const id = index + 2;
+    server.send({ jsonrpc: '2.0', id, ...request });
+    answers.push((await awaitResponse(id)).result);
+    answeredAt.push(Date.now() - startedAt);
+  }
+  server.close();
+  return { answers, answeredAt, ...(await server.finished) };
 }

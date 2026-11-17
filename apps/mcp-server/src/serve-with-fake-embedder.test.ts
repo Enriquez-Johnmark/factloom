@@ -12,6 +12,7 @@ import {
   INITIALIZE_REQUEST,
   INITIALIZED_NOTIFICATION,
   parseOutputLines,
+  runServerRequests,
   startServerProcess,
   waitFor,
 } from './testing/server-process.ts';
@@ -104,44 +105,21 @@ describe('the recall tool over stdio', () => {
   }, 30_000);
 });
 
-const ResponseSchema = z.object({ jsonrpc: z.literal('2.0'), id: z.number() }).loose();
 const ToolResultSchema = z.object({
   isError: z.boolean().optional(),
   structuredContent: z.unknown().optional(),
   content: z.array(z.object({ type: z.string(), text: z.string() })),
 });
 
-/**
- * One server process on a database file: it is initialised, each request is sent once the
- * one before it has been answered, and standard input is then closed. Returns the answers by
- * request, every line of standard output, the exit code, and when `tools/list` was answered.
- */
-async function runServerSession(directory: string, requests: readonly { method: string; params: unknown }[]) {
-  const startedAt = Date.now();
-  const server = startServerProcess(
-    ENTRY,
-    { FACTLOOM_DB: join(directory, 'factloom.db'), FACTLOOM_NAMESPACE: NAMESPACE },
-    directory,
-  );
-  const responseTo = (id: number) =>
-    parseOutputLines(server.readStandardOutput())
-      .map((line) => ResponseSchema.safeParse(line))
-      .find((parsed) => parsed.success && parsed.data.id === id)?.data;
-  server.send(INITIALIZE_REQUEST);
-  await waitFor(() => responseTo(1) !== undefined, 15_000);
-  server.send(INITIALIZED_NOTIFICATION);
-  const answers: unknown[] = [];
-  const answeredAt: number[] = [];
-  for (const [index, request] of requests.entries()) {
-    const id = index + 2;
-    server.send({ jsonrpc: '2.0', id, ...request });
-    await waitFor(() => responseTo(id) !== undefined, 15_000);
-    answeredAt.push(Date.now() - startedAt);
-    answers.push(responseTo(id)?.result);
-  }
-  server.close();
-  const finished = await server.finished;
-  return { answers, answeredAt, ...finished };
+/** One session of the test entry on the database file of a directory, which is also its home. */
+function runServerSession(directory: string, requests: readonly { method: string; params: unknown }[]) {
+  return runServerRequests({
+    entry: ENTRY,
+    variables: { FACTLOOM_DB: join(directory, 'factloom.db'), FACTLOOM_NAMESPACE: NAMESPACE },
+    home: directory,
+    requests,
+    timeout: 15_000,
+  });
 }
 
 const callTool = (name: string, args: Record<string, unknown>) => ({
