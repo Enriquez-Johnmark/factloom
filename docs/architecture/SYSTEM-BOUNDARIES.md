@@ -62,7 +62,8 @@ The test helpers are ordinary exports of the one `index.ts`. They import no test
 | Group | Exports |
 |---|---|
 | Use cases | `remember`, `recordStructuredFacts`, `changeFact`, `recall`, `getFactHistory`, and from phase 2 `giveFeedback`, with their input and output types |
-| Domain | `softwareDevelopmentDomain` |
+| Domain | `softwareDevelopmentDomain`, and from phase 3 the checks the verification job takes from it: `findSymbolNames` (FL-071), and `readDependencyVersion` and `describeDependencyVersion` (FL-062) |
+| Secret check, phase 3 | `checkForSecrets`, with `CheckedField`: the check of FL-022, passed by the composition root to the LLM verification rung of `@factloom/maintenance`, which may not import this package, so that no file it matches is sent to the LLM (FL-051) |
 | Retrieval eval | `recallWithSettings`, with `RecallSettings` and `DEFAULT_RECALL_SETTINGS`: recall with explicit lane weights, lane list length and fusion constant, for the eval in `apps/mcp-server/evals/` (FL-033) |
 
 Rank fusion and entity resolution are internal.
