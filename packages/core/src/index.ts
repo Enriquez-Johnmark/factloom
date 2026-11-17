@@ -75,5 +75,7 @@ export type { EndFactInput } from './operations/end-fact.ts';
 export { endFact } from './operations/end-fact.ts';
 export type { ReviseValidTimeInput, ValidTimeRevision } from './operations/revise-valid-time.ts';
 export { reviseValidTime } from './operations/revise-valid-time.ts';
+export type { AdjustConfidenceInput } from './operations/adjust-confidence.ts';
+export { adjustConfidence } from './operations/adjust-confidence.ts';
 export type { FindConflictCandidatesInput } from './operations/find-conflict-candidates.ts';
 export { findConflictCandidates } from './operations/find-conflict-candidates.ts';
