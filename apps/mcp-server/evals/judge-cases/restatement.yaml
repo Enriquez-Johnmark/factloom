@@ -1,0 +1,19 @@
+# From the scenario "Restatement": the same package manager stated again. The rule decides it.
+name: "Restatement: the package manager is stated twice"
+scenario: restatement
+observed_at: 2026-02-14
+text: "Reminder for new contributors: the package manager of shop-api is pnpm."
+subject: { type: repository, name: shop-api }
+predicate: uses_package_manager
+new_fact:
+  object: { type: dependency, name: pnpm }
+  statement: shop-api uses pnpm as its package manager.
+  valid_from: null
+  valid_to: null
+candidates:
+  - object: { type: dependency, name: pnpm }
+    statement: shop-api uses pnpm as its package manager.
+    valid_from: null
+    valid_to: null
+    recorded_at: 2026-01-10
+    expected: duplicate

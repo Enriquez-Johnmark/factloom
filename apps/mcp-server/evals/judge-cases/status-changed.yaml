@@ -1,0 +1,18 @@
+# A status that changed on a stated date.
+name: "Succession: the decision was superseded"
+observed_at: 2026-05-10
+text: The decision trunk-based development was superseded on 3 May 2026.
+subject: { type: decision, name: trunk-based development }
+predicate: has_status
+new_fact:
+  object: { value: superseded }
+  statement: The decision trunk-based development has the status superseded.
+  valid_from: 2026-05-03
+  valid_to: null
+candidates:
+  - object: { value: accepted }
+    statement: The decision trunk-based development has the status accepted.
+    valid_from: null
+    valid_to: null
+    recorded_at: 2026-02-20
+    expected: succession

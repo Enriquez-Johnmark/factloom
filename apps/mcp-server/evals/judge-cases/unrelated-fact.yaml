@@ -1,0 +1,14 @@
+# From the scenario "Unrelated fact about the same subject": the stored test framework is
+# under another predicate, so findConflictCandidates returns nothing and the judge is not asked.
+name: "Unrelated fact about the same subject: a package manager after a test framework"
+scenario: unrelated-fact
+observed_at: 2026-02-03
+text: shop-api installs its dependencies with pnpm.
+subject: { type: repository, name: shop-api }
+predicate: uses_package_manager
+new_fact:
+  object: { type: dependency, name: pnpm }
+  statement: shop-api installs its dependencies with pnpm.
+  valid_from: null
+  valid_to: null
+candidates: []

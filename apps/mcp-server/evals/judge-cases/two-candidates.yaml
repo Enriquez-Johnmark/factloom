@@ -1,0 +1,25 @@
+# A new target with an unknown start overlaps two stored periods. The text says only the
+# current one was replaced; the earlier one is untouched.
+name: "Two candidates in one call: a move from Fly.io to Railway"
+observed_at: 2026-06-15
+text: shop-api moved from Fly.io to Railway.
+subject: { type: repository, name: shop-api }
+predicate: deploys_to
+new_fact:
+  object: { value: Railway }
+  statement: shop-api is deployed to Railway.
+  valid_from: null
+  valid_to: null
+candidates:
+  - object: { value: Heroku }
+    statement: From 1 January 2024 until 1 February 2025 shop-api was deployed to Heroku.
+    valid_from: 2024-01-01
+    valid_to: 2025-02-01
+    recorded_at: 2026-03-10
+    expected: unrelated
+  - object: { value: Fly.io }
+    statement: Since 1 February 2025, shop-api has been deployed to Fly.io.
+    valid_from: 2025-02-01
+    valid_to: null
+    recorded_at: 2026-03-01
+    expected: succession

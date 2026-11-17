@@ -1,0 +1,19 @@
+# From the scenario "Succession": the text says the test framework was switched, and when.
+name: "Succession: the unit tests moved from Jest to Vitest"
+scenario: succession
+observed_at: 2026-04-02
+text: We switched the unit tests of shop-api from Jest to Vitest on 26 March 2026.
+subject: { type: repository, name: shop-api }
+predicate: uses_test_framework
+new_fact:
+  object: { type: dependency, name: Vitest }
+  statement: shop-api uses Vitest for its unit tests.
+  valid_from: 2026-03-26
+  valid_to: null
+candidates:
+  - object: { type: dependency, name: Jest }
+    statement: shop-api uses Jest for its unit tests.
+    valid_from: null
+    valid_to: null
+    recorded_at: 2026-01-10
+    expected: succession

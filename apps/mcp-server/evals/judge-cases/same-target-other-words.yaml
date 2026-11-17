@@ -1,0 +1,19 @@
+# The same deployment target in other words. "To be precise" invites a correction.
+name: "Duplicate in other words: Fly and Fly.io"
+misleading_wording: true
+observed_at: 2026-03-02
+text: To be precise, shop-api is deployed to Fly, the hosting platform at fly.io.
+subject: { type: repository, name: shop-api }
+predicate: deploys_to
+new_fact:
+  object: { value: Fly }
+  statement: shop-api is deployed to Fly.
+  valid_from: null
+  valid_to: null
+candidates:
+  - object: { value: Fly.io }
+    statement: shop-api is deployed to Fly.io.
+    valid_from: null
+    valid_to: null
+    recorded_at: 2026-01-10
+    expected: duplicate

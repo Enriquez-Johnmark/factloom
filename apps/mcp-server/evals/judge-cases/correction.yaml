@@ -1,0 +1,19 @@
+# From the scenario "Correction": the text says the stored port was a typo and never true.
+name: "Correction: the database port was recorded wrongly"
+scenario: correction
+observed_at: 2026-03-05
+text: "Correction: PostgreSQL has always listened on port 5432, not 5433. The earlier note was a typo."
+subject: { type: dependency, name: PostgreSQL }
+predicate: listens_on_port
+new_fact:
+  object: { value: "5432" }
+  statement: The local PostgreSQL for shop-api listens on port 5432.
+  valid_from: null
+  valid_to: null
+candidates:
+  - object: { value: "5433" }
+    statement: The local PostgreSQL for shop-api listens on port 5433.
+    valid_from: null
+    valid_to: null
+    recorded_at: 2026-01-10
+    expected: correction

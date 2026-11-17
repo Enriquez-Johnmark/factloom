@@ -1,0 +1,20 @@
+# Another kind of test, under the same single-valued predicate. "Actually" invites a
+# correction, but the text says neither that Jest was wrong nor that it was replaced.
+name: "Unrelated despite the wording: the end-to-end tests run with Playwright"
+misleading_wording: true
+observed_at: 2026-02-20
+text: Actually, the end-to-end tests of shop-api run with Playwright.
+subject: { type: repository, name: shop-api }
+predicate: uses_test_framework
+new_fact:
+  object: { type: dependency, name: Playwright }
+  statement: shop-api runs its end-to-end tests with Playwright.
+  valid_from: null
+  valid_to: null
+candidates:
+  - object: { type: dependency, name: Jest }
+    statement: shop-api uses Jest for its unit tests.
+    valid_from: null
+    valid_to: null
+    recorded_at: 2026-01-10
+    expected: unrelated

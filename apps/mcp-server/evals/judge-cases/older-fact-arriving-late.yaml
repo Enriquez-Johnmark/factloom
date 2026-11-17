@@ -1,0 +1,20 @@
+# From the scenario "Older fact arriving late": a hearsay period that overlaps the stored
+# target. The text neither says the target changed nor that the stored fact was wrong.
+name: "Older fact arriving late: a Render deployment overlaps the Fly.io period"
+scenario: older-fact-arriving-late
+observed_at: 2026-03-20
+text: Someone mentioned that shop-api was deployed to Render from June 2025 to September 2025.
+subject: { type: repository, name: shop-api }
+predicate: deploys_to
+new_fact:
+  object: { value: Render }
+  statement: shop-api was deployed to Render from June 2025 to September 2025.
+  valid_from: 2025-06-01
+  valid_to: 2025-09-01
+candidates:
+  - object: { value: Fly.io }
+    statement: Since 1 February 2025, shop-api has been deployed to Fly.io.
+    valid_from: 2025-02-01
+    valid_to: null
+    recorded_at: 2026-03-01
+    expected: unrelated

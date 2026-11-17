@@ -247,6 +247,9 @@ importers:
       '@factloom/graph-rag':
         specifier: workspace:*
         version: link:../../packages/graph-rag
+      '@factloom/maintenance':
+        specifier: workspace:*
+        version: link:../../packages/maintenance
       '@factloom/storage':
         specifier: workspace:*
         version: link:../../packages/storage

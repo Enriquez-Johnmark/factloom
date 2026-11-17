@@ -1,0 +1,20 @@
+# A trial that was not adopted. "Tried" and "switch" invite a succession; the text says the
+# stored value is still in use. The new fact is what a wrong extraction would give.
+name: "Unrelated despite the wording: Yarn was tried and not adopted"
+misleading_wording: true
+observed_at: 2026-02-21
+text: We tried Yarn on a branch of shop-api last week but did not switch; pnpm is still the package manager.
+subject: { type: repository, name: shop-api }
+predicate: uses_package_manager
+new_fact:
+  object: { type: dependency, name: Yarn }
+  statement: shop-api uses Yarn as its package manager.
+  valid_from: null
+  valid_to: null
+candidates:
+  - object: { type: dependency, name: pnpm }
+    statement: shop-api uses pnpm as its package manager.
+    valid_from: null
+    valid_to: null
+    recorded_at: 2026-01-10
+    expected: unrelated

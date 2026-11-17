@@ -1,0 +1,19 @@
+# From the scenario "Multi-valued predicate": a second convention does not replace the first.
+name: "Multi-valued predicate: a second convention"
+scenario: multi-valued-predicate
+observed_at: 2026-01-24
+text: shop-api also follows trunk-based development.
+subject: { type: repository, name: shop-api }
+predicate: follows_convention
+new_fact:
+  object: { type: convention, name: trunk-based development }
+  statement: shop-api follows trunk-based development.
+  valid_from: null
+  valid_to: null
+candidates:
+  - object: { type: convention, name: conventional commits }
+    statement: shop-api follows conventional commits.
+    valid_from: null
+    valid_to: null
+    recorded_at: 2026-01-10
+    expected: unrelated

@@ -1,0 +1,21 @@
+# From the scenario "A plan": if extraction wrongly took the plan as a fact, the judge must
+# still not end the current target, because the text says nothing has changed yet.
+name: "A plan: a move to Kubernetes that has not happened"
+scenario: plan
+misleading_wording: true
+observed_at: 2026-04-02
+text: We plan to move shop-api to Kubernetes in June.
+subject: { type: repository, name: shop-api }
+predicate: deploys_to
+new_fact:
+  object: { value: Kubernetes }
+  statement: shop-api is deployed to Kubernetes.
+  valid_from: null
+  valid_to: null
+candidates:
+  - object: { value: Fly.io }
+    statement: shop-api is deployed to Fly.io.
+    valid_from: null
+    valid_to: null
+    recorded_at: 2026-01-10
+    expected: unrelated

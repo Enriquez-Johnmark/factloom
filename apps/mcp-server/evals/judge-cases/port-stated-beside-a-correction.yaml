@@ -1,0 +1,19 @@
+# A correction of something else, beside a restatement of the stored port in other words.
+name: "Duplicate beside a correction of another port"
+misleading_wording: true
+observed_at: 2026-03-06
+text: "Correction: the Redis port I gave yesterday was wrong. PostgreSQL itself still listens on port 5432."
+subject: { type: dependency, name: PostgreSQL }
+predicate: listens_on_port
+new_fact:
+  object: { value: port 5432 }
+  statement: PostgreSQL listens on port 5432.
+  valid_from: null
+  valid_to: null
+candidates:
+  - object: { value: "5432" }
+    statement: The local PostgreSQL for shop-api listens on port 5432.
+    valid_from: null
+    valid_to: null
+    recorded_at: 2026-01-10
+    expected: duplicate

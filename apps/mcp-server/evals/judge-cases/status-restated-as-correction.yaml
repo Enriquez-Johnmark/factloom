@@ -1,0 +1,19 @@
+# The same status in another case, introduced as a correction. The rule decides it.
+name: "Duplicate by rule despite the wording: the status is Accepted"
+misleading_wording: true
+observed_at: 2026-02-22
+text: "Correction: the decision trunk-based development is Accepted."
+subject: { type: decision, name: trunk-based development }
+predicate: has_status
+new_fact:
+  object: { value: Accepted }
+  statement: The decision trunk-based development has the status Accepted.
+  valid_from: null
+  valid_to: null
+candidates:
+  - object: { value: accepted }
+    statement: The decision trunk-based development has the status accepted.
+    valid_from: null
+    valid_to: null
+    recorded_at: 2026-02-20
+    expected: duplicate
