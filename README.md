@@ -66,6 +66,24 @@ Each of these adds a dependency or a model. It is added when a measurement shows
 | A language server (LSP) | Heavier still: one server per language, started and kept running, to answer a question a text search answers well enough to flag a fact for review. | The same |
 | An approximate vector index | Exact search is fast enough at the sizes one repository's memory reaches. | The benchmark missing its target |
 
+## Removing content: purge
+
+Factloom never deletes a fact. The one exception is a **purge**, for a secret stored by mistake or a request to erase personal data ([ADR 0012](docs/architecture/adr/0012-purge-is-the-one-exception.md)). It replaces the text of a source, of the facts that came only from it and their copies, and of the notes that explained changes to them, with `[purged]`. It then clears the freed pages of the database file. The rows, their dates and their audit entries stay.
+
+A purge is a command a person runs, never an MCP tool, so an agent cannot remove content. It uses the same `FACTLOOM_DB` and `FACTLOOM_NAMESPACE` as the server, from `apps/mcp-server`. First list the sources behind a fact, by the fact identifier that `recall` returned. It prints each source's identifier, kind, locator and observed time, never its content:
+
+```sh
+node src/main.ts purge sources <fact-id>
+```
+
+Then purge one source, with the reason `secret_stored` or `erasure_requested`:
+
+```sh
+node src/main.ts purge source <source-id> --reason secret_stored
+```
+
+Stop the server first. If another process is reading the database, the write-ahead log keeps old pages until it stops, and the command says so; run it again then. A purge does not reach backups or copies of the file, entity names, or text already sent to the LLM provider.
+
 ## Roadmap
 
 | Phase | Capability |
