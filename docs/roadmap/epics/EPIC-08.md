@@ -81,7 +81,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-040 | Create the maintenance package and its boundary rules | 2 | FL-001 | Completed |
-| FL-041 | Conflict judge | 2 | FL-040, FL-011, FL-019, FL-027, FL-028 | Pending |
+| FL-041 | Conflict judge | 2 | FL-040, FL-011, FL-019, FL-027, FL-028 | Under Review |
 | FL-042 | Automatic correction inside remember | 2 | FL-035, FL-041, FL-039 | Pending |
 | FL-043 | Proposed changes: storage and operations | 2 | FL-042 | Pending |
 | FL-070 | Human-approval policy in remember, with a command to list, approve and reject | 2 | FL-043, FL-042, FL-034 | Pending |
@@ -220,7 +220,7 @@ Not run: a forbidden import with its dependency declared in the package's `packa
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 2 |
 | Depends on | FL-040, FL-011, FL-019, FL-027, FL-028 |
 | Requirements | REQ-16 (REQ-CA-03) |
@@ -272,18 +272,72 @@ Not run: a forbidden import with its dependency declared in the package's `packa
 - The model for the `conflict_detection` task is chosen in the composition root's task map (FL-019). No model name is written in `maintenance`.
 
 **Acceptance criteria.**
-- [ ] A unit test for each deterministic rule passes with an LLM client that fails if called: no candidates; same object; multi-valued predicate with a different object.
-- [ ] A unit test shows the moment of change is the new fact's `validFrom` when given, and the source's observed time when not, with a scripted LLM.
-- [ ] A unit test shows one LLM call is made for a new fact with three remaining candidates.
-- [ ] A unit test shows an out-of-range index and a missing candidate each give `llm_failed`.
+- [x] A unit test for each deterministic rule passes with an LLM client that fails if called: no candidates; same object; multi-valued predicate with a different object.
+- [x] A unit test shows the moment of change is the new fact's `validFrom` when given, and the source's observed time when not, with a scripted LLM.
+- [x] A unit test shows one LLM call is made for a new fact with three remaining candidates.
+- [x] A unit test shows an out-of-range index and a missing candidate each give `llm_failed`.
 - [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the judge eval in record mode from `apps/mcp-server` (`pnpm run record:judge`, which wraps the Anthropic client of FL-019 with the wrapper of FL-028 in record mode), reads the diff of the new recordings for secrets, and records the model identifier. A replayed run fails while a recording is missing, so the code and the recordings are committed together after this step, and the item is not `Completed` before it.
-- [ ] The judge eval runs inside `pnpm check` in replay and fails when a recording is missing.
-- [ ] The eval output shows the verdict table and both rates. The rates are recorded as numbers; this item sets no target for them, because no published figure exists to set one against. FL-042 sets the bar on the scenario set.
-- [ ] Every judge case whose expected verdict is reached by a deterministic rule gets that verdict.
+- [x] The judge eval runs inside `pnpm check` in replay and fails when a recording is missing.
+- [x] The eval output shows the verdict table and both rates. The rates are recorded as numbers; this item sets no target for them, because no published figure exists to set one against. FL-042 sets the bar on the scenario set.
+- [x] Every judge case whose expected verdict is reached by a deterministic rule gets that verdict.
 
 **Validation.** Unit tests with scripted and failing LLM clients. The judge eval in replay. One live run by hand: the owner runs the eval with recording on and an API key set, and records the model identifier from the task map and the two rates.
 
 **Completion evidence.** The commit; the eval table and the two rates from the replayed run; the model identifier the recordings were made with; the candidate limit recorded in `INTERFACES.md`.
+
+**Recorded evidence.** Done on 2026-11-16 and 2026-11-17 on Linux x64 with Node.js v22.23.4. The recording step, which the item gives to the owner, was run by the agent in the session with the owner's approval, using the key in `OWNER_ANTHROPIC_API_KEY`. The item is `Under Review` until the owner confirms that step.
+
+Commits, in order: `feat(core): add the conflict judge type` (with its section in [`INTERFACES.md`](../../architecture/INTERFACES.md) and its row in [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md)), `feat(maintenance): add the conflict judge` (the judge, its prompt and its unit tests), `test(mcp-server): add the judge cases and their eval`, `test(mcp-server): add the judge recordings and run the cases in replay`, and `docs: record the first conflict judge results in Q-30`. Each passed `pnpm check` on its own.
+
+The judge. `judgeConflicts(deps, input)` in `@factloom/maintenance` has the type `ConflictJudge` from `@factloom/core`. Rules first, with no LLM call: no candidates give no verdicts; the same object is `duplicate`; under a multi-valued predicate another object is `unrelated`. Only the rest go to the LLM, in one call with `task: 'conflict_detection'`, numbered from 1. A `succession` carries the new fact's `validFrom`, or the time the source was observed when it has none.
+
+Unit tests, in `packages/maintenance/src/judge-conflicts.test.ts`, 14 in all. The three rules pass with an LLM client that throws if called. The moment of change is tested both ways with a scripted LLM. One call is made for three remaining candidates: the scripted LLM throws on a second. An index out of range, a candidate left out, an index named twice and an answer outside the schema each give `llm_failed`. Each rule was broken by hand once and a test failed: the duplicate rule (3 tests), the multi-valued rule (1), the overlap rule (2), the range check (1), the check for an index named twice (1), the check for a candidate left out (1), and the moment of change (1). The test for an index named twice at first passed with its check removed, because the missing-candidate check caught the same answer; it now names every candidate as well as one twice, and fails without its own check. In the eval, counting only `succession` as a change failed 2 of its 6 tests.
+
+The judge cases. Sixteen files in `apps/mcp-server/evals/judge-cases/`, read by `judge-case.ts` with the loader approach of the extraction cases. Seven are built from the texts of the FL-027 scenarios that give a second fact about the same subject: correction, multi-valued predicate, older fact arriving late, plan, restatement, succession, unrelated fact. The other four never reach the judge: "a date in the text" and "no date in the text" have one text, "a known name under a different entity type" gives a fact about another subject, and "retraction" is a `changeFact` report, not a text. Six cases expect only `duplicate` or `unrelated` and have wording that invites a change ("Correction:", "Actually", "To be precise", "tried ... did not switch", a plan to move). A test checks both counts. The expected verdicts were reviewed by hand by the agent.
+
+The recording run. `pnpm run record:judge` ran once from `apps/mcp-server`, with `ANTHROPIC_API_KEY` set for that command only, and exited 0. The model, from the task map, is `claude-haiku-5-5`. There were 12 calls, every stop reason `end_turn`, with 2,879 input tokens, 1,308 output, 883 written to the cache by the first call and 9,713 read from it; the second call read 883. The 12 recordings were read for secrets: each holds only `task`, `model`, `instructions`, `input` and `response`, and none holds a key, a header, a token or a path of the machine.
+
+`pnpm check`, under `unshare -rn` with no network and no API key, and with `CLAUDECODE` and `AI_AGENT` unset so that Vitest prints the output of passing tests (FL-069), exited 0. Two runs printed the same judge report, byte for byte. The report's table and rates:
+
+```text
+Judge cases in replay, model claude-haiku-5-5:
+expected \ given   duplicate  succession  correction   unrelated  llm_failed
+duplicate              4           0           0           0           0
+succession             0           4           0           0           0
+correction             0           0           2           0           0
+unrelated              0           0           0           6           0
+
+Changes given where none was expected: 0 of 10 (0.000).
+Changes expected and not given: 0 of 6 (0.000).
+ Test Files  74 passed (74)
+      Tests  799 passed (799)
+```
+
+Every one of the 16 candidates got its expected verdict. Four cases are decided by the rules alone, and a test with an LLM that always fails shows that each of them gets its expected verdicts.
+
+With one recording moved aside, the replay test failed:
+
+```text
+Error: No recording for the key 196649b7f300c5a417fa4693e0e7431e71e2a5b173ad37176f4f0f0ce5389eca. Expected the file <repo>/apps/mcp-server/evals/recordings/judge/196649b7f300c5a417fa4693e0e7431e71e2a5b173ad37176f4f0f0ce5389eca.json. Record it with: pnpm --filter @factloom/mcp-server run record:judge
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the commit that adds the recordings: https://github.com/Johnmark-Tech/factloom/actions/runs/43985315695.
+
+Differences from the item:
+
+- The candidate limit is `JUDGE_CANDIDATE_LIMIT`, 10, in `@factloom/core` beside the judge type, so that `graph-rag` can use it in FL-042 without importing `maintenance`. It is recorded in `INTERFACES.md`. Phase 1's `remember` still reads up to 50 candidates for its own two rules, a constant private to `graph-rag`; FL-042 decides how the two meet.
+- Values are compared after `normaliseEntityName` (trim, collapse white space, lower case), as the item's "after normalisation" says. Phase 1's restatement rule compares values exactly, so the judge also calls "PNPM " and "pnpm" a duplicate.
+- One rule beyond the item: a single-valued candidate whose valid period does not overlap the new fact's is `unrelated`, without the LLM. `findConflictCandidates` returns only overlapping candidates, so it matters only to a caller that passes others.
+- An answer that names a candidate twice is also `llm_failed`.
+- The input carries `objectEntityName`, the name of the new fact's object entity, because the prompt names values and a new fact holds only an entity identifier.
+- The record command and the replay test are in `apps/mcp-server/src/`, beside those of FL-069, because they need the Anthropic client and its task map, and the boundary lint keeps `evals/` from importing `src/`. The cases, their loader and the eval runner are in `apps/mcp-server/evals/`.
+
+Not run: Sonnet 5.5, the second model Q-30 asks about, and more than one recording run, so nothing is known of the verdicts' variance.
+
+For the owner's review:
+
+- Confirm the recording step, which the item gives to the owner: the model, the token counts, and the diff of the 12 recordings.
+- Review the expected verdicts of the 16 cases. Two are judgement calls: the Render period that overlaps Fly.io (`unrelated`, so FL-042 skips it, as the scenario expects), and Playwright for end-to-end tests beside Jest for unit tests under the one single-valued `uses_test_framework` (`unrelated`).
 
 ### FL-042: Automatic correction inside remember
 
