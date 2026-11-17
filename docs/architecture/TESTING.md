@@ -17,7 +17,7 @@ One command, `pnpm check`, runs the format check, lint, type check and every tes
 
 ### Continuous integration
 
-`pnpm check` runs on Linux and on macOS arm64 on every push to `main`, with the lowest supported Node.js line and the Active LTS line. The workflow is `.github/workflows/ci.yml`. The clean-install job below is planned and not yet built. Before anything is published, a job installs the packed server on a clean machine and starts it, which is requirement REQ-CA-08 of the [competitive analysis](../research/evaluations/competitive-analysis.md). The first run of the server downloads the embedding model, so that job needs network access and takes longer than later starts.
+`pnpm check` runs on Linux and on macOS arm64 on every push to `main`, with the lowest supported Node.js line and the Active LTS line. The workflow is `.github/workflows/ci.yml`. On the same pushes, the clean-install job (FL-003) installs the packed server on a clean machine and starts it, which is requirement REQ-CA-08 of the [competitive analysis](../research/evaluations/competitive-analysis.md). Its script, `scripts/clean-install/run.sh`, runs the pin test, builds the five workspace members (`pnpm run build`), packs them (`pnpm run pack:archives`), installs the archives into an empty directory with npm from the public registry, and runs `apps/mcp-server/src/check-installed-server.ts` against the installed copy: it lists the tools, records one fact and recalls it, over stdio, with the real embedding model and no API key. It prints the installed size, and does not fail on it. The first run of the server downloads the embedding model, so the job needs network access and has a 30-minute limit, against 15 for the check job.
 
 ## Unit tests
 
