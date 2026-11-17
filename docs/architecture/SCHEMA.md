@@ -316,6 +316,12 @@ Every read resolves an entity identifier through the merges whose `undone_at` is
 
 `fact_usage` holds one row per fact: the namespace, `last_recalled_at` and `recall_count`, updated in place. It is the one table whose rows change, because it is bookkeeping and holds no content. `fact_usage_tracking` holds, per namespace, the time of the first usage write, so that a job can tell a fact never used from one used before counting began. Neither is written by `commit` or audited: the store's `recordFactUsage` writes both in one transaction, with one batched upsert for all facts of a recall result, and skips a fact outside the namespace.
 
+### `fact_verification`, migration `0007_add_fact_verification.sql` (FL-049)
+
+One row per verification: an identifier, the namespace, the fact, the outcome (`confirmed`, `contradicted`, `source_missing` or `inconclusive`), the method (`deterministic` or `llm`) and `verified_at`. It changes no fact. Two triggers refuse every update and delete. A commit refuses a verification of a fact outside its change set's namespace with `not_found`, and of an invalidated fact with `already_invalidated`. The `record_verification` change writes the row and one audit entry, action `fact.verified`, target kind `fact`, `detail` `{ verificationId }`, under the operation `verification`. Outcome and method are closed lists in the core schema, as for feedback.
+
+The latest verification of a fact is the row with the latest `verified_at`, then the latest `rowid`. `listStaleFacts` reads current facts with the time predicate at one moment, each with its latest `verified_at` or else `created_at`, and its latest confidence from `fact_confidence`. `listOrphanedFacts` reads live facts with no source whose `purged_at` is `NULL`, or whose latest verification is `source_missing`. The migration adds `fact_verification_by_fact` for the latest verification of a fact. Both lists start from the facts of a namespace through the namespace prefix of `fact_subject_predicate`. A partial index of live facts by namespace was tried and left out, because without statistics the planner then chose it for `listFacts` by subject too.
+
 ## Planned additions
 
 These are designed so that the interfaces in [`INTERFACES.md`](INTERFACES.md) are stable, but they are not in the first migration. Each is an added table or column, and purge also replaces two triggers, so none forces a rewrite of what exists.
@@ -323,7 +329,6 @@ These are designed so that the interfaces in [`INTERFACES.md`](INTERFACES.md) ar
 | Phase | Addition | Why it can wait |
 |---|---|---|
 | 3 | An `entity_alias` table (FL-053) | Phase 1 resolves entities by exact name only |
-| 3 | `fact_verification` table: fact, outcome, method, time | Nothing verifies facts before phase 3 |
 | 3 | The record that a fact is an **archived fact** (FL-065) | Archiving by disuse reads `fact_usage`, which FL-055 added |
 
 ## What differs in Postgres
