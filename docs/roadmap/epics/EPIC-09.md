@@ -87,7 +87,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 |---|---|---|---|---|
 | FL-048 | Maintenance run entry point | 3 | FL-040, FL-034, FL-037 | Under Review |
 | FL-049 | Verification records and the stale and orphaned lists | 3 | FL-015, FL-045, FL-061 | Completed |
-| FL-050 | Deterministic verification: repository reader and path checks | 3 | FL-018, FL-048, FL-049 | Pending |
+| FL-050 | Deterministic verification: repository reader and path checks | 3 | FL-018, FL-048, FL-049 | Completed |
 | FL-071 | Deterministic verification: function check by text search | 3 | FL-050, FL-018 | Pending |
 | FL-062 | Deterministic verification: manifest version check and succession | 3 | FL-050, FL-018 | Pending |
 | FL-051 | LLM verification as the last rung | 3 | FL-062, FL-028, FL-022 | Pending |
@@ -332,7 +332,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-018, FL-048, FL-049 |
 | Requirements | REQ-21 (REQ-CA-09), REQ-24 |
@@ -397,18 +397,95 @@ The repository interface is declared in `@factloom/maintenance`, its only consum
 - `.claude/rules/architecture.md`: an interface is added because there are two implementations, git and the test fake.
 
 **Acceptance criteria.**
-- [ ] Fixture "file deleted": a fact anchored to a file that a later commit deletes. After one run with an LLM client that fails if called: the fact is live and current, its latest verification is `source_missing`, `listOrphanedFacts` returns it, the run's report counts it as flagged, and no fact row was invalidated.
-- [ ] Fixture "nothing changed": the fact is recorded as `confirmed`, and a second run made with the clock inside the verification interval examines no anchored fact.
-- [ ] Fixture "other branch": a fact anchored at a commit that is not an ancestor of `HEAD` gets no verification row and no change.
-- [ ] Fixture "file changed": a fact anchored to a file that a later commit edits. The outcome is `inconclusive` and the fact is unchanged.
-- [ ] A test runs the job in a directory that is not a git repository and shows the job reported as failed and the store unchanged.
-- [ ] Every audit entry written by these runs has trigger `maintenance`, and after every fixture run the number of fact rows and the `invalidatedAt` of every fact are as before.
-- [ ] Unit tests of the ladder with the fake repository reader cover each row of the rung table, and one test shows that a rung passed to the job runs at the place it names: before rung 3, or after it for a file that changed.
-- [ ] `git grep -n "RepositoryReader\|HEAD" -- packages/core/src` finds nothing.
+- [x] Fixture "file deleted": a fact anchored to a file that a later commit deletes. After one run with an LLM client that fails if called: the fact is live and current, its latest verification is `source_missing`, `listOrphanedFacts` returns it, the run's report counts it as flagged, and no fact row was invalidated.
+- [x] Fixture "nothing changed": the fact is recorded as `confirmed`, and a second run made with the clock inside the verification interval examines no anchored fact.
+- [x] Fixture "other branch": a fact anchored at a commit that is not an ancestor of `HEAD` gets no verification row and no change.
+- [x] Fixture "file changed": a fact anchored to a file that a later commit edits. The outcome is `inconclusive` and the fact is unchanged.
+- [x] A test runs the job in a directory that is not a git repository and shows the job reported as failed and the store unchanged.
+- [x] Every audit entry written by these runs has trigger `maintenance`, and after every fixture run the number of fact rows and the `invalidatedAt` of every fact are as before.
+- [x] Unit tests of the ladder with the fake repository reader cover each row of the rung table, and one test shows that a rung passed to the job runs at the place it names: before rung 3, or after it for a file that changed.
+- [x] `git grep -n "RepositoryReader\|HEAD" -- packages/core/src` finds nothing.
 
 **Validation.** Unit tests of the ladder with a fake reader and the in-memory store. Tests of the git implementation and of the whole run against fixture repositories with the SQLite adapter, on both CI platforms from FL-002. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output on Linux and macOS arm64; the list of git commands used, each with its documentation citation.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4 and git 2.43.0, in seven commits:
+
+1. `docs: add listVerifications to the MemoryStore of INTERFACES.md`;
+2. `feat(core): add listVerifications in both stores`;
+3. `feat(maintenance): add the verification job, its ladder and the repository reader it reads`;
+4. `feat(mcp-server): add the git repository reader and fixture repositories for tests`;
+5. `feat(mcp-server): run the verification job in maintenance, against FACTLOOM_REPO`;
+6. `docs: add FACTLOOM_REPO to the configuration in MCP-TOOLS.md`;
+7. `docs(mcp-server): describe the verification job of the maintenance command`.
+
+The item was started while FL-048, on which it depends, was `Under Review`. FL-048's code is complete: only the owner's run of the two session start hooks remains, and this item changes neither hook.
+
+Built:
+
+- **The interface.** `RepositoryReader`, declared in `@factloom/maintenance` and exported from its entry, has five methods: `readHead`, `isAncestorOfHead`, `pathExists`, `readContentId` and `readText`.
+- **The job.** `verifyAnchoredFacts`:
+  - takes the stale facts from `listStaleFacts`, not verified for `VERIFICATION_INTERVAL_MS`, seven days;
+  - uses as the anchor of each the most recently observed source of kind `file` with a locator and a version;
+  - climbs the ladder: commit on the branch, path at `HEAD`, the domain's rungs placed `before_content_check`, the content identifier compared with the anchor's, then the rungs placed `after_content_changed`;
+  - records each outcome with `recordVerification`, method `deterministic`, trigger `maintenance` and reason `verification_due`.
+
+  It names no entity type, predicate, file name or git command.
+- **The report.** The job reports each flagged fact with its identifier and the reason `source_missing`. A job's report now carries `flaggedItems`.
+- **`listVerifications`**, added to `MemoryStore` in both stores, with contract case E6. It reads the outcomes back. The item listed two read methods; the tests had no other way to see which outcome was recorded.
+- **The git reader.** `createGitRepositoryReader` in `apps/mcp-server` runs git with `execFile` and its arguments as a list, never through a shell, at commits and never on the working tree. A directory that is not a repository fails `readHead` with `invalid_input`, before anything is read or recorded.
+- **The wiring.** The job is registered as `verify_anchored_facts` in `buildMaintenanceJobs` with no domain rungs. `FACTLOOM_REPO`, which defaults to the working directory, is read by `readConfiguration` and added to `MCP-TOOLS.md`.
+- **The fixture helper.** `testing/fixture-repository.ts` builds repositories in a temporary directory, with fixed author and committer dates and with global and system git configuration turned off. FL-071, FL-062 and FL-054 will reuse it.
+
+The git commands, each re-read on 2026-11-17 on https://git-scm.com/docs:
+
+| Method | Command | Documentation |
+|---|---|---|
+| `readHead` | `git rev-parse --verify HEAD^{commit}` | git-rev-parse: `--verify` emits one object name "otherwise, error out"; gitrevisions: `<rev>^{commit}` "describes the corresponding commit object" |
+| `isAncestorOfHead` | `git cat-file -e <commit>^{commit}`, then `git merge-base --is-ancestor <commit> HEAD` | git-cat-file: "Exit with zero status if `<object>` exists and is a valid object"; git-merge-base: exit 0 if an ancestor, 1 if not, "Errors are signaled by a non-zero status that is not 1" (research check 4.7) |
+| `pathExists` | `git cat-file -e <commit>:<path>` | git-cat-file, as above; gitrevisions: `<rev>:<path>` "names the blob or tree at the given path" (research check 4.1) |
+| `readContentId` | `git rev-parse --verify --quiet <commit>:<path>` | git-rev-parse `--verify`, with `-q` to exit non-zero without a message (research check 4.6) |
+| `readText` | `git cat-file blob <commit>:<path>` | git-cat-file: with a type, "the raw (though uncompressed) contents of the `<object>` will be returned" |
+
+The documentation gives no exit status for a missing object under `cat-file -e`, only "non-zero". So the reader treats any non-zero status there as "absent", once `readHead` has shown that the repository can be read.
+
+Tests:
+
+- **The ladder, with a fake reader and the in-memory store.** Ten unit tests: `confirmed`, `inconclusive`, `source_missing` with the flag, a commit on another branch, a fact with no anchor, a rung placed before the content check deciding and the after-rung not running, a rung placed after it running only for a changed file, no rung for a missing file, a repository that cannot be read, and a second run inside the interval.
+- **The git reader, against a fixture repository.** Four tests: `HEAD`; ancestor, other branch and unknown commit; path, content identifier and text; not a repository.
+- **The whole run, with the SQLite adapter, through `buildMaintenanceJobs` and `runMaintenance`.** The five fixtures of the acceptance criteria, "file deleted", "nothing changed", "other branch", "file changed" and "not a git repository". After each run the fact rows and their `invalidatedAt` are as before, and every verification's audit entry has trigger `maintenance`.
+- **The command, as a child process.** It runs the job on a fixture repository and exits 0, and it exits 1 with the job failed when `FACTLOOM_REPO` is not a repository.
+- **No LLM call.** Every run receives the dependencies of `createTestDeps`, whose LLM client fails if called.
+
+`git grep -n "RepositoryReader\|HEAD" -- packages/core/src` found nothing (exit 1).
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| The ladder skips the branch check | the other-branch unit test |
+| A changed file counts as unchanged | the file-changed unit test and the after-rung unit test |
+| Rungs placed before the content check run after it | the before-rung and after-rung unit tests |
+| The git reader reads the content identifier at `HEAD`, not at the anchor | the reader's content test and the "file changed" fixture |
+| The git reader counts an unknown commit as an ancestor | the reader's ancestor test |
+
+One break failed no test, and is not a fault: moving the read of `HEAD` into the loop still reads it before the first verification is recorded.
+
+`pnpm check`:
+
+```text
+ Test Files  98 passed (98)
+      Tests  1020 passed (1020)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the fifth commit, with the git tests on both: https://github.com/Johnmark-Tech/factloom/actions/runs/44003830461.
+
+Differences from the item:
+
+- **`listVerifications` was added to `MemoryStore`**, a third read method.
+- **An unreadable repository is `invalid_input`.** No error code names one, and the item does not ask for a new code, so the job's failure uses `invalid_input`. Its message names the directory and git's own error.
+- **`flaggedItems` was added to every job's report** to meet functional requirement 5.
 
 ### FL-071: Deterministic verification: function check by text search
 
