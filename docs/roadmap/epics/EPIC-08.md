@@ -88,7 +88,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | FL-044 | reviseValidTime operation | 2 | FL-010 | Completed |
 | FL-045 | Confidence history and adjustConfidence | 2 | FL-015, FL-016, FL-017 | Completed |
 | FL-046 | Feedback operation and migration | 2 | FL-015, FL-022 | Completed |
-| FL-059 | give_feedback tool | 2 | FL-046, FL-036, FL-058 | Pending |
+| FL-059 | give_feedback tool | 2 | FL-046, FL-036, FL-058 | Completed |
 | FL-060 | Acting on feedback | 2 | FL-046, FL-045, FL-042 | Pending |
 | FL-047 | Purge design, proven by a spike | 2 | FL-015 | Pending |
 | FL-061 | Purge operation | 2 | FL-047, FL-016, FL-017 | Pending |
@@ -902,7 +902,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-046, FL-036, FL-058 |
 | Requirements | REQ-18, REQ-10 |
@@ -952,17 +952,61 @@ Differences from the item:
 - [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md), "What a handler does".
 
 **Acceptance criteria.**
-- [ ] Tests of the tool, with a server built from the in-memory store and a client connected in process, pass with these names: "records feedback and returns its identifier", "stores the comment as the content of a source", "returns not_found for an unknown fact", "returns invalid_input for an unknown signal", "refuses a comment that contains a secret".
-- [ ] A test asserts that after the call `listAuditEntries` for the returned feedback identifier holds one entry with action `feedback.recorded` and trigger `agent`.
-- [ ] A test named "lists the six tools in order with their annotations" asserts the six names in order, the annotation values, an output schema on each, and a description on every input field.
-- [ ] The MCP smoke test (FL-037) lists six tools, calls `give_feedback` with `wrong` on a recorded fact, and gets a result with a `feedback_id` and a `follow_up` from the list in functional requirement 1. If FL-037 is not built yet, the item is `Blocked` on FL-037 for this criterion.
-- [ ] A test named "the instructions fit the limit" still passes.
-- [ ] `MCP-TOOLS.md` describes the tool, and the tool table there has six rows.
-- [ ] `pnpm check` exits 0.
+- [x] Tests of the tool, with a server built from the in-memory store and a client connected in process, pass with these names: "records feedback and returns its identifier", "stores the comment as the content of a source", "returns not_found for an unknown fact", "returns invalid_input for an unknown signal", "refuses a comment that contains a secret".
+- [x] A test asserts that after the call `listAuditEntries` for the returned feedback identifier holds one entry with action `feedback.recorded` and trigger `agent`.
+- [x] A test named "lists the six tools in order with their annotations" asserts the six names in order, the annotation values, an output schema on each, and a description on every input field.
+- [x] The MCP smoke test (FL-037) lists six tools, calls `give_feedback` with `wrong` on a recorded fact, and gets a result with a `feedback_id` and a `follow_up` from the list in functional requirement 1. If FL-037 is not built yet, the item is `Blocked` on FL-037 for this criterion.
+- [x] A test named "the instructions fit the limit" still passes.
+- [x] `MCP-TOOLS.md` describes the tool, and the tool table there has six rows.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests with fakes and an in-process client. The MCP smoke test. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the updated `MCP-TOOLS.md`.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in two commits: `feat(mcp-server): add the give_feedback tool` and `docs: describe the give_feedback tool in MCP-TOOLS.md`.
+
+The tool is `apps/mcp-server/src/give-feedback-tool.ts`: one handler that calls `giveFeedback` with the configured namespace and the trigger `agent`, and translates the `Result` with `toToolError` and `toToolSuccess`. It is the sixth entry of `FACTLOOM_TOOLS`. Its annotations are not read-only, not destructive, not idempotent and not open-world. Its description sends the agent to `invalidate_fact` when it knows the replacement or the date. The server's instructions gain one sentence on it; the test "the instructions fit the limit" still passes.
+
+Tests, in `give-feedback-tool.test.ts`, with the in-memory store and an in-process client, under the five names the item gives:
+
+- **"records feedback and returns its identifier"** also asserts that `listAuditEntries` for the returned identifier holds one entry with action `feedback.recorded` and trigger `agent`.
+- **"returns invalid_input for an unknown signal"** is refused by the SDK before the handler runs, with its own message, `Input validation error: Invalid arguments for tool give_feedback: signal: Invalid option: ...`, as `MCP-TOOLS.md`, "Errors", says of input that fails a tool's schema. The test asserts that message.
+- **"refuses a comment that contains a secret"** asserts `invalid_input:` and that the text does not contain the token.
+
+Tests that list the tools now expect six names:
+
+- **"lists the six tools in order with their annotations"** (renamed from five): the six names and annotations, an output schema on each, a description on every input field.
+- **The stdio smoke test of FL-037**, `serve-with-fake-embedder.test.ts`: it lists the six tools, and in its second session calls `give_feedback` with `wrong` on the recorded fact, and the result has a `feedback_id` and a `follow_up` from the list.
+- **`main.test.ts`**: the six tools.
+
+FL-003, the clean-install job, is not built yet; it is written with the six names when it is built.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| Trigger `person` instead of `agent` | "records feedback and returns its identifier" |
+| `idempotentHint: true` | "lists the six tools in order with their annotations" |
+| The tool left out of `FACTLOOM_TOOLS` | the five tool tests and the list test |
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the second commit, including the stdio smoke test with the sixth tool: https://github.com/Johnmark-Tech/factloom/actions/runs/43992743928.
+
+`MCP-TOOLS.md` has six rows in the tool table, a section for `give_feedback`, its row in the annotation table, its name in the rows of `not_found` and of the key table and in "Secrets", and no longer lists a feedback tool under "Not in phase 1".
+
+`pnpm check`:
+
+```text
+$ biome format .
+Checked 295 files. No fixes applied.
+$ biome lint .
+Checked 295 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  81 passed (81)
+      Tests  875 passed (875)
+```
 
 ### FL-060: Acting on feedback
 
