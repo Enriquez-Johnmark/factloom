@@ -250,7 +250,9 @@ deferrable. All are open, not decided.
 - `entity_mention`, `entity_alias` and `entity_merge` tables and `entity.merged_into` from day one
   ([entity-resolution.md](technical/entity-resolution.md)). Review: the phase 1 pipeline never
   merges; these are additive tables and columns; only the rule "never rewrite `entity_id` on
-  facts" would force a rewrite if broken.
+  facts" would force a rewrite if broken. `entity_merge` was built in FL-052; `entity_alias` is
+  left out by [ADR 0021](../architecture/adr/0021-no-alias-table-merges-serve-as-aliases.md),
+  because a merge serves as an alias.
 - A `fact_usage` table, a retrieval log, a `pinned` flag and `last_verified_at` from day one
   ([memory-decay-and-consolidation.md](technical/memory-decay-and-consolidation.md)). Review:
   nothing consumes them before phase 3; only access history is unrecoverable, and an archiving

@@ -328,7 +328,6 @@ These are designed so that the interfaces in [`INTERFACES.md`](INTERFACES.md) ar
 
 | Phase | Addition | Why it can wait |
 |---|---|---|
-| 3 | An `entity_alias` table (FL-053) | Phase 1 resolves entities by exact name only |
 | 3 | The record that a fact is an **archived fact** (FL-065) | Archiving by disuse reads `fact_usage`, which FL-055 added |
 
 ## What differs in Postgres
