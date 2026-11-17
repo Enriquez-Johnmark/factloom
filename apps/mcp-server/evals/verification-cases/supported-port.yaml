@@ -1,0 +1,15 @@
+# The file still states the port the fact names, among other edits.
+name: "Supported: the local PostgreSQL port"
+statement: The local PostgreSQL listens on port 5432.
+path: docker-compose.yml
+expected: supported
+text: |
+  services:
+    db:
+      image: postgres:16
+      ports:
+        - "5432:5432"
+      environment:
+        POSTGRES_DB: shop
+    cache:
+      image: redis:7

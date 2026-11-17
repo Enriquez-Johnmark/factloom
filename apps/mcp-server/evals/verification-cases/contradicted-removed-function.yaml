@@ -1,0 +1,10 @@
+# The file says outright that the function the fact describes was removed.
+name: "Contradicted: a function described as removed"
+statement: The function parseDate in src/dates.ts parses calendar dates.
+path: src/dates.ts
+expected: contradicted
+text: |
+  // parseDate was removed in favour of parseDateInput, which also reads timestamps.
+  export function parseDateInput(text: string): Date {
+    return new Date(text);
+  }

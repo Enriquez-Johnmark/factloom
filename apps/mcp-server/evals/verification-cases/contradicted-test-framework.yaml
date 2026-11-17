@@ -1,0 +1,15 @@
+# The test script now runs another framework, and the old one is gone.
+name: "Contradicted: the tests moved to Jest"
+statement: shop-api runs its tests with Vitest.
+path: package.json
+expected: contradicted
+text: |
+  {
+    "name": "shop-api",
+    "scripts": {
+      "test": "jest"
+    },
+    "devDependencies": {
+      "jest": "30.0.0"
+    }
+  }

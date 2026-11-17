@@ -1,0 +1,15 @@
+# The framework is named only through a shared preset whose content is elsewhere.
+name: "Unclear: the test runner comes from a shared preset"
+statement: shop-api runs its tests with Vitest.
+path: package.json
+expected: unclear
+text: |
+  {
+    "name": "shop-api",
+    "scripts": {
+      "test": "shop-tools test"
+    },
+    "devDependencies": {
+      "@shop/tools": "3.2.0"
+    }
+  }

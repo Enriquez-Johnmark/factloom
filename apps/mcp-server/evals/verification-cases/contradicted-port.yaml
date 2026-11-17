@@ -1,0 +1,12 @@
+# The port was changed in the file.
+name: "Contradicted: the local PostgreSQL port moved"
+statement: The local PostgreSQL listens on port 5432.
+path: docker-compose.yml
+expected: contradicted
+text: |
+  services:
+    db:
+      image: postgres:16
+      ports:
+        - "5433:5433"
+      command: ["postgres", "-p", "5433"]

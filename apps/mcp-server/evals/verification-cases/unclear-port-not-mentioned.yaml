@@ -1,0 +1,10 @@
+# The file no longer mentions the port, and says nothing against it.
+name: "Unclear: the port is not mentioned any more"
+statement: The local PostgreSQL listens on port 5432.
+path: docker-compose.yml
+expected: unclear
+text: |
+  services:
+    db:
+      image: postgres:16
+      env_file: .env.db

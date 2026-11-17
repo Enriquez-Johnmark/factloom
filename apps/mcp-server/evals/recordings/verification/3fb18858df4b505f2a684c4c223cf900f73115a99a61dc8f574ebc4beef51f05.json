@@ -1,0 +1,9 @@
+{
+  "task": "verification",
+  "model": "claude-haiku-5-5",
+  "instructions": "You check a fact that a memory holds about a code repository against one file of that repository, as the file is now.\n\nThe fact was learned from this file at an earlier commit. The file has changed since. Decide whether the file as it is now still supports the fact.\n\nAnswer one of:\n- supported: the file states or plainly shows what the fact says.\n- contradicted: the file states or plainly shows something that cannot be true together with the fact, such as another value for the same thing, or that the thing was removed.\n- unclear: the file neither supports nor contradicts the fact, or you cannot tell.\n\nRules:\n- Decide from the file text given, and nothing else. Do not guess what other files say.\n- A fact that the file no longer mentions, without saying anything against it, is unclear, not contradicted.\n- Answer contradicted only when the file says something that rules the fact out.",
+  "input": "Fact: shop-api follows conventional commits.\nFile: CONTRIBUTING.md\nFile text:\n<<<\n# Contributing\n\nOpen an issue before a large change. Keep pull requests small, and add a test for\nevery bug you fix.\n\n>>>",
+  "response": {
+    "answer": "unclear"
+  }
+}

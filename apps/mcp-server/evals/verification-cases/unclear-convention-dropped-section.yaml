@@ -1,0 +1,10 @@
+# The contributing guide was cut down and no longer says how to write commit messages.
+name: "Unclear: the commit section was removed"
+statement: shop-api follows conventional commits.
+path: CONTRIBUTING.md
+expected: unclear
+text: |
+  # Contributing
+
+  Open an issue before a large change. Keep pull requests small, and add a test for
+  every bug you fix.

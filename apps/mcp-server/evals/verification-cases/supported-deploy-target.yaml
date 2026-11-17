@@ -1,0 +1,10 @@
+# The deployment notes still name the target, in other words.
+name: "Supported: the deployment target in a README"
+statement: shop-api is deployed to Fly.io.
+path: README.md
+expected: supported
+text: |
+  # shop-api
+
+  The shop API. Every push to main is built and deployed to our Fly.io app `shop-api-prod`
+  by the release workflow. See docs/runbook.md for rollbacks.

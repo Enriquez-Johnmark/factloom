@@ -1,0 +1,9 @@
+# The README now names another target and says the old one is no longer used.
+name: "Contradicted: the deployment moved to Render"
+statement: shop-api is deployed to Fly.io.
+path: README.md
+expected: contradicted
+text: |
+  # shop-api
+
+  The shop API is deployed to Render. We stopped deploying to Fly.io in October.

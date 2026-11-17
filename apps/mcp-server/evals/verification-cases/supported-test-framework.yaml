@@ -1,0 +1,16 @@
+# The test script still runs the framework the fact names.
+name: "Supported: the test framework"
+statement: shop-api runs its tests with Vitest.
+path: package.json
+expected: supported
+text: |
+  {
+    "name": "shop-api",
+    "scripts": {
+      "test": "vitest run",
+      "lint": "biome lint ."
+    },
+    "devDependencies": {
+      "vitest": "5.1.0"
+    }
+  }

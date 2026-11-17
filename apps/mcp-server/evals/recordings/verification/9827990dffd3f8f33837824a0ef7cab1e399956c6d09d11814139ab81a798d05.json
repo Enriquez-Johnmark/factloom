@@ -1,0 +1,9 @@
+{
+  "task": "verification",
+  "model": "claude-haiku-5-5",
+  "instructions": "You check a fact that a memory holds about a code repository against one file of that repository, as the file is now.\n\nThe fact was learned from this file at an earlier commit. The file has changed since. Decide whether the file as it is now still supports the fact.\n\nAnswer one of:\n- supported: the file states or plainly shows what the fact says.\n- contradicted: the file states or plainly shows something that cannot be true together with the fact, such as another value for the same thing, or that the thing was removed.\n- unclear: the file neither supports nor contradicts the fact, or you cannot tell.\n\nRules:\n- Decide from the file text given, and nothing else. Do not guess what other files say.\n- A fact that the file no longer mentions, without saying anything against it, is unclear, not contradicted.\n- Answer contradicted only when the file says something that rules the fact out.",
+  "input": "Fact: The local PostgreSQL listens on port 5432.\nFile: docker-compose.yml\nFile text:\n<<<\nservices:\n  db:\n    image: postgres:16\n    ports:\n      - \"5432:5432\"\n    environment:\n      POSTGRES_DB: shop\n  cache:\n    image: redis:7\n\n>>>",
+  "response": {
+    "answer": "supported"
+  }
+}

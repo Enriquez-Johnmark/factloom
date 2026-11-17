@@ -1,0 +1,10 @@
+# The README now covers only how to run the tests locally.
+name: "Unclear: a README about something else"
+statement: shop-api is deployed to Fly.io.
+path: README.md
+expected: unclear
+text: |
+  # shop-api
+
+  Run `pnpm install`, then `pnpm test`. The tests need a local PostgreSQL; see
+  docs/setup.md.

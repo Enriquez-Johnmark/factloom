@@ -1,0 +1,10 @@
+# The contributing guide still states the convention.
+name: "Supported: conventional commits"
+statement: shop-api follows conventional commits.
+path: CONTRIBUTING.md
+expected: supported
+text: |
+  # Contributing
+
+  Write each commit message in the Conventional Commits format, for example
+  `fix(cart): keep the quantity when a price changes`. Squash before merging.
