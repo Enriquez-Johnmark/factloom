@@ -1,6 +1,7 @@
 name: CI
 
-# Runs `pnpm check` on every push to main, on Linux and on macOS arm64.
+# Runs `pnpm check` on every push to main, on Linux and on macOS arm64, and installs the
+# packed server into an empty directory on both and checks it (the clean-install job).
 # Two further jobs are started by hand from the Actions tab: the SQLite spikes on macOS arm64,
 # and `pnpm eval`, which runs the tests that need the real embedding model and the
 # performance benchmark. The eval job also runs once a week on a schedule, never on a push.
@@ -29,6 +30,7 @@ jobs:
     name: check (${{ matrix.os }}, Node ${{ matrix.node }})
     if: github.event_name == 'push'
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -66,6 +68,37 @@ jobs:
         env:
           FACTLOOM_DB: ${{ runner.temp }}/factloom.db
           FACTLOOM_NAMESPACE: repo:ci
+
+  # Installs the packed server into an empty directory and checks it over stdio (FL-003).
+  # The first start downloads the embedding model from huggingface.co, so the job needs the
+  # network and has a longer time limit than the check job. It sets no API key.
+  clean-install:
+    name: clean install (${{ matrix.os }})
+    if: github.event_name == 'push'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-26]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@9bbca1e9dc2902adb87e8780fe5c98796985a62d # v6.1.1
+        with:
+          run_install: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Show the environment
+        run: |
+          node --version
+          pnpm --version
+          npm --version
+          node -p "process.platform + '-' + process.arch"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build, pack, install into an empty directory and check
+        run: bash scripts/clean-install/run.sh
 
   spikes:
     name: spikes (macOS arm64)
