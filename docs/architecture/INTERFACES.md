@@ -129,6 +129,16 @@ export type Feedback = {
   readonly recordedAt: Timestamp;
 };
 
+/** Phase 3. The outcome of checking a fact against its source. Changes no fact (FL-049). */
+export type FactVerification = {
+  readonly id: string;
+  readonly namespace: Namespace;
+  readonly factId: FactId;
+  readonly outcome: 'confirmed' | 'contradicted' | 'source_missing' | 'inconclusive';
+  readonly method: 'deterministic' | 'llm';
+  readonly verifiedAt: Timestamp;
+};
+
 /** What was being done. Phases 2 and 3 add 'merge', 'verification', 'feedback' and 'purge'. */
 export type Operation =
   | 'remember'
@@ -139,7 +149,8 @@ export type Operation =
   | 'confidence_adjustment'
   | 'feedback'
   | 'purge'
-  | 'merge';
+  | 'merge'
+  | 'verification';
 
 /** Why, from a fixed list, so that the audit log holds no free text. Later phases add codes. */
 export type ReasonCode =
@@ -151,7 +162,8 @@ export type ReasonCode =
   | 'feedback_given'
   | 'erasure_requested'
   | 'secret_stored'
-  | 'same_entity';
+  | 'same_entity'
+  | 'verification_due';
 
 export type AuditAction =
   | 'entity.created'
@@ -164,7 +176,8 @@ export type AuditAction =
   | 'source.purged'
   | 'fact.purged'
   | 'entity.merged'
-  | 'entity.merge_undone';
+  | 'entity.merge_undone'
+  | 'fact.verified';
 
 export type AuditEntry = {
   readonly id: number;
@@ -294,6 +307,22 @@ export interface MemoryStore {
   /** Phase 2. The feedback on one fact, in the order it was given. */
   listFeedback(query: { readonly namespace: Namespace; readonly factId: FactId }): Promise<Result<readonly Feedback[]>>;
 
+  /**
+   * Phase 3. Current facts at `currentAt` whose latest verification, or recording if none, is
+   * before `notVerifiedSince`, least recently verified first; with `confidenceBelow`, also
+   * current facts whose latest confidence is below it.
+   */
+  listStaleFacts(query: {
+    readonly namespace: Namespace;
+    readonly currentAt: Timestamp;
+    readonly notVerifiedSince: Timestamp;
+    readonly confidenceBelow: number | null;
+    readonly limit: number;
+  }): Promise<Result<readonly FactWithSources[]>>;
+
+  /** Phase 3. Live facts whose every source is purged, or whose latest verification is `source_missing`, oldest first. */
+  listOrphanedFacts(query: { readonly namespace: Namespace; readonly limit: number }): Promise<Result<readonly FactWithSources[]>>;
+
   close(): Promise<void>;
 }
 
@@ -346,7 +375,9 @@ export type Change =
       readonly singleValuedPredicates: readonly string[];
     }
   /** Phase 3. Withdraws a merge: sets its `undoneAt`, once. */
-  | { readonly kind: 'undo_entity_merge'; readonly mergeId: string; readonly fromEntityId: EntityId };
+  | { readonly kind: 'undo_entity_merge'; readonly mergeId: string; readonly fromEntityId: EntityId }
+  /** Phase 3. Appends a verification. Changes no fact. The fact must be live. */
+  | { readonly kind: 'record_verification'; readonly verification: FactVerification };
 
 export type CommitReceipt = {
   readonly operationId: string;
@@ -699,8 +730,8 @@ export declare function undoEntityMerge(
 ): Promise<Result<{ readonly mergeId: string }>>;
 ```
 
-- **Verification is recorded, not applied.** `recordVerification` writes a row and an audit entry. What follows from a `contradicted` outcome, an invalidation or a lower confidence, is a separate call, so the audit log shows both the finding and the action. Errors: `invalid_input`, `not_found`, `already_invalidated`, `storage_failed`.
-- **`listStaleFacts` and `listOrphanedFacts` are reads.** They add two methods to `MemoryStore` in phase 3, backed by the `fact_verification` table. They return an empty list when nothing is due. Errors: `invalid_input`, `storage_failed`.
+- **Verification is recorded, not applied.** `recordVerification` (FL-049) commits one `record_verification` change under the operation `verification`, which appends a row to the `fact_verification` table: fact, outcome, method, time. Its audit entry, action `fact.verified`, targets the fact, with `detail` `{ verificationId }`; the outcome and the method are in the row, not in the entry. The reason code for a scheduled check is `verification_due`. What follows from a `contradicted` outcome, an invalidation or a lower confidence, is a separate call, so the audit log shows both the finding and the action. Errors: `invalid_input`, `not_found`, `already_invalidated`, `storage_failed`.
+- **`listStaleFacts` and `listOrphanedFacts` are reads.** They add two methods to `MemoryStore` in phase 3, backed by the `fact_verification` table. `listStaleFacts` passes its clock's now as `currentAt`. They return an empty list when nothing is due. The latest verification of a fact is the one with the latest time; of two with the same time, the one recorded later. A fact revised into a copy gets a new identifier, and the copy, having no verification, counts as verified at its own recording. `confidenceBelow` outside 0 to 1 is `invalid_input`. Errors: `invalid_input`, `storage_failed`.
 - **A merge is a row, not an edit.** `mergeEntities` (FL-052) commits one `merge_entities` change under the operation `merge`, which adds a row to an `entity_merge` table: from, into, when. Its audit entry, action `entity.merged`, targets the entity merged from, with `detail` `{ intoEntityId, mergeId }`; the reason code for a duplicate is `same_entity`. `listEntityMerges` reads the merges of a namespace, undone ones included. No entity and no fact is rewritten. Reads resolve identifiers through the merges that have not been undone, following a chain if the target was itself merged later.
 - **A merge can be refused.** If the two entities hold live facts for the same single-valued predicate with different objects and overlapping valid periods, merging them would break the single-value rule. `mergeEntities` then returns `conflict` with those facts and merges nothing. Product 2 resolves them first. Reads resolve through whole chains of merges: with A merged into B and B into C, the facts of all three are read under C. A merge that would make a cycle is `invalid_input` (FL-063). Two entities of different types can be merged, because the same thing is sometimes extracted under two types. Other errors: `not_found`; `invalid_input` for an entity merged with itself; `already_exists` when the first entity is already merged; `storage_failed`.
 - **The single-value rule after a merge (FL-063).** A merge is refused when the two entities, each with everything already merged into it, hold live facts for the same single-valued predicate with different objects and overlapping valid periods. Two such facts with the same object are not refused: the merge leaves both live, each a restatement of the other, under the merged entity. Objects are compared as stored, as the restatement rule compares them: the same entity identifier, or the same value. The store's rule inside `commit` keeps checking only the facts a change set records, against every live fact of the merged subjects, so the two restating facts stay as they are and a later value that differs from them is refused as before. Which predicates are single-valued reaches the store in the `merge_entities` change, from the domain `mergeEntities` is given, and the check is made inside the commit.
