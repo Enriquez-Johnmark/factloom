@@ -16,10 +16,11 @@ import type { DuplicateStage, StageDecision } from './find-duplicate-entities.ts
 
 /**
  * The cosine similarity of two name embeddings from which a pair of one type is a candidate
- * for the LLM. Chosen on 2026-11-17 from the entity pair set of FL-064 with bge-small-en-v1.5:
- * the pairs expected the same scored 0.669 to 0.923 and those expected different 0.591 to 0.882,
- * so names alone cannot separate them, and the threshold sits just below the lowest true pair,
- * to leave the decision to the LLM.
+ * for the LLM. Measured on 2026-11-17 on the 50 pairs of FL-064 with bge-small-en-v1.5: the
+ * pairs expected the same scored 0.583 to 0.923 and those expected different 0.591 to 0.946,
+ * so names alone cannot separate them and the LLM decides. Of 3,196 unrelated pairs of names
+ * in the set, 13% score 0.65 or more and 57% score 0.57 or more, so 0.65 keeps the LLM calls
+ * few, at the cost of the one true pair below it (OpenTelemetry and OTel, 0.583).
  */
 export const SIMILARITY_THRESHOLD = 0.65;
 
