@@ -108,7 +108,8 @@ type RefReasonCode =
   | 'verification_due'
   | 'anchor_moved'
   | 'unused'
-  | 'requested';
+  | 'requested'
+  | 'source_changed';
 type RefAuditAction =
   | 'entity.created'
   | 'source.recorded'
