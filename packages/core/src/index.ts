@@ -79,5 +79,7 @@ export type { ReviseValidTimeInput, ValidTimeRevision } from './operations/revis
 export { reviseValidTime } from './operations/revise-valid-time.ts';
 export type { AdjustConfidenceInput } from './operations/adjust-confidence.ts';
 export { adjustConfidence } from './operations/adjust-confidence.ts';
+export type { RecordFeedbackInput } from './operations/record-feedback.ts';
+export { recordFeedback } from './operations/record-feedback.ts';
 export type { FindConflictCandidatesInput } from './operations/find-conflict-candidates.ts';
 export { findConflictCandidates } from './operations/find-conflict-candidates.ts';
