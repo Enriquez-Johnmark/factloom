@@ -73,7 +73,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-035 | remember and record_fact tools | 1 | FL-019, FL-058, FL-023, FL-024 | Completed |
 | FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-018, FL-035, FL-058, FL-025, FL-032 | Completed |
 | FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Completed |
-| FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Pending |
+| FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Under Review |
 
 ### FL-034: Server configuration and composition root
 
@@ -506,7 +506,7 @@ The entry was broken by hand twice and the test failed each time: the store open
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 1 |
 | Depends on | FL-037 |
 | Requirements | REQ-10, REQ-29, REQ-36 |
@@ -570,3 +570,34 @@ The owner runs each step on the Apple Silicon Mac, in order, and records the res
 **Validation.** A run by the owner on the Apple Silicon Mac. No automated test can stand in for the two hosts.
 
 **Completion evidence.** The commit with the README section and the revised research documents. In the commit message or in the closed rows: the outputs recorded in each step above, the two host versions, and the date of the run.
+
+**Recorded evidence.** Prepared on 2026-11-17 by the agent, in three commits: `docs(mcp-server): add the guide to registering the server in Claude Code and Codex`, `docs: record that claude mcp add needs the server name before --env`, and `docs(mcp-server): put the server name before --env and record the Linux dry run`. The item is `Under Review`: every acceptance criterion is a step the owner runs on the Apple Silicon Mac, and none is ticked.
+
+Prepared:
+
+- **The guide.** The section "Register the server" of [`apps/mcp-server/README.md`](../../../apps/mcp-server/README.md):
+  - the prerequisites and the three variables;
+  - the `claude mcp add` command and the `.mcp.json` entry;
+  - the `codex mcp add` command and the `~/.codex/config.toml` table;
+  - how to check the registration;
+  - the table of the four set-ups, each marked "Not yet (FL-038)".
+- **No key in the guide.** The `.mcp.json` entry takes the key with `${ANTHROPIC_API_KEY:-}`, which the server reads as unset when empty. The Codex table forwards it with `env_vars`.
+
+Run here, on Linux with Claude Code 2.1.326, with a throwaway home directory and project:
+
+- **The research's argument order fails.** `claude mcp add --transport stdio --scope local --env FACTLOOM_NAMESPACE=repo:shop-api factloom -- node …/main.ts` exited with `Invalid environment variable format: factloom`. `--env` takes several values (`-e, --env <env...>` in `claude mcp add --help`), so it took the name as one of them.
+- **The corrected order works.** With the name before `--env`, the server was added to the local config, and `claude mcp list` printed `factloom: node /home/user/factloom/apps/mcp-server/src/main.ts - √ Connected`.
+- **The `.mcp.json` entry** was listed as `⏸ Pending approval (run `claude` to approve)`, as the research says for a project server in an interactive session.
+- **The fix is recorded** in the guide and in [`mcp.md`](../../research/technical/mcp.md), with the date, as technical requirement 1 asks.
+
+Not run here:
+
+- No Claude Code session was started, so neither `/mcp` nor a tool call was made.
+- Codex is not installed here.
+- Nothing ran on macOS. FL-003's clean-install job shows the installed server, its native SQLite modules and the embedding runtime working on GitHub's macOS arm64 runner. That is not the owner's Mac, and no host is involved.
+- Q-01, Q-02, Q-15, Q-16, Q-23 and Q-79 stay open until the owner's run.
+
+Differences from the item:
+
+- **Six tools.** `/mcp` will list six tools, not five: `give_feedback` was added in phase 2.
+- **The guide adds `tool_timeout_sec = 300`** to the Codex table. Codex's default of 60 seconds may be too short for the first call, which downloads the embedding model.
