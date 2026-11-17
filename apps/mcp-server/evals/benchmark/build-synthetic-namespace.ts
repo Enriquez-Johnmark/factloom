@@ -107,6 +107,7 @@ export async function buildSyntheticNamespace(
       version: null,
       content: null,
       contentHash: null,
+      purgedAt: null,
       observedAt: createdAt,
       createdAt,
     };
@@ -137,6 +138,7 @@ export async function buildSyntheticNamespace(
         validTo: ended ? ENDED_TO : null,
         createdAt,
         invalidatedAt: null,
+        purgedAt: null,
         supersededByFactId: null,
       };
       const vector = new Float32Array(options.dimensions).map(() => random() * 2 - 1);

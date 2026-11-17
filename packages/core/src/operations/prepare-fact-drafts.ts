@@ -78,6 +78,7 @@ export async function prepareFactDrafts(
       namespace,
       createdAt,
       invalidatedAt: null,
+      purgedAt: null,
       supersededByFactId: null,
     });
     if (!parsed.success) {

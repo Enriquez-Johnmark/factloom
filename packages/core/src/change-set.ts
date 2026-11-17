@@ -51,6 +51,14 @@ export const ChangeSchema = z.discriminatedUnion('kind', [
     })
     .readonly(),
   z.strictObject({ kind: z.literal('record_feedback'), feedback: FeedbackSchema }).readonly(),
+  z
+    .strictObject({
+      kind: z.literal('purge_content'),
+      /** A fact's text, or a source's content and locator, is replaced (ADR 0012). */
+      targetKind: z.enum(['source', 'fact']),
+      targetId: z.string().min(1),
+    })
+    .readonly(),
 ]);
 export type Change = z.infer<typeof ChangeSchema>;
 
@@ -66,6 +74,7 @@ function findForeignRow(namespace: string, change: Change): string | null {
     case 'attach_source':
     case 'invalidate_fact':
     case 'adjust_confidence':
+    case 'purge_content':
       return null;
     case 'record_feedback':
       return change.feedback.namespace === namespace ? null : `feedback ${change.feedback.id}`;

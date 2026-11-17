@@ -69,6 +69,7 @@ export function source(id: string, day: string, content: string, namespace = NAM
     version: null,
     content,
     contentHash: null,
+    purgedAt: null,
     observedAt: at(day),
     createdAt: at(day),
   };
@@ -87,6 +88,7 @@ export function fact(id: string, predicate: string, value: string, fields: Parti
     validTo: null,
     createdAt: at('2026-01-10'),
     invalidatedAt: null,
+    purgedAt: null,
     supersededByFactId: null,
     ...fields,
   };
@@ -944,6 +946,7 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
       id: 'redis',
       createdAt: at(RECORDED),
       invalidatedAt: null,
+      purgedAt: null,
     });
   });
   test('Q5: each adjustment writes one audit entry with the previous and the new confidence', async () => {

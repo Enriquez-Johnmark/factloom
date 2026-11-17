@@ -128,6 +128,7 @@ describe('reads on SQLite', () => {
             validTo: null,
             createdAt: created,
             invalidatedAt: null,
+            purgedAt: null,
             supersededByFactId: null,
           },
           sourceIds: ['s-1'],

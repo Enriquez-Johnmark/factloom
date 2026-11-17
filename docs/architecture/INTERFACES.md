@@ -80,6 +80,8 @@ export type Fact = {
   readonly createdAt: Timestamp;
   readonly invalidatedAt: Timestamp | null;
   readonly supersededByFactId: FactId | null;
+  /** Phase 2. When the text was purged and replaced by the marker '[purged]' (ADR 0012), or null. */
+  readonly purgedAt: Timestamp | null;
 };
 
 export type Source = {
@@ -92,6 +94,8 @@ export type Source = {
   readonly contentHash: string | null;
   readonly observedAt: Timestamp;
   readonly createdAt: Timestamp;
+  /** Phase 2. When the content and locator were purged (ADR 0012), or null. */
+  readonly purgedAt: Timestamp | null;
 };
 
 export type Trigger = 'agent' | 'person' | 'feedback' | 'maintenance';
@@ -116,7 +120,8 @@ export type Operation =
   | 'correction'
   | 'retraction'
   | 'confidence_adjustment'
-  | 'feedback';
+  | 'feedback'
+  | 'purge';
 
 /** Why, from a fixed list, so that the audit log holds no free text. Later phases add codes. */
 export type ReasonCode =
@@ -125,7 +130,9 @@ export type ReasonCode =
   | 'reported_wrong'
   | 'reported_ended'
   | 'period_corrected'
-  | 'feedback_given';
+  | 'feedback_given'
+  | 'erasure_requested'
+  | 'secret_stored';
 
 export type AuditAction =
   | 'entity.created'
@@ -134,7 +141,9 @@ export type AuditAction =
   | 'fact.source_attached'
   | 'fact.invalidated'
   | 'fact.confidence_adjusted'
-  | 'feedback.recorded';
+  | 'feedback.recorded'
+  | 'source.purged'
+  | 'fact.purged';
 
 export type AuditEntry = {
   readonly id: number;
@@ -228,6 +237,21 @@ export interface MemoryStore {
     readonly targetId: string;
   }): Promise<Result<readonly AuditEntry[]>>;
 
+  /** Phase 2, for purge. Every fact, live or not, linked to any of the sources, oldest first. */
+  listFactsOfSources(query: {
+    readonly namespace: Namespace;
+    readonly sourceIds: readonly SourceId[];
+  }): Promise<Result<readonly FactWithSources[]>>;
+
+  /** Phase 2, for purge. The sources whose content has this hash, oldest first. */
+  findSourcesByContentHash(query: {
+    readonly namespace: Namespace;
+    readonly contentHash: string;
+  }): Promise<Result<readonly Source[]>>;
+
+  /** Phase 2. The feedback on one fact, in the order it was given. */
+  listFeedback(query: { readonly namespace: Namespace; readonly factId: FactId }): Promise<Result<readonly Feedback[]>>;
+
   close(): Promise<void>;
 }
 
@@ -269,7 +293,9 @@ export type Change =
   /** Phase 2. The new confidence, from the change set's `occurredAt`. The fact row is not changed. */
   | { readonly kind: 'adjust_confidence'; readonly factId: FactId; readonly confidence: number }
   /** Phase 2. Changes no fact. The fact may be invalidated. */
-  | { readonly kind: 'record_feedback'; readonly feedback: Feedback };
+  | { readonly kind: 'record_feedback'; readonly feedback: Feedback }
+  /** Phase 2. Replaces a fact's text, or a source's content and locator (ADR 0012). */
+  | { readonly kind: 'purge_content'; readonly targetKind: 'source' | 'fact'; readonly targetId: string };
 
 export type CommitReceipt = {
   readonly operationId: string;
@@ -537,7 +563,7 @@ export declare function purgeContent(
 - **`reviseValidTime`** exists for the case one fact at a time cannot express: moving the date of a succession means changing the end of one fact and the start of the next together. Each fact is invalidated and superseded by a copy with the new period, and the single-value rule is checked once, on the result. Each copy keeps the original's sources, gains the given one, and copies the original's vector, so the embedder is not called. `revisedFactIds` lists the copies in the order of the input. Errors: as `endFact`, and `invalid_input` for an empty list, a fact listed twice, or a period that does not end after it starts.
 - **`adjustConfidence` does not copy the fact.** It commits one `adjust_confidence` change under the operation `confidence_adjustment`, which appends a row to the `fact_confidence` table (fact, confidence, time), and reads return the latest confidence recorded at or before the known-at date; `getFact` and `listFacts` with `live` or `all` return the latest. `previousConfidence` is the confidence a read returned just before the call. A copy per adjustment would change the fact's identifier and its recorded date every time. Confidence changes on feedback or on a failed verification, never on a timer. Errors: `invalid_input`, `not_found`, `already_invalidated`, `storage_failed`.
 - **`recordFeedback` decides nothing.** Product 2 reads feedback and then calls `invalidateFact`, `endFact` or `adjustConfidence` under the domain's correction policy. Errors: `invalid_input`, `not_found`, `storage_failed`.
-- **`purgeContent`** is designed in [ADR 0012](adr/0012-purge-is-the-one-exception.md), "The phase 2 design", proven by the [purge spike](../../spikes/purge/README.md), and built in FL-061. It covers the target source and every source with the same content hash; every fact whose sources are all among them, and every copy of one, a copy being a fact linked by supersession with the same subject, predicate and object; and the content of every source that explained a change to those facts. Facts that came only from an explaining source are left, as orphaned facts. Purged text becomes `[purged]`, a source's locator and hash become `null`, a live purged fact is also invalidated, and its keyword and vector entries are removed. Planned names: the change kind `purge_content`, `{ kind: 'purge_content', targetKind: 'source' | 'fact', targetId }`; the operation `purge`; the actions `source.purged` and `fact.purged`; the reason codes `erasure_requested` and `secret_stored`; and `purgedAt: Timestamp | null` on `Fact` and `Source`. Errors: `not_found`, `storage_failed`.
+- **`purgeContent`** is designed in [ADR 0012](adr/0012-purge-is-the-one-exception.md), "The phase 2 design", proven by the [purge spike](../../spikes/purge/README.md), and built in FL-061; the names below are the ones it uses. It covers the target source and every source with the same content hash; every fact whose sources are all among them, and every copy of one, a copy being a fact linked by supersession with the same subject, predicate and object; and the content of every source that explained a change to those facts. Facts that came only from an explaining source are left, as orphaned facts. Purged text becomes `[purged]`, a source's locator and hash become `null`, a live purged fact is also invalidated, and its keyword and vector entries are removed. Names: the change kind `purge_content`, `{ kind: 'purge_content', targetKind: 'source' | 'fact', targetId }`; the operation `purge`; the actions `source.purged` and `fact.purged`; the reason codes `erasure_requested` and `secret_stored`; and `purgedAt: Timestamp | null` on `Fact` and `Source`. Purging what is already purged changes nothing and writes no audit entry. A purged fact keeps its row, read by `getFact` and `listFacts` with the marker; neither lane returns it, and `recall`'s graph lane leaves it out. Freed pages are cleared afterwards by `clearFreedPages` of `@factloom/storage`. Errors: `not_found`, `storage_failed`.
 
 Each phase 2 operation adds what it needs: a `Change` kind, an `Operation` name, `AuditAction` values and reason codes. `reviseValidTime` adds only the reason code `period_corrected`: it is made of `record_fact` and `invalidate_fact` changes, and its operation is the existing `revision`. Adding a kind does not change the existing ones.
 

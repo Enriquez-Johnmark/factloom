@@ -105,6 +105,7 @@ function newFact(
     validTo: to === null ? null : validDay(to),
     createdAt,
     invalidatedAt: null,
+    purgedAt: null,
     supersededByFactId: null,
   };
 }
@@ -170,6 +171,7 @@ export function toChangeSet(step: Step, index: number, existing: readonly Fact[]
         version: null,
         content: `step ${index}`,
         contentHash: null,
+        purgedAt: null,
         observedAt: occurredAt,
         createdAt: occurredAt,
       },
@@ -220,6 +222,7 @@ export function toChangeSet(step: Step, index: number, existing: readonly Fact[]
           validTo: validDay(step.to),
           createdAt: occurredAt,
           invalidatedAt: null,
+          purgedAt: null,
           supersededByFactId: null,
         };
         changes.push(record(copy, sourceId, { copyFromFactId: target.id }), {

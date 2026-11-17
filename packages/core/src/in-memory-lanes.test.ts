@@ -29,6 +29,7 @@ function fact(id: string, statement: string, fields: Partial<Fact> = {}): Fact {
     validTo: null,
     createdAt: day('2026-01-10'),
     invalidatedAt: null,
+    purgedAt: null,
     supersededByFactId: null,
     ...fields,
   };
@@ -87,6 +88,7 @@ async function createStore(changes: readonly Change[]): Promise<MemoryStore> {
           version: null,
           content: null,
           contentHash: null,
+          purgedAt: null,
           observedAt: day('2026-01-10'),
           createdAt: day('2026-01-10'),
         },

@@ -61,6 +61,8 @@ type RefFact = {
   readonly createdAt: Timestamp;
   readonly invalidatedAt: Timestamp | null;
   readonly supersededByFactId: RefFactId | null;
+  /** Phase 2. When the text was purged and replaced by the marker '[purged]' (ADR 0012), or null. */
+  readonly purgedAt: Timestamp | null;
 };
 
 type RefSource = {
@@ -73,6 +75,8 @@ type RefSource = {
   readonly contentHash: string | null;
   readonly observedAt: Timestamp;
   readonly createdAt: Timestamp;
+  /** Phase 2. When the content and locator were purged (ADR 0012), or null. */
+  readonly purgedAt: Timestamp | null;
 };
 
 type RefTrigger = 'agent' | 'person' | 'feedback' | 'maintenance';
@@ -83,14 +87,17 @@ type RefOperation =
   | 'correction'
   | 'retraction'
   | 'confidence_adjustment'
-  | 'feedback';
+  | 'feedback'
+  | 'purge';
 type RefReasonCode =
   | 'stated'
   | 'restated'
   | 'reported_wrong'
   | 'reported_ended'
   | 'period_corrected'
-  | 'feedback_given';
+  | 'feedback_given'
+  | 'erasure_requested'
+  | 'secret_stored';
 type RefAuditAction =
   | 'entity.created'
   | 'source.recorded'
@@ -98,7 +105,9 @@ type RefAuditAction =
   | 'fact.source_attached'
   | 'fact.invalidated'
   | 'fact.confidence_adjusted'
-  | 'feedback.recorded';
+  | 'feedback.recorded'
+  | 'source.purged'
+  | 'fact.purged';
 
 type RefAuditEntry = {
   readonly id: number;
@@ -141,7 +150,8 @@ type RefChange =
       readonly supersededByFactId: RefFactId | null;
     }
   | { readonly kind: 'adjust_confidence'; readonly factId: RefFactId; readonly confidence: number }
-  | { readonly kind: 'record_feedback'; readonly feedback: RefFeedback };
+  | { readonly kind: 'record_feedback'; readonly feedback: RefFeedback }
+  | { readonly kind: 'purge_content'; readonly targetKind: 'source' | 'fact'; readonly targetId: string };
 
 type RefFeedback = {
   readonly id: string;
@@ -241,6 +251,18 @@ interface RefMemoryStore {
     readonly targetKind: RefAuditEntry['targetKind'];
     readonly targetId: string;
   }): Promise<Result<readonly RefAuditEntry[]>>;
+  listFactsOfSources(query: {
+    readonly namespace: RefNamespace;
+    readonly sourceIds: readonly RefSourceId[];
+  }): Promise<Result<readonly RefFactWithSources[]>>;
+  findSourcesByContentHash(query: {
+    readonly namespace: RefNamespace;
+    readonly contentHash: string;
+  }): Promise<Result<readonly RefSource[]>>;
+  listFeedback(query: {
+    readonly namespace: RefNamespace;
+    readonly factId: RefFactId;
+  }): Promise<Result<readonly RefFeedback[]>>;
   close(): Promise<void>;
 }
 

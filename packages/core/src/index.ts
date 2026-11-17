@@ -47,6 +47,7 @@ export {
   NamespaceSchema,
   SourceIdSchema,
   SourceSchema,
+  PURGED_MARKER,
   TimeFilterSchema,
 } from './fact.ts';
 export type { LlmClient, LlmTask } from './llm-client.ts';

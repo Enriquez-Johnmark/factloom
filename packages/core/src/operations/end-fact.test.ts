@@ -386,9 +386,16 @@ describe('buildEndFactChangeSet', () => {
     id: 'source-2',
     namespace: NAMESPACE,
     contentHash: null,
+    purgedAt: null,
     createdAt: now,
   };
-  const row = { namespace: NAMESPACE, createdAt: now, invalidatedAt: null, supersededByFactId: null };
+  const row = {
+    namespace: NAMESPACE,
+    createdAt: now,
+    invalidatedAt: null,
+    supersededByFactId: null,
+    purgedAt: null,
+  };
   const endedCopy = {
     ...draft('uses_database_version', 'PostgreSQL 14', TRUE_SINCE).fact,
     ...row,

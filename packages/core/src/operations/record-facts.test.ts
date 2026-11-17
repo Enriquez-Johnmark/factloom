@@ -292,13 +292,21 @@ describe('buildRecordFactsChangeSet', () => {
   it('orders the changes: the source, the new entities, the facts, the restated facts', () => {
     const now = toTimestamp(new Date('2026-01-10T00:00:00.000Z'));
     const entity = { ...shopApi, namespace: NAMESPACE, createdAt: now };
-    const source = { ...note(null), id: 'source-1', namespace: NAMESPACE, contentHash: null, createdAt: now };
+    const source = {
+      ...note(null),
+      id: 'source-1',
+      namespace: NAMESPACE,
+      contentHash: null,
+      purgedAt: null,
+      createdAt: now,
+    };
     const fact = {
       ...draft('uses_database_version', '16').fact,
       id: 'fact-1',
       namespace: NAMESPACE,
       createdAt: now,
       invalidatedAt: null,
+      purgedAt: null,
       supersededByFactId: null,
     };
 

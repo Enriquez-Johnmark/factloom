@@ -30,6 +30,7 @@ const SOURCE = {
   version: 'abc123',
   content: 'A long text that the tool does not return.',
   contentHash: null,
+  purgedAt: null,
   observedAt: at('2026-01-09'),
   createdAt: at('2026-01-10'),
 };
@@ -48,6 +49,7 @@ function factWith(object: FactWithSources['fact']['object'], objectEntity: FactW
       validTo: null,
       createdAt: at('2026-01-10'),
       invalidatedAt: at('2026-02-01'),
+      purgedAt: null,
       supersededByFactId: 'f-2',
     },
     subject: SHOP,

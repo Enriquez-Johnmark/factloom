@@ -34,6 +34,7 @@ function source(
     version: null,
     content,
     contentHash: null,
+    purgedAt: null,
     observedAt: day('2026-01-10'),
     createdAt: day('2026-01-10'),
   };
@@ -52,6 +53,7 @@ function fact(id: string, fields: Partial<Fact> = {}): Fact {
     validTo: null,
     createdAt: day('2026-01-10'),
     invalidatedAt: null,
+    purgedAt: null,
     supersededByFactId: null,
     ...fields,
   };

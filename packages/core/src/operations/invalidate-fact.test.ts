@@ -406,6 +406,7 @@ describe('buildInvalidateFactChangeSet', () => {
     id: 'source-1',
     namespace: NAMESPACE,
     contentHash: null,
+    purgedAt: null,
     createdAt: now,
   };
   const shared = {
@@ -437,6 +438,7 @@ describe('buildInvalidateFactChangeSet', () => {
       namespace: NAMESPACE,
       createdAt: now,
       invalidatedAt: null,
+      purgedAt: null,
       supersededByFactId: null,
     };
 

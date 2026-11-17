@@ -78,6 +78,7 @@ function toCandidate(judgeCase: JudgeCase, index: number): FactWithSources {
       validTo: toNullableTimestamp(candidate.valid_to),
       createdAt: recordedAt,
       invalidatedAt: null,
+      purgedAt: null,
       supersededByFactId: null,
     },
     subject: entity(judgeCase.subject.name, judgeCase.subject.type),

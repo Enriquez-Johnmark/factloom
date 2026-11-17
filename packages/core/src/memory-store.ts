@@ -10,6 +10,7 @@ import type {
   SourceId,
   TimeFilter,
 } from './fact.ts';
+import type { Feedback } from './feedback.ts';
 import type { Result } from './result.ts';
 
 /**
@@ -76,6 +77,24 @@ export interface MemoryStore {
     readonly targetKind: AuditEntry['targetKind'];
     readonly targetId: string;
   }): Promise<Result<readonly AuditEntry[]>>;
+
+  /** Phase 2, for purge. Every fact, live or not, linked to any of the sources, oldest first. */
+  listFactsOfSources(query: {
+    readonly namespace: Namespace;
+    readonly sourceIds: readonly SourceId[];
+  }): Promise<Result<readonly FactWithSources[]>>;
+
+  /** Phase 2, for purge. The sources whose content has this hash, oldest first. */
+  findSourcesByContentHash(query: {
+    readonly namespace: Namespace;
+    readonly contentHash: string;
+  }): Promise<Result<readonly Source[]>>;
+
+  /** Phase 2. The feedback on one fact, in the order it was given. */
+  listFeedback(query: {
+    readonly namespace: Namespace;
+    readonly factId: FactId;
+  }): Promise<Result<readonly Feedback[]>>;
 
   close(): Promise<void>;
 }

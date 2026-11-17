@@ -79,6 +79,8 @@ export const FactSchema = z
     createdAt: TimestampSchema,
     invalidatedAt: TimestampSchema.nullable(),
     supersededByFactId: FactIdSchema.nullable(),
+    /** When the fact's text was purged and replaced by `PURGED_MARKER`, or null. */
+    purgedAt: TimestampSchema.nullable(),
   })
   .check((context) => {
     for (const rule of FACT_RULES) {
@@ -101,9 +103,14 @@ export const SourceSchema = z
     contentHash: z.string().nullable(),
     observedAt: TimestampSchema,
     createdAt: TimestampSchema,
+    /** When the source's content and locator were purged, or null. */
+    purgedAt: TimestampSchema.nullable(),
   })
   .readonly();
 export type Source = z.infer<typeof SourceSchema>;
+
+/** The text that replaces purged content (ADR 0012). A row's `purgedAt` says it was purged. */
+export const PURGED_MARKER = '[purged]';
 
 /** A fact as a read returns it: with the entities it names and the sources it came from. */
 export const FactWithSourcesSchema = z

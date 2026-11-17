@@ -10,13 +10,14 @@ import {
   type Failure,
   normaliseEntityName,
   ok,
+  PURGED_MARKER,
   type Result,
 } from '@factloom/core';
 import type { Database } from 'better-sqlite3';
 import { LATEST_CONFIDENCE } from './confidence-columns.ts';
 import { type EmbeddingModel, toBlob } from './embedding-model.ts';
 
-const ACTION_OF_CHANGE: { readonly [Kind in Change['kind']]: AuditAction } = {
+const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_content'>]: AuditAction } = {
   create_entity: 'entity.created',
   record_source: 'source.recorded',
   record_fact: 'fact.recorded',
@@ -25,6 +26,13 @@ const ACTION_OF_CHANGE: { readonly [Kind in Change['kind']]: AuditAction } = {
   adjust_confidence: 'fact.confidence_adjusted',
   record_feedback: 'feedback.recorded',
 };
+
+/** What happened to the target of a change. A purge's action depends on what it purged. */
+function actionOf(change: Change): AuditAction {
+  if (change.kind === 'purge_content')
+    return change.targetKind === 'source' ? 'source.purged' : 'fact.purged';
+  return ACTION_OF_CHANGE[change.kind];
+}
 
 function targetOf(change: Change): {
   readonly targetKind: AuditEntry['targetKind'];
@@ -43,6 +51,8 @@ function targetOf(change: Change): {
       return { targetKind: 'fact', targetId: change.factId };
     case 'record_feedback':
       return { targetKind: 'feedback', targetId: change.feedback.id };
+    case 'purge_content':
+      return { targetKind: change.targetKind, targetId: change.targetId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -168,6 +178,27 @@ export function createCommit(
      VALUES (@id, @namespace, @factId, @signal, @trigger, @sourceId, @recordedAt)`,
   );
   const isFeedbackIdUsed = db.prepare<[string], unknown>('SELECT 1 FROM feedback WHERE id = ?');
+  const selectPurgedAt = {
+    fact: db.prepare<[string, string], { readonly purged_at: string | null }>(
+      'SELECT purged_at FROM fact WHERE id = ? AND namespace = ?',
+    ),
+    source: db.prepare<[string, string], { readonly purged_at: string | null }>(
+      'SELECT purged_at FROM source WHERE id = ? AND namespace = ?',
+    ),
+  };
+  // The triggers of the fourth migration permit exactly these two updates, and the fact's
+  // keyword entry is removed by its trigger, with the old text.
+  const purgeFact = db.prepare(
+    `UPDATE fact SET statement = @marker,
+       object_value = CASE WHEN object_value IS NULL THEN NULL ELSE @marker END, purged_at = @purgedAt
+     WHERE id = @id AND namespace = @namespace AND purged_at IS NULL`,
+  );
+  const removeVector = db.prepare('DELETE FROM fact_embedding WHERE fact_id = ?');
+  const purgeSource = db.prepare(
+    `UPDATE source SET content = CASE WHEN content IS NULL THEN NULL ELSE @marker END,
+       content_hash = NULL, locator = NULL, purged_at = @purgedAt
+     WHERE id = @id AND namespace = @namespace AND purged_at IS NULL`,
+  );
   const insertAuditEntry = db.prepare(
     `INSERT INTO audit_log (namespace, operation_id, operation, action, target_kind, target_id,
                             trigger, reason_code, source_id, detail, occurred_at)
@@ -357,6 +388,21 @@ export function createCommit(
         insertFeedback.run(feedback);
         return { factId: feedback.factId };
       }
+      case 'purge_content': {
+        const { targetKind, targetId } = change;
+        const state = selectPurgedAt[targetKind].get(targetId, namespace);
+        if (state === undefined) refuse('not_found', `The ${targetKind} ${targetId} does not exist.`);
+        if (state.purged_at !== null)
+          refuse('invalid_input', `The ${targetKind} ${targetId} is already purged.`);
+        const values = { id: targetId, namespace, marker: PURGED_MARKER, purgedAt: changeSet.occurredAt };
+        if (targetKind === 'source') {
+          purgeSource.run(values);
+          return null;
+        }
+        purgeFact.run(values);
+        removeVector.run(targetId);
+        return null;
+      }
       default: {
         const unhandled: never = change;
         return unhandled;
@@ -407,7 +453,7 @@ export function createCommit(
         namespace: changeSet.namespace,
         operationId: changeSet.operationId,
         operation: changeSet.operation,
-        action: ACTION_OF_CHANGE[change.kind],
+        action: actionOf(change),
         ...targetOf(change),
         trigger: changeSet.trigger,
         reasonCode: changeSet.reasonCode,

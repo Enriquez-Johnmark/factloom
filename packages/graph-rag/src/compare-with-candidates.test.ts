@@ -28,6 +28,7 @@ function candidate(
       validTo: validTo === null ? null : at(validTo),
       createdAt: at('2026-01-10'),
       invalidatedAt: null,
+      purgedAt: null,
       supersededByFactId: null,
     },
     subject: {

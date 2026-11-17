@@ -14,6 +14,7 @@ export async function buildSource(
     id: deps.newId(),
     namespace: parts.namespace,
     contentHash: parts.source.content === null ? null : await hashContent(parts.source.content),
+    purgedAt: null,
     createdAt: parts.createdAt,
   };
 }

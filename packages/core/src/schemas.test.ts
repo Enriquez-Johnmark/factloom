@@ -31,6 +31,7 @@ function fact(fields: {
     createdAt: fields.createdAt,
     invalidatedAt: fields.invalidatedAt ?? null,
     supersededByFactId: fields.supersededByFactId ?? null,
+    purgedAt: null,
   };
 }
 
@@ -116,6 +117,7 @@ const source = {
   version: null,
   content: 'We run PostgreSQL 16.',
   contentHash: null,
+  purgedAt: null,
   observedAt: at('2026-04-02'),
   createdAt: at('2026-04-02'),
 };
@@ -249,11 +251,11 @@ describe('ChangeSetSchema', () => {
     expect(issues(ChangeSetSchema, changeSet({}, { embedding: [1, 0, 0, 0] })).length).toBeGreaterThan(0);
   });
 
-  it('rejects a kind of change, an operation or a reason that phase 1 does not have', () => {
+  it('rejects a kind of change, an operation or a reason that is not in the closed lists', () => {
     expect(
       issues(ChangeSetSchema, changeSet({ changes: [{ kind: 'merge_entities' }] })).length,
     ).toBeGreaterThan(0);
-    expect(issues(ChangeSetSchema, changeSet({ operation: 'purge' })).length).toBeGreaterThan(0);
+    expect(issues(ChangeSetSchema, changeSet({ operation: 'deletion' })).length).toBeGreaterThan(0);
     expect(issues(ChangeSetSchema, changeSet({ reasonCode: 'because' })).length).toBeGreaterThan(0);
     expect(issues(ChangeSetSchema, changeSet({ trigger: 'robot' })).length).toBeGreaterThan(0);
   });

@@ -5,6 +5,8 @@ import {
   EntitySchema,
   type Fact,
   FactSchema,
+  type Feedback,
+  FeedbackSchema,
   type Source,
   SourceSchema,
 } from '@factloom/core';
@@ -64,6 +66,7 @@ export type SourceRow = {
   readonly content_hash: string | null;
   readonly observed_at: string;
   readonly created_at: string;
+  readonly purged_at: string | null;
 };
 
 export function toSource(row: SourceRow): Source {
@@ -77,6 +80,7 @@ export function toSource(row: SourceRow): Source {
     contentHash: row.content_hash,
     observedAt: row.observed_at,
     createdAt: row.created_at,
+    purgedAt: row.purged_at,
   });
 }
 
@@ -94,6 +98,7 @@ export type FactRow = {
   readonly created_at: string;
   readonly invalidated_at: string | null;
   readonly superseded_by_fact_id: string | null;
+  readonly purged_at: string | null;
 };
 
 export function toFact(row: FactRow): Fact {
@@ -113,6 +118,29 @@ export function toFact(row: FactRow): Fact {
     createdAt: row.created_at,
     invalidatedAt: row.invalidated_at,
     supersededByFactId: row.superseded_by_fact_id,
+    purgedAt: row.purged_at,
+  });
+}
+
+export type FeedbackRow = {
+  readonly id: string;
+  readonly namespace: string;
+  readonly fact_id: string;
+  readonly signal: string;
+  readonly trigger: string;
+  readonly source_id: string | null;
+  readonly recorded_at: string;
+};
+
+export function toFeedback(row: FeedbackRow): Feedback {
+  return parseRow(FeedbackSchema, 'feedback', {
+    id: row.id,
+    namespace: row.namespace,
+    factId: row.fact_id,
+    signal: row.signal,
+    trigger: row.trigger,
+    sourceId: row.source_id,
+    recordedAt: row.recorded_at,
   });
 }
 

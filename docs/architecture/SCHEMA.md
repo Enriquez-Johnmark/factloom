@@ -296,13 +296,22 @@ A read with a time filter returns, as `confidence`, the latest row recorded at o
 
 One row per piece of feedback: an identifier, the namespace, the fact, the signal (`right`, `wrong` or `outdated`), the trigger, the source that holds what was said or `NULL`, and `recorded_at`. It changes no fact. Two triggers refuse every update and delete. A commit refuses feedback on a fact outside its change set's namespace with `not_found`, and accepts feedback on an invalidated fact, because a fact recalled with a past known-at date can be one. The `record_feedback` change writes the row and one audit entry, action `feedback.recorded`, target kind `feedback`, `detail` `{ factId }`, under the operation `feedback` and the reason code `feedback_given`. The comment is the content of the source, never text in the row or the log.
 
+### Purge, migration `0004_purge.sql` (FL-061)
+
+Designed in [ADR 0012](adr/0012-purge-is-the-one-exception.md), "The phase 2 design", and proven by the [purge spike](../../spikes/purge/README.md). `fact` and `source` gain `purged_at`.
+
+- **Triggers.** `fact_changes_only_by_invalidation` is replaced by `fact_changes_only_by_invalidation_or_purge`, which permits one invalidation as before, now also with `purged_at` unchanged, and one purge: `statement` to `[purged]`, `object_value` to `[purged]` if set, and nothing else. `source_never_updated` is replaced by `source_changes_only_by_purge`: `content` to `[purged]` if set, `content_hash` and `locator` to `NULL`, and nothing else. `fact_embedding_removed_only_by_purge` lets a vector be deleted only when its fact is purged.
+- **Keyword index.** `fact_fts_purge` removes the keyword entry with the old statement when `purged_at` is set. The FTS5 option `secure-delete` is on, so the term leaves the index's shadow tables too.
+- **The change.** The `purge_content` change writes the marker and `purged_at` on its target, removes a purged fact's vector, and writes one audit entry, action `fact.purged` or `source.purged`, `detail` `null`, under the operation `purge` and the reason code `erasure_requested` or `secret_stored`. A live purged fact is invalidated by an `invalidate_fact` change in the same change set.
+- **Freed pages.** They are cleared after the commit by `clearFreedPages` of `@factloom/storage`: `VACUUM`, then `wal_checkpoint(TRUNCATE)`.
+- **Completeness.** A test classifies every text and binary column of the migrated schema as content covered by purge or not content, and fails on a column that is in neither list.
+
 ## Planned additions
 
 These are designed so that the interfaces in [`INTERFACES.md`](INTERFACES.md) are stable, but they are not in the first migration. Each is an added table or column, and purge also replaces two triggers, so none forces a rewrite of what exists.
 
 | Phase | Addition | Why it can wait |
 |---|---|---|
-| 2 | Purge, designed in [ADR 0012](adr/0012-purge-is-the-one-exception.md) and proven by the [purge spike](../../spikes/purge/README.md): `fact.purged_at` and `source.purged_at`; the fact and source triggers replaced by ones that also permit one purge, where the text becomes `[purged]` and a source's locator and hash `NULL`; a trigger that removes the keyword entry with the old text; the FTS5 option `secure-delete`; and a trigger that lets a vector be deleted only when its fact is purged. Planned names: the change `purge_content`, the operation `purge`, the actions `source.purged` and `fact.purged`, the reason codes `erasure_requested` and `secret_stored`. Built in FL-061 | Purge is first needed when memory holds real user data. The part that could not be added later, an audit log with no free text in it, is in the first migration |
 | 3 | `entity_merge` table: from, into, `merged_at`, and `undone_at`, which is set once. An `entity_alias` table | Phase 1 resolves entities by exact name only and never merges. No entity and no fact is rewritten by a merge; reads resolve identifiers through the merges that are not undone |
 | 3 | `fact_verification` table: fact, outcome, method, time | Nothing verifies facts before phase 3 |
 | 3 | `fact_usage` table: fact, last recalled, count; and the record that a fact is an **archived fact** | Archiving by disuse starts counting when it is introduced. Keeping it out of phase 1 keeps recall a pure read |

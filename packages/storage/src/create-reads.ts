@@ -14,10 +14,12 @@ import {
   type AuditRow,
   type EntityRow,
   type FactRow,
+  type FeedbackRow,
   type SourceRow,
   toAuditEntry,
   toEntity,
   toFact,
+  toFeedback,
   toSource,
 } from './row-mappers.ts';
 import { TIME_PREDICATE } from './time-predicate.ts';
@@ -37,7 +39,7 @@ export type ListFactsShape = {
 function factColumns(confidence: string): string {
   return `f.id, f.namespace, f.subject_entity_id, f.predicate, f.object_entity_id, f.object_value,
   f.statement, ${confidence} AS confidence, f.valid_from, f.valid_to, f.created_at, f.invalidated_at,
-  f.superseded_by_fact_id`;
+  f.superseded_by_fact_id, f.purged_at`;
 }
 
 /** For reads with a time filter: the confidence at its known-at date. */
@@ -45,6 +47,9 @@ const FACT_COLUMNS_AT_KNOWN_AT = factColumns(CONFIDENCE_AT_KNOWN_AT);
 
 /** For reads with no known-at date: the latest confidence. */
 const FACT_COLUMNS_LATEST = factColumns(LATEST_CONFIDENCE);
+
+const SOURCE_COLUMNS =
+  'id, namespace, kind, locator, version, content, content_hash, observed_at, created_at, purged_at';
 
 /**
  * The SQL of `listFacts` for one combination of filters. It is built only from the fixed
@@ -93,6 +98,15 @@ export type SqliteReads = {
   readonly searchFactsByKeyword: (
     query: Parameters<MemoryStore['searchFactsByKeyword']>[0],
   ) => Result<readonly FactWithSources[]>;
+  readonly listFactsOfSources: (
+    query: Parameters<MemoryStore['listFactsOfSources']>[0],
+  ) => readonly FactWithSources[];
+  readonly findSourcesByContentHash: (
+    query: Parameters<MemoryStore['findSourcesByContentHash']>[0],
+  ) => ReturnType<typeof toSource>[];
+  readonly listFeedback: (
+    query: Parameters<MemoryStore['listFeedback']>[0],
+  ) => ReturnType<typeof toFeedback>[];
 };
 
 /**
@@ -116,12 +130,11 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
     `SELECT ${FACT_COLUMNS_LATEST} FROM fact f WHERE f.id = ? AND f.namespace = ?`,
   );
   const selectSource = db.prepare<[string, string], SourceRow>(
-    `SELECT id, namespace, kind, locator, version, content, content_hash, observed_at, created_at
-     FROM source WHERE id = ? AND namespace = ?`,
+    `SELECT ${SOURCE_COLUMNS} FROM source WHERE id = ? AND namespace = ?`,
   );
   const selectSourcesOfFacts = db.prepare<[string, string], SourceRow & { readonly fact_id: string }>(
     `SELECT fs.fact_id, s.id, s.namespace, s.kind, s.locator, s.version, s.content, s.content_hash,
-            s.observed_at, s.created_at
+            s.observed_at, s.created_at, s.purged_at
      FROM fact_source fs JOIN source s ON s.id = fs.source_id
      WHERE s.namespace = ? AND fs.fact_id IN (SELECT value FROM json_each(?))
      ORDER BY s.created_at, s.rowid`,
@@ -148,6 +161,19 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
      FROM fact f JOIN fact_embedding e ON e.fact_id = f.id
      WHERE f.namespace = @namespace AND ${TIME_PREDICATE}
      ORDER BY vec_distance_cosine(e.embedding, @vector), f.rowid LIMIT @limit`,
+  );
+  const selectFactsOfSources = db.prepare<[string, string], FactRow>(
+    `SELECT ${FACT_COLUMNS_LATEST} FROM fact f
+     WHERE f.namespace = ? AND f.id IN (
+       SELECT fs.fact_id FROM fact_source fs WHERE fs.source_id IN (SELECT value FROM json_each(?)))
+     ORDER BY f.created_at, f.rowid`,
+  );
+  const selectSourcesByHash = db.prepare<[string, string], SourceRow>(
+    `SELECT ${SOURCE_COLUMNS} FROM source WHERE namespace = ? AND content_hash = ? ORDER BY created_at, rowid`,
+  );
+  const selectFeedback = db.prepare<[string, string], FeedbackRow>(
+    `SELECT id, namespace, fact_id, signal, trigger, source_id, recorded_at FROM feedback
+     WHERE namespace = ? AND fact_id = ? ORDER BY recorded_at, rowid`,
   );
   const listStatements = new Map<string, Statement<[Record<string, unknown>], FactRow>>();
 
@@ -262,6 +288,21 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
 
     listAuditEntries(query) {
       return selectAuditEntries.all(query.namespace, query.targetKind, query.targetId).map(toAuditEntry);
+    },
+
+    listFactsOfSources(query) {
+      return withSources(
+        selectFactsOfSources.all(query.namespace, JSON.stringify(query.sourceIds)),
+        query.namespace,
+      );
+    },
+
+    findSourcesByContentHash(query) {
+      return selectSourcesByHash.all(query.namespace, query.contentHash).map(toSource);
+    },
+
+    listFeedback(query) {
+      return selectFeedback.all(query.namespace, query.factId).map(toFeedback);
     },
   };
 }

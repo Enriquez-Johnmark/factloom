@@ -69,6 +69,7 @@ describe('matchesTimeFilter', () => {
     validTo: day('2026-03-15'),
     createdAt: day('2026-01-10'),
     invalidatedAt: day('2026-06-01'),
+    purgedAt: null,
     supersededByFactId: null,
   };
 

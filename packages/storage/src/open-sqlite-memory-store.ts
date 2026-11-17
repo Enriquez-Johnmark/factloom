@@ -66,6 +66,9 @@ export function openSqliteMemoryStore(options: SqliteMemoryStoreOptions): Result
       searchFactsByKeyword: (query) => read(() => reads.searchFactsByKeyword(query)),
       getSource: (query) => read(() => ok(reads.getSource(query))),
       listAuditEntries: (query) => read(() => ok(reads.listAuditEntries(query))),
+      listFactsOfSources: (query) => read(() => ok(reads.listFactsOfSources(query))),
+      findSourcesByContentHash: (query) => read(() => ok(reads.findSourcesByContentHash(query))),
+      listFeedback: (query) => read(() => ok(reads.listFeedback(query))),
       close: () => {
         db.close();
         return Promise.resolve();

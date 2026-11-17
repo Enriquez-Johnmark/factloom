@@ -1,7 +1,15 @@
 import type { AuditAction, AuditEntry } from './audit.ts';
 import { type Change, type ChangeSet, ChangeSetSchema } from './change-set.ts';
 import { normaliseEntityName } from './entity-name.ts';
-import type { Entity, Fact, FactWithSources, Namespace, Source, TimeFilter } from './fact.ts';
+import {
+  type Entity,
+  type Fact,
+  type FactWithSources,
+  type Namespace,
+  PURGED_MARKER,
+  type Source,
+  type TimeFilter,
+} from './fact.ts';
 import type { Feedback } from './feedback.ts';
 import type { MemoryStore } from './memory-store.ts';
 import { err, type Failure, ok } from './result.ts';
@@ -64,7 +72,7 @@ function entityKey(namespace: Namespace, type: string, name: string): string {
   return JSON.stringify([namespace, type, normaliseEntityName(name)]);
 }
 
-const ACTION_OF_CHANGE: { readonly [Kind in Change['kind']]: AuditAction } = {
+const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_content'>]: AuditAction } = {
   create_entity: 'entity.created',
   record_source: 'source.recorded',
   record_fact: 'fact.recorded',
@@ -73,6 +81,13 @@ const ACTION_OF_CHANGE: { readonly [Kind in Change['kind']]: AuditAction } = {
   adjust_confidence: 'fact.confidence_adjusted',
   record_feedback: 'feedback.recorded',
 };
+
+/** What happened to the target of a change. A purge's action depends on what it purged. */
+function actionOf(change: Change): AuditAction {
+  if (change.kind === 'purge_content')
+    return change.targetKind === 'source' ? 'source.purged' : 'fact.purged';
+  return ACTION_OF_CHANGE[change.kind];
+}
 
 function targetOf(change: Change): {
   readonly targetKind: AuditEntry['targetKind'];
@@ -91,6 +106,8 @@ function targetOf(change: Change): {
       return { targetKind: 'fact', targetId: change.factId };
     case 'record_feedback':
       return { targetKind: 'feedback', targetId: change.feedback.id };
+    case 'purge_content':
+      return { targetKind: change.targetKind, targetId: change.targetId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -181,6 +198,8 @@ function detailOf(change: Change, changes: readonly Change[], before: State): Au
       };
     case 'record_feedback':
       return { factId: change.feedback.factId };
+    case 'purge_content':
+      return null;
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -197,6 +216,43 @@ function notLive(fact: Fact): Failure {
       : `The fact ${fact.id} was invalidated and superseded by ${superseded}. Use that fact.`,
     { relatedFactIds: superseded === null ? [] : [superseded] },
   );
+}
+
+/**
+ * Replaces a fact's text with the marker and removes its vector (ADR 0012). Its keyword entry
+ * goes with the text: the keyword lane skips purged facts. Nothing else of the row changes.
+ */
+function purgeFact(draft: State, changeSet: ChangeSet, factId: string): Failure | null {
+  const fact = draft.facts.get(factId);
+  if (fact === undefined || fact.namespace !== changeSet.namespace) {
+    return err('not_found', `The fact ${factId} does not exist.`);
+  }
+  if (fact.purgedAt !== null) return err('invalid_input', `The fact ${factId} is already purged.`);
+  draft.facts.set(factId, {
+    ...fact,
+    statement: PURGED_MARKER,
+    object: fact.object.kind === 'value' ? { kind: 'value', value: PURGED_MARKER } : fact.object,
+    purgedAt: changeSet.occurredAt,
+  });
+  draft.vectors.delete(factId);
+  return null;
+}
+
+/** Replaces a source's content with the marker and clears its locator and hash (ADR 0012). */
+function purgeSource(draft: State, changeSet: ChangeSet, sourceId: string): Failure | null {
+  const source = draft.sources.get(sourceId);
+  if (source === undefined || source.namespace !== changeSet.namespace) {
+    return err('not_found', `The source ${sourceId} does not exist.`);
+  }
+  if (source.purgedAt !== null) return err('invalid_input', `The source ${sourceId} is already purged.`);
+  draft.sources.set(sourceId, {
+    ...source,
+    content: source.content === null ? null : PURGED_MARKER,
+    contentHash: null,
+    locator: null,
+    purgedAt: changeSet.occurredAt,
+  });
+  return null;
 }
 
 /** Applies one change to the draft. Returns a failure and leaves the caller to discard the draft. */
@@ -340,6 +396,10 @@ function applyChange(draft: State, changeSet: ChangeSet, change: Change): Failur
       draft.feedback.set(feedback.id, feedback);
       return null;
     }
+    case 'purge_content':
+      return change.targetKind === 'fact'
+        ? purgeFact(draft, changeSet, change.targetId)
+        : purgeSource(draft, changeSet, change.targetId);
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -475,7 +535,7 @@ export function createInMemoryStore(): MemoryStore {
           namespace: changeSet.namespace,
           operationId: changeSet.operationId,
           operation: changeSet.operation,
-          action: ACTION_OF_CHANGE[change.kind],
+          action: actionOf(change),
           ...targetOf(change),
           trigger: changeSet.trigger,
           reasonCode: changeSet.reasonCode,
@@ -566,6 +626,8 @@ export function createInMemoryStore(): MemoryStore {
       if (!isValidLimit(query.limit)) return Promise.resolve(invalidLimit());
       const wanted = new Set(wordsOf(query.text));
       const ranked = factsInTime(query.namespace, query.time).flatMap((fact) => {
+        // A purged fact has no keyword entry.
+        if (fact.purgedAt !== null) return [];
         const statementWords = new Set(wordsOf(fact.statement));
         const matching = [...wanted].filter((word) => statementWords.has(word)).length;
         // More matching words rank first, so the rank is the negative count.
@@ -588,6 +650,31 @@ export function createInMemoryStore(): MemoryStore {
           entry.targetId === query.targetId,
       );
       return Promise.resolve(ok(structuredClone(entries)));
+    },
+
+    listFactsOfSources(query) {
+      const wanted = new Set(query.sourceIds);
+      const results = [...state.facts.values()].flatMap((fact) => {
+        if (fact.namespace !== query.namespace) return [];
+        if (!(state.factSources.get(fact.id) ?? []).some((sourceId) => wanted.has(sourceId))) return [];
+        const result = withSources(fact, null);
+        return result === null ? [] : [result];
+      });
+      return Promise.resolve(ok(results));
+    },
+
+    findSourcesByContentHash(query) {
+      const found = [...state.sources.values()].filter(
+        (source) => source.namespace === query.namespace && source.contentHash === query.contentHash,
+      );
+      return Promise.resolve(ok(structuredClone(found)));
+    },
+
+    listFeedback(query) {
+      const found = [...state.feedback.values()].filter(
+        (feedback) => feedback.namespace === query.namespace && feedback.factId === query.factId,
+      );
+      return Promise.resolve(ok(structuredClone(found)));
     },
 
     close() {

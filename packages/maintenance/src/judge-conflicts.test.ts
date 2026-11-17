@@ -57,6 +57,7 @@ function storedFact(
       validTo,
       createdAt: RECORDED_ON,
       invalidatedAt: null,
+      purgedAt: null,
       supersededByFactId: null,
     },
     subject: { ...SHOP_API, createdAt: RECORDED_ON },
