@@ -18,6 +18,7 @@ export const OperationSchema = z.enum([
   'purge',
   'merge',
   'verification',
+  'archive',
 ]);
 export type Operation = z.infer<typeof OperationSchema>;
 
@@ -34,6 +35,8 @@ export const ReasonCodeSchema = z.enum([
   'same_entity',
   'verification_due',
   'anchor_moved',
+  'unused',
+  'requested',
 ]);
 export type ReasonCode = z.infer<typeof ReasonCodeSchema>;
 
@@ -51,6 +54,8 @@ export const AuditActionSchema = z.enum([
   'entity.merged',
   'entity.merge_undone',
   'fact.verified',
+  'fact.archived',
+  'fact.unarchived',
 ]);
 export type AuditAction = z.infer<typeof AuditActionSchema>;
 

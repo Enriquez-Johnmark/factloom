@@ -40,6 +40,7 @@ function candidate(
     },
     objectEntity: null,
     sources: [],
+    archivedAt: null,
   };
 }
 

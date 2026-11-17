@@ -63,6 +63,7 @@ function storedFact(
     subject: { ...SHOP_API, createdAt: RECORDED_ON },
     objectEntity: isEntity ? storedEntity(object.entity) : null,
     sources: [],
+    archivedAt: null,
   };
 }
 

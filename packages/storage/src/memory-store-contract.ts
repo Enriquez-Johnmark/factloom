@@ -1199,6 +1199,94 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
     expect(listed.ok ? null : listed.error.code).toBe('invalid_input');
   });
 
+  // --- Archiving (FL-065) ---
+  const archiving = { operation: 'archive', trigger: 'person', reasonCode: 'requested' } as const;
+  const archive = (factId: string, archiveId = 'ar-1'): Change => ({
+    kind: 'archive_fact',
+    archiveId,
+    factId,
+  });
+  const unarchive = (factId: string): Change => ({ kind: 'unarchive_fact', factId });
+  const archivedAtOf = async (factId: string) => {
+    const found = await store.getFact({ namespace: NAMESPACE, factId });
+    if (!found.ok || found.value === null) throw new Error(`No fact ${factId}.`);
+    return found.value.archivedAt;
+  };
+
+  test('H1: archiving then unarchiving leaves the fact row as it was, writes two audit entries, and every read says whether it is archived', async () => {
+    const rowBefore = await store.getFact({ namespace: NAMESPACE, factId: 'pg16' });
+    const entriesBefore = await auditEntries(store, 'fact', 'pg16');
+
+    const archived = await store.commit(changeSet('op-h1a', '2026-06-01', [archive('pg16')], archiving));
+    const whileArchived = await archivedAtOf('pg16');
+    const listed = await store.listFacts({
+      namespace: NAMESPACE,
+      subjectEntityId: null,
+      predicate: null,
+      touchingEntityIds: null,
+      supersededByFactId: null,
+      time: 'live',
+      limit: 10,
+    });
+    const unarchived = await store.commit(changeSet('op-h1b', '2026-06-02', [unarchive('pg16')], archiving));
+
+    expect([archived.ok, unarchived.ok]).toEqual([true, true]);
+    expect(whileArchived).toBe(at('2026-06-01'));
+    expect(listed.ok && listed.value.map((found) => [found.fact.id, found.archivedAt])).toContainEqual([
+      'pg16',
+      at('2026-06-01'),
+    ]);
+    expect(await archivedAtOf('pg16')).toBeNull();
+    const rowAfter = await store.getFact({ namespace: NAMESPACE, factId: 'pg16' });
+    expect(rowAfter.ok && rowAfter.value?.fact).toEqual(rowBefore.ok && rowBefore.value?.fact);
+    expect(
+      (await auditEntries(store, 'fact', 'pg16'))
+        .slice(entriesBefore.length)
+        .map((entry) => [entry.operation, entry.action, entry.detail]),
+    ).toEqual([
+      ['archive', 'fact.archived', { archiveId: 'ar-1' }],
+      ['archive', 'fact.unarchived', { archiveId: 'ar-1' }],
+    ]);
+  });
+  test('H2: an archived fact still counts for the single-value rule', async () => {
+    const archived = await store.commit(changeSet('op-h2a', '2026-06-01', [archive('pg16')], archiving));
+    expect(archived.ok).toBe(true);
+
+    const second = await store.commit(
+      changeSet('op-h2b', '2026-06-02', [
+        recordFact(
+          fact('pg17', DATABASE, 'PostgreSQL 17', {
+            validFrom: at('2026-06-01'),
+            createdAt: at('2026-06-02'),
+          }),
+          {
+            sourceIds: ['s-1'],
+          },
+        ),
+      ]),
+    );
+
+    expect(second.ok ? null : second.error.code).toBe('conflict');
+  });
+  test('H3: archiving a fact that is already archived returns already_exists', async () => {
+    const first = await store.commit(changeSet('op-h3a', '2026-06-01', [archive('pg16')], archiving));
+    expect(first.ok).toBe(true);
+
+    const again = await store.commit(changeSet('op-h3b', '2026-06-02', [archive('pg16', 'ar-2')], archiving));
+
+    expect(again.ok ? null : again.error.code).toBe('already_exists');
+    expect(await archivedAtOf('pg16')).toBe(at('2026-06-01'));
+  });
+  refuses('H4: unarchiving a fact that is not archived returns already_exists', 'already_exists', () =>
+    changeSet('op-h4', '2026-06-01', [unarchive('pg16')], archiving),
+  );
+  refuses(
+    'H5: archiving an invalidated fact returns already_invalidated and names the superseding fact',
+    'already_invalidated',
+    () => changeSet('op-h5', '2026-06-01', [archive('pg14')], archiving),
+    (related) => expect(related).toEqual(['pg14-ended']),
+  );
+
   // --- Stale and orphaned facts (FL-049) ---
   // At NOW the current facts are pg16, recorded 2026-04-02, and node22, recorded 2026-05-01.
   // pg14-ended is live but ended; pg14 and node20 are invalidated.
@@ -2383,6 +2471,25 @@ function registerSingleValueRuleAndNamespaces(
 
     expect(mine.ok && mine.value.map((found) => found.id)).toEqual(['e-repo']);
     expect(theirs.ok && theirs.value.map((found) => found.id)).toEqual(['other-e-repo']);
+  });
+  cases.test('N12: archiving or unarchiving a fact of the other namespace returns not_found', async () => {
+    const archived = await commit([{ kind: 'archive_fact', archiveId: 'ar-other', factId: 'other-pg16' }], {
+      operation: 'archive',
+      trigger: 'person',
+      reasonCode: 'requested',
+    });
+    const unarchived = await commit([{ kind: 'unarchive_fact', factId: 'other-pg16' }], {
+      operation: 'archive',
+      trigger: 'person',
+      reasonCode: 'requested',
+    });
+
+    expect([archived, unarchived].map((result) => (result.ok ? null : result.error.code))).toEqual([
+      'not_found',
+      'not_found',
+    ]);
+    const found = await cases.store().getFact({ namespace: OTHER, factId: 'other-pg16' });
+    expect(found.ok && found.value?.archivedAt).toBeNull();
   });
   cases.test(
     'N8: usage recorded for a fact of the other namespace changes nothing, and usage is not read across namespaces',

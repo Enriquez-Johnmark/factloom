@@ -5,6 +5,7 @@ import {
   normaliseEntityName,
   ok,
   type Result,
+  TimestampSchema,
 } from '@factloom/core';
 import type { Database, Statement } from 'better-sqlite3';
 import { buildKeywordQuery } from './build-keyword-query.ts';
@@ -243,6 +244,10 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
   );
   const selectStaleFacts = db.prepare<[Record<string, unknown>], FactRow>(STALE_FACTS_SQL);
   const selectOrphanedFacts = db.prepare<[Record<string, unknown>], FactRow>(ORPHANED_FACTS_SQL);
+  const selectOpenArchives = db.prepare<[string], { readonly fact_id: string; readonly archived_at: string }>(
+    `SELECT fact_id, archived_at FROM fact_archive
+     WHERE unarchived_at IS NULL AND fact_id IN (SELECT value FROM json_each(?))`,
+  );
   const listStatements = new Map<string, Statement<[Record<string, unknown>], FactRow>>();
 
   // Three queries for any number of facts: the facts are given, then their entities, then their sources.
@@ -272,12 +277,25 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
       sources.push(toSource(row));
       sourcesOf.set(row.fact_id, sources);
     }
+    const archivedAt = new Map(
+      selectOpenArchives
+        .all(JSON.stringify(rows.map((fact) => fact.id)))
+        .map((row) => [row.fact_id, TimestampSchema.parse(row.archived_at)]),
+    );
     return rows.flatMap((row) => {
       const subject = entities.get(resolve(row.subject_entity_id));
       if (subject === undefined) return [];
       const objectEntity =
         row.object_entity_id === null ? null : (entities.get(resolve(row.object_entity_id)) ?? null);
-      return [{ fact: toFact(row), subject, objectEntity, sources: sourcesOf.get(row.id) ?? [] }];
+      return [
+        {
+          fact: toFact(row),
+          subject,
+          objectEntity,
+          sources: sourcesOf.get(row.id) ?? [],
+          archivedAt: archivedAt.get(row.id) ?? null,
+        },
+      ];
     });
   };
 

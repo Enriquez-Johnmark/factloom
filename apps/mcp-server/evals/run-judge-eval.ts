@@ -84,6 +84,7 @@ function toCandidate(judgeCase: JudgeCase, index: number): FactWithSources {
     subject: entity(judgeCase.subject.name, judgeCase.subject.type),
     objectEntity: 'value' in candidate.object ? null : entity(candidate.object.name, candidate.object.type),
     sources: [],
+    archivedAt: null,
   };
 }
 

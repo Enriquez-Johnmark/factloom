@@ -55,6 +55,7 @@ function factWith(object: FactWithSources['fact']['object'], objectEntity: FactW
     subject: SHOP,
     objectEntity,
     sources: [SOURCE],
+    archivedAt: null,
   };
   return found;
 }

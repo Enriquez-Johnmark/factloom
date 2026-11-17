@@ -19,6 +19,14 @@ import { err, type Failure, ok } from './result.ts';
 import type { Timestamp } from './timestamp.ts';
 import { matchesTimeFilter, periodsOverlap } from './valid-period.ts';
 
+/** One archiving of a fact, open while `unarchivedAt` is null. */
+type ArchiveRow = {
+  readonly id: string;
+  readonly factId: string;
+  readonly archivedAt: Timestamp;
+  readonly unarchivedAt: Timestamp | null;
+};
+
 /** One confidence adjustment of a fact. */
 type ConfidenceRow = { readonly factId: string; readonly confidence: number; readonly adjustedAt: Timestamp };
 
@@ -40,6 +48,8 @@ type State = {
   readonly merges: EntityMerge[];
   /** Verifications in the order they were recorded. */
   readonly verifications: FactVerification[];
+  /** Archivings in the order they were made, ended ones included. */
+  readonly archives: ArchiveRow[];
   /** The size of the vectors held, once the first one is recorded. */
   dimensions: number | null;
 };
@@ -57,6 +67,7 @@ function createEmptyState(): State {
     feedback: new Map(),
     merges: [],
     verifications: [],
+    archives: [],
     dimensions: null,
   };
 }
@@ -75,6 +86,7 @@ function copyState(state: State): State {
     feedback: new Map(state.feedback),
     merges: [...state.merges],
     verifications: [...state.verifications],
+    archives: [...state.archives],
     dimensions: state.dimensions,
   };
 }
@@ -94,6 +106,8 @@ const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_conte
   merge_entities: 'entity.merged',
   undo_entity_merge: 'entity.merge_undone',
   record_verification: 'fact.verified',
+  archive_fact: 'fact.archived',
+  unarchive_fact: 'fact.unarchived',
 };
 
 /** What happened to the target of a change. A purge's action depends on what it purged. */
@@ -128,6 +142,9 @@ function targetOf(change: Change): {
       return { targetKind: 'entity', targetId: change.fromEntityId };
     case 'record_verification':
       return { targetKind: 'fact', targetId: change.verification.factId };
+    case 'archive_fact':
+    case 'unarchive_fact':
+      return { targetKind: 'fact', targetId: change.factId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -226,6 +243,11 @@ function detailOf(change: Change, changes: readonly Change[], before: State): Au
       return { mergeId: change.mergeId };
     case 'record_verification':
       return { verificationId: change.verification.id };
+    case 'archive_fact':
+      return { archiveId: change.archiveId };
+    case 'unarchive_fact':
+      // The archiving it ends: the one in force before the commit.
+      return { archiveId: findOpenArchive(before, change.factId)?.id ?? null };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -411,6 +433,11 @@ function purgeSource(draft: State, changeSet: ChangeSet, sourceId: string): Fail
   return null;
 }
 
+/** The archiving of a fact in force, if any. */
+function findOpenArchive(state: State, factId: string): ArchiveRow | undefined {
+  return state.archives.find((row) => row.factId === factId && row.unarchivedAt === null);
+}
+
 /** Applies one change to the draft. Returns a failure and leaves the caller to discard the draft. */
 function applyChange(draft: State, changeSet: ChangeSet, change: Change): Failure | null {
   const namespace = changeSet.namespace;
@@ -567,6 +594,32 @@ function applyChange(draft: State, changeSet: ChangeSet, change: Change): Failur
       draft.verifications.push(verification);
       return null;
     }
+    case 'archive_fact': {
+      const fact = findFact(change.factId);
+      if (fact === undefined) return err('not_found', `The fact ${change.factId} does not exist.`);
+      if (fact.invalidatedAt !== null) return notLive(fact);
+      if (draft.archives.some((row) => row.id === change.archiveId)) {
+        return err('already_exists', `The identifier ${change.archiveId} is already used by an archiving.`);
+      }
+      if (findOpenArchive(draft, fact.id) !== undefined) {
+        return err('already_exists', `The fact ${fact.id} is already archived.`);
+      }
+      draft.archives.push({
+        id: change.archiveId,
+        factId: fact.id,
+        archivedAt: changeSet.occurredAt,
+        unarchivedAt: null,
+      });
+      return null;
+    }
+    case 'unarchive_fact': {
+      const fact = findFact(change.factId);
+      if (fact === undefined) return err('not_found', `The fact ${change.factId} does not exist.`);
+      const open = findOpenArchive(draft, fact.id);
+      if (open === undefined) return err('already_exists', `The fact ${fact.id} is not archived.`);
+      draft.archives[draft.archives.indexOf(open)] = { ...open, unarchivedAt: changeSet.occurredAt };
+      return null;
+    }
     case 'purge_content':
       return change.targetKind === 'fact'
         ? purgeFact(draft, changeSet, change.targetId)
@@ -672,7 +725,8 @@ export function createInMemoryStore(): MemoryStore {
       const source = state.sources.get(sourceId);
       return source === undefined ? [] : [source];
     });
-    return structuredClone({ fact, subject, objectEntity, sources });
+    const archivedAt = findOpenArchive(state, fact.id)?.archivedAt ?? null;
+    return structuredClone({ fact, subject, objectEntity, sources, archivedAt });
   };
 
   /** The facts of a namespace that pass the time filter, in the order they were recorded. */

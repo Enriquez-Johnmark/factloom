@@ -29,6 +29,8 @@ const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_conte
   merge_entities: 'entity.merged',
   undo_entity_merge: 'entity.merge_undone',
   record_verification: 'fact.verified',
+  archive_fact: 'fact.archived',
+  unarchive_fact: 'fact.unarchived',
 };
 
 /** What happened to the target of a change. A purge's action depends on what it purged. */
@@ -63,6 +65,9 @@ function targetOf(change: Change): {
       return { targetKind: 'entity', targetId: change.fromEntityId };
     case 'record_verification':
       return { targetKind: 'fact', targetId: change.verification.factId };
+    case 'archive_fact':
+    case 'unarchive_fact':
+      return { targetKind: 'fact', targetId: change.factId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -192,6 +197,14 @@ export function createCommit(
     `INSERT INTO fact_verification (id, namespace, fact_id, outcome, method, verified_at)
      VALUES (@id, @namespace, @factId, @outcome, @method, @verifiedAt)`,
   );
+  const insertArchive = db.prepare(
+    `INSERT INTO fact_archive (id, namespace, fact_id, archived_at) VALUES (@id, @namespace, @factId, @archivedAt)`,
+  );
+  const isArchiveIdUsed = db.prepare<[string], unknown>('SELECT 1 FROM fact_archive WHERE id = ?');
+  const selectOpenArchive = db.prepare<[string], { readonly id: string }>(
+    'SELECT id FROM fact_archive WHERE fact_id = ? AND unarchived_at IS NULL',
+  );
+  const closeArchive = db.prepare('UPDATE fact_archive SET unarchived_at = @unarchivedAt WHERE id = @id');
   const isVerificationIdUsed = db.prepare<[string], unknown>('SELECT 1 FROM fact_verification WHERE id = ?');
   const selectPurgedAt = {
     fact: db.prepare<[string, string], { readonly purged_at: string | null }>(
@@ -484,6 +497,31 @@ export function createCommit(
           refuse('already_exists', `The merge ${change.mergeId} was already undone.`);
         undoMerge.run({ id: change.mergeId, namespace, undoneAt: changeSet.occurredAt });
         return { mergeId: change.mergeId };
+      }
+      case 'archive_fact': {
+        requireLiveFact(change.factId, namespace);
+        if (isArchiveIdUsed.get(change.archiveId) !== undefined) {
+          refuse('already_exists', `The identifier ${change.archiveId} is already used by an archiving.`);
+        }
+        if (selectOpenArchive.get(change.factId) !== undefined) {
+          refuse('already_exists', `The fact ${change.factId} is already archived.`);
+        }
+        insertArchive.run({
+          id: change.archiveId,
+          namespace,
+          factId: change.factId,
+          archivedAt: changeSet.occurredAt,
+        });
+        return { archiveId: change.archiveId };
+      }
+      case 'unarchive_fact': {
+        if (selectFactState.get(change.factId, namespace) === undefined) {
+          refuse('not_found', `The fact ${change.factId} does not exist.`);
+        }
+        const open = selectOpenArchive.get(change.factId);
+        if (open === undefined) refuse('already_exists', `The fact ${change.factId} is not archived.`);
+        closeArchive.run({ id: open.id, unarchivedAt: changeSet.occurredAt });
+        return { archiveId: open.id };
       }
       case 'record_verification': {
         const { verification } = change;

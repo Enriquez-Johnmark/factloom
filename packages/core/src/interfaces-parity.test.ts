@@ -93,7 +93,8 @@ type RefOperation =
   | 'feedback'
   | 'purge'
   | 'merge'
-  | 'verification';
+  | 'verification'
+  | 'archive';
 type RefReasonCode =
   | 'stated'
   | 'restated'
@@ -105,7 +106,9 @@ type RefReasonCode =
   | 'secret_stored'
   | 'same_entity'
   | 'verification_due'
-  | 'anchor_moved';
+  | 'anchor_moved'
+  | 'unused'
+  | 'requested';
 type RefAuditAction =
   | 'entity.created'
   | 'source.recorded'
@@ -118,7 +121,9 @@ type RefAuditAction =
   | 'fact.purged'
   | 'entity.merged'
   | 'entity.merge_undone'
-  | 'fact.verified';
+  | 'fact.verified'
+  | 'fact.archived'
+  | 'fact.unarchived';
 
 type RefAuditEntry = {
   readonly id: number;
@@ -142,6 +147,7 @@ type RefFactWithSources = {
   readonly subject: RefEntity;
   readonly objectEntity: RefEntity | null;
   readonly sources: readonly RefSource[];
+  readonly archivedAt: Timestamp | null;
 };
 
 type RefChange =
@@ -169,7 +175,9 @@ type RefChange =
       readonly singleValuedPredicates: readonly string[];
     }
   | { readonly kind: 'undo_entity_merge'; readonly mergeId: string; readonly fromEntityId: RefEntityId }
-  | { readonly kind: 'record_verification'; readonly verification: RefFactVerification };
+  | { readonly kind: 'record_verification'; readonly verification: RefFactVerification }
+  | { readonly kind: 'archive_fact'; readonly archiveId: string; readonly factId: RefFactId }
+  | { readonly kind: 'unarchive_fact'; readonly factId: RefFactId };
 
 type RefFactVerification = {
   readonly id: string;

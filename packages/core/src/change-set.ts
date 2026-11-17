@@ -80,6 +80,12 @@ export const ChangeSchema = z.discriminatedUnion('kind', [
     .readonly(),
   /** Phase 3. Appends a verification. Changes no fact. The fact must be live. */
   z.strictObject({ kind: z.literal('record_verification'), verification: FactVerificationSchema }).readonly(),
+  /** Phase 3. Marks a live fact as archived, from the change set's `occurredAt`. The fact row is not changed. */
+  z
+    .strictObject({ kind: z.literal('archive_fact'), archiveId: z.string().min(1), factId: FactIdSchema })
+    .readonly(),
+  /** Phase 3. Ends the archiving of a fact. */
+  z.strictObject({ kind: z.literal('unarchive_fact'), factId: FactIdSchema }).readonly(),
 ]);
 export type Change = z.infer<typeof ChangeSchema>;
 
@@ -96,6 +102,8 @@ function findForeignRow(namespace: string, change: Change): string | null {
     case 'invalidate_fact':
     case 'adjust_confidence':
     case 'purge_content':
+    case 'archive_fact':
+    case 'unarchive_fact':
       return null;
     case 'merge_entities':
       return change.merge.namespace === namespace ? null : `merge ${change.merge.id}`;

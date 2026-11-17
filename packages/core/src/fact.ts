@@ -119,6 +119,8 @@ export const FactWithSourcesSchema = z
     subject: EntitySchema,
     objectEntity: EntitySchema.nullable(),
     sources: z.array(SourceSchema).readonly(),
+    /** Since when the fact is an archived fact, or null when it is not. */
+    archivedAt: TimestampSchema.nullable(),
   })
   .readonly();
 export type FactWithSources = z.infer<typeof FactWithSourcesSchema>;
