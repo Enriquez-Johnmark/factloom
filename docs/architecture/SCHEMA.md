@@ -322,13 +322,13 @@ One row per verification: an identifier, the namespace, the fact, the outcome (`
 
 The latest verification of a fact is the row with the latest `verified_at`, then the latest `rowid`. `listStaleFacts` reads current facts with the time predicate at one moment, each with its latest `verified_at` or else `created_at`, and its latest confidence from `fact_confidence`. `listOrphanedFacts` reads live facts with no source whose `purged_at` is `NULL`, or whose latest verification is `source_missing`. The migration adds `fact_verification_by_fact` for the latest verification of a fact. Both lists start from the facts of a namespace through the namespace prefix of `fact_subject_predicate`. A partial index of live facts by namespace was tried and left out, because without statistics the planner then chose it for `listFacts` by subject too.
 
+### `fact_archive`, migration `0008_add_fact_archive.sql` (FL-065)
+
+One row per archiving of a fact: an identifier, the namespace, the fact, `archived_at`, and `unarchived_at`, which is set once. No fact row is changed: an **archived fact** is still a live fact and still counts for the single-value rule. A partial unique index lets a fact have at most one archiving in force, and reads find it by the fact. Triggers refuse every delete and every update but setting `unarchived_at` once. The `archive_fact` and `unarchive_fact` changes write one audit entry each, actions `fact.archived` and `fact.unarchived`, target kind `fact`, `detail` `{ archiveId }`, under the operation `archive`. Every read returns `archivedAt`, the `archived_at` of the archiving in force, or null. Recall leaves archived facts out from FL-073.
+
 ## Planned additions
 
-These are designed so that the interfaces in [`INTERFACES.md`](INTERFACES.md) are stable, but they are not in the first migration. Each is an added table or column, and purge also replaces two triggers, so none forces a rewrite of what exists.
-
-| Phase | Addition | Why it can wait |
-|---|---|---|
-| 3 | The record that a fact is an **archived fact** (FL-065) | Archiving by disuse reads `fact_usage`, which FL-055 added |
+None remain. Every addition planned for phases 2 and 3 is now a migration, described under "Added by later migrations". An alias table was planned and is left out by [ADR 0021](adr/0021-no-alias-table-merges-serve-as-aliases.md).
 
 ## What differs in Postgres
 
