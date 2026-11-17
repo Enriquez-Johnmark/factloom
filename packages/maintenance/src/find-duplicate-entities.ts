@@ -13,21 +13,30 @@ import type { JobCounts } from './run-maintenance.ts';
 /** Entities read per page. */
 const ENTITY_PAGE_SIZE = 500;
 
-/** Two entities of one namespace and one type, the one created earlier first. */
+/** Two entities of one namespace, the one created earlier first. */
 export type EntityPair = { readonly earlier: Entity; readonly later: Entity };
 
 /**
- * One stage of duplicate detection. It decides that a pair is the same entity, or returns
- * null to pass the pair to the next stage. FL-064 adds stages after the name stage.
+ * What a stage found for a pair: `same`, to merge or report; `candidate`, a likely pair the
+ * stage could not decide, to report; `failed`, a check that could not be made; `deferred`, a
+ * pair left for the next run; or null, to pass the pair to the next stage.
+ */
+export type StageDecision = 'same' | 'candidate' | 'failed' | 'deferred' | null;
+
+/**
+ * One stage of duplicate detection. A stage marked `crossType` is also offered pairs of two
+ * types whose names are equal in their strict form; the others see pairs of one type only.
  */
 export type DuplicateStage = {
   readonly name: string;
-  readonly decide: (pair: EntityPair) => Promise<Result<'same' | null>>;
+  readonly crossType: boolean;
+  readonly decide: (pair: EntityPair) => Promise<Result<StageDecision>>;
 };
 
-/** Stage 1: the names are equal in their strict form. */
+/** Stage 1: the names are equal in their strict form. Pairs of one type only. */
 export const NAME_STAGE: DuplicateStage = {
   name: 'name',
+  crossType: false,
   decide: async ({ earlier, later }) =>
     ok(normaliseNameStrictly(earlier.name) === normaliseNameStrictly(later.name) ? 'same' : null),
 };
@@ -61,10 +70,15 @@ function byCreation(a: Entity, b: Entity): number {
 }
 
 /**
- * The pairs to compare: entities of the same type that are not merged into another, and whose
- * pair was never merged and undone. An entity merged into another is read as that one.
+ * The pairs to compare: entities not merged into another, whose pair was never merged and
+ * undone, of the same type, or of two types with names equal in their strict form when a stage
+ * takes such pairs. An entity merged into another is read as that one.
  */
-function listCandidatePairs(entities: readonly Entity[], merges: readonly EntityMerge[]): EntityPair[] {
+function listCandidatePairs(
+  entities: readonly Entity[],
+  merges: readonly EntityMerge[],
+  withCrossType: boolean,
+): EntityPair[] {
   const mergedFrom = new Set(
     merges.filter((merge) => merge.undoneAt === null).map((merge) => merge.fromEntityId),
   );
@@ -77,16 +91,21 @@ function listCandidatePairs(entities: readonly Entity[], merges: readonly Entity
   const pairs: EntityPair[] = [];
   for (const [index, earlier] of roots.entries()) {
     for (const later of roots.slice(index + 1)) {
-      if (later.type !== earlier.type || undone.has(pairKey(earlier.id, later.id))) continue;
-      pairs.push({ earlier, later });
+      if (undone.has(pairKey(earlier.id, later.id))) continue;
+      const isSameType = later.type === earlier.type;
+      const isCrossTypeNameMatch =
+        withCrossType && normaliseNameStrictly(earlier.name) === normaliseNameStrictly(later.name);
+      if (isSameType || isCrossTypeNameMatch) pairs.push({ earlier, later });
     }
   }
   return pairs;
 }
 
-/** The first decision of the stages, in order, or null when none decides. */
-async function decide(stages: readonly DuplicateStage[], pair: EntityPair): Promise<Result<'same' | null>> {
+/** The first decision of the stages that take the pair, in order, or null when none decides. */
+async function decide(stages: readonly DuplicateStage[], pair: EntityPair): Promise<Result<StageDecision>> {
+  const isCrossType = pair.earlier.type !== pair.later.type;
   for (const stage of stages) {
+    if (isCrossType && !stage.crossType) continue;
     const decided = await stage.decide(pair);
     if (!decided.ok || decided.value !== null) return decided;
   }
@@ -94,11 +113,13 @@ async function decide(stages: readonly DuplicateStage[], pair: EntityPair): Prom
 }
 
 /**
- * The duplicate entity job: compares the entities of a namespace pair by pair, within one type,
- * through the stages in order. A pair found to be the same is merged into the entity created
+ * The duplicate entity job: compares the entities of a namespace pair by pair, within one type
+ * or across types for a stage that takes such pairs, through the stages in order. A likely pair a
+ * stage cannot decide is reported, not merged. A pair found to be the same is merged into the entity created
  * earlier under the domain's policy `automatic`, and reported for a person under
  * `human_approval`. A merge refused with `conflict` is flagged with the facts in the way. A
- * pair whose merge was undone is never merged again. Needs no embedder and no LLM.
+ * pair whose merge was undone is never merged again. The name stage needs no embedder and no
+ * LLM; the similarity stage of FL-064 brings its own.
  */
 export async function findDuplicateEntities(
   deps: FindDuplicateEntitiesDeps,
@@ -113,16 +134,30 @@ export async function findDuplicateEntities(
   let examined = 0;
   let changed = 0;
   let failed = 0;
+  let undecided = 0;
   const flaggedItems: { id: string; reason: string }[] = [];
   // An entity merged in this run is read as the one it was merged into from then on.
   const mergedNow = new Set<string>();
-  for (const pair of listCandidatePairs(entities.value, merges.value)) {
+  const withCrossType = deps.stages.some((stage) => stage.crossType);
+  for (const pair of listCandidatePairs(entities.value, merges.value, withCrossType)) {
     if (mergedNow.has(pair.earlier.id) || mergedNow.has(pair.later.id)) continue;
     examined += 1;
     const decided = await decide(deps.stages, pair);
     if (!decided.ok) return decided;
     if (decided.value === null) continue;
     const id = `${pair.later.id}->${pair.earlier.id}`;
+    if (decided.value === 'failed') {
+      failed += 1;
+      continue;
+    }
+    if (decided.value === 'deferred') {
+      undecided += 1;
+      continue;
+    }
+    if (decided.value === 'candidate') {
+      flaggedItems.push({ id, reason: 'similar_name' });
+      continue;
+    }
     if (deps.domain.correctionPolicy === 'human_approval') {
       flaggedItems.push({ id, reason: 'same_entity' });
       continue;
@@ -143,5 +178,5 @@ export async function findDuplicateEntities(
       failed += 1;
     }
   }
-  return ok({ examined, changed, flagged: flaggedItems.length, failed, undecided: 0, flaggedItems });
+  return ok({ examined, changed, flagged: flaggedItems.length, failed, undecided, flaggedItems });
 }

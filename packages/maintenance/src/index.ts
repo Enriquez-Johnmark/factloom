@@ -16,7 +16,20 @@ export type { CheckedValue, StructuredCheck } from './create-structured-value-ru
 export { createStructuredValueRung } from './create-structured-value-rung.ts';
 export { archiveUnusedFacts } from './archive-unused-facts.ts';
 export type { Anchor } from './find-anchor.ts';
-export type { DuplicateStage, EntityPair, FindDuplicateEntitiesDeps } from './find-duplicate-entities.ts';
+export {
+  cosineSimilarity,
+  createSimilarityStage,
+  FACTS_PER_ENTITY,
+  MAX_ENTITY_MATCH_CALLS_PER_RUN,
+  SIMILARITY_THRESHOLD,
+} from './create-similarity-stage.ts';
+export type { MatchedEntity } from './entity-match-prompt.ts';
+export type {
+  DuplicateStage,
+  EntityPair,
+  FindDuplicateEntitiesDeps,
+  StageDecision,
+} from './find-duplicate-entities.ts';
 export { findDuplicateEntities, NAME_STAGE } from './find-duplicate-entities.ts';
 export type {
   RungDecision,
