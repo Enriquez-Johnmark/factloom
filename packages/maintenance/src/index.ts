@@ -5,6 +5,8 @@ export { MaintenanceReportSchema, runMaintenance } from './run-maintenance.ts';
 export type { RepairMovedAnchorsDeps } from './repair-moved-anchors.ts';
 export { repairMovedAnchors } from './repair-moved-anchors.ts';
 export type { RepositoryReader } from './repository-reader.ts';
+export type { ArchiveUnusedFactsDeps } from './archive-unused-facts.ts';
+export { archiveUnusedFacts } from './archive-unused-facts.ts';
 export type { Anchor } from './find-anchor.ts';
 export type { DuplicateStage, EntityPair, FindDuplicateEntitiesDeps } from './find-duplicate-entities.ts';
 export { findDuplicateEntities, NAME_STAGE } from './find-duplicate-entities.ts';
