@@ -6,7 +6,7 @@ It is an application and exports nothing. Its entry point is `src/main.ts`. A to
 
 ## Register the server
 
-Claude Code and Codex each start the server as a local process over stdio. The steps below start it from a clone of this repository; nothing is published. The commands follow the "Claude Code" and "OpenAI Codex" sections of the [MCP research](../../docs/research/technical/mcp.md), which read them from each host's documentation. They have not yet been run on a Mac in either host: the owner runs them in FL-038, and this section then carries the date and the versions they were confirmed with.
+Claude Code and Codex each start the server as a local process over stdio. The steps below start it from a clone of this repository; nothing is published. The commands follow the "Claude Code" and "OpenAI Codex" sections of the [MCP research](../../docs/research/technical/mcp.md), which read them from each host's documentation. They have not yet been run on a Mac in either host: the owner runs them in FL-038, and this section then carries the date and the versions they were confirmed with. On 2026-11-17, on Linux with Claude Code 2.1.326 and a throwaway home directory, the `claude mcp add` command below registered the server and `claude mcp list` reported it connected, and the `.mcp.json` entry was listed as waiting for approval. No session was started and no tool was called. Codex was not available there.
 
 **Prerequisites.** Node.js `^22.18.0 || >=24`, the range in the root `package.json` ([ADR 0015](../../docs/architecture/adr/0015-toolchain.md)). A clone of the repository, and `pnpm install` at its root. Replace `/absolute/path/to/factloom` below with the path of the clone: the guide uses absolute paths because the working directory a host starts a server in is unverified (Q-16).
 
@@ -23,10 +23,10 @@ The first tool call that embeds a text, `record_fact`, `remember` or `recall`, d
 **Claude Code.** In the repository whose memory this is, register the server for that project only (`local` scope, stored in `~/.claude.json`):
 
 ```sh
-claude mcp add --transport stdio --scope local --env FACTLOOM_NAMESPACE=repo:shop-api factloom -- node /absolute/path/to/factloom/apps/mcp-server/src/main.ts
+claude mcp add --transport stdio --scope local factloom --env FACTLOOM_NAMESPACE=repo:shop-api -- node /absolute/path/to/factloom/apps/mcp-server/src/main.ts
 ```
 
-To let `remember` work, add `--env ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY` before `factloom`: the shell puts in the key from your environment, and Claude Code stores it in `~/.claude.json`, which is not in any repository. The equivalent entry in a project's `.mcp.json`, which is meant to be committed, takes the key from the environment Claude Code runs in and is empty when none is set:
+The server's name comes before `--env`: `--env` takes several values, and given first it takes the name as one of them and the command fails with "Invalid environment variable format". To let `remember` work, add `--env ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY` after the first `--env`: the shell puts in the key from your environment, and Claude Code stores it in `~/.claude.json`, which is not in any repository. The equivalent entry in a project's `.mcp.json`, which is meant to be committed, takes the key from the environment Claude Code runs in and is empty when none is set:
 
 ```json
 {
