@@ -88,7 +88,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-048 | Maintenance run entry point | 3 | FL-040, FL-034, FL-037 | Under Review |
 | FL-049 | Verification records and the stale and orphaned lists | 3 | FL-015, FL-045, FL-061 | Completed |
 | FL-050 | Deterministic verification: repository reader and path checks | 3 | FL-018, FL-048, FL-049 | Completed |
-| FL-071 | Deterministic verification: function check by text search | 3 | FL-050, FL-018 | Pending |
+| FL-071 | Deterministic verification: function check by text search | 3 | FL-050, FL-018 | Completed |
 | FL-062 | Deterministic verification: manifest version check and succession | 3 | FL-050, FL-018 | Pending |
 | FL-051 | LLM verification as the last rung | 3 | FL-062, FL-028, FL-022 | Pending |
 | FL-052 | Entity merge with read resolution | 3 | FL-015, FL-016, FL-017 | Completed |
@@ -491,7 +491,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-050, FL-018 |
 | Requirements | REQ-21 (REQ-CA-09), REQ-24 |
@@ -536,18 +536,70 @@ Differences from the item:
 - REQ-31: the core is generic; the name check comes from the domain.
 
 **Acceptance criteria.**
-- [ ] Fixture "function removed": a fact whose subject is a symbol named `parseDate`, anchored to a file that defines it; a later commit removes the function and leaves the file. After one run with an LLM client that fails if called: the latest verification is `contradicted` and `deterministic`, the fact is live and current, the report counts it as flagged, and no fact row was invalidated.
-- [ ] Fixture "function still there": the same fact after a commit that edits another part of the file. The name is found, and the outcome is `inconclusive` because the file changed.
-- [ ] Fixture "longer name only": the file no longer holds `parseDate` and holds `parseDateInput`. The outcome is `contradicted`: the search is for the whole word.
-- [ ] Fixture "not about a symbol": a fact about a repository anchored to a file that a later commit edits. The rung does not decide it, and the outcome is `inconclusive` as in FL-050.
-- [ ] Unit tests of the word search pass with these names: "finds a name as a whole word", "does not find a name inside a longer name", "keeps the case of the name", "finds a name next to punctuation".
-- [ ] A test named "the software development domain has a type for a function or symbol" passes, and the tests of FL-018 that assert the exact lists pass with the added names.
-- [ ] Every audit entry written by these runs has trigger `maintenance`.
-- [ ] `pnpm check` exits 0.
+- [x] Fixture "function removed": a fact whose subject is a symbol named `parseDate`, anchored to a file that defines it; a later commit removes the function and leaves the file. After one run with an LLM client that fails if called: the latest verification is `contradicted` and `deterministic`, the fact is live and current, the report counts it as flagged, and no fact row was invalidated.
+- [x] Fixture "function still there": the same fact after a commit that edits another part of the file. The name is found, and the outcome is `inconclusive` because the file changed.
+- [x] Fixture "longer name only": the file no longer holds `parseDate` and holds `parseDateInput`. The outcome is `contradicted`: the search is for the whole word.
+- [x] Fixture "not about a symbol": a fact about a repository anchored to a file that a later commit edits. The rung does not decide it, and the outcome is `inconclusive` as in FL-050.
+- [x] Unit tests of the word search pass with these names: "finds a name as a whole word", "does not find a name inside a longer name", "keeps the case of the name", "finds a name next to punctuation".
+- [x] A test named "the software development domain has a type for a function or symbol" passes, and the tests of FL-018 that assert the exact lists pass with the added names.
+- [x] Every audit entry written by these runs has trigger `maintenance`.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests of the word search and of the rung with a fake reader and the in-memory store. Tests of the whole run against fixture repositories with the git implementation and the SQLite adapter, on both CI platforms from FL-002. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output on Linux and macOS arm64. Any fact the fixtures show flagged wrongly is noted under "Open decisions" of this epic.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in four commits:
+
+1. `feat(maintenance): add the word search and the name check rung, and flag a contradicted fact`;
+2. `feat(graph-rag): add the symbol type, described_as and the name check to the domain`;
+3. `feat(mcp-server): run the name check in the verification job`;
+4. `docs(mcp-server): describe the name check of the verification job`.
+
+Built:
+
+- **The word search.** `containsWholeWord` in `@factloom/maintenance` is a pure function: a match counts only where the characters before and after it are not letters, digits, `_` or `$`, and the case is kept.
+- **The rung.** `createNameCheckRung(namesToFind)` is placed `before_content_check`. It reads the file at `HEAD` through the repository reader, which gains no method, and decides `contradicted` when a name is missing. Otherwise the fact goes on to the file-unchanged rung. A fact that names no symbol is not read.
+- **Flagging.** The verification job now flags a `contradicted` fact as well as a `source_missing` one, with the outcome as the reason, whatever the policy. `maintenance` names no entity type and no predicate.
+- **The domain.** The software development domain gains the entity type `symbol`, the multi-valued predicate `described_as` with a value as its object, an extraction instruction for a symbol, and `findSymbolNames`: the names of a fact's entities of type `symbol`. All are in one commit, with the tests of FL-018 that assert the exact lists. The composition root passes `findSymbolNames` to the rung.
+- **The recordings.** The domain's types and predicates are part of the extraction prompt and of its output schema, so every extraction recording of FL-069 got a new key. With the owner's approval, in this session, the owner's key was set for the one command `pnpm run record:extraction` and nowhere else:
+  - the cases were recorded again with `claude-haiku-5-5`: 20 of 20 pass, 25 facts expected, 24 extracted, 24 matched, 0 forbidden, precision 1.000, recall 0.960;
+  - the 20 recordings named by the old keys were removed;
+  - the new files were scanned for key, token and password patterns and none matched.
+
+Tests:
+
+- **The word search:** the four named tests, "finds a name as a whole word", "does not find a name inside a longer name", "keeps the case of the name" and "finds a name next to punctuation".
+- **The rung, with a fake reader:** a missing name, a longer name only, every name found, and a fact that names no symbol, for which nothing is read.
+- **The domain:** "the software development domain has a type for a function or symbol", and the exact lists, now five types and seven predicates.
+- **The fixtures, with the git reader and the SQLite adapter, in `name-check-run.test.ts`:**
+  - "function removed": `contradicted` and `deterministic`, flagged with reason `contradicted`, fact rows unchanged, the audit entry's trigger `maintenance`;
+  - "function still there": `inconclusive`;
+  - "longer name only": `contradicted`;
+  - "not about a symbol": `inconclusive`.
+
+  Every run passes the dependencies of `createTestDeps`, whose LLM client fails if called. No fixture flagged a fact wrongly, so nothing is added under "Open decisions".
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| The search matches inside a longer name | "longer name only", the rung's longer-name test, "does not find a name inside a longer name" |
+| The search ignores case | "keeps the case of the name" |
+| The composition root passes no rung | "function removed", "longer name only" |
+
+`pnpm check`:
+
+```text
+      Tests  1087 passed (1087)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the third commit, which holds all of the code and the recordings: https://github.com/Johnmark-Tech/factloom/actions/runs/44013087474.
+
+Differences from the item:
+
+- **A contradicted fact is flagged with the reason `contradicted`**, in the same `flaggedItems` list as a missing file.
+- **The name check is `findSymbolNames`**, exported by `@factloom/graph-rag` beside the domain. The domain type of `@factloom/core` gains no field.
 
 ### FL-062: Deterministic verification: manifest version check and succession
 
