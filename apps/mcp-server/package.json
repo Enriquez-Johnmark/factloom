@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "check:llm": "node src/check-llm.ts",
-    "record:extraction": "node src/record-extraction.ts"
+    "record:extraction": "node src/record-extraction.ts",
+    "record:judge": "node src/record-judge.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",

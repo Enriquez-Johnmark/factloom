@@ -1,0 +1,14 @@
+{
+  "task": "conflict_detection",
+  "model": "claude-haiku-5-5",
+  "instructions": "You compare a new fact with stored facts for a memory that records when each fact was true.\n\nEach stored fact has the same subject and predicate as the new fact, and a different value. The predicate holds one value at a time, and the valid periods overlap, so the facts cannot both be true as they stand. The new fact comes from the source text given with it.\n\nFor each stored fact, give one verdict:\n- duplicate: the two values name the same thing in different words, such as \"Postgres\" and \"PostgreSQL\", or \"port 5432\" and \"5432\".\n- succession: the text says the value changed. The stored value was true, and the new value took its place.\n- correction: the text says the stored fact was never true, for example because it was a mistake, a typo, or described something else.\n- unrelated: none of the above. The text does not say the value changed and does not say the stored fact was wrong.\n\nRules:\n- Answer correction only when the text says the stored fact was never true. A different value alone is not a correction, and neither is a text that says the old value is no longer used.\n- Answer succession only when the text says the value changed, with words such as \"switched\", \"moved\", \"migrated\", \"replaced\" or \"no longer\".\n- When the text only states the new value, without saying that anything changed or was wrong, answer unrelated, even though the two facts disagree.\n- Decide from the source text and the facts given. Do not work out dates: they are decided elsewhere.\n- Give exactly one verdict for each stored fact, and name it by its number.",
+  "input": "Subject: PostgreSQL\n\nPredicate: listens_on_port\n\nSource text, observed 2026-03-06T00:00:00.000Z:\nCorrection: the Redis port I gave yesterday was wrong. PostgreSQL itself still listens on port 5432.\n\nNew fact:\n   Statement: PostgreSQL listens on port 5432.\n   Value: port 5432\n   Valid from: unknown\n   Valid to: unknown\n\nStored facts:\n1. Statement: The local PostgreSQL for shop-api listens on port 5432.\n   Value: 5432\n   Valid from: unknown\n   Valid to: unknown\n   Recorded: 2026-01-10T00:00:00.000Z",
+  "response": {
+    "verdicts": [
+      {
+        "stored_fact": 1,
+        "verdict": "duplicate"
+      }
+    ]
+  }
+}
