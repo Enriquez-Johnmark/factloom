@@ -99,6 +99,8 @@ The second job, `repair_moved_anchors` (FL-054), runs after it. For each fact wh
 
 The third job, `find_duplicate_entities` (FL-053), compares the entities of the namespace within each type. Two whose names are equal once case, punctuation, spaces and Unicode compatibility forms are set aside, such as `Node.js` and `nodejs`, are merged into the one created earlier. The domain's correction policy decides whether it merges or only reports the pair. A pair whose merge someone undid is not merged again, and a merge refused because the two hold different values is reported with the facts in the way. It needs no embedding model and no API key.
 
+The fourth job, `archive_unused_facts` (FL-073), archives the current facts that were recorded more than `FACTLOOM_ARCHIVE_AFTER_DAYS` days ago (180 by default) and not recalled within that time, with the reason `unused`. It archives nothing until usage tracking has run for a whole period, so a fact is never taken as unused before its use was counted. Under `human_approval` it only reports them. An archived fact stays live: `recall` leaves it out of a question about now unless `include_archived` is set, and returns it for a dated question.
+
 By hand, from `apps/mcp-server`:
 
 ```sh
