@@ -22,7 +22,7 @@ function createTemporaryDirectory(): string {
 }
 
 describe('the maintenance command', () => {
-  it('runs the verification job on a new database, prints a report and exits with 0', async () => {
+  it('runs the verification and repair jobs on a new database, prints a report and exits with 0', async () => {
     const directory = createTemporaryDirectory();
     const repository = createFixtureRepository();
     repository.commit({ 'README.md': 'shop-api\n' }, 'Start');
@@ -54,10 +54,20 @@ describe('the maintenance command', () => {
         failed: 0,
         flaggedItems: [],
       },
+      {
+        name: 'repair_moved_anchors',
+        status: 'ok',
+        error: null,
+        examined: 0,
+        changed: 0,
+        flagged: 0,
+        failed: 0,
+        flaggedItems: [],
+      },
     ]);
   }, 30_000);
 
-  it('reports the verification job as failed and exits with 1 when FACTLOOM_REPO is not a git repository', async () => {
+  it('reports the verification and repair jobs as failed and exits with 1 when FACTLOOM_REPO is not a git repository', async () => {
     const directory = createTemporaryDirectory();
     const started = startServerProcess(
       MAIN,
@@ -77,6 +87,7 @@ describe('the maintenance command', () => {
     const report = MaintenanceReportSchema.parse(JSON.parse(finished.standardOutput));
     expect(report.jobs).toMatchObject([
       { name: 'verify_anchored_facts', status: 'failed', error: 'invalid_input' },
+      { name: 'repair_moved_anchors', status: 'failed', error: 'invalid_input' },
     ]);
   }, 30_000);
 

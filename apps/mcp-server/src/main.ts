@@ -61,6 +61,8 @@ if (command.kind === 'maintenance') {
     { now },
     buildMaintenanceJobs({
       store: opened.value,
+      embedder,
+      domain: softwareDevelopmentDomain,
       namespace,
       now,
       newId: () => randomUUID(),
