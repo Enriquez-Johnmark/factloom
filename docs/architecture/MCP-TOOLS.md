@@ -37,14 +37,14 @@ So a user with a subscription and no API key can use everything except `remember
 
 | Tool | Needs a key of Factloom's own |
 |---|---|
-| `recall`, `record_fact`, `invalidate_fact`, `get_fact_history` | No |
+| `recall`, `record_fact`, `invalidate_fact`, `get_fact_history`, `give_feedback` | No |
 | `remember` | Yes, `ANTHROPIC_API_KEY` |
 
 Extraction through another provider's key, such as OpenAI's, is not planned for phase 1. The LLM sits behind an interface, so a second provider can be added when someone needs it.
 
 ## Tools
 
-Five tools, in this order. Every input field has a description in its schema. Every tool declares an output schema and returns the same JSON both as `structuredContent` and as text.
+Six tools, in this order: the five of phase 1 and `give_feedback`, added in phase 2 as [ADR 0016](adr/0016-mcp-stdio-server-with-five-tools.md) provides. Every input field has a description in its schema. Every tool declares an output schema and returns the same JSON both as `structuredContent` and as text.
 
 | Tool | Does | Calls an LLM | Read-only |
 |---|---|---|---|
@@ -53,6 +53,7 @@ Five tools, in this order. Every input field has a description in its schema. Ev
 | `record_fact` | Records one fact that is already structured | No | No |
 | `invalidate_fact` | Says a fact is wrong or no longer true | No | No |
 | `get_fact_history` | Shows how a fact changed and why | No | Yes |
+| `give_feedback` | Records that a fact was found right, wrong or out of date | No | No |
 
 `recall` is first because it is the tool an agent should reach for most.
 
@@ -201,9 +202,23 @@ Output: `{ entries: HistoryEntry[] }`, ordered by valid time and then by recorde
 
 Each entry is a `RecalledFact` without `score`, plus `changes`, a list of `{ operation, action, trigger, reason_code, explanation, occurred_at }`, where `explanation` is the content of the source that explains the change, or `null` if there is none or it was purged, taken from the audit log. The explanation of a change is the content of the source that `source_id` names.
 
+### `give_feedback`
+
+Use case: `giveFeedback`. Phase 2 (FL-059).
+
+| Input | Type | Required | Meaning |
+|---|---|---|---|
+| `fact_id` | string | Yes | The fact, as returned by `recall` |
+| `signal` | `"right"`, `"wrong"` or `"outdated"` | Yes | What the reporter found |
+| `comment` | string, 1 to 1,000 characters | No | What was said. Stored as the content of a source of kind `agent_note`, not in the audit log |
+
+Output: `{ feedback_id, follow_up }`, where `follow_up` is one of `confidence_raised`, `confidence_lowered`, `retracted`, `ended`, `none`, and says what Factloom did about the feedback. Until feedback is acted on (FL-060) it is always `none`.
+
+The handler calls `giveFeedback` with the configured namespace and the trigger `agent`. The feedback changes no fact, and it is accepted for a fact that is no longer live, because a fact recalled with a past `known_at` can be one. Its description tells the agent to use `invalidate_fact` instead when it knows what replaced the fact or when it stopped being true.
+
 ## Secrets
 
-`remember`, `record_fact` and `invalidate_fact` refuse input that contains a recognisable secret, such as an API key or a private key block. The check is a fixed list of patterns and runs before anything is stored or sent to the LLM. The result is `invalid_input`, and the message names the kind of secret found without repeating it. A pattern list cannot catch every secret; content that slips through is removed with a purge, which is phase 2. See [ADR 0019](adr/0019-writes-containing-a-secret-are-refused.md).
+`remember`, `record_fact`, `invalidate_fact` and `give_feedback` refuse input that contains a recognisable secret, such as an API key or a private key block. The check is a fixed list of patterns and runs before anything is stored or sent to the LLM. The result is `invalid_input`, and the message names the kind of secret found without repeating it. A pattern list cannot catch every secret; content that slips through is removed with a purge, which is phase 2. See [ADR 0019](adr/0019-writes-containing-a-secret-are-refused.md).
 
 ## Errors
 
@@ -212,7 +227,7 @@ A failure the agent can act on is returned as a normal tool result with `isError
 | Code | When | Tools |
 |---|---|---|
 | `invalid_input` | A field fails its schema, a date is malformed, or an entity type or predicate is not in the domain | All |
-| `not_found` | `fact_id` does not exist in the namespace | `invalidate_fact`, `get_fact_history` |
+| `not_found` | `fact_id` does not exist in the namespace | `invalidate_fact`, `get_fact_history`, `give_feedback` |
 | `already_invalidated` | The fact is no longer live. The message gives the identifier of the fact that superseded it, if there is one | `invalidate_fact` |
 | `already_exists` | An entity with that name and type, or a row with that identifier, was created by another process between the lookup and the commit. Calling the tool again succeeds | `remember`, `record_fact`, `invalidate_fact` |
 | `conflict` | The single-value rule: a live fact for the same subject and single-valued predicate overlaps the new fact in valid time. The message gives the identifiers of the overlapping facts. `remember` reports a conflict it finds before writing in `skipped`, not as an error | `remember`, `record_fact`, `invalidate_fact` |
@@ -234,6 +249,7 @@ Input that fails the tool's own schema is rejected by the SDK before the handler
 | `record_fact` | false | false | false | false |
 | `invalidate_fact` | false | false | false | false |
 | `get_fact_history` | true | | | false |
+| `give_feedback` | false | false | false | false |
 
 `remember` is open-world because it sends the text to the LLM provider.
 
@@ -244,7 +260,6 @@ Each handler does three things and nothing else: converts the tool input to the 
 ## Not in phase 1
 
 - **Conflict detection and automatic resolution inside `remember`.** Phase 2.
-- **A feedback tool.** Phase 2.
 - **Hooks that call recall at session start.** Useful, because an agent may never call the tools on its own, but optional and later. The server must be useful with no hook installed.
 - **Resources, prompts, and an HTTP transport.**
 - **A tool to list or merge entities.** Phase 3.
