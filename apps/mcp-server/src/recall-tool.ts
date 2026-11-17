@@ -1,6 +1,6 @@
 import { recall } from '@factloom/graph-rag';
 import { z } from 'zod';
-import type { RegisterTool } from './create-factloom-server.ts';
+import type { RegisterTool, ServerDeps } from './create-factloom-server.ts';
 import { readOptionalDate } from './read-optional-date.ts';
 import { FactOutputSchema, toFactOutput } from './to-fact-output.ts';
 import { toToolError } from './to-tool-error.ts';
@@ -37,6 +37,26 @@ const RecallOutputSchema = z.object({
 const DEFAULT_LIMIT = 10;
 
 /** Registers `recall`: finds the facts that answer a question, filtered by time. Read-only. */
+/**
+ * Records that recall returned these facts, after the result is produced and without waiting
+ * for it: the handler's one step beyond translating (MCP-TOOLS.md, "What a handler does"). A
+ * failure is logged and dropped; a lost update is acceptable, because usage is bookkeeping.
+ */
+function recordUsage(deps: ServerDeps, factIds: readonly string[]): void {
+  if (factIds.length === 0) return;
+  const logFailure = (reason: string) => deps.log(`The usage of recalled facts was not recorded: ${reason}`);
+  try {
+    void deps.store.recordFactUsage({ namespace: deps.namespace, factIds, recalledAt: deps.now() }).then(
+      (written) => {
+        if (!written.ok) logFailure(written.error.code);
+      },
+      (cause: unknown) => logFailure(cause instanceof Error ? cause.message : String(cause)),
+    );
+  } catch (cause) {
+    logFailure(cause instanceof Error ? cause.message : String(cause));
+  }
+}
+
 export const registerRecallTool: RegisterTool = (server, deps) => {
   server.registerTool(
     'recall',
@@ -62,6 +82,10 @@ export const registerRecallTool: RegisterTool = (server, deps) => {
         limit: limit ?? DEFAULT_LIMIT,
       });
       if (!recalled.ok) return toToolError(recalled.error);
+      recordUsage(
+        deps,
+        recalled.value.facts.map((found) => found.fact.id),
+      );
       return toToolSuccess({
         facts: recalled.value.facts.map((found) => ({ ...toFactOutput(found), score: found.score })),
       });

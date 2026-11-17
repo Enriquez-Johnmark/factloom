@@ -255,7 +255,7 @@ Input that fails the tool's own schema is rejected by the SDK before the handler
 
 ## What a handler does
 
-Each handler does three things and nothing else: converts the tool input to the use case's input, calls the use case, and converts the `Result` to a tool result. It contains no rules about facts. The HTTP API in phase 4 will call the same use cases.
+Each handler does three things and nothing else: converts the tool input to the use case's input, calls the use case, and converts the `Result` to a tool result. It contains no rules about facts. The `recall` handler does one thing more, after its result is produced: it records the usage of the returned facts with the store's `recordFactUsage`, without waiting for it, and logs and drops a failure, because usage is bookkeeping, not memory (FL-055). The HTTP API in phase 4 will call the same use cases.
 
 ## Not in phase 1
 
