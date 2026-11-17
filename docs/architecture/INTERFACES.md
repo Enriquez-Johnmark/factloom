@@ -150,7 +150,8 @@ export type Operation =
   | 'feedback'
   | 'purge'
   | 'merge'
-  | 'verification';
+  | 'verification'
+  | 'archive';
 
 /** Why, from a fixed list, so that the audit log holds no free text. Later phases add codes. */
 export type ReasonCode =
@@ -164,7 +165,9 @@ export type ReasonCode =
   | 'secret_stored'
   | 'same_entity'
   | 'verification_due'
-  | 'anchor_moved';
+  | 'anchor_moved'
+  | 'unused'
+  | 'requested';
 
 export type AuditAction =
   | 'entity.created'
@@ -178,7 +181,9 @@ export type AuditAction =
   | 'fact.purged'
   | 'entity.merged'
   | 'entity.merge_undone'
-  | 'fact.verified';
+  | 'fact.verified'
+  | 'fact.archived'
+  | 'fact.unarchived';
 
 export type AuditEntry = {
   readonly id: number;
@@ -341,6 +346,8 @@ export type FactWithSources = {
   readonly subject: Entity;
   readonly objectEntity: Entity | null;
   readonly sources: readonly Source[];
+  /** Phase 3. Since when the fact is an archived fact, or null when it is not (FL-065). */
+  readonly archivedAt: Timestamp | null;
 };
 
 export type ChangeSet = {
@@ -387,7 +394,11 @@ export type Change =
   /** Phase 3. Withdraws a merge: sets its `undoneAt`, once. */
   | { readonly kind: 'undo_entity_merge'; readonly mergeId: string; readonly fromEntityId: EntityId }
   /** Phase 3. Appends a verification. Changes no fact. The fact must be live. */
-  | { readonly kind: 'record_verification'; readonly verification: FactVerification };
+  | { readonly kind: 'record_verification'; readonly verification: FactVerification }
+  /** Phase 3. Marks a live fact as archived, from the change set's `occurredAt`. The fact row is not changed. */
+  | { readonly kind: 'archive_fact'; readonly archiveId: string; readonly factId: FactId }
+  /** Phase 3. Ends the archiving of a fact. */
+  | { readonly kind: 'unarchive_fact'; readonly factId: FactId };
 
 export type CommitReceipt = {
   readonly operationId: string;
@@ -727,6 +738,18 @@ export declare function listOrphanedFacts(
   input: { readonly namespace: Namespace; readonly limit: number },
 ): Promise<Result<readonly FactWithSources[]>>;
 
+/** Marks live facts as archived facts, in one commit. Recall leaves them out from FL-073. */
+export declare function archiveFacts(
+  deps: Pick<OperationDeps, 'store' | 'now' | 'newId'>,
+  input: ChangeContext & { readonly factIds: readonly FactId[] },
+): Promise<Result<{ readonly archiveIds: readonly string[] }>>;
+
+/** Ends the archiving of a fact. Only this operation unarchives: recall does not. */
+export declare function unarchiveFact(
+  deps: Pick<OperationDeps, 'store' | 'now' | 'newId'>,
+  input: ChangeContext & { readonly factId: FactId },
+): Promise<Result<null>>;
+
 /** Records that one entity is the same as another. Facts keep their identifiers. */
 export declare function mergeEntities(
   deps: Pick<OperationDeps, 'store' | 'domain' | 'now' | 'newId'>,
@@ -743,6 +766,7 @@ export declare function undoEntityMerge(
 - **Verification is recorded, not applied.** `recordVerification` (FL-049) commits one `record_verification` change under the operation `verification`, which appends a row to the `fact_verification` table: fact, outcome, method, time. Its audit entry, action `fact.verified`, targets the fact, with `detail` `{ verificationId }`; the outcome and the method are in the row, not in the entry. The reason code for a scheduled check is `verification_due`.
 - **A moved anchor is repaired by restatement (FL-054).** When git shows that an anchored file was renamed, the maintenance job attaches a source at the new path with `recordFacts`, with no drafts and the fact in `restatedFactIds`. That commits one `record_source` and one `attach_source` change under the operation `remember`, as any restatement does, with trigger `maintenance` and the reason code `anchor_moved`. No fact row is written and the fact keeps its identifier. The job then records a verification with the same reason code. What follows from a `contradicted` outcome, an invalidation or a lower confidence, is a separate call, so the audit log shows both the finding and the action. Errors: `invalid_input`, `not_found`, `already_invalidated`, `storage_failed`.
 - **`listStaleFacts` and `listOrphanedFacts` are reads.** They add two methods to `MemoryStore` in phase 3, backed by the `fact_verification` table. `listStaleFacts` passes its clock's now as `currentAt`. They return an empty list when nothing is due. The latest verification of a fact is the one with the latest time; of two with the same time, the one recorded later. A fact revised into a copy gets a new identifier, and the copy, having no verification, counts as verified at its own recording. `confidenceBelow` outside 0 to 1 is `invalid_input`. Errors: `invalid_input`, `storage_failed`.
+- **Archiving is a row, not an edit (FL-065).** `archiveFacts` commits one `archive_fact` change per fact under the operation `archive`, which adds a row to the `fact_archive` table: the fact and since when. `unarchiveFact` commits one `unarchive_fact` change, which sets the row's `unarchived_at` once. Their audit entries, actions `fact.archived` and `fact.unarchived`, target the fact, with `detail` `{ archiveId }`. The caller gives the reason code: `unused` for the archiving job of FL-073, `requested` otherwise. The fact row, its identifier, its `invalidated_at` and its valid time do not change, and an archived fact is still a live fact: it counts for the single-value rule. Every read returns `archivedAt`, the start of the archiving in force, or null. Errors: `invalid_input`, `not_found`, `already_invalidated` for archiving a fact that is not live, `already_exists` for archiving an archived fact or unarchiving one that is not, `storage_failed`.
 - **A merge is a row, not an edit.** `mergeEntities` (FL-052) commits one `merge_entities` change under the operation `merge`, which adds a row to an `entity_merge` table: from, into, when. Its audit entry, action `entity.merged`, targets the entity merged from, with `detail` `{ intoEntityId, mergeId }`; the reason code for a duplicate is `same_entity`. `listEntityMerges` reads the merges of a namespace, undone ones included. No entity and no fact is rewritten. Reads resolve identifiers through the merges that have not been undone, following a chain if the target was itself merged later.
 - **A merge can be refused.** If the two entities hold live facts for the same single-valued predicate with different objects and overlapping valid periods, merging them would break the single-value rule. `mergeEntities` then returns `conflict` with those facts and merges nothing. Product 2 resolves them first. Reads resolve through whole chains of merges: with A merged into B and B into C, the facts of all three are read under C. A merge that would make a cycle is `invalid_input` (FL-063). Two entities of different types can be merged, because the same thing is sometimes extracted under two types. Other errors: `not_found`; `invalid_input` for an entity merged with itself; `already_exists` when the first entity is already merged; `storage_failed`.
 - **The single-value rule after a merge (FL-063).** A merge is refused when the two entities, each with everything already merged into it, hold live facts for the same single-valued predicate with different objects and overlapping valid periods. Two such facts with the same object are not refused: the merge leaves both live, each a restatement of the other, under the merged entity. Objects are compared as stored, as the restatement rule compares them: the same entity identifier, or the same value. The store's rule inside `commit` keeps checking only the facts a change set records, against every live fact of the merged subjects, so the two restating facts stay as they are and a later value that differs from them is refused as before. Which predicates are single-valued reaches the store in the `merge_entities` change, from the domain `mergeEntities` is given, and the check is made inside the commit.
