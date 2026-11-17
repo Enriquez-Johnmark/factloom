@@ -452,8 +452,8 @@ Read methods return only `invalid_input` and `storage_failed`. A read that finds
 First needed in phase 1, for extraction.
 
 ```ts
-/** Phase 1 uses 'extraction'. Phase 2 adds conflict detection, phase 3 verification. */
-export type LlmTask = 'extraction' | 'conflict_detection' | 'verification';
+/** Phase 1 uses 'extraction'. Phase 2 adds conflict detection, phase 3 verification and entity matching (FL-064). */
+export type LlmTask = 'extraction' | 'conflict_detection' | 'verification' | 'entity_matching';
 
 export interface LlmClient {
   /** Asks for one object that matches the schema. */
