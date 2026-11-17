@@ -90,7 +90,8 @@ async function climbLadder(
 /**
  * The verification job: checks the stale facts of a namespace against the repository their
  * sources point at, and records each outcome with method `deterministic`. It changes no fact.
- * A fact whose file is gone is flagged for a person and stays live. A fact with no anchor, or
+ * A fact whose file is gone, or that a rung finds contradicted, is
+ * flagged for a person and stays live. A fact with no anchor, or
  * from a commit that is not on this branch, is examined and nothing is recorded. If the
  * repository cannot be read, the job fails before recording anything.
  */
@@ -130,8 +131,10 @@ export async function verifyAnchoredFacts(
       if (recorded.error.code !== 'already_invalidated') failed += 1;
       continue;
     }
-    if (outcome.value === 'source_missing')
-      flaggedItems.push({ id: found.fact.id, reason: 'source_missing' });
+    // A file gone or a fact the file contradicts is left for a person, whatever the policy.
+    if (outcome.value === 'source_missing' || outcome.value === 'contradicted') {
+      flaggedItems.push({ id: found.fact.id, reason: outcome.value });
+    }
   }
   return ok({
     examined: stale.value.length,
