@@ -66,11 +66,10 @@ Completed on 2026-11-17. Each answer is labelled **confirmed** (run in the [purg
 9. **The old text for the keyword index.** The entry is removed by a trigger, `fact_fts_purge`, that runs when `purged_at` is set. It issues the FTS5 `delete` command with `OLD.rowid` and `OLD.statement`, the text the external-content index needs. The FTS5 option `secure-delete` is turned on once, in the migration; it is stored in the index's config table, so it holds for every connection.
    - **Confirmed**: without the option, the term stayed in the shadow table `fact_fts_data` even after `VACUUM`, though `MATCH` no longer found it (runs A and C).
    - The option's description and its minimum version, SQLite 3.42.0, are from https://www.sqlite.org/fts5.html as summarised by a fetch tool, **likely**. The project's SQLite is 3.54.1.
-10. **How a person invokes it.** Through a command of `apps/mcp-server`, built in FL-072, never an MCP tool.
-    - `find <text>` lists the sources of the namespace whose content or locator contains the text, by identifier, kind and observed time, with no excerpt.
-    - `source <id> --reason erasure_requested|secret_stored` shows what would be purged, the counts of sources and facts, and purges only with `--yes`.
-    - It runs `purgeContent` with the trigger `person`, then `VACUUM` and the checkpoint, and says whether the checkpoint finished.
-    - **Likely**: the command is FL-072's to build and test.
+10. **How a person invokes it.** Through a command of `apps/mcp-server`, built in FL-072, never an MCP tool. It uses the server's configuration and works in its namespace.
+    - `purge sources <fact-id>` lists the sources of the fact and of the facts linked to it by supersession, with each source's identifier, kind, locator and observed time, and no content.
+    - `purge source <source-id> --reason erasure_requested|secret_stored` runs `purgeContent` with the trigger `person`, prints the identifiers it purged, closes the store and runs `clearFreedPages`, and says whether the checkpoint finished. Without a reason it refuses.
+    - **Confirmed** by FL-072's child-process tests. An earlier draft of this answer proposed a search by text and a `--yes` flag; FL-072's requirements fix the forms above instead.
 
 ## What purge does not remove
 
