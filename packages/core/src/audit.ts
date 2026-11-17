@@ -38,6 +38,7 @@ export const ReasonCodeSchema = z.enum([
   'unused',
   'requested',
   'source_changed',
+  'verification_failed',
 ]);
 export type ReasonCode = z.infer<typeof ReasonCodeSchema>;
 
