@@ -86,7 +86,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-048 | Maintenance run entry point | 3 | FL-040, FL-034, FL-037 | Under Review |
-| FL-049 | Verification records and the stale and orphaned lists | 3 | FL-015, FL-045, FL-061 | Pending |
+| FL-049 | Verification records and the stale and orphaned lists | 3 | FL-015, FL-045, FL-061 | Completed |
 | FL-050 | Deterministic verification: repository reader and path checks | 3 | FL-018, FL-048, FL-049 | Pending |
 | FL-071 | Deterministic verification: function check by text search | 3 | FL-050, FL-018 | Pending |
 | FL-062 | Deterministic verification: manifest version check and succession | 3 | FL-050, FL-018 | Pending |
@@ -204,7 +204,7 @@ For the owner's review:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-015, FL-045, FL-061 |
 | Requirements | REQ-21, REQ-24 |
@@ -247,17 +247,86 @@ For the owner's review:
 - [`INTERFACES.md`](../../architecture/INTERFACES.md), "Errors from `commit`": read methods return only `invalid_input` and `storage_failed`.
 
 **Acceptance criteria.**
-- [ ] Contract suite cases pass against both stores, with a fixed clock: three current facts, one verified recently, one verified long ago and one never verified and recorded in between, are returned by `listStaleFacts` in the order "long ago, in between", and the recent one is not returned.
-- [ ] A contract case shows an ended fact and an invalidated fact are not returned by `listStaleFacts`.
-- [ ] A contract case shows `confidenceBelow` adds a recently verified fact whose confidence was adjusted below the threshold.
-- [ ] A contract case shows `listOrphanedFacts` returns a fact whose latest verification is `source_missing`, stops returning it after a later `confirmed`, and returns a fact whose only source was purged.
-- [ ] Contract cases cover the refusals of `recordVerification`: a missing fact is `not_found`, an invalidated fact is `already_invalidated`, an unknown outcome is `invalid_input`.
-- [ ] A contract case shows one audit entry per verification, with operation `verification`, and no change to any fact row.
-- [ ] A SQLite adapter test shows a direct `UPDATE` or `DELETE` on `fact_verification` is refused, and that the query plan of each list uses an index.
+- [x] Contract suite cases pass against both stores, with a fixed clock: three current facts, one verified recently, one verified long ago and one never verified and recorded in between, are returned by `listStaleFacts` in the order "long ago, in between", and the recent one is not returned.
+- [x] A contract case shows an ended fact and an invalidated fact are not returned by `listStaleFacts`.
+- [x] A contract case shows `confidenceBelow` adds a recently verified fact whose confidence was adjusted below the threshold.
+- [x] A contract case shows `listOrphanedFacts` returns a fact whose latest verification is `source_missing`, stops returning it after a later `confirmed`, and returns a fact whose only source was purged.
+- [x] Contract cases cover the refusals of `recordVerification`: a missing fact is `not_found`, an invalidated fact is `already_invalidated`, an unknown outcome is `invalid_input`.
+- [x] A contract case shows one audit entry per verification, with operation `verification`, and no change to any fact row.
+- [x] A SQLite adapter test shows a direct `UPDATE` or `DELETE` on `fact_verification` is refused, and that the query plan of each list uses an index.
 
 **Validation.** The contract suite against both stores. SQLite adapter tests for the triggers and the query plans. `pnpm check`.
 
 **Completion evidence.** The commit and the passing check output.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in four commits:
+
+1. `docs: design verification records and the stale and orphaned lists in INTERFACES.md`;
+2. `feat(core): record verifications of facts in both stores`;
+3. `feat(core): add listStaleFacts and listOrphanedFacts in both stores`;
+4. `docs: describe fact_verification and the two lists in SCHEMA.md`.
+
+Built:
+
+- **The record.** `FactVerification` in `@factloom/core`: identifier, namespace, fact, outcome, method, `verifiedAt`. The change `record_verification`, under the operation `verification`, writes one row and one audit entry, action `fact.verified`, on the fact, with `detail` `{ verificationId }`. The reason code for a scheduled check is `verification_due`. The store refuses a missing fact with `not_found` and an invalidated one with `already_invalidated`; the change set's schema refuses an outcome outside the list with `invalid_input`.
+- **The operations.** `recordVerification`, `listStaleFacts` and `listOrphanedFacts`. `listStaleFacts` refuses a `confidenceBelow` outside 0 to 1 and passes its clock's now to the store.
+- **The store methods.** `MemoryStore.listStaleFacts` and `listOrphanedFacts`, in both stores. In SQLite each is one query, `STALE_FACTS_SQL` and `ORPHANED_FACTS_SQL` in `create-reads.ts`. The latest verification is the one with the latest time, and of two with one time the later recorded.
+- **The migration.** `0007_add_fact_verification.sql`, sha256 `df970f2fc8655560f28500ee996e4080f356b97d6b4c5d3d9a065605667bd68c`. It holds the table, the index `fact_verification_by_fact`, and two triggers that refuse every update and delete. It carries the comment on Postgres. The purge inventory of FL-061 required its six columns to be classified, and they are listed as not content.
+
+Contract cases, against both stores:
+
+- **E1:** one audit entry on the fact, operation `verification`, action `fact.verified`, naming the verification; every fact row unchanged.
+- **E2 to E5:** a missing fact is `not_found`, an invalidated fact is `already_invalidated` naming its successor, an unknown outcome is `invalid_input`, a repeated identifier is `already_exists`.
+- **L1:** with a fixed clock, `pg16` verified long ago and `redis` never verified and recorded later come in that order, and `node22`, verified recently, is left out.
+- **L2:** the ended fact `pg14-ended` and the invalidated facts are not returned.
+- **L3:** `confidenceBelow` 0.5 adds `node22`, verified recently and adjusted to 0.3; at 0.3 it is not added, since the rule is "below".
+- **L4:** a fact whose latest verification is `source_missing` is orphaned, is not after a later `confirmed`, and a fact whose only source was purged is orphaned.
+- **L5:** of two verifications at one time, the later recorded is the latest.
+- **L6 and L7:** both lists respect `limit` and refuse a limit below 1; the stale list is empty when nothing is due.
+- **N9 and N10:** a verification of a fact of the other namespace is `not_found`, and neither list returns a fact of the other namespace.
+
+The count of group 1 is 78, and of group 2 37 for the in-memory store and 39 for SQLite. The operations have 6 unit tests with the in-memory store.
+
+The SQLite tests in `fact-verification-sqlite.test.ts` show a direct `UPDATE` and `DELETE` refused by the triggers, and the query plan of each list. The plan of the stale list, on the fixture:
+
+```text
+SEARCH f USING INDEX fact_subject_predicate (namespace=?)
+CORRELATED SCALAR SUBQUERY 2
+SEARCH v USING COVERING INDEX fact_verification_by_fact (fact_id=?)
+CORRELATED SCALAR SUBQUERY 1
+SEARCH c USING INDEX fact_confidence_by_fact (fact_id=?)
+USE TEMP B-TREE FOR ORDER BY
+```
+
+SQLite lists the two subqueries twice, because the outer query reads both of their columns. The orphaned list's plan searches `fact_subject_predicate`, the primary key of `fact_source`, the primary key of `source`, and `fact_verification_by_fact`. Neither plan scans a table.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| Either store records a verification of an invalidated fact | E3 |
+| SQLite ignores `confidenceBelow` | L3 |
+| SQLite lets the earlier of two verifications at one time win | L5 |
+| SQLite's stale list leaves out the time predicate | L1, L2, L3, L6, L7, N10 |
+| SQLite's orphaned list ignores whether a source is purged | L4 |
+| The migration leaves out `fact_verification_by_fact` | both query plan tests |
+| The in-memory store lets the earlier of two verifications at one time win | L5 |
+| The in-memory store sorts the stale list the wrong way | L1, L2, L3, N10 |
+
+`pnpm check`:
+
+```text
+ Test Files  95 passed (95)
+      Tests  997 passed (997)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the fourth commit, which holds the code of the second and third: https://github.com/Johnmark-Tech/factloom/actions/runs/44001024893.
+
+Differences from the item:
+
+- **No new index on `fact`.** A partial index of live facts by namespace was added first and then removed: without statistics, the planner chose it for `listFacts` by subject as well, and the existing test of that query's index failed. Both lists start from the namespace prefix of `fact_subject_predicate`, so the migration adds only the index on `fact_verification`.
+- **The store method takes `currentAt`.** The moment at which facts must be current is passed by `listStaleFacts`, from its clock, so that the store reads no clock.
+- **The audit entry targets the fact**, not a verification row, so that a fact's history shows when it was checked. The outcome and the method stay in the row, as technical requirement 5 asks.
 
 ### FL-050: Deterministic verification: repository reader and path checks
 
