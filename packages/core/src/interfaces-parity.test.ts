@@ -8,6 +8,7 @@ import type { Change, ChangeSet, CommitReceipt } from './change-set.ts';
 import type { Domain, PredicateDefinition } from './domain.ts';
 import type { Embedder } from './embedder.ts';
 import type { EntityMerge } from './entity-merge.ts';
+import type { FactUsage } from './fact-usage.ts';
 import type { Feedback } from './feedback.ts';
 import type {
   Entity,
@@ -158,6 +159,12 @@ type RefChange =
   | { readonly kind: 'purge_content'; readonly targetKind: 'source' | 'fact'; readonly targetId: string }
   | { readonly kind: 'merge_entities'; readonly merge: RefEntityMerge };
 
+type RefFactUsage = {
+  readonly factId: RefFactId;
+  readonly lastRecalledAt: Timestamp;
+  readonly recallCount: number;
+};
+
 type RefEntityMerge = {
   readonly id: string;
   readonly namespace: RefNamespace;
@@ -273,6 +280,16 @@ interface RefMemoryStore {
     readonly namespace: RefNamespace;
     readonly contentHash: string;
   }): Promise<Result<readonly RefSource[]>>;
+  recordFactUsage(usage: {
+    readonly namespace: RefNamespace;
+    readonly factIds: readonly RefFactId[];
+    readonly recalledAt: Timestamp;
+  }): Promise<Result<null>>;
+  getFactUsage(query: {
+    readonly namespace: RefNamespace;
+    readonly factId: RefFactId;
+  }): Promise<Result<RefFactUsage | null>>;
+  getUsageTrackingStart(query: { readonly namespace: RefNamespace }): Promise<Result<Timestamp | null>>;
   listEntityMerges(query: { readonly namespace: RefNamespace }): Promise<Result<readonly RefEntityMerge[]>>;
   listFeedback(query: {
     readonly namespace: RefNamespace;
@@ -310,6 +327,7 @@ const parity: {
   readonly Domain: Same<Domain, RefDomain>;
   readonly Feedback: Same<Feedback, RefFeedback>;
   readonly EntityMerge: Same<EntityMerge, RefEntityMerge>;
+  readonly FactUsage: Same<FactUsage, RefFactUsage>;
   readonly Change: Same<Change, RefChange>;
   readonly ChangeSet: Same<ChangeSet, RefChangeSet>;
   readonly CommitReceipt: Same<CommitReceipt, RefCommitReceipt>;
@@ -337,6 +355,7 @@ const parity: {
   Domain: true,
   Feedback: true,
   EntityMerge: true,
+  FactUsage: true,
   Change: true,
   ChangeSet: true,
   CommitReceipt: true,
@@ -351,6 +370,6 @@ describe('the types derived from the schemas', () => {
   it('have the shapes that INTERFACES.md commits to', () => {
     // The real check is the type of `parity` above, made by the compiler.
     expect(Object.values(parity).every((same) => same === true)).toBe(true);
-    expect(Object.keys(parity)).toHaveLength(26);
+    expect(Object.keys(parity)).toHaveLength(27);
   });
 });

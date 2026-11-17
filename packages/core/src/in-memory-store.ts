@@ -11,6 +11,7 @@ import {
   type TimeFilter,
 } from './fact.ts';
 import type { EntityMerge } from './entity-merge.ts';
+import type { FactUsage } from './fact-usage.ts';
 import type { Feedback } from './feedback.ts';
 import type { MemoryStore } from './memory-store.ts';
 import { err, type Failure, ok } from './result.ts';
@@ -544,6 +545,9 @@ function cosineDistance(first: Float32Array, second: Float32Array): number {
  */
 export function createInMemoryStore(): MemoryStore {
   let state = createEmptyState();
+  // Usage is bookkeeping, not memory, so it is kept beside the state, not in it.
+  const factUsage = new Map<string, FactUsage>();
+  const usageTrackingStart = new Map<Namespace, Timestamp>();
 
   /**
    * Builds what a read returns for one fact, with its confidence at the read's known-at date,
@@ -745,6 +749,34 @@ export function createInMemoryStore(): MemoryStore {
         (source) => source.namespace === query.namespace && source.contentHash === query.contentHash,
       );
       return Promise.resolve(ok(structuredClone(found)));
+    },
+
+    recordFactUsage(usage) {
+      // Bookkeeping outside the state that commit replaces: no change set, no audit entry.
+      let wrote = false;
+      for (const factId of new Set(usage.factIds)) {
+        if (state.facts.get(factId)?.namespace !== usage.namespace) continue;
+        const known = factUsage.get(factId);
+        factUsage.set(factId, {
+          factId,
+          lastRecalledAt: usage.recalledAt,
+          recallCount: (known?.recallCount ?? 0) + 1,
+        });
+        wrote = true;
+      }
+      if (wrote && !usageTrackingStart.has(usage.namespace))
+        usageTrackingStart.set(usage.namespace, usage.recalledAt);
+      return Promise.resolve(ok(null));
+    },
+
+    getFactUsage(query) {
+      if (state.facts.get(query.factId)?.namespace !== query.namespace) return Promise.resolve(ok(null));
+      const found = factUsage.get(query.factId);
+      return Promise.resolve(ok(found === undefined ? null : { ...found }));
+    },
+
+    getUsageTrackingStart(query) {
+      return Promise.resolve(ok(usageTrackingStart.get(query.namespace) ?? null));
     },
 
     listEntityMerges(query) {

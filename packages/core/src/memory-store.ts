@@ -11,8 +11,10 @@ import type {
   TimeFilter,
 } from './fact.ts';
 import type { EntityMerge } from './entity-merge.ts';
+import type { FactUsage } from './fact-usage.ts';
 import type { Feedback } from './feedback.ts';
 import type { Result } from './result.ts';
+import type { Timestamp } from './timestamp.ts';
 
 /**
  * Where memory is kept. One interface, because the first thing every write needs is to be
@@ -90,6 +92,27 @@ export interface MemoryStore {
     readonly namespace: Namespace;
     readonly contentHash: string;
   }): Promise<Result<readonly Source[]>>;
+
+  /**
+   * Phase 3. Records that recall returned these facts: for each, the time and a count raised
+   * by one, in one write. Outside `commit`, with no audit entry: usage is bookkeeping, not
+   * memory. A fact missing from the namespace is skipped. The first write of a namespace
+   * records when its usage tracking began.
+   */
+  recordFactUsage(usage: {
+    readonly namespace: Namespace;
+    readonly factIds: readonly FactId[];
+    readonly recalledAt: Timestamp;
+  }): Promise<Result<null>>;
+
+  /** Phase 3. When recall last returned a fact and how often, or null when it never did. */
+  getFactUsage(query: {
+    readonly namespace: Namespace;
+    readonly factId: FactId;
+  }): Promise<Result<FactUsage | null>>;
+
+  /** Phase 3. When usage tracking began in a namespace: its first usage write, or null before it. */
+  getUsageTrackingStart(query: { readonly namespace: Namespace }): Promise<Result<Timestamp | null>>;
 
   /** Phase 3. Every merge of the namespace, undone ones included, in the order they were made. */
   listEntityMerges(query: { readonly namespace: Namespace }): Promise<Result<readonly EntityMerge[]>>;

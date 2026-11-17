@@ -25,6 +25,8 @@ export { DomainSchema, PredicateDefinitionSchema } from './domain.ts';
 export type { Embedder } from './embedder.ts';
 export type { EntityMerge } from './entity-merge.ts';
 export { EntityMergeSchema } from './entity-merge.ts';
+export type { FactUsage } from './fact-usage.ts';
+export { FactUsageSchema } from './fact-usage.ts';
 export type { Feedback, FeedbackSignal } from './feedback.ts';
 export { FeedbackSchema, FeedbackSignalSchema } from './feedback.ts';
 export type {

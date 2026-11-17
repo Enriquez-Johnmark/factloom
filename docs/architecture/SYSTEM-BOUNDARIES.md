@@ -51,7 +51,7 @@ Each package exports only what another package needs. Everything else stays priv
 | Interfaces | `MemoryStore`, `LlmClient`, `Embedder` |
 | Fact operations, phase 1 | `recordFacts`, `invalidateFact`, `endFact`, `findConflictCandidates`, with `OperationDeps`, `ChangeContext`, `NewSource`, `NewEntity`, `NewFact`, `FactDraft` |
 | Fact operations, phase 2 | `reviseValidTime`, with `ReviseValidTimeInput` and `ValidTimeRevision`; `adjustConfidence`, with `AdjustConfidenceInput`; `recordFeedback`, with `RecordFeedbackInput`; `purgeContent`, with `PurgeContentInput`, and `PURGED_MARKER` |
-| Fact operations, phase 3 | `mergeEntities`, with `MergeEntitiesInput`, and `EntityMerge` |
+| Fact operations, phase 3 | `mergeEntities`, with `MergeEntitiesInput`, and `EntityMerge`; `FactUsage`, the usage that `MemoryStore.recordFactUsage` writes |
 | Conflict judge, phase 2 | `ConflictJudge`, `ConflictJudgeInput`, `ConflictVerdict`, `JUDGE_CANDIDATE_LIMIT` |
 | Test helpers | `createInMemoryStore`, `createFakeEmbedder`, `createScriptedLlm`, `createTestDeps` |
 

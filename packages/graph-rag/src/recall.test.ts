@@ -503,6 +503,50 @@ describe('recall', () => {
     ]);
   });
 
+  it('writes nothing to the store, usage included', async () => {
+    const { memory } = await recordShopTimeline();
+    const snapshot = async () => {
+      const facts = await memory.store.listFacts({
+        namespace: NAMESPACE,
+        subjectEntityId: null,
+        predicate: null,
+        touchingEntityIds: null,
+        supersededByFactId: null,
+        time: 'all',
+        limit: 1000,
+      });
+      if (!facts.ok) throw new Error(facts.error.message);
+      const perFact = [];
+      for (const { fact } of facts.value) {
+        perFact.push(
+          await memory.store.listAuditEntries({
+            namespace: NAMESPACE,
+            targetKind: 'fact',
+            targetId: fact.id,
+          }),
+        );
+        perFact.push(await memory.store.getFactUsage({ namespace: NAMESPACE, factId: fact.id }));
+      }
+      return JSON.stringify([
+        facts.value,
+        perFact,
+        await memory.store.getUsageTrackingStart({ namespace: NAMESPACE }),
+      ]);
+    };
+    const before = await snapshot();
+
+    const recalled = await recall(memory.on(NOW), {
+      namespace: NAMESPACE,
+      question: QUESTION,
+      validAt: null,
+      knownAt: null,
+      limit: 10,
+    });
+
+    expect(recalled.ok && recalled.value.facts.length).toBeGreaterThan(0);
+    expect(await snapshot()).toBe(before);
+  });
+
   it('leaves a purged fact out of the graph lane, even for a known-at date before the purge', async () => {
     const memory = createMemory();
     const shopUsesRedis = await recordOne(

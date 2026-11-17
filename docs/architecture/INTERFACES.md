@@ -100,6 +100,13 @@ export type Source = {
 
 export type Trigger = 'agent' | 'person' | 'feedback' | 'maintenance';
 
+/** Phase 3. How often recall has returned a fact, and when last. Bookkeeping, not memory. */
+export type FactUsage = {
+  readonly factId: FactId;
+  readonly lastRecalledAt: Timestamp;
+  readonly recallCount: number;
+};
+
 /** Phase 3. That one entity is the same thing as another. Reads resolve `fromEntityId` to `intoEntityId` while `undoneAt` is null. */
 export type EntityMerge = {
   readonly id: string;
@@ -262,6 +269,24 @@ export interface MemoryStore {
     readonly contentHash: string;
   }): Promise<Result<readonly Source[]>>;
 
+  /**
+   * Phase 3. Records that recall returned these facts: for each, the time and a count raised
+   * by one, in one write. Outside `commit`, with no audit entry: usage is bookkeeping, not
+   * memory. A fact missing from the namespace is skipped. The first write of a namespace
+   * records when its usage tracking began.
+   */
+  recordFactUsage(usage: {
+    readonly namespace: Namespace;
+    readonly factIds: readonly FactId[];
+    readonly recalledAt: Timestamp;
+  }): Promise<Result<null>>;
+
+  /** Phase 3. When recall last returned a fact and how often, or null when it never did. */
+  getFactUsage(query: { readonly namespace: Namespace; readonly factId: FactId }): Promise<Result<FactUsage | null>>;
+
+  /** Phase 3. When usage tracking began in a namespace: its first usage write, or null before it. */
+  getUsageTrackingStart(query: { readonly namespace: Namespace }): Promise<Result<Timestamp | null>>;
+
   /** Phase 3. Every merge of the namespace, undone ones included, in the order they were made. */
   listEntityMerges(query: { readonly namespace: Namespace }): Promise<Result<readonly EntityMerge[]>>;
 
@@ -326,7 +351,7 @@ export type CommitReceipt = {
 - **`commit` is the only way to write.** There is no method that writes a fact without an audit entry, so the rule "every change is recorded" cannot be skipped by accident.
 - **All or nothing.** Changes apply in order inside one transaction. Any failure leaves memory as it was.
 - **The single-value rule is checked inside the transaction.** After applying the changes, for every fact recorded with `singleValued: true`, the store looks for another live fact with the same subject and predicate whose valid period overlaps it. A missing bound counts as open. If one exists the commit fails with `conflict` and names the facts. The check is in the store, not before it, because two server processes can share one database file: a check made before the commit could pass in both.
-- **Reads never write.** Recall does not update a counter or a timestamp. From phase 3, how often a fact is recalled is recorded by the caller after the read, in a usage table outside `commit` and with no audit entry: usage counts are bookkeeping, not memory.
+- **Reads never write.** Recall does not update a counter or a timestamp. From phase 3, how often a fact is recalled is recorded by the caller after the read, in a usage table outside `commit` and with no audit entry: usage counts are bookkeeping, not memory. The store's `recordFactUsage` writes it, in one batched statement, skipping facts outside the namespace; `getFactUsage` and `getUsageTrackingStart` read it. Only the `recall` tool calls `recordFactUsage`, after its result is produced and without waiting; a failure is logged and dropped (FL-055).
 - **The store decides nothing else.** It does not judge conflicts, choose what to invalidate, or call an LLM. It enforces the rules in [`SCHEMA.md`](SCHEMA.md).
 - **Entity identifiers are resolved through merges by the store.** From phase 3, a query for an entity also matches facts recorded against entities merged into it, and `subject` and `objectEntity` in results are the entity that the others were merged into. In phases 1 and 2 there are no merges, and the read methods do not change shape when they arrive.
 - **Methods return promises** although SQLite is synchronous, because Postgres is not. The consequence is one coarse `commit` instead of a transaction handle, since a SQLite transaction cannot stay open across an `await`.

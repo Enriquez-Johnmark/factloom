@@ -312,6 +312,10 @@ One row per merge: an identifier, the namespace, `from_entity_id`, `into_entity_
 
 Every read resolves an entity identifier through the merges whose `undone_at` is `NULL`, in SQL (`packages/storage/src/entity-resolution-sql.ts`) and in the in-memory store: a filter by subject or by touching entities matches every identifier merged with the one asked for, and `subject` and `objectEntity` in results are the entity merged into. The single-value rule inside `commit` is checked across merged entities. A read with a past known-at date resolves through today's merges.
 
+### `fact_usage` and `fact_usage_tracking`, migration `0006_add_fact_usage.sql` (FL-055)
+
+`fact_usage` holds one row per fact: the namespace, `last_recalled_at` and `recall_count`, updated in place. It is the one table whose rows change, because it is bookkeeping and holds no content. `fact_usage_tracking` holds, per namespace, the time of the first usage write, so that a job can tell a fact never used from one used before counting began. Neither is written by `commit` or audited: the store's `recordFactUsage` writes both in one transaction, with one batched upsert for all facts of a recall result, and skips a fact outside the namespace.
+
 ## Planned additions
 
 These are designed so that the interfaces in [`INTERFACES.md`](INTERFACES.md) are stable, but they are not in the first migration. Each is an added table or column, and purge also replaces two triggers, so none forces a rewrite of what exists.
@@ -320,7 +324,7 @@ These are designed so that the interfaces in [`INTERFACES.md`](INTERFACES.md) ar
 |---|---|---|
 | 3 | An `entity_alias` table (FL-053) | Phase 1 resolves entities by exact name only |
 | 3 | `fact_verification` table: fact, outcome, method, time | Nothing verifies facts before phase 3 |
-| 3 | `fact_usage` table: fact, last recalled, count; and the record that a fact is an **archived fact** | Archiving by disuse starts counting when it is introduced. Keeping it out of phase 1 keeps recall a pure read |
+| 3 | The record that a fact is an **archived fact** (FL-065) | Archiving by disuse reads `fact_usage`, which FL-055 added |
 
 ## What differs in Postgres
 

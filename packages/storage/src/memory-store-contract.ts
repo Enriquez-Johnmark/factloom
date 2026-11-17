@@ -1296,6 +1296,63 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
     expect(result.ok ? null : result.error.code).toBe('not_found');
   });
 
+  // --- Usage (FL-055) ---
+  test('W1: recording usage sets the time and raises the count of each fact by one, and writes no audit entry', async () => {
+    const ids = ['pg16', 'node22', 'pg14-ended'];
+    const auditBefore = await Promise.all(ids.map((id) => auditEntries(store, 'fact', id)));
+    expect(await store.getUsageTrackingStart({ namespace: NAMESPACE })).toEqual({ ok: true, value: null });
+
+    const first = await store.recordFactUsage({
+      namespace: NAMESPACE,
+      factIds: ids,
+      recalledAt: at('2026-06-01'),
+    });
+    const second = await store.recordFactUsage({
+      namespace: NAMESPACE,
+      factIds: ids,
+      recalledAt: at('2026-06-02'),
+    });
+
+    expect([first, second]).toEqual([
+      { ok: true, value: null },
+      { ok: true, value: null },
+    ]);
+    for (const factId of ids) {
+      expect(await store.getFactUsage({ namespace: NAMESPACE, factId })).toEqual({
+        ok: true,
+        value: { factId, lastRecalledAt: at('2026-06-02'), recallCount: 2 },
+      });
+    }
+    expect(await Promise.all(ids.map((id) => auditEntries(store, 'fact', id)))).toEqual(auditBefore);
+    expect(await store.getUsageTrackingStart({ namespace: NAMESPACE })).toEqual({
+      ok: true,
+      value: at('2026-06-01'),
+    });
+  });
+  test('W2: recording usage for an unknown fact changes nothing and returns no error', async () => {
+    const before = await snapshot(store);
+
+    const result = await store.recordFactUsage({
+      namespace: NAMESPACE,
+      factIds: ['missing'],
+      recalledAt: at('2026-06-01'),
+    });
+
+    expect(result).toEqual({ ok: true, value: null });
+    expect(await store.getFactUsage({ namespace: NAMESPACE, factId: 'missing' })).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect(await store.getUsageTrackingStart({ namespace: NAMESPACE })).toEqual({ ok: true, value: null });
+    expect(await snapshot(store)).toBe(before);
+  });
+  test('W3: a fact never recalled has no usage', async () => {
+    expect(await store.getFactUsage({ namespace: NAMESPACE, factId: 'pg16' })).toEqual({
+      ok: true,
+      value: null,
+    });
+  });
+
   /** A store holding only the first commit of the timeline, to read the receipt of the second. */
   async function createStoreWithFirstCommit(): Promise<MemoryStore> {
     const fresh = await createStore();
@@ -1799,6 +1856,32 @@ function registerSingleValueRuleAndNamespaces(
       .listAuditEntries({ namespace: NAMESPACE, targetKind: 'feedback', targetId: 'fb-other' });
     expect(entries.ok && entries.value).toEqual([]);
   });
+  cases.test(
+    'N8: usage recorded for a fact of the other namespace changes nothing, and usage is not read across namespaces',
+    async () => {
+      const store = cases.store();
+      const result = await store.recordFactUsage({
+        namespace: NAMESPACE,
+        factIds: ['other-pg16'],
+        recalledAt: at('2026-06-01'),
+      });
+      expect(result).toEqual({ ok: true, value: null });
+      expect(await store.getFactUsage({ namespace: OTHER, factId: 'other-pg16' })).toEqual({
+        ok: true,
+        value: null,
+      });
+      await store.recordFactUsage({
+        namespace: OTHER,
+        factIds: ['other-pg16'],
+        recalledAt: at('2026-06-01'),
+      });
+      expect(await store.getFactUsage({ namespace: NAMESPACE, factId: 'other-pg16' })).toEqual({
+        ok: true,
+        value: null,
+      });
+      expect(await store.getUsageTrackingStart({ namespace: NAMESPACE })).toEqual({ ok: true, value: null });
+    },
+  );
   cases.test('N4: a supersession link to a fact of the other namespace returns not_found', async () => {
     const result = await commit([
       { kind: 'invalidate_fact', factId: 'pg16', supersededByFactId: 'other-pg16' },

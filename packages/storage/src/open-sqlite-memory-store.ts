@@ -3,6 +3,7 @@ import { err, type MemoryStore, ok, type Result, toTimestamp } from '@factloom/c
 import type { Database } from 'better-sqlite3';
 import { createCommit } from './create-commit.ts';
 import { createReads } from './create-reads.ts';
+import { createUsage } from './create-usage.ts';
 import { findEmbeddingModelMismatch } from './embedding-model.ts';
 import { openConnection } from './open-connection.ts';
 import { runMigrations } from './run-migrations.ts';
@@ -57,6 +58,7 @@ export function openSqliteMemoryStore(options: SqliteMemoryStoreOptions): Result
     }
     const commit = createCommit(db, embeddingModel);
     const reads = createReads(db, embeddingModel);
+    const usageMethods = createUsage(db);
     const store: MemoryStore = {
       commit: (changeSet) => Promise.resolve(commit(changeSet)),
       findEntities: (query) => read(() => ok(reads.findEntities(query))),
@@ -70,6 +72,17 @@ export function openSqliteMemoryStore(options: SqliteMemoryStoreOptions): Result
       findSourcesByContentHash: (query) => read(() => ok(reads.findSourcesByContentHash(query))),
       listFeedback: (query) => read(() => ok(reads.listFeedback(query))),
       listEntityMerges: (query) => read(() => ok(reads.listEntityMerges(query))),
+      recordFactUsage: (usage) => {
+        try {
+          usageMethods.recordFactUsage(usage);
+          return Promise.resolve(ok(null));
+        } catch (cause) {
+          const reason = cause instanceof Error ? cause.message : String(cause);
+          return Promise.resolve(err('storage_failed', `The usage write failed. ${reason}`, { cause }));
+        }
+      },
+      getFactUsage: (query) => read(() => ok(usageMethods.getFactUsage(query))),
+      getUsageTrackingStart: (query) => read(() => ok(usageMethods.getUsageTrackingStart(query))),
       close: () => {
         db.close();
         return Promise.resolve();
