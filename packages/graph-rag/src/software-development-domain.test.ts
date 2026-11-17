@@ -129,12 +129,21 @@ describe('softwareDevelopmentDomain', () => {
     expect(new Set(SCENARIO_CASES.map((row) => row.scenario)).size).toBe(11);
   });
 
-  it('has exactly four entity types and six predicates', () => {
+  it('the software development domain has a type for a function or symbol', () => {
+    expect(softwareDevelopmentDomain.entityTypes).toContain('symbol');
+    const describedAs = softwareDevelopmentDomain.predicates.find(
+      (predicate) => predicate.name === 'described_as',
+    );
+    expect(describedAs?.cardinality).toBe('multi');
+  });
+
+  it('has exactly five entity types and seven predicates', () => {
     expect(softwareDevelopmentDomain.entityTypes).toEqual([
       'repository',
       'dependency',
       'convention',
       'decision',
+      'symbol',
     ]);
     expect(softwareDevelopmentDomain.predicates.map((predicate) => predicate.name)).toEqual([
       'uses_test_framework',
@@ -143,6 +152,7 @@ describe('softwareDevelopmentDomain', () => {
       'listens_on_port',
       'follows_convention',
       'has_status',
+      'described_as',
     ]);
   });
 

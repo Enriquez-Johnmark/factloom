@@ -1,4 +1,4 @@
-import type { Domain } from '@factloom/core';
+import type { Domain, FactWithSources } from '@factloom/core';
 
 /**
  * The software development domain: what Factloom can say about a repository. It starts with
@@ -9,7 +9,7 @@ import type { Domain } from '@factloom/core';
  */
 export const softwareDevelopmentDomain: Domain = {
   name: 'software_development',
-  entityTypes: ['repository', 'dependency', 'convention', 'decision'],
+  entityTypes: ['repository', 'dependency', 'convention', 'decision', 'symbol'],
   predicates: [
     {
       name: 'uses_test_framework',
@@ -47,6 +47,12 @@ export const softwareDevelopmentDomain: Domain = {
         'A decision has a status, given as a value, for example the decision "use SQLite first" has_status "accepted".',
       cardinality: 'single',
     },
+    {
+      name: 'described_as',
+      description:
+        'A symbol does what a value says, for example the function parseDate described_as "parses a calendar date".',
+      cardinality: 'multi',
+    },
   ],
   extractionInstructions: [
     'The texts come from work on software: notes, commit messages, conversations with a coding agent.',
@@ -54,8 +60,20 @@ export const softwareDevelopmentDomain: Domain = {
     'A dependency is a library, a tool, a framework, a database or a service that a repository uses, such as Vitest, pnpm or PostgreSQL.',
     'A convention is a way of working that a repository follows, such as conventional commits.',
     'A decision is a choice the team made, named by what was chosen, such as "use SQLite first".',
+    'A symbol is a function, class, type or constant in the code, named exactly as the code names it, such as parseDate.',
     'A deployment target, a port and a status are values, not entities. Write a port as its digits only.',
     'Keep a name as the text writes it; do not expand or shorten it.',
   ].join('\n'),
   correctionPolicy: 'automatic',
 };
+
+/**
+ * The names a fact needs in its anchored file, for the name check of the verification job
+ * (FL-071): the name of each of its entities that is a symbol. Empty for a fact that names
+ * no symbol, which the check then leaves to the next rung.
+ */
+export function findSymbolNames(found: FactWithSources): readonly string[] {
+  return [found.subject, found.objectEntity].flatMap((entity) =>
+    entity !== null && entity.type === 'symbol' ? [entity.name] : [],
+  );
+}

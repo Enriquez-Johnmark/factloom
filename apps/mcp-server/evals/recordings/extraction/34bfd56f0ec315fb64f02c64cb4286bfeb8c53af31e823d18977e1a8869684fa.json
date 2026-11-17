@@ -1,0 +1,24 @@
+{
+  "task": "extraction",
+  "model": "claude-haiku-5-5",
+  "instructions": "You extract facts from a text for a memory that records when each fact was true.\n\nRules:\n- Return only facts the text states as true. A plan, an intention, a proposal, a question or a hypothetical is not a fact: return nothing for it.\n- A text with nothing worth remembering gives an empty list.\n- Use only the entity types and predicates listed below. Leave out a fact that none of them fits.\n- The object of a fact is an entity, with a type and a name, or a value such as a version, a port, a command or a target.\n- The statement is one sentence that can be read on its own, without the text.\n- confidence is from 0 to 1: how sure the text makes you that the fact is true.\n- valid_from is the date the fact became true, and valid_to the date it stopped. Give a date only when the text states it or a relative date in the text fixes it; otherwise give null. Never give a date the text does not support. Words such as \"now\" or \"currently\" fix no date, and neither does the moment the text was written, such as the time of a commit.\n- Resolve a relative date, such as \"yesterday\" or \"three days ago\", against the reference time given with the text.\n- When the text gives only a month or a year, use the first day of that period.\n- When the text says that something replaced something else on a date it states or fixes, also return the replaced fact, with valid_to that date. When it gives no date for the change, return only the new fact.\n- Write dates as calendar dates, such as 2026-03-15, or as full UTC timestamps.\n\nThe texts come from work on software: notes, commit messages, conversations with a coding agent.\nA repository is a code base, named as its folder or package is named, such as shop-api.\nA dependency is a library, a tool, a framework, a database or a service that a repository uses, such as Vitest, pnpm or PostgreSQL.\nA convention is a way of working that a repository follows, such as conventional commits.\nA decision is a choice the team made, named by what was chosen, such as \"use SQLite first\".\nA symbol is a function, class, type or constant in the code, named exactly as the code names it, such as parseDate.\nA deployment target, a port and a status are values, not entities. Write a port as its digits only.\nKeep a name as the text writes it; do not expand or shorten it.\n\nEntity types:\n- repository\n- dependency\n- convention\n- decision\n- symbol\n\nPredicates:\n- uses_test_framework (one value at a time): A repository runs its tests with a dependency, for example the repository uses_test_framework Vitest.\n- uses_package_manager (one value at a time): A repository installs its dependencies with a dependency, for example the repository uses_package_manager pnpm.\n- deploys_to (one value at a time): A repository is deployed to a named target, given as a value, for example the repository deploys_to \"Fly.io\".\n- listens_on_port (one value at a time): A dependency accepts connections on a port, given as a value, for example PostgreSQL listens_on_port \"5432\".\n- follows_convention (several values at once): A repository follows a convention, for example the repository follows_convention \"conventional commits\".\n- has_status (one value at a time): A decision has a status, given as a value, for example the decision \"use SQLite first\" has_status \"accepted\".\n- described_as (several values at once): A symbol does what a value says, for example the function parseDate described_as \"parses a calendar date\".",
+  "input": "Reference time: 2026-02-14T00:00:00.000Z\n\nText:\nThe local Redis listens on port 6379.",
+  "response": {
+    "facts": [
+      {
+        "confidence": 0.9,
+        "object": {
+          "value": "6379"
+        },
+        "predicate": "listens_on_port",
+        "statement": "The local Redis listens on port 6379.",
+        "subject": {
+          "name": "Redis",
+          "type": "dependency"
+        },
+        "valid_from": null,
+        "valid_to": null
+      }
+    ]
+  }
+}
