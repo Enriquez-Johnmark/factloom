@@ -19,6 +19,7 @@ Configuration, read from environment variables by the composition root:
 | `FACTLOOM_DB` | Path of the SQLite file | `~/.factloom/factloom.db` |
 | `FACTLOOM_NAMESPACE` | The namespace every tool call uses | None. Required |
 | `ANTHROPIC_API_KEY` | Key for extraction. Needed only by `remember` | none |
+| `FACTLOOM_REPO` | The git repository that the maintenance command verifies facts against (FL-050). The tools do not read it | The working directory |
 
 `FACTLOOM_NAMESPACE` has no default. The server refuses to start without it and says why: the default database is one file per user, so a shared default namespace would mix the memory of every repository that user works in.
 
