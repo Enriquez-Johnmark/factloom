@@ -1475,7 +1475,7 @@ Rules broken by hand, each then restored:
       Tests  1121 passed (1121)
 ```
 
-The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the seventh commit: https://github.com/Johnmark-Tech/factloom/actions/runs/44029997298. The entity pair eval runs under `pnpm eval`, which the workflow runs only weekly or by hand; it was run here, on Linux x64, and not yet in the eval job.
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the seventh commit: https://github.com/Johnmark-Tech/factloom/actions/runs/44029997298. The entity pair eval runs under `pnpm eval`, which the workflow runs only weekly or by hand. Started by hand on the 50-pair set at the eleventh commit, the eval job passed on Linux x64 with the same counts and similarities as here: https://github.com/Johnmark-Tech/factloom/actions/runs/44036447389.
 
 Differences from the item:
 
