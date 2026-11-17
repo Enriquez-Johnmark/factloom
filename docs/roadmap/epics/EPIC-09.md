@@ -89,7 +89,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-049 | Verification records and the stale and orphaned lists | 3 | FL-015, FL-045, FL-061 | Completed |
 | FL-050 | Deterministic verification: repository reader and path checks | 3 | FL-018, FL-048, FL-049 | Completed |
 | FL-071 | Deterministic verification: function check by text search | 3 | FL-050, FL-018 | Completed |
-| FL-062 | Deterministic verification: manifest version check and succession | 3 | FL-050, FL-018 | Pending |
+| FL-062 | Deterministic verification: manifest version check and succession | 3 | FL-050, FL-018 | Completed |
 | FL-051 | LLM verification as the last rung | 3 | FL-062, FL-028, FL-022 | Pending |
 | FL-052 | Entity merge with read resolution | 3 | FL-015, FL-016, FL-017 | Completed |
 | FL-063 | Undo a merge and refuse a conflicting merge | 3 | FL-052 | Completed |
@@ -605,7 +605,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-050, FL-018 |
 | Requirements | REQ-21 (REQ-CA-09), REQ-24 |
@@ -657,20 +657,95 @@ Differences from the item:
 - [`TESTING.md`](../../architecture/TESTING.md): "A test that must make no LLM call passes a client that fails on any call."
 
 **Acceptance criteria.**
-- [ ] Fixture "manifest version changes": a repository whose `package.json` pins a dependency at one version, a stored fact about that version anchored at that commit, then a commit that changes the version. After one maintenance run with an LLM client that fails if called: the old fact is ended with `validTo` equal to the second commit's committer time; a current fact holds the new version; its source has kind `file`, the manifest path and the second commit; the verification row says `contradicted` and `deterministic`.
-- [ ] The same fixture, read afterwards: asking as of a date between the two commits returns the old version; asking with a known-at date before the run returns the old version as current; fact history shows a succession.
-- [ ] Fixture "manifest changed, version the same": another line of the manifest changes. The outcome is `confirmed` and the fact is unchanged.
-- [ ] Fixture "dependency removed": the outcome is `contradicted`, the fact is live, and the report counts it as flagged.
-- [ ] Fixture "file changed, no structured check": the outcome is `inconclusive` and the fact is unchanged.
-- [ ] A test with a domain whose policy is `human_approval` runs the first fixture and shows the verification row `contradicted`, the fact unchanged, and the fact counted as flagged.
-- [ ] A second run over the first fixture changes nothing: the successor is anchored at `HEAD` and is confirmed or not yet due.
-- [ ] Every audit entry written by these runs has trigger `maintenance`.
-- [ ] Unit tests of the structured check pass with these names: "reads a version from dependencies", "reads a version from devDependencies", "returns no value for a dependency that is not listed", "returns no value for a manifest that does not parse".
-- [ ] A test named "the software development domain has a single-valued predicate for a dependency's version" passes.
+- [x] Fixture "manifest version changes": a repository whose `package.json` pins a dependency at one version, a stored fact about that version anchored at that commit, then a commit that changes the version. After one maintenance run with an LLM client that fails if called: the old fact is ended with `validTo` equal to the second commit's committer time; a current fact holds the new version; its source has kind `file`, the manifest path and the second commit; the verification row says `contradicted` and `deterministic`.
+- [x] The same fixture, read afterwards: asking as of a date between the two commits returns the old version; asking with a known-at date before the run returns the old version as current; fact history shows a succession.
+- [x] Fixture "manifest changed, version the same": another line of the manifest changes. The outcome is `confirmed` and the fact is unchanged.
+- [x] Fixture "dependency removed": the outcome is `contradicted`, the fact is live, and the report counts it as flagged.
+- [x] Fixture "file changed, no structured check": the outcome is `inconclusive` and the fact is unchanged.
+- [x] A test with a domain whose policy is `human_approval` runs the first fixture and shows the verification row `contradicted`, the fact unchanged, and the fact counted as flagged.
+- [x] A second run over the first fixture changes nothing: the successor is anchored at `HEAD` and is confirmed or not yet due.
+- [x] Every audit entry written by these runs has trigger `maintenance`.
+- [x] Unit tests of the structured check pass with these names: "reads a version from dependencies", "reads a version from devDependencies", "returns no value for a dependency that is not listed", "returns no value for a manifest that does not parse".
+- [x] A test named "the software development domain has a single-valued predicate for a dependency's version" passes.
 
 **Validation.** Unit tests of the rung and of the structured check with a fake reader and the in-memory store. Tests of the whole run against fixture repositories with the git implementation and the SQLite adapter, on both CI platforms from FL-002. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output on Linux and macOS arm64; the git command used for the added method, with its documentation citation.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4 and git 2.43.0, in six commits:
+
+1. `docs: settle in INTERFACES.md how a value found changed in its source ends a fact`;
+2. `feat(core): add the reason code source_changed`;
+3. `feat(maintenance): add the structured value rung, and end a fact whose value changed in its source`;
+4. `feat(graph-rag): add pins_version and the package.json version check to the domain`;
+5. `feat(mcp-server): run the version check in the verification job`;
+6. `docs(mcp-server): describe the version check of the verification job`.
+
+Built:
+
+- **Rung decisions.** A rung now returns a decision: the outcome, and for a value that changed, a successor with the new value, its statement and when it changed. The name check of FL-071 returns its decision with no successor.
+- **`createStructuredValueRung(checks)`**, placed `after_content_changed`, looks up the domain's check by the fact's predicate.
+  - It reads the value at the anchor's commit and at `HEAD`. The same value is `confirmed`; a different one, or none at `HEAD`, is `contradicted`; a predicate with no check, or a file that cannot be read, decides nothing, so the outcome stays `inconclusive`.
+  - For a new value, it walks the commits that touched the file after the anchor and dates the change by the committer time of the first commit whose value differs.
+
+  `maintenance` names no predicate, file name or git command.
+- **The job.**
+  - It records the verification first.
+  - Then, for a `contradicted` fact with a successor under `automatic`, it calls `endFact` with trigger `maintenance` and reason `source_changed`. The successor holds the new value, and the source is the file at `HEAD`: kind `file`, the path, the `HEAD` commit.
+  - A `conflict` or `already_invalidated` from `endFact` counts as examined.
+  - Any other `contradicted` fact is flagged.
+  - The job's dependencies are now the full `OperationDeps`, since `endFact` needs the domain and the embedder.
+- **The repository reader** gains `listCommitsTouching(path, fromCommit)`. Its git implementation runs `git log --reverse --format=%H %cI <from>..HEAD -- <path>`, after check 4.3 of the research, which lists commits with their committer times. Re-read on 2026-11-17:
+  - https://git-scm.com/docs/gitrevisions: `<rev1>..<rev2>` "Include commits that are reachable from `<rev2>` but exclude those that are reachable from `<rev1>`";
+  - https://git-scm.com/docs/git-log: `-- <path>` shows "only commits that are enough to explain how the files that match the specified paths came to be"; `--reverse` outputs the chosen commits in reverse order; `%cI` is the committer date in strict ISO 8601.
+
+  The last two were read only as a summary of the page, and the reader's test confirms them by running the command.
+- **The domain.** The software development domain gains the single-valued predicate `pins_version`, with a value as its object, and its check: `readDependencyVersion` parses a `package.json` and reads `dependencies`, then `devDependencies`; `describeDependencyVersion` words the successor. All are in one commit, with the FL-018 tests of the exact lists, now eight predicates. The composition root keys the check by `pins_version`.
+- **The recordings.** As for FL-071, the predicate is part of the extraction prompt, so the extraction cases were recorded again with the owner's key, set for that one command: `claude-haiku-5-5`, 20 of 20 pass, precision 1.000, recall 0.960. The 20 old recordings were removed, and the new ones scanned for key, token and password patterns, with no match.
+- **The fixture helper** now takes a date for each commit, so that `validTo` can be asserted exactly.
+
+Tests:
+
+- **The structured check:** the four named tests, "reads a version from dependencies", "reads a version from devDependencies", "returns no value for a dependency that is not listed" and "returns no value for a manifest that does not parse".
+- **The domain:** "the software development domain has a single-valued predicate for a dependency's version".
+- **The rung, with a fake reader:**
+  - confirmed after an unrelated change;
+  - contradicted with the new value, dated by the first differing commit among three;
+  - contradicted with no successor for a removed value;
+  - nothing for a predicate with no check;
+  - nothing for an unreadable file.
+- **The git reader:** `listCommitsTouching` lists only the later commit that touched the path, with its committer time.
+- **The fixtures, with the git reader and the SQLite adapter, in `version-check-run.test.ts`:**
+  - "manifest version changes": the job reports one change. The verification is `contradicted` and `deterministic`. The current fact holds 5.1.0, with the source `file`, `package.json` and the second commit. The audit entries of the old fact are `verification` then `succession`, both with trigger `maintenance`, the succession with reason `source_changed`.
+  - **Read afterwards:** as of 2026-02-01, between the commits, the old version is returned, ended at the second commit's committer time, 2026-02-14T10:30:00.000Z. Known at 2026-02-20, before the run, the old version is current.
+  - "manifest changed, version the same": `confirmed`, fact rows unchanged.
+  - "dependency removed": `contradicted`, flagged, fact rows unchanged.
+  - "file changed, no structured check": `inconclusive`, fact rows unchanged.
+  - **`human_approval`:** `contradicted`, no change, flagged.
+  - **A second run:** no change and no flag.
+
+  Every run receives the dependencies of `createTestDeps`, whose LLM client fails if called.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| The change is dated by the last commit, not the first | the rung's dating test |
+| The job ignores `human_approval` | the human-approval fixture |
+| A different value counts as the same | the rung's dating test, the version-change, read-afterwards and human-approval fixtures |
+
+`pnpm check`:
+
+```text
+      Tests  1105 passed (1105)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the fifth commit, which holds all of the code and the recordings: https://github.com/Johnmark-Tech/factloom/actions/runs/44014042711.
+
+Differences from the item:
+
+- **The repository method** is `listCommitsTouching`, which lists the commits; the rung reads each one's value to find the first that differs. The research's check 4.5 searches by text, which a version string does not fit.
+- **A rung's result is a decision**, with an optional successor, so that the job can make the change after recording the verification.
 
 ### FL-051: LLM verification as the last rung
 
