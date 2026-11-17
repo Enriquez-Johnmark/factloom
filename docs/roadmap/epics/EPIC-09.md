@@ -90,7 +90,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-050 | Deterministic verification: repository reader and path checks | 3 | FL-018, FL-048, FL-049 | Completed |
 | FL-071 | Deterministic verification: function check by text search | 3 | FL-050, FL-018 | Completed |
 | FL-062 | Deterministic verification: manifest version check and succession | 3 | FL-050, FL-018 | Completed |
-| FL-051 | LLM verification as the last rung | 3 | FL-062, FL-028, FL-022 | Pending |
+| FL-051 | LLM verification as the last rung | 3 | FL-062, FL-028, FL-022 | Completed |
 | FL-052 | Entity merge with read resolution | 3 | FL-015, FL-016, FL-017 | Completed |
 | FL-063 | Undo a merge and refuse a conflicting merge | 3 | FL-052 | Completed |
 | FL-053 | Duplicate entity detection by name | 3 | FL-048, FL-052, FL-063 | Completed |
@@ -751,7 +751,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-062, FL-028, FL-022 |
 | Requirements | REQ-21, REQ-24 |
@@ -797,19 +797,108 @@ Differences from the item:
 - Text sent to the LLM provider leaves the machine. The rung sends nothing the secret check matches.
 
 **Acceptance criteria.**
-- [ ] A unit test shows the rung is not reached for a fact whose deterministic outcome is `confirmed`, `contradicted` or `source_missing`: it passes with an LLM client that fails if called.
-- [ ] A unit test with a scripted LLM shows each of the three answers recorded with method `llm` and the matching outcome.
-- [ ] A unit test shows `contradicted` lowers the confidence by the step, leaves the fact live, and writes audit entries with trigger `maintenance`.
-- [ ] A unit test shows a failed call records `inconclusive` and changes no confidence.
-- [ ] Unit tests show an oversized file and a file containing a secret pattern are not sent: each passes with an LLM client that fails if called.
-- [ ] A unit test shows that with no LLM client configured the run completes and reports the facts left `inconclusive`.
-- [ ] A unit test shows the call limit: with the limit set to 2 and five undecided facts, two calls are made.
-- [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the verification eval in record mode from `apps/mcp-server` (`pnpm run record:verification`, which wraps the Anthropic client with the wrapper of FL-028 in record mode), reads the diff of the new recordings for secrets, and records the model identifier. A replayed run fails while a recording is missing, so the code and the recordings are committed together after this step, and the item is not `Completed` before it.
-- [ ] The verification eval runs inside `pnpm check` in replay, fails on a missing recording, and prints the table and the rate. The rate is recorded; this item sets no target for it.
+- [x] A unit test shows the rung is not reached for a fact whose deterministic outcome is `confirmed`, `contradicted` or `source_missing`: it passes with an LLM client that fails if called.
+- [x] A unit test with a scripted LLM shows each of the three answers recorded with method `llm` and the matching outcome.
+- [x] A unit test shows `contradicted` lowers the confidence by the step, leaves the fact live, and writes audit entries with trigger `maintenance`.
+- [x] A unit test shows a failed call records `inconclusive` and changes no confidence.
+- [x] Unit tests show an oversized file and a file containing a secret pattern are not sent: each passes with an LLM client that fails if called.
+- [x] A unit test shows that with no LLM client configured the run completes and reports the facts left `inconclusive`.
+- [x] A unit test shows the call limit: with the limit set to 2 and five undecided facts, two calls are made.
+- [x] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the verification eval in record mode from `apps/mcp-server` (`pnpm run record:verification`, which wraps the Anthropic client with the wrapper of FL-028 in record mode), reads the diff of the new recordings for secrets, and records the model identifier. A replayed run fails while a recording is missing, so the code and the recordings are committed together after this step, and the item is not `Completed` before it.
+- [x] The verification eval runs inside `pnpm check` in replay, fails on a missing recording, and prints the table and the rate. The rate is recorded; this item sets no target for it.
 
 **Validation.** Unit tests with scripted and failing LLM clients, the fake repository reader and the in-memory store. The eval in replay. One live run by hand: the owner runs the eval with recording on and records the model identifier and the rate.
 
 **Completion evidence.** The commit; the eval table and rate; the model identifier the recordings were made with; the three constants' values.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in nine commits:
+
+1. `docs: settle in INTERFACES.md that an LLM verdict only lowers confidence`;
+2. `feat(core): add the reason code verification_failed`;
+3. `feat(maintenance): add the LLM verification rung, which lowers the confidence of a contradicted fact`;
+4. `test(maintenance): build the fake key of the secret test at run time, so the repository scan passes`;
+5. `feat(graph-rag): export the secret check, for the LLM verification rung`;
+6. `docs: list the domain checks and the secret check among the exports of graph-rag`;
+7. `feat(mcp-server): run the LLM verification rung last in the verification job when a key is set`;
+8. `test(mcp-server): add the verification cases and their eval, recorded with the owner's key`;
+9. `docs(mcp-server): describe the LLM step of the verification job`.
+
+Commit 3 alone does not pass `pnpm check`. Its new test held a literal AWS-style key, which the repository-wide secret scan of FL-022 refuses once the file is tracked. The check run before that commit passed only because the file was not yet tracked. Commit 4 fixes it, and every later commit passes. History was not rewritten.
+
+Built:
+
+- **The rung.** `createLlmVerificationRung({ llm, containsSecret, maxCalls })`, placed `after_content_changed`, is the last rung the composition root passes. It is reached only for a file that changed and that no deterministic rung decided.
+  - It reads the file at `HEAD` and calls `generateObject` with task `verification`, the stable `VERIFICATION_INSTRUCTIONS` and the fact's statement, path and file text in `input`.
+  - It maps `supported`, `contradicted` and `unclear` to `confirmed`, `contradicted` and `inconclusive`, with method `llm`.
+  - It is made anew for each run, because it counts its calls.
+- **The three constants:**
+  - `MAX_VERIFIED_TEXT_LENGTH` = 50,000 characters;
+  - `CONFIDENCE_STEP` = 0.2;
+  - `MAX_LLM_CALLS_PER_RUN` = 20.
+- **The guards:**
+  - a file over the limit, or one the secret check matches, is not sent and stays `inconclusive`;
+  - a failed call, or an answer outside the schema, is `inconclusive` with method `llm` and counted as failed;
+  - with no LLM client the fact is recorded `inconclusive` and counted as undecided;
+  - beyond the call limit the fact is not recorded at all, so it stays stale for the next run, and is counted as undecided.
+- **Decisions.** A rung's decision now carries the method and a note (`failed`, `undecided`, `deferred`). Every job's report has a new count, `undecided`.
+- **The job.** On `contradicted` with method `llm`, it calls `adjustConfidence` to lower the confidence by the step, to no less than 0, with trigger `maintenance` and the new reason code `verification_failed`, and flags the fact. It never ends or invalidates a fact on an LLM verdict.
+- **The secret check.** `checkForSecrets` is now exported by `@factloom/graph-rag`, recorded in `SYSTEM-BOUNDARIES.md`, and passed to the rung by the composition root.
+- **The model.** The maintenance command gives the rung the Anthropic client only when `ANTHROPIC_API_KEY` is set. The model comes from the task map, `verification`: `claude-haiku-5-5`. No model name is in `maintenance`.
+
+Unit tests, with scripted and failing LLM clients, a fake reader and the in-memory store:
+
+- **Not reached:** for `confirmed`, `source_missing`, and a fact the name check contradicts.
+- **The answers:** each of the three, with method `llm`.
+- **`contradicted`:** confidence 0.9 becomes 0.7, the fact stays live and flagged, and the audit entries `fact.verified` and `fact.confidence_adjusted` have trigger `maintenance`.
+- **A failed call:** `inconclusive`, counted as failed, confidence unchanged.
+- **Not sent:** an oversized file and a file with a secret pattern.
+- **No client:** the run completes with one undecided fact.
+- **The call limit:** with a limit of 2 and five undecided facts, two verifications are recorded and three are undecided.
+
+**The eval.** Twelve cases in `apps/mcp-server/evals/verification-cases/`, four for each answer, written and reviewed by hand. `run-verification-eval.ts` runs them through the rung. `verification-replay.test.ts` replays them inside `pnpm check`; with one recording removed, it failed with `No recording for the key …` and named the record command. The recordings were made in this session with the owner's key, set in the environment for the one command `pnpm run record:verification` and nowhere else, model `claude-haiku-5-5`, 12 calls. They were scanned for key, token and password patterns, with no match. The table:
+
+```text
+MATCH  expected contradicted, given contradicted  Contradicted: the deployment moved to Render
+MATCH  expected contradicted, given contradicted  Contradicted: the local PostgreSQL port moved
+MATCH  expected contradicted, given contradicted  Contradicted: a function described as removed
+MATCH  expected contradicted, given contradicted  Contradicted: the tests moved to Jest
+MATCH  expected supported, given supported  Supported: conventional commits
+MATCH  expected supported, given supported  Supported: the deployment target in a README
+MATCH  expected supported, given supported  Supported: the local PostgreSQL port
+MATCH  expected supported, given supported  Supported: the test framework
+MATCH  expected unclear, given unclear  Unclear: the test runner comes from a shared preset
+MATCH  expected unclear, given unclear  Unclear: the commit section was removed
+MATCH  expected unclear, given unclear  Unclear: the port is not mentioned any more
+MATCH  expected unclear, given unclear  Unclear: a README about something else
+Matched: 12 of 12.
+Expected supported or unclear, answered contradicted: 0.000.
+```
+
+The rate is recorded and no target is set. Twelve hand-written cases are a small set, so the rate says little beyond them.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| No size or secret guard | the not-sent test |
+| No call limit | the call-limit test |
+| The rung placed before the content check | the not-reached test |
+| The confidence not lowered | the `contradicted` test |
+| A recording removed | the replay test |
+
+`pnpm check`:
+
+```text
+      Tests  1114 passed (1114)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the eighth commit, which holds all of the code and the recordings, with the eval in replay on both: https://github.com/Johnmark-Tech/factloom/actions/runs/44017515181.
+
+Differences from the item:
+
+- **The owner's step was done in this session**, as the item says, with the owner's approval to use the key. The agent ran the record command with the key set for that command only.
+- **The report gains an `undecided` count** for facts left `inconclusive` because no key is set, and for facts left for the next run by the call limit.
+- **Facts beyond the call limit are not recorded at all**, so that they are still stale on the next run, as "wait for the next run" requires.
 
 ### FL-052: Entity merge with read resolution
 
