@@ -9,6 +9,8 @@ export type JobCounts = {
   /** Left for a person to decide. */
   readonly flagged: number;
   readonly failed: number;
+  /** What was flagged, each with a word that says why, so that a person can find it. */
+  readonly flaggedItems: readonly { readonly id: string; readonly reason: string }[];
 };
 
 /**
@@ -38,12 +40,15 @@ export const MaintenanceReportSchema = z.strictObject({
       changed: CountSchema,
       flagged: CountSchema,
       failed: CountSchema,
+      flaggedItems: z
+        .array(z.strictObject({ id: z.string().min(1), reason: z.string().min(1) }).readonly())
+        .readonly(),
     }),
   ),
 });
 export type MaintenanceReport = z.infer<typeof MaintenanceReportSchema>;
 
-const NOTHING: JobCounts = { examined: 0, changed: 0, flagged: 0, failed: 0 };
+const NOTHING: JobCounts = { examined: 0, changed: 0, flagged: 0, failed: 0, flaggedItems: [] };
 
 /**
  * Runs the jobs once, one after another in the order given, and collects their reports. A job

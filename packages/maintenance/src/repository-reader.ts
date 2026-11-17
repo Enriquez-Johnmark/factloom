@@ -1,0 +1,20 @@
+import type { Result } from '@factloom/core';
+
+/**
+ * What the verification ladder reads from a repository, and nothing more. Paths are relative
+ * to the repository's root. A commit is a commit identifier as stored in a source's `version`.
+ * The git implementation is in the application; tests use a fake. Every method returns
+ * `invalid_input` when the repository cannot be read.
+ */
+export type RepositoryReader = {
+  /** The commit `HEAD` names. */
+  readonly readHead: () => Promise<Result<string>>;
+  /** Whether a commit is `HEAD` or an ancestor of it. False for a commit the repository does not have. */
+  readonly isAncestorOfHead: (commit: string) => Promise<Result<boolean>>;
+  /** Whether a path exists at a commit. */
+  readonly pathExists: (commit: string, path: string) => Promise<Result<boolean>>;
+  /** The content identifier of a path at a commit, or null when the path does not exist there. */
+  readonly readContentId: (commit: string, path: string) => Promise<Result<string | null>>;
+  /** The text of a path at a commit, or null when the path does not exist there. */
+  readonly readText: (commit: string, path: string) => Promise<Result<string | null>>;
+};

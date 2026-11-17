@@ -20,7 +20,13 @@ describe('runMaintenance', () => {
       run: async () => {
         ran.push(name);
         return outcome === 'ok'
-          ? ok({ examined: 3, changed: 1, flagged: 1, failed: 0 })
+          ? ok({
+              examined: 3,
+              changed: 1,
+              flagged: 1,
+              failed: 0,
+              flaggedItems: [{ id: 'f-1', reason: 'source_missing' }],
+            })
           : err('storage_failed', 'Disk full.');
       },
     });
@@ -43,7 +49,10 @@ describe('runMaintenance', () => {
   it('reports a job that throws as failed and runs the next', async () => {
     const report = await runMaintenance({ now: steppingClock() }, [
       { name: 'throws', run: () => Promise.reject(new Error('boom')) },
-      { name: 'after', run: () => Promise.resolve(ok({ examined: 0, changed: 0, flagged: 0, failed: 0 })) },
+      {
+        name: 'after',
+        run: () => Promise.resolve(ok({ examined: 0, changed: 0, flagged: 0, failed: 0, flaggedItems: [] })),
+      },
     ]);
 
     expect(report.jobs.map(({ name, status }) => [name, status])).toEqual([
