@@ -85,7 +85,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-048 | Maintenance run entry point | 3 | FL-040, FL-034, FL-037 | Pending |
+| FL-048 | Maintenance run entry point | 3 | FL-040, FL-034, FL-037 | Under Review |
 | FL-049 | Verification records and the stale and orphaned lists | 3 | FL-015, FL-045, FL-061 | Pending |
 | FL-050 | Deterministic verification: repository reader and path checks | 3 | FL-018, FL-048, FL-049 | Pending |
 | FL-071 | Deterministic verification: function check by text search | 3 | FL-050, FL-018 | Pending |
@@ -104,7 +104,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 3 |
 | Depends on | FL-040, FL-034, FL-037 |
 | Requirements | REQ-20, REQ-21, REQ-24 |
@@ -150,15 +150,55 @@ REQ-20 says duplicates are merged "on a schedule", and the glossary defines self
 - Every change a job makes carries the trigger `maintenance`.
 
 **Acceptance criteria.**
-- [ ] A unit test runs three fake jobs, the second of which fails, and shows all three ran in order and the report holds three entries with the second marked failed.
-- [ ] A test starts the command as a child process on a temporary database with no jobs and shows exit code 0 and a standard output that parses as the report schema.
-- [ ] A test starts the command without a namespace and shows a non-zero exit code and a message on standard error.
-- [ ] The MCP smoke test still passes: starting the application with no argument serves MCP over stdio.
+- [x] A unit test runs three fake jobs, the second of which fails, and shows all three ran in order and the report holds three entries with the second marked failed.
+- [x] A test starts the command as a child process on a temporary database with no jobs and shows exit code 0 and a standard output that parses as the report schema.
+- [x] A test starts the command without a namespace and shows a non-zero exit code and a message on standard error.
+- [x] The MCP smoke test still passes: starting the application with no argument serves MCP over stdio.
 - [ ] The owner adds the documented session start hook for Claude Code on the Mac, starts a session in a repository, and records the report that the run produced. The same is done for Codex. If a host's hook cannot be made to run the command, the guide says so and the reason is added to [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md).
 
 **Validation.** Unit tests of the run function with fake jobs. Two child-process tests of the command. The MCP smoke test. The owner's two hook runs.
 
 **Completion evidence.** The commit; the passing check output; the two reports from the owner's hook runs, or the recorded reason one could not be produced.
+
+**Recorded evidence.** Done on 2026-11-17 on Linux x64 with Node.js v22.23.4, in three commits: `feat(maintenance): add the maintenance run and its report`, `feat(mcp-server): add the maintenance command`, and `docs: describe the app's modes and how to run maintenance from a hook`. The item is `Under Review` until the owner runs the two hooks; the last acceptance criterion is the owner's.
+
+The run and the command:
+
+- **The run function.** `runMaintenance(deps, jobs)` in `packages/maintenance/src/run-maintenance.ts` runs `MaintenanceJob`s, each a name and a bound `run` that returns a `Result` of `JobCounts`, one after another.
+- **Failures.** A job that fails, by returning a failure or by throwing, is reported `failed` with its error code and zero counts, and the jobs after it still run.
+- **The report.** The report's start and end times come from the clock passed in. Its schema, `MaintenanceReportSchema`, is exported.
+- **The command.** `node src/main.ts maintenance` is a further mode of the entry point's `readCommand`, which FL-072 wrote. It opens the store from the server's configuration, so it refuses to start without a namespace. It runs the jobs of `buildMaintenanceJobs` in `src/maintenance-jobs.ts`, which is empty until FL-050 and later items add theirs, writes the report as one JSON line to standard output, and exits with 1 if a job failed.
+
+Functional requirement 5, counting work another process did as examined, is stated in the doc comment of `MaintenanceJob`, for each job to follow; no job exists yet to test it on.
+
+Tests:
+
+- **Unit, 3:** three fake jobs, the second failing, all run in order, with the second reported `failed`, `storage_failed`; a throwing job is reported `failed` and the next still runs; no job gives an empty list with the run's times, and the report parses.
+- **Child process, 2:** the command on a new database with no jobs exits 0 and prints a report that parses with the schema and has no jobs; with no namespace it exits non-zero, prints nothing to standard output, and says `FACTLOOM_NAMESPACE is not set` on standard error.
+- **The smoke tests**, `serve-with-fake-embedder.test.ts` and `main.test.ts`, still pass: with no argument the application serves MCP over stdio.
+
+The guide. FL-038 has not written the registration guide, so the section is in `apps/mcp-server/README.md`, "Running maintenance", for FL-038 to place. It also replaces that README's stale "scaffold only" status with a table of the modes. It gives the command by hand and a `SessionStart` hook for each host, written from the hosts' current pages, read on 2026-11-17:
+
+- **Claude Code:** https://code.claude.com/docs/en/hooks. The event, the matchers, the fields, the default timeout of 600 seconds, and that standard output is added as context are quoted from the page; the location of the settings files was read as a summary, and the README marks it likely.
+- **Codex:** https://learn.chatgpt.com/docs/hooks, to which https://developers.openai.com/codex/hooks redirects. It documents a `SessionStart` hook in `hooks.json` or `config.toml`, to be reviewed and trusted with `/hooks` before it runs.
+
+Both hosts add a hook's standard output to the session's context, so the examples write the report to `~/.factloom/last-maintenance.json`.
+
+`pnpm check`:
+
+```text
+ Test Files  86 passed (86)
+      Tests  906 passed (906)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the third commit, including both child-process tests: https://github.com/Johnmark-Tech/factloom/actions/runs/43996240427.
+
+Not run: the two hooks, which the last criterion gives to the owner on the Mac.
+
+For the owner's review:
+
+- Add the Claude Code hook from `apps/mcp-server/README.md`, start a session in a repository, and record `~/.factloom/last-maintenance.json`.
+- Do the same for Codex, after trusting the hook with `/hooks`. If either hook cannot be made to run the command, record why in the guide and in `OPEN-QUESTIONS.md`.
 
 ### FL-049: Verification records and the stale and orphaned lists
 
