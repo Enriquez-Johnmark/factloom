@@ -35,6 +35,7 @@ function fakeRepository(head: Readonly<Record<string, string>>, readable = true)
     pathExists: async (commit, path) => ok(at(commit, path) !== null),
     readContentId: async (commit, path) => ok(at(commit, path)),
     readText: async (commit, path) => ok(at(commit, path)),
+    findRenamedPath: async () => ok(null),
   };
 }
 

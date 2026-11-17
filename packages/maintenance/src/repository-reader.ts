@@ -17,4 +17,10 @@ export type RepositoryReader = {
   readonly readContentId: (commit: string, path: string) => Promise<Result<string | null>>;
   /** The text of a path at a commit, or null when the path does not exist there. */
   readonly readText: (commit: string, path: string) => Promise<Result<string | null>>;
+  /**
+   * The path a file was renamed to by the last commit on the branch that removed the given
+   * path, or null when that commit deleted it or no commit removed it. One step: a file renamed
+   * twice needs two calls.
+   */
+  readonly findRenamedPath: (path: string) => Promise<Result<string | null>>;
 };

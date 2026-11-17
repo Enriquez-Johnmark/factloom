@@ -60,6 +60,23 @@ describe('the git repository reader', () => {
     expect(await reader.readText(first, 'docs/missing.md')).toEqual({ ok: true, value: null });
   });
 
+  it('finds the path a file was renamed to, and none for a deleted file or one never removed', async () => {
+    const repository = createFixtureRepository();
+    cleanups.push(repository.remove);
+    repository.commit({ 'a.md': 'Alpha\n', 'b.md': 'Beta\n', 'c.md': 'Gamma\n' }, 'Add three notes');
+    repository.git('mv', 'a.md', 'renamed.md');
+    repository.commit({ 'b.md': null }, 'Rename one note and delete another');
+    const reader = createGitRepositoryReader(repository.directory);
+
+    const answers = await Promise.all(['a.md', 'b.md', 'c.md'].map((path) => reader.findRenamedPath(path)));
+
+    expect(answers).toEqual([
+      { ok: true, value: 'renamed.md' },
+      { ok: true, value: null },
+      { ok: true, value: null },
+    ]);
+  });
+
   it('refuses with invalid_input to read HEAD of a directory that is not a repository', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'factloom-not-a-repo-'));
     cleanups.push(() => rmSync(directory, { recursive: true, force: true }));

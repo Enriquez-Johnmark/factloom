@@ -91,5 +91,34 @@ export function createGitRepositoryReader(directory: string): RepositoryReader {
       if (run.value.code !== 0) return unreadable(directory, run.value.standardError);
       return ok(run.value.standardOutput);
     },
+
+    async findRenamedPath(path) {
+      // Check 4.2 of the research: the last commit whose diff, limited to the path, deletes it.
+      // --no-renames keeps a user's diff.renames setting from reporting it otherwise.
+      const removed = await git([
+        'log',
+        '--no-renames',
+        '--diff-filter=D',
+        '--format=%H',
+        '-1',
+        'HEAD',
+        '--',
+        path,
+      ]);
+      if (!removed.ok) return removed;
+      if (removed.value.code !== 0) return unreadable(directory, removed.value.standardError);
+      const commit = removed.value.standardOutput.trim();
+      if (commit === '') return ok(null);
+      // That commit's changes with rename detection at git's default similarity: a line
+      // "R<score>\t<old>\t<new>" names the new path.
+      const shown = await git(['show', '-M', '--name-status', '--format=', commit]);
+      if (!shown.ok) return shown;
+      if (shown.value.code !== 0) return unreadable(directory, shown.value.standardError);
+      for (const line of shown.value.standardOutput.split('\n')) {
+        const [status, from, to] = line.split('\t');
+        if (status?.startsWith('R') && from === path && to !== undefined) return ok(to);
+      }
+      return ok(null);
+    },
   };
 }

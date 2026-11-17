@@ -5,10 +5,10 @@ import {
   ok,
   type Result,
   recordVerification,
-  type Source,
   toTimestamp,
   type VerificationOutcome,
 } from '@factloom/core';
+import { type Anchor, findAnchor } from './find-anchor.ts';
 import type { RepositoryReader } from './repository-reader.ts';
 import type { JobCounts } from './run-maintenance.ts';
 
@@ -17,9 +17,6 @@ export const VERIFICATION_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** The most stale facts one run considers. The rest wait for the next run. */
 const STALE_FACTS_PER_RUN = 500;
-
-/** The place in a fact's source a check reads: a path at a commit. */
-export type Anchor = { readonly path: string; readonly commit: string };
 
 /**
  * A rung that a domain adds to the ladder. `before_content_check` runs once the path is known
@@ -41,20 +38,6 @@ export type VerifyAnchoredFactsDeps = Pick<OperationDeps, 'store' | 'now' | 'new
   readonly repository: RepositoryReader;
   readonly rungs: readonly VerificationRung[];
 };
-
-/**
- * The anchor of a fact: of its sources of kind `file` with both a locator and a version, the
- * most recently observed. Null when it has none.
- */
-function findAnchor(sources: readonly Source[]): Anchor | null {
-  let latest: (Anchor & { readonly observedAt: string }) | null = null;
-  for (const { kind, locator, version, observedAt } of sources) {
-    if (kind !== 'file' || locator === null || version === null) continue;
-    if (latest === null || observedAt > latest.observedAt)
-      latest = { path: locator, commit: version, observedAt };
-  }
-  return latest === null ? null : { path: latest.path, commit: latest.commit };
-}
 
 /** Runs the domain's rungs of one placement in order, and returns the first decision. */
 async function runRungs(
