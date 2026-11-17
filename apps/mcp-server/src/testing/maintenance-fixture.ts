@@ -13,6 +13,7 @@ import {
   TEST_DOMAIN,
   toTimestamp,
 } from '@factloom/core';
+import { softwareDevelopmentDomain } from '@factloom/graph-rag';
 import { runMaintenance } from '@factloom/maintenance';
 import { openSqliteMemoryStore } from '@factloom/storage';
 import { createGitRepositoryReader } from '../create-git-repository-reader.ts';
@@ -86,6 +87,47 @@ export async function recordAnchoredFact(store: MemoryStore, commit: string, pat
     ],
     restatedFactIds: [],
   });
+  if (!recorded.ok) throw new Error(recorded.error.message);
+  return recorded.value.factIds[0] ?? 'none';
+}
+
+/** Records, with the software development domain, that the function `name` parses a calendar date, from a file at a commit. */
+export async function recordSymbolFact(
+  store: MemoryStore,
+  commit: string,
+  path: string,
+  name: string,
+): Promise<string> {
+  const recorded = await recordFacts(
+    createTestDeps({ now: '2026-01-10', domain: softwareDevelopmentDomain, store }),
+    {
+      namespace: NAMESPACE,
+      trigger: 'agent',
+      reasonCode: 'stated',
+      source: {
+        kind: 'file',
+        locator: path,
+        version: commit,
+        content: `${name} parses a calendar date.`,
+        observedAt: toTimestamp(new Date('2026-01-10')),
+      },
+      drafts: [
+        {
+          fact: {
+            subjectEntityId: `symbol-${name}`,
+            predicate: 'described_as',
+            object: { kind: 'value', value: 'parses a calendar date' },
+            statement: `${name} parses a calendar date`,
+            confidence: 0.9,
+            validFrom: null,
+            validTo: null,
+          },
+          newEntities: [{ id: `symbol-${name}`, type: 'symbol', name }],
+        },
+      ],
+      restatedFactIds: [],
+    },
+  );
   if (!recorded.ok) throw new Error(recorded.error.message);
   return recorded.value.factIds[0] ?? 'none';
 }

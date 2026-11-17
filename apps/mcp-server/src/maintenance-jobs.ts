@@ -1,5 +1,7 @@
+import { findSymbolNames } from '@factloom/graph-rag';
 import {
   archiveUnusedFacts,
+  createNameCheckRung,
   findDuplicateEntities,
   type MaintenanceJob,
   NAME_STAGE,
@@ -26,8 +28,10 @@ export function buildMaintenanceJobs(
   return [
     {
       name: 'verify_anchored_facts',
-      // The rungs of FL-071 and FL-062 come from the software development domain.
-      run: () => verifyAnchoredFacts({ ...deps, rungs: [] }, { namespace }),
+      // The rungs come from the software development domain: the name check of FL-071, and
+      // the version check of FL-062.
+      run: () =>
+        verifyAnchoredFacts({ ...deps, rungs: [createNameCheckRung(findSymbolNames)] }, { namespace }),
     },
     { name: 'repair_moved_anchors', run: () => repairMovedAnchors(deps, { namespace }) },
     // FL-064 adds the embedding and LLM stages after the name stage.
