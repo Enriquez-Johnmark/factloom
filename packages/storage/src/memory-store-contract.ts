@@ -849,6 +849,145 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
     ),
   );
 
+  // --- Confidence history (FL-045) ---
+  // A cache recorded at 0.9 on 2026-06-01 and adjusted to 0.4 on 2026-07-01.
+  const RECORDED = '2026-06-01';
+  const ADJUSTED = '2026-07-01';
+  const adjust = (factId: string, confidence: number): Change => ({
+    kind: 'adjust_confidence',
+    factId,
+    confidence,
+  });
+  const adjusted = { operation: 'confidence_adjustment', reasonCode: 'stated' } as const;
+  const recordCache = async (): Promise<void> => {
+    const recorded = await store.commit(
+      changeSet('op-cache', RECORDED, [
+        recordFact(fact('redis', 'uses_cache', 'Redis', { createdAt: at(RECORDED), confidence: 0.9 }), {
+          singleValued: false,
+          embedding: new Float32Array([0, 0, 1, 0]),
+        }),
+      ]),
+    );
+    if (!recorded.ok) throw new Error(recorded.error.message);
+  };
+  const adjustCache = async (): Promise<void> => {
+    const result = await store.commit(changeSet('op-adjust', ADJUSTED, [adjust('redis', 0.4)], adjusted));
+    if (!result.ok) throw new Error(result.error.message);
+  };
+  const confidenceOf = async (time: TimeFilter | 'live' | 'all'): Promise<number | undefined> => {
+    const listed = await store.listFacts({
+      namespace: NAMESPACE,
+      subjectEntityId: null,
+      predicate: 'uses_cache',
+      touchingEntityIds: null,
+      supersededByFactId: null,
+      time,
+      limit: 10,
+    });
+    if (!listed.ok) throw new Error(listed.error.message);
+    return listed.value[0]?.fact.confidence;
+  };
+
+  test('Q1: a read returns the confidence that held at its known-at date', async () => {
+    await recordCache();
+    await adjustCache();
+
+    expect(await confidenceOf({ validAt: NOW, knownAt: at('2026-06-15') })).toBe(0.9);
+    expect(await confidenceOf({ validAt: NOW, knownAt: at(ADJUSTED) })).toBe(0.4);
+    expect(await confidenceOf({ validAt: NOW, knownAt: NOW })).toBe(0.4);
+  });
+  test('Q2: getFact, and listFacts with live or all, return the latest confidence', async () => {
+    await recordCache();
+    await adjustCache();
+
+    const found = await store.getFact({ namespace: NAMESPACE, factId: 'redis' });
+    expect(found.ok && found.value?.fact.confidence).toBe(0.4);
+    expect(await confidenceOf('live')).toBe(0.4);
+    expect(await confidenceOf('all')).toBe(0.4);
+  });
+  test('Q3: as of now, known at now, both search lanes return the adjusted confidence', async () => {
+    await recordCache();
+    await adjustCache();
+    const now = { validAt: NOW, knownAt: NOW };
+
+    const byKeyword = await store.searchFactsByKeyword({
+      namespace: NAMESPACE,
+      text: 'Redis',
+      time: now,
+      limit: 5,
+    });
+    const byVector = await store.searchFactsByVector({
+      namespace: NAMESPACE,
+      vector: new Float32Array([0, 0, 1, 0]),
+      time: now,
+      limit: 1,
+    });
+
+    expect(byKeyword.ok && byKeyword.value.map(({ fact }) => [fact.id, fact.confidence])).toEqual([
+      ['redis', 0.4],
+    ]);
+    expect(byVector.ok && byVector.value.map(({ fact }) => [fact.id, fact.confidence])).toEqual([
+      ['redis', 0.4],
+    ]);
+  });
+  test('Q4: an adjustment leaves the fact identifier, its recorded time and the number of facts unchanged', async () => {
+    await recordCache();
+    const before = await listFactIds(store, 'all');
+
+    await adjustCache();
+
+    expect(await listFactIds(store, 'all')).toEqual(before);
+    const found = await store.getFact({ namespace: NAMESPACE, factId: 'redis' });
+    expect(found.ok && found.value?.fact).toMatchObject({
+      id: 'redis',
+      createdAt: at(RECORDED),
+      invalidatedAt: null,
+    });
+  });
+  test('Q5: each adjustment writes one audit entry with the previous and the new confidence', async () => {
+    await recordCache();
+    await adjustCache();
+
+    const entries = (await auditEntries(store, 'fact', 'redis')).filter(
+      (entry) => entry.action === 'fact.confidence_adjusted',
+    );
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      operation: 'confidence_adjustment',
+      detail: { previousConfidence: 0.9, confidence: 0.4 },
+      occurredAt: at(ADJUSTED),
+    });
+  });
+  test('Q6: of two adjustments at the same time, the later one recorded wins', async () => {
+    await recordCache();
+
+    const result = await store.commit(
+      changeSet('op-adjust', ADJUSTED, [adjust('redis', 0.4), adjust('redis', 0.7)], adjusted),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(await confidenceOf({ validAt: NOW, knownAt: at(ADJUSTED) })).toBe(0.7);
+    const entries = (await auditEntries(store, 'fact', 'redis')).filter(
+      (entry) => entry.action === 'fact.confidence_adjusted',
+    );
+    expect(entries.map((entry) => entry.detail)).toEqual([
+      { previousConfidence: 0.9, confidence: 0.4 },
+      { previousConfidence: 0.4, confidence: 0.7 },
+    ]);
+  });
+  refuses('Q7: a confidence above 1 returns invalid_input', 'invalid_input', () =>
+    changeSet('op-q7', '2026-06-01', [adjust('pg16', 1.5)], adjusted),
+  );
+  refuses('Q8: adjusting a missing fact returns not_found', 'not_found', () =>
+    changeSet('op-q8', '2026-06-01', [adjust('missing', 0.4)], adjusted),
+  );
+  refuses(
+    'Q9: adjusting an invalidated fact returns already_invalidated and names the superseding fact',
+    'already_invalidated',
+    () => changeSet('op-q9', '2026-06-01', [adjust('pg14', 0.4)], adjusted),
+    (related) => expect(related).toEqual(['pg14-ended']),
+  );
+
   /** A store holding only the first commit of the timeline, to read the receipt of the second. */
   async function createStoreWithFirstCommit(): Promise<MemoryStore> {
     const fresh = await createStore();
@@ -1121,6 +1260,16 @@ function registerSingleValueRuleAndNamespaces(
       ).toBe('not_found');
     },
   );
+  cases.test('N6: adjusting the confidence of a fact of the other namespace returns not_found', async () => {
+    const before = await listFactIds(cases.store(), 'all', { namespace: OTHER });
+    const result = await commit([{ kind: 'adjust_confidence', factId: 'other-pg16', confidence: 0.4 }], {
+      operation: 'confidence_adjustment',
+    });
+    expect(result.ok ? null : result.error.code).toBe('not_found');
+    const found = await cases.store().getFact({ namespace: OTHER, factId: 'other-pg16' });
+    expect(found.ok && found.value?.fact.confidence).toBe(1);
+    expect(await listFactIds(cases.store(), 'all', { namespace: OTHER })).toEqual(before);
+  });
   cases.test('N4: a supersession link to a fact of the other namespace returns not_found', async () => {
     const result = await commit([
       { kind: 'invalidate_fact', factId: 'pg16', supersededByFactId: 'other-pg16' },

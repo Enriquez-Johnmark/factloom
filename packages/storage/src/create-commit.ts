@@ -13,6 +13,7 @@ import {
   type Result,
 } from '@factloom/core';
 import type { Database } from 'better-sqlite3';
+import { LATEST_CONFIDENCE } from './confidence-columns.ts';
 import { type EmbeddingModel, toBlob } from './embedding-model.ts';
 
 const ACTION_OF_CHANGE: { readonly [Kind in Change['kind']]: AuditAction } = {
@@ -21,6 +22,7 @@ const ACTION_OF_CHANGE: { readonly [Kind in Change['kind']]: AuditAction } = {
   record_fact: 'fact.recorded',
   attach_source: 'fact.source_attached',
   invalidate_fact: 'fact.invalidated',
+  adjust_confidence: 'fact.confidence_adjusted',
 };
 
 function targetOf(change: Change): {
@@ -36,6 +38,7 @@ function targetOf(change: Change): {
       return { targetKind: 'fact', targetId: change.fact.id };
     case 'attach_source':
     case 'invalidate_fact':
+    case 'adjust_confidence':
       return { targetKind: 'fact', targetId: change.factId };
     default: {
       const unhandled: never = change;
@@ -149,6 +152,13 @@ export function createCommit(
   const selectObject = db.prepare<[string, string], ObjectRow>(
     `SELECT subject_entity_id, predicate, object_entity_id, object_value
      FROM fact WHERE id = ? AND namespace = ?`,
+  );
+  const insertConfidence = db.prepare(
+    'INSERT INTO fact_confidence (fact_id, confidence, adjusted_at) VALUES (?, ?, ?)',
+  );
+  // The latest confidence of a fact: its latest adjustment, or its confidence at recording.
+  const selectLatestConfidence = db.prepare<[string, string], { readonly confidence: number }>(
+    `SELECT ${LATEST_CONFIDENCE} AS confidence FROM fact f WHERE f.id = ? AND f.namespace = ?`,
   );
   const insertAuditEntry = db.prepare(
     `INSERT INTO audit_log (namespace, operation_id, operation, action, target_kind, target_id,
@@ -317,6 +327,12 @@ export function createCommit(
           supersededByFactId: change.supersededByFactId,
         });
         return { supersededByFactId: change.supersededByFactId };
+      }
+      case 'adjust_confidence': {
+        requireLiveFact(change.factId, namespace);
+        const previous = selectLatestConfidence.get(change.factId, namespace);
+        insertConfidence.run(change.factId, change.confidence, changeSet.occurredAt);
+        return { previousConfidence: previous?.confidence ?? null, confidence: change.confidence };
       }
       default: {
         const unhandled: never = change;

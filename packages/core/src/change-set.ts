@@ -41,6 +41,14 @@ export const ChangeSchema = z.discriminatedUnion('kind', [
       supersededByFactId: FactIdSchema.nullable(),
     })
     .readonly(),
+  z
+    .strictObject({
+      kind: z.literal('adjust_confidence'),
+      factId: FactIdSchema,
+      /** The new confidence, from the change set's `occurredAt`. The fact row is not changed. */
+      confidence: z.number().min(0).max(1),
+    })
+    .readonly(),
 ]);
 export type Change = z.infer<typeof ChangeSchema>;
 
@@ -55,6 +63,7 @@ function findForeignRow(namespace: string, change: Change): string | null {
       return change.fact.namespace === namespace ? null : `fact ${change.fact.id}`;
     case 'attach_source':
     case 'invalidate_fact':
+    case 'adjust_confidence':
       return null;
     default: {
       const unhandled: never = change;

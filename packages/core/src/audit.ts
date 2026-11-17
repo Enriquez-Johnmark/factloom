@@ -7,7 +7,14 @@ export const TriggerSchema = z.enum(['agent', 'person', 'feedback', 'maintenance
 export type Trigger = z.infer<typeof TriggerSchema>;
 
 /** What was being done. Phases 2 and 3 add 'merge', 'verification', 'feedback' and 'purge'. */
-export const OperationSchema = z.enum(['remember', 'revision', 'succession', 'correction', 'retraction']);
+export const OperationSchema = z.enum([
+  'remember',
+  'revision',
+  'succession',
+  'correction',
+  'retraction',
+  'confidence_adjustment',
+]);
 export type Operation = z.infer<typeof OperationSchema>;
 
 /** Why, from a fixed list, so that the audit log holds no free text. Later phases add codes. */
@@ -27,6 +34,7 @@ export const AuditActionSchema = z.enum([
   'fact.recorded',
   'fact.source_attached',
   'fact.invalidated',
+  'fact.confidence_adjusted',
 ]);
 export type AuditAction = z.infer<typeof AuditActionSchema>;
 

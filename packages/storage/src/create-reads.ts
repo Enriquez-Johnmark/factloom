@@ -8,6 +8,7 @@ import {
 } from '@factloom/core';
 import type { Database, Statement } from 'better-sqlite3';
 import { buildKeywordQuery } from './build-keyword-query.ts';
+import { CONFIDENCE_AT_KNOWN_AT, LATEST_CONFIDENCE } from './confidence-columns.ts';
 import { type EmbeddingModel, toBlob } from './embedding-model.ts';
 import {
   type AuditRow,
@@ -32,8 +33,18 @@ export type ListFactsShape = {
   readonly time: 'filter' | 'live' | 'all';
 };
 
-const FACT_COLUMNS = `f.id, f.namespace, f.subject_entity_id, f.predicate, f.object_entity_id, f.object_value,
-  f.statement, f.confidence, f.valid_from, f.valid_to, f.created_at, f.invalidated_at, f.superseded_by_fact_id`;
+/** The columns of a fact row, with the confidence that the read's time asks for. */
+function factColumns(confidence: string): string {
+  return `f.id, f.namespace, f.subject_entity_id, f.predicate, f.object_entity_id, f.object_value,
+  f.statement, ${confidence} AS confidence, f.valid_from, f.valid_to, f.created_at, f.invalidated_at,
+  f.superseded_by_fact_id`;
+}
+
+/** For reads with a time filter: the confidence at its known-at date. */
+const FACT_COLUMNS_AT_KNOWN_AT = factColumns(CONFIDENCE_AT_KNOWN_AT);
+
+/** For reads with no known-at date: the latest confidence. */
+const FACT_COLUMNS_LATEST = factColumns(LATEST_CONFIDENCE);
 
 /**
  * The SQL of `listFacts` for one combination of filters. It is built only from the fixed
@@ -50,8 +61,9 @@ export function buildListFactsSql(shape: ListFactsShape): string {
   const where = conditions.join('\n  AND ');
   // Newest first. Facts recorded at the same moment come in the reverse of their row order,
   // which never changes, so the order is the same on every run.
+  const columns = shape.time === 'filter' ? FACT_COLUMNS_AT_KNOWN_AT : FACT_COLUMNS_LATEST;
   const select = (extra: string): string =>
-    `SELECT ${FACT_COLUMNS}, f.rowid AS row_order FROM fact f WHERE ${where}${extra}`;
+    `SELECT ${columns}, f.rowid AS row_order FROM fact f WHERE ${where}${extra}`;
   if (!shape.hasTouching) return `${select('')} ORDER BY f.created_at DESC, f.rowid DESC LIMIT @limit`;
   // Facts whose subject or whose object entity is one of the given entities. Two selects, so
   // that each can use its own index; UNION drops a fact that both find. The identifiers are
@@ -101,7 +113,7 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
      WHERE namespace = ? AND id IN (SELECT value FROM json_each(?))`,
   );
   const selectFact = db.prepare<[string, string], FactRow>(
-    `SELECT ${FACT_COLUMNS} FROM fact f WHERE f.id = ? AND f.namespace = ?`,
+    `SELECT ${FACT_COLUMNS_LATEST} FROM fact f WHERE f.id = ? AND f.namespace = ?`,
   );
   const selectSource = db.prepare<[string, string], SourceRow>(
     `SELECT id, namespace, kind, locator, version, content, content_hash, observed_at, created_at
@@ -123,7 +135,7 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
   // is smaller for a better match. The namespace and the time predicate are in the same
   // query as the MATCH, so the limit counts only facts that pass them.
   const selectByKeyword = db.prepare<[Record<string, unknown>], FactRow>(
-    `SELECT ${FACT_COLUMNS}
+    `SELECT ${FACT_COLUMNS_AT_KNOWN_AT}
      FROM fact_fts JOIN fact f ON f.rowid = fact_fts.rowid
      WHERE fact_fts MATCH @match AND f.namespace = @namespace AND ${TIME_PREDICATE}
      ORDER BY bm25(fact_fts), f.rowid DESC LIMIT @limit`,
@@ -132,7 +144,7 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
   // and the time predicate, nearest first. The filter is in the same query as the distance,
   // so the limit counts only facts that pass it: the nearest rows can all be superseded copies.
   const selectByVector = db.prepare<[Record<string, unknown>], FactRow>(
-    `SELECT ${FACT_COLUMNS}
+    `SELECT ${FACT_COLUMNS_AT_KNOWN_AT}
      FROM fact f JOIN fact_embedding e ON e.fact_id = f.id
      WHERE f.namespace = @namespace AND ${TIME_PREDICATE}
      ORDER BY vec_distance_cosine(e.embedding, @vector), f.rowid LIMIT @limit`,

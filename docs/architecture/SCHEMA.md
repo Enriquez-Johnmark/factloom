@@ -33,7 +33,7 @@ Because a fact row never changes except to be invalidated, anything that looks l
 
 Each of these is one database transaction and writes one audit entry per change, all sharing one `operation_id`. A change is one item of the **change set**: an entity created, a source recorded, a fact recorded, a source attached, or a fact invalidated. Recording a fact inserts its row, its source links and its embedding, and is one change.
 
-A change of confidence is not in this table. `fact.confidence` is the confidence at recording and is never rewritten or copied; see "Planned additions".
+A change of confidence is not in this table. `fact.confidence` is the confidence at recording and is never rewritten or copied. From the second migration a later confidence is a row of `fact_confidence`; see "Added by later migrations".
 
 A fact has at most one supersession link, set when it is invalidated. A fact retracted with no replacement cannot be linked to one later.
 
@@ -252,7 +252,7 @@ Notes on the columns:
 - **`source.locator` and `source.version`** together are the **anchor**. Both are optional: a note from an agent has neither.
 - **`source.content`** is optional and is the only place source text is kept.
 - **`fact_embedding.model` and `dimensions`** record which embedding model produced the vector. A database holds vectors from one model; the storage adapter refuses to start with a different one. Changing model means re-embedding, which is possible because `statement` is kept. The two columns are on every row, not in one settings row, because that lets a re-embedding run be resumed and an unfinished one be detected.
-- **`audit_log.operation`** names what was being done: `remember`, `revision`, `succession`, `correction`, `retraction`. **`action`** names what happened to one target: `entity.created`, `source.recorded`, `fact.recorded`, `fact.source_attached`, `fact.invalidated`.
+- **`audit_log.operation`** names what was being done: `remember`, `revision`, `succession`, `correction`, `retraction`, and from phase 2 `confidence_adjustment`. **`action`** names what happened to one target: `entity.created`, `source.recorded`, `fact.recorded`, `fact.source_attached`, `fact.invalidated`, and from phase 2 `fact.confidence_adjusted`.
 - **`audit_log.reason_code`** says why, from a fixed list: `stated`, `restated`, `reported_wrong`, `reported_ended`, `period_corrected` (a valid period found to be wrong, phase 2). **`source_id`** is the source that explains the change, if there is one. An agent's own words are never written to the log: they are stored as the content of a source of kind `agent_note`, and the entry points to it.
 - **`audit_log.detail`** is JSON restricted to identifiers and numbers, such as the identifier of the superseding fact. The restriction is in the core schema for an audit entry; the database checks only that the text is valid JSON.
 - **The lists of operations, actions, target kinds, triggers and reason codes** are closed lists in the core schema, not `CHECK` constraints. Later phases add values, and SQLite cannot alter a `CHECK` without rebuilding the table.
@@ -282,13 +282,22 @@ The three PRAGMAs and their documented behaviour are in the [SQLite research](..
 
 Two processes writing to one file was run on 2026-11-15, in the adapter tests of work item [FL-068](../roadmap/epics/EPIC-03.md): while a second process held the write lock with an uncommitted fact, a commit in the first process waited, then ran its single-value check against what the second had committed and returned `conflict`. A process killed before its commit finished left no row behind. The research had listed this as unverified.
 
+## Added by later migrations
+
+The "Tables" block above is the first migration exactly, and a test holds it to that. Tables added since are described here.
+
+### `fact_confidence`, migration `0002_add_fact_confidence.sql` (FL-045)
+
+An append-only history of confidence: the fact, the new confidence, and `adjusted_at`, the change set's `occurredAt`. Two triggers refuse every update and delete. A row belongs to the namespace of its fact; there is no namespace column, because fact identifiers are unique across namespaces and a commit refuses an adjustment to a fact outside its change set's namespace.
+
+A read with a time filter returns, as `confidence`, the latest row recorded at or before its known-at date, or `fact.confidence` when there is none. `getFact` and `listFacts` with `live` or `all` have no known-at date and return the latest row. Rows with the same `adjusted_at` are ordered by `rowid`, so the later insertion wins. The `adjust_confidence` change writes one row and one audit entry, action `fact.confidence_adjusted`, whose `detail` is `{ previousConfidence, confidence }`.
+
 ## Planned additions
 
 These are designed so that the interfaces in [`INTERFACES.md`](INTERFACES.md) are stable, but they are not in the first migration. Each is an added table or column, and purge also replaces two triggers, so none forces a rewrite of what exists.
 
 | Phase | Addition | Why it can wait |
 |---|---|---|
-| 2 | `fact_confidence` table, append-only: fact, confidence, time. Reads return the latest confidence recorded at or before the known-at date | Nothing changes a confidence before feedback exists. `fact.confidence` already holds the confidence at recording |
 | 2 | `feedback` table: fact, signal, trigger, time, and the source that holds what was said | Nothing reads feedback before conflict handling exists |
 | 2 | Purge: `fact.purged_at` and `source.purged_at`, and one narrowly permitted change in the fact and source triggers that replaces content with a marker value | Purge is first needed when memory holds real user data. The part that could not be added later, an audit log with no free text in it, is in the first migration. The requirements are in [ADR 0012](adr/0012-purge-is-the-one-exception.md) |
 | 3 | `entity_merge` table: from, into, `merged_at`, and `undone_at`, which is set once. An `entity_alias` table | Phase 1 resolves entities by exact name only and never merges. No entity and no fact is rewritten by a merge; reads resolve identifiers through the merges that are not undone |

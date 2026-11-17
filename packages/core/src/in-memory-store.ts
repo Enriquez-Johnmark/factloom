@@ -4,7 +4,11 @@ import { normaliseEntityName } from './entity-name.ts';
 import type { Entity, Fact, FactWithSources, Namespace, Source, TimeFilter } from './fact.ts';
 import type { MemoryStore } from './memory-store.ts';
 import { err, type Failure, ok } from './result.ts';
+import type { Timestamp } from './timestamp.ts';
 import { matchesTimeFilter, periodsOverlap } from './valid-period.ts';
+
+/** One confidence adjustment of a fact. */
+type ConfidenceRow = { readonly factId: string; readonly confidence: number; readonly adjustedAt: Timestamp };
 
 /** Everything the store holds. A commit works on a copy and replaces this only if it succeeds. */
 type State = {
@@ -17,6 +21,8 @@ type State = {
   readonly factSources: Map<string, readonly string[]>;
   readonly vectors: Map<string, Float32Array>;
   readonly auditEntries: AuditEntry[];
+  /** Confidence adjustments in the order they were recorded. The fact rows keep their confidence at recording. */
+  readonly confidences: ConfidenceRow[];
   /** The size of the vectors held, once the first one is recorded. */
   dimensions: number | null;
 };
@@ -30,6 +36,7 @@ function createEmptyState(): State {
     factSources: new Map(),
     vectors: new Map(),
     auditEntries: [],
+    confidences: [],
     dimensions: null,
   };
 }
@@ -44,6 +51,7 @@ function copyState(state: State): State {
     factSources: new Map(state.factSources),
     vectors: new Map(state.vectors),
     auditEntries: [...state.auditEntries],
+    confidences: [...state.confidences],
     dimensions: state.dimensions,
   };
 }
@@ -58,6 +66,7 @@ const ACTION_OF_CHANGE: { readonly [Kind in Change['kind']]: AuditAction } = {
   record_fact: 'fact.recorded',
   attach_source: 'fact.source_attached',
   invalidate_fact: 'fact.invalidated',
+  adjust_confidence: 'fact.confidence_adjusted',
 };
 
 function targetOf(change: Change): {
@@ -73,6 +82,7 @@ function targetOf(change: Change): {
       return { targetKind: 'fact', targetId: change.fact.id };
     case 'attach_source':
     case 'invalidate_fact':
+    case 'adjust_confidence':
       return { targetKind: 'fact', targetId: change.factId };
     default: {
       const unhandled: never = change;
@@ -112,6 +122,33 @@ function findRevisedFactId(recorded: Fact, changes: readonly Change[], before: S
   return null;
 }
 
+/**
+ * The confidence of a fact at a known-at date: the latest adjustment recorded at or before it,
+ * or the confidence at recording when there is none. With no date, the latest adjustment.
+ * Adjustments with the same time are ordered by recording, so the later one wins.
+ */
+function confidenceAt(confidences: readonly ConfidenceRow[], fact: Fact, knownAt: Timestamp | null): number {
+  let latest: ConfidenceRow | null = null;
+  for (const row of confidences) {
+    if (row.factId !== fact.id || (knownAt !== null && row.adjustedAt > knownAt)) continue;
+    if (latest === null || row.adjustedAt >= latest.adjustedAt) latest = row;
+  }
+  return latest?.confidence ?? fact.confidence;
+}
+
+/**
+ * The confidence a fact had before an adjustment in a change set: that of an earlier
+ * adjustment of the same fact in the same change set, or else its latest before the commit.
+ */
+function previousConfidence(factId: string, earlier: readonly Change[], before: State): number | null {
+  const lastEarlier = earlier.findLast(
+    (other) => other.kind === 'adjust_confidence' && other.factId === factId,
+  );
+  if (lastEarlier?.kind === 'adjust_confidence') return lastEarlier.confidence;
+  const fact = before.facts.get(factId);
+  return fact === undefined ? null : confidenceAt(before.confidences, fact, null);
+}
+
 /** What an audit entry's detail holds for one change. Fixed per action; identifiers only. */
 function detailOf(change: Change, changes: readonly Change[], before: State): AuditEntry['detail'] {
   switch (change.kind) {
@@ -126,6 +163,15 @@ function detailOf(change: Change, changes: readonly Change[], before: State): Au
       return { sourceId: change.sourceId };
     case 'invalidate_fact':
       return { supersededByFactId: change.supersededByFactId };
+    case 'adjust_confidence':
+      return {
+        previousConfidence: previousConfidence(
+          change.factId,
+          changes.slice(0, changes.indexOf(change)),
+          before,
+        ),
+        confidence: change.confidence,
+      };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -259,6 +305,17 @@ function applyChange(draft: State, changeSet: ChangeSet, change: Change): Failur
       });
       return null;
     }
+    case 'adjust_confidence': {
+      const fact = findFact(change.factId);
+      if (fact === undefined) return err('not_found', `The fact ${change.factId} does not exist.`);
+      if (fact.invalidatedAt !== null) return notLive(fact);
+      draft.confidences.push({
+        factId: fact.id,
+        confidence: change.confidence,
+        adjustedAt: changeSet.occurredAt,
+      });
+      return null;
+    }
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -337,8 +394,13 @@ function cosineDistance(first: Float32Array, second: Float32Array): number {
 export function createInMemoryStore(): MemoryStore {
   let state = createEmptyState();
 
-  /** Builds what a read returns for one fact. Copies, so a caller cannot change memory through a result. */
-  const withSources = (fact: Fact): FactWithSources | null => {
+  /**
+   * Builds what a read returns for one fact, with its confidence at the read's known-at date,
+   * or its latest confidence when the read has none. Copies, so a caller cannot change memory
+   * through a result.
+   */
+  const withSources = (stored: Fact, knownAt: Timestamp | null): FactWithSources | null => {
+    const fact = { ...stored, confidence: confidenceAt(state.confidences, stored, knownAt) };
     const subject = state.entities.get(fact.subjectEntityId);
     if (subject === undefined) return null;
     const objectEntity =
@@ -358,12 +420,13 @@ export function createInMemoryStore(): MemoryStore {
   const rankedResults = (
     ranked: readonly { readonly fact: Fact; readonly rank: number }[],
     limit: number,
+    knownAt: Timestamp,
   ): FactWithSources[] =>
     [...ranked]
       .sort((a, b) => a.rank - b.rank)
       .slice(0, limit)
       .flatMap(({ fact }) => {
-        const result = withSources(fact);
+        const result = withSources(fact, knownAt);
         return result === null ? [] : [result];
       });
 
@@ -417,7 +480,7 @@ export function createInMemoryStore(): MemoryStore {
     getFact(query) {
       const fact = state.facts.get(query.factId);
       if (fact === undefined || fact.namespace !== query.namespace) return Promise.resolve(ok(null));
-      return Promise.resolve(ok(withSources(fact)));
+      return Promise.resolve(ok(withSources(fact, null)));
     },
 
     listFacts(query) {
@@ -450,8 +513,9 @@ export function createInMemoryStore(): MemoryStore {
               : -1,
         )
         .slice(0, query.limit);
+      const knownAt = typeof time === 'string' ? null : time.knownAt;
       const results = newestFirst.flatMap(({ fact }) => {
-        const result = withSources(fact);
+        const result = withSources(fact, knownAt);
         return result === null ? [] : [result];
       });
       return Promise.resolve(ok(results));
@@ -471,7 +535,7 @@ export function createInMemoryStore(): MemoryStore {
         const vector = state.vectors.get(fact.id);
         return vector === undefined ? [] : [{ fact, rank: cosineDistance(query.vector, vector) }];
       });
-      return Promise.resolve(ok(rankedResults(ranked, query.limit)));
+      return Promise.resolve(ok(rankedResults(ranked, query.limit, query.time.knownAt)));
     },
 
     searchFactsByKeyword(query) {
@@ -483,7 +547,7 @@ export function createInMemoryStore(): MemoryStore {
         // More matching words rank first, so the rank is the negative count.
         return matching === 0 ? [] : [{ fact, rank: -matching }];
       });
-      return Promise.resolve(ok(rankedResults(ranked, query.limit)));
+      return Promise.resolve(ok(rankedResults(ranked, query.limit, query.time.knownAt)));
     },
 
     getSource(query) {

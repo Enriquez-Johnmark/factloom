@@ -75,14 +75,21 @@ type RefSource = {
 };
 
 type RefTrigger = 'agent' | 'person' | 'feedback' | 'maintenance';
-type RefOperation = 'remember' | 'revision' | 'succession' | 'correction' | 'retraction';
+type RefOperation =
+  | 'remember'
+  | 'revision'
+  | 'succession'
+  | 'correction'
+  | 'retraction'
+  | 'confidence_adjustment';
 type RefReasonCode = 'stated' | 'restated' | 'reported_wrong' | 'reported_ended' | 'period_corrected';
 type RefAuditAction =
   | 'entity.created'
   | 'source.recorded'
   | 'fact.recorded'
   | 'fact.source_attached'
-  | 'fact.invalidated';
+  | 'fact.invalidated'
+  | 'fact.confidence_adjusted';
 
 type RefAuditEntry = {
   readonly id: number;
@@ -123,7 +130,8 @@ type RefChange =
       readonly kind: 'invalidate_fact';
       readonly factId: RefFactId;
       readonly supersededByFactId: RefFactId | null;
-    };
+    }
+  | { readonly kind: 'adjust_confidence'; readonly factId: RefFactId; readonly confidence: number };
 
 type RefChangeSet = {
   readonly namespace: RefNamespace;

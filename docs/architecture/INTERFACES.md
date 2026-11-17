@@ -97,7 +97,13 @@ export type Source = {
 export type Trigger = 'agent' | 'person' | 'feedback' | 'maintenance';
 
 /** What was being done. Phases 2 and 3 add 'merge', 'verification', 'feedback' and 'purge'. */
-export type Operation = 'remember' | 'revision' | 'succession' | 'correction' | 'retraction';
+export type Operation =
+  | 'remember'
+  | 'revision'
+  | 'succession'
+  | 'correction'
+  | 'retraction'
+  | 'confidence_adjustment';
 
 /** Why, from a fixed list, so that the audit log holds no free text. Later phases add codes. */
 export type ReasonCode = 'stated' | 'restated' | 'reported_wrong' | 'reported_ended' | 'period_corrected';
@@ -107,7 +113,8 @@ export type AuditAction =
   | 'source.recorded'
   | 'fact.recorded'
   | 'fact.source_attached'
-  | 'fact.invalidated';
+  | 'fact.invalidated'
+  | 'fact.confidence_adjusted';
 
 export type AuditEntry = {
   readonly id: number;
@@ -138,7 +145,7 @@ export type TimeFilter = {
 Two points that are easy to miss:
 
 - **The audit log explains a change by pointing at a source.** When an agent says "this is wrong because we moved to Vitest", that sentence is stored as the content of a source, and the audit entry carries `reasonCode: 'reported_wrong'` and that source's identifier. A later **purge** can then remove the sentence without changing the log.
-- **`detail` is fixed per action.** For `fact.invalidated` it is `{ supersededByFactId }`. For `fact.recorded` it is `{ revisesFactId }` when the fact is a copy made by a revision, and `null` otherwise. For `fact.source_attached` it is `{ sourceId }`. For `entity.created` and `source.recorded` it is `null`.
+- **`detail` is fixed per action.** For `fact.invalidated` it is `{ supersededByFactId }`. For `fact.recorded` it is `{ revisesFactId }` when the fact is a copy made by a revision, and `null` otherwise. For `fact.source_attached` it is `{ sourceId }`. For `fact.confidence_adjusted` it is `{ previousConfidence, confidence }`. For `entity.created` and `source.recorded` it is `null`.
 - **`Operation` is what was being done; `AuditAction` is what happened to one row.** A **succession** is one operation with three actions: a fact recorded, a fact invalidated, a fact recorded.
 
 ## Storage
@@ -238,7 +245,9 @@ export type Change =
       readonly singleValued: boolean;
     }
   | { readonly kind: 'attach_source'; readonly factId: FactId; readonly sourceId: SourceId }
-  | { readonly kind: 'invalidate_fact'; readonly factId: FactId; readonly supersededByFactId: FactId | null };
+  | { readonly kind: 'invalidate_fact'; readonly factId: FactId; readonly supersededByFactId: FactId | null }
+  /** Phase 2. The new confidence, from the change set's `occurredAt`. The fact row is not changed. */
+  | { readonly kind: 'adjust_confidence'; readonly factId: FactId; readonly confidence: number };
 
 export type CommitReceipt = {
   readonly operationId: string;
