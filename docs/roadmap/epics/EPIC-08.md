@@ -86,7 +86,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | FL-043 | Proposed changes: storage and operations | 2 | FL-042 | Pending |
 | FL-070 | Human-approval policy in remember, with a command to list, approve and reject | 2 | FL-043, FL-042, FL-034 | Pending |
 | FL-044 | reviseValidTime operation | 2 | FL-010 | Completed |
-| FL-045 | Confidence history and adjustConfidence | 2 | FL-015, FL-016, FL-017 | Pending |
+| FL-045 | Confidence history and adjustConfidence | 2 | FL-015, FL-016, FL-017 | Completed |
 | FL-046 | Feedback operation and migration | 2 | FL-015, FL-022 | Pending |
 | FL-059 | give_feedback tool | 2 | FL-046, FL-036, FL-058 | Pending |
 | FL-060 | Acting on feedback | 2 | FL-046, FL-045, FL-042 | Pending |
@@ -661,7 +661,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-015, FL-016, FL-017 |
 | Requirements | REQ-01, REQ-18, REQ-24 |
@@ -706,16 +706,78 @@ Differences from the item:
 - [`SCHEMA.md`](../../architecture/SCHEMA.md), "Migrations": a new numbered file; the first migration is not edited.
 
 **Acceptance criteria.**
-- [ ] Contract suite cases pass against both stores, with a fixed clock: a fact recorded at confidence 0.9 and adjusted to 0.4 later is returned with 0.9 for a known-at date before the adjustment and 0.4 for one after; `getFact` returns 0.4; each search lane returns 0.4 with the default time filter.
-- [ ] A contract case shows the fact's identifier, `createdAt` and row count are unchanged by an adjustment.
-- [ ] Contract cases cover the refusals: confidence 1.5 is `invalid_input`; a missing fact is `not_found`; an invalidated fact is `already_invalidated`; a fact in another namespace is `not_found`.
-- [ ] A contract case shows one audit entry per adjustment, with action `fact.confidence_adjusted` and the two numbers in `detail`.
-- [ ] A SQLite adapter test shows a direct `UPDATE` or `DELETE` on `fact_confidence` is refused.
-- [ ] A SQLite adapter test opens a database created by the earlier migrations only, applies the new one, and reads an existing fact with its confidence at recording.
+- [x] Contract suite cases pass against both stores, with a fixed clock: a fact recorded at confidence 0.9 and adjusted to 0.4 later is returned with 0.9 for a known-at date before the adjustment and 0.4 for one after; `getFact` returns 0.4; each search lane returns 0.4 with the default time filter.
+- [x] A contract case shows the fact's identifier, `createdAt` and row count are unchanged by an adjustment.
+- [x] Contract cases cover the refusals: confidence 1.5 is `invalid_input`; a missing fact is `not_found`; an invalidated fact is `already_invalidated`; a fact in another namespace is `not_found`.
+- [x] A contract case shows one audit entry per adjustment, with action `fact.confidence_adjusted` and the two numbers in `detail`.
+- [x] A SQLite adapter test shows a direct `UPDATE` or `DELETE` on `fact_confidence` is refused.
+- [x] A SQLite adapter test opens a database created by the earlier migrations only, applies the new one, and reads an existing fact with its confidence at recording.
 
 **Validation.** The contract suite against both stores. SQLite adapter tests for the triggers and the migration. A unit test of the operation with the in-memory store. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the migration file's name and hash as recorded by the migration runner in the test.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in three commits: `feat(storage): add the fact_confidence migration`, `feat(core): add the adjust_confidence change to both stores`, and `feat(core): add the adjustConfidence operation`.
+
+The names proposed in the item are kept: the `Change` kind `adjust_confidence`, the action `fact.confidence_adjusted`, and the operation `confidence_adjustment`. They are in `INTERFACES.md`, `SCHEMA.md` and the parity test of `core`. `SCHEMA.md` gains a section, "Added by later migrations", because its "Tables" block is held by a test to the first migration exactly; the row of "Planned additions" for `fact_confidence` is removed.
+
+The migration is `packages/storage/migrations/0002_add_fact_confidence.sql`, recorded by the migration runner in the test as `0002_add_fact_confidence.sql`, sha256 `e3ae562615f546ceb27a5b0bab7a77874c0ce02bf79c1e344c8212712d56cfff`. It holds the table, an index on `(fact_id, adjusted_at)`, two triggers that refuse update and delete, and a comment on what Postgres will do differently.
+
+Reads. In SQLite the confidence of a row is one expression, in `packages/storage/src/confidence-columns.ts`: the latest `fact_confidence` row of the fact, ordered by `adjusted_at` and then `rowid` descending, with or without `adjusted_at <= @knownAt`, or else `fact.confidence`. `listFacts` with a time filter and both search lanes use the known-at form; `getFact` and `listFacts` with `live` or `all` use the latest. The in-memory store applies the same rule in `confidenceAt`.
+
+Contract cases, against both stores:
+
+- **Q1** recorded at 0.9 on 2026-06-01 and adjusted to 0.4 on 2026-07-01: 0.9 known at 2026-06-15, 0.4 known at 2026-07-01 and now.
+- **Q2** `getFact`, and `listFacts` with `live` and `all`, return 0.4.
+- **Q3** the keyword lane and the vector lane each return 0.4, as of now and known at now.
+- **Q4** the identifier, `createdAt` and the list of fact rows are unchanged.
+- **Q5** one audit entry, `fact.confidence_adjusted`, with `{ previousConfidence: 0.9, confidence: 0.4 }`.
+- **Q6** two adjustments at the same time: the later one wins, and the second entry's previous confidence is the first's.
+- **Q7 to Q9** 1.5 is `invalid_input`, a missing fact `not_found`, an invalidated fact `already_invalidated` with its successor.
+- **N6** a fact of the other namespace is `not_found`.
+
+The registered counts rise to 52 in the first group, and to 18 and 19 in the second.
+
+SQLite adapter tests, in `fact-confidence-migration.test.ts`. A direct `UPDATE` or `DELETE` on `fact_confidence` is refused with the triggers' messages. A database is created with a directory holding only `0001_initial.sql`, and a fact at 0.9 is written to it with SQL. Opening it with `openSqliteMemoryStore` applies the second migration, and `getFact` returns 0.9.
+
+`adjustConfidence` refuses a confidence outside 0 to 1 and a fact that is not live, and returns `{ factId, previousConfidence }`. Six unit tests cover it.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| SQLite reads ignore the known-at date | Q1 |
+| SQLite orders adjustments at the same time by first insertion | Q6 |
+| SQLite adjusts a fact without checking that it is live | Q8, Q9, N6 |
+| The in-memory store ignores the known-at date | Q1 |
+| The in-memory store orders adjustments at the same time by first insertion | Q6 |
+| The in-memory store adjusts an invalidated fact | Q9 |
+| `adjustConfidence` returns the new confidence as the previous one | 2 |
+| `adjustConfidence` commits under the operation `revision` | 1 |
+
+Removing the range check of `adjustConfidence` failed no test: the change schema refuses the value with `invalid_input` as well. The check stays because it refuses before any read.
+
+`pnpm check`:
+
+```text
+$ biome format .
+Checked 287 files. No fixes applied.
+$ biome lint .
+Checked 287 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  77 passed (77)
+      Tests  843 passed (843)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the third commit, so the migration and the new SQL ran on Apple Silicon: https://github.com/Johnmark-Tech/factloom/actions/runs/43991184737.
+
+Differences from the item:
+
+- `listFacts` with `live`, like `all`, has no known-at date and returns the latest confidence. The item names only `getFact` and `all`.
+- The table has no namespace column: fact identifiers are unique across namespaces, and the commit refuses a fact outside the change set's namespace, as technical requirement 2 asks.
+- The audit entry's detail calls the two numbers `previousConfidence` and `confidence`.
 
 ### FL-046: Feedback operation and migration
 
