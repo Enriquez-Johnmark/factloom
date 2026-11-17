@@ -1,6 +1,13 @@
-import { describeDependencyVersion, findSymbolNames, readDependencyVersion } from '@factloom/graph-rag';
+import type { LlmClient } from '@factloom/core';
+import {
+  checkForSecrets,
+  describeDependencyVersion,
+  findSymbolNames,
+  readDependencyVersion,
+} from '@factloom/graph-rag';
 import {
   archiveUnusedFacts,
+  createLlmVerificationRung,
   createNameCheckRung,
   createStructuredValueRung,
   findDuplicateEntities,
@@ -12,19 +19,29 @@ import {
 } from '@factloom/maintenance';
 import type { ServerDeps } from './create-factloom-server.ts';
 
+/** Whether a text holds something the secret check of FL-022 matches. */
+function containsSecret(text: string): boolean {
+  return !checkForSecrets([{ name: 'file', value: text }]).ok;
+}
+
 /**
- * The rungs of the software development domain: the name check of FL-071, and the version
- * check of FL-062, which reads a dependency's version from its `package.json`.
+ * The rungs of one verification run, in order: from the software development domain, the
+ * name check of FL-071 and the version check of FL-062, which reads a dependency's version
+ * from its `package.json`; then the LLM rung of FL-051, last, made anew for each run because
+ * it counts its calls.
  */
-const VERIFICATION_RUNGS = [
-  createNameCheckRung(findSymbolNames),
-  createStructuredValueRung({
-    pins_version: {
-      readValue: (found, text) => readDependencyVersion(text, found.subject.name),
-      describeSuccessor: (found, version) => describeDependencyVersion(found.subject.name, version),
-    },
-  }),
-];
+function buildVerificationRungs(llm: LlmClient | null) {
+  return [
+    createNameCheckRung(findSymbolNames),
+    createStructuredValueRung({
+      pins_version: {
+        readValue: (found, text) => readDependencyVersion(text, found.subject.name),
+        describeSuccessor: (found, version) => describeDependencyVersion(found.subject.name, version),
+      },
+    }),
+    createLlmVerificationRung({ llm, containsSecret }),
+  ];
+}
 
 /**
  * The maintenance jobs, in the order they run, bound to the composition root's dependencies.
@@ -37,13 +54,15 @@ export function buildMaintenanceJobs(
     readonly repository: RepositoryReader;
     /** How many days a fact must go unrecalled before it is archived. */
     readonly archiveAfterDays: number;
+    /** The LLM for the last verification rung, or null when no key is set. */
+    readonly llm: LlmClient | null;
   },
 ): readonly MaintenanceJob[] {
   const { namespace } = deps;
   return [
     {
       name: 'verify_anchored_facts',
-      run: () => verifyAnchoredFacts({ ...deps, rungs: VERIFICATION_RUNGS }, { namespace }),
+      run: () => verifyAnchoredFacts({ ...deps, rungs: buildVerificationRungs(deps.llm) }, { namespace }),
     },
     { name: 'repair_moved_anchors', run: () => repairMovedAnchors(deps, { namespace }) },
     // FL-064 adds the embedding and LLM stages after the name stage.

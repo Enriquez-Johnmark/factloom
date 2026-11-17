@@ -189,6 +189,8 @@ export function runOn(
       namespace: NAMESPACE,
       repository: createGitRepositoryReader(repositoryDirectory),
       archiveAfterDays: 180,
+      // No key: the LLM rung leaves a fact it would ask about inconclusive.
+      llm: null,
     }),
   );
 }

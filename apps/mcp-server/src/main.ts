@@ -60,6 +60,17 @@ const opened = openSqliteMemoryStore({
 });
 if (!opened.ok) stop(`${opened.error.code}: ${opened.error.message}`);
 
+// The key goes to the Anthropic client and nowhere else. A call's usage is logged without it.
+const llm = createAnthropicLlmClient({
+  apiKey: anthropicApiKey,
+  models: DEFAULT_LLM_MODELS,
+  logUsage: (report) =>
+    log(
+      `${report.task} on ${report.model}: ${report.inputTokens} input tokens, ${report.outputTokens} output tokens, stop reason ${report.stopReason ?? 'none'}.`,
+    ),
+  sendMessage: createAnthropicMessageSender(),
+});
+
 if (command.kind === 'maintenance') {
   // A run is not an MCP server: the report is the one JSON document on standard output.
   const now = () => toTimestamp(new Date());
@@ -74,6 +85,8 @@ if (command.kind === 'maintenance') {
       newId: () => randomUUID(),
       repository: createGitRepositoryReader(repositoryDirectory),
       archiveAfterDays,
+      // With no key the LLM rung is skipped, and the facts it would ask about stay inconclusive.
+      llm: anthropicApiKey === null ? null : llm,
     }),
   );
   await opened.value.close();
@@ -95,17 +108,6 @@ if (command.kind !== 'serve') {
   );
   process.exit(exitCode);
 }
-
-// The key goes to the Anthropic client and nowhere else. A call's usage is logged without it.
-const llm = createAnthropicLlmClient({
-  apiKey: anthropicApiKey,
-  models: DEFAULT_LLM_MODELS,
-  logUsage: (report) =>
-    log(
-      `${report.task} on ${report.model}: ${report.inputTokens} input tokens, ${report.outputTokens} output tokens, stop reason ${report.stopReason ?? 'none'}.`,
-    ),
-  sendMessage: createAnthropicMessageSender(),
-});
 
 serveFactloom(
   {
