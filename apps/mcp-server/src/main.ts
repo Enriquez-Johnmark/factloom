@@ -1,6 +1,7 @@
 // The composition root of the MCP server: the one place that reads the environment and names
 // the concrete implementations. Standard output belongs to the protocol, so everything a
-// person should read goes to standard error.
+// person should read goes to standard error. With the argument `purge`, it runs the purge
+// command instead, which a person runs and which is not an MCP server (FL-072).
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -16,7 +17,9 @@ import {
 import type { Logger } from './create-factloom-server.ts';
 import { FACTLOOM_TOOLS } from './factloom-tools.ts';
 import { createLocalEmbedder } from './create-local-embedder.ts';
+import { readCommand } from './read-command.ts';
 import { readConfiguration } from './read-configuration.ts';
+import { runPurgeCommand } from './run-purge-command.ts';
 import { serveFactloom } from './serve-factloom.ts';
 
 const log: Logger = (message) => {
@@ -29,6 +32,7 @@ function stop(message: string): never {
   process.exit(1);
 }
 
+const command = readCommand(process.argv.slice(2));
 const configuration = readConfiguration(process.env, homedir());
 if (!configuration.ok) stop(configuration.error.message);
 const { databasePath, namespace, modelCacheDirectory, anthropicApiKey } = configuration.value;
@@ -42,6 +46,21 @@ const opened = openSqliteMemoryStore({
   embeddingDimensions: embedder.dimensions,
 });
 if (!opened.ok) stop(`${opened.error.code}: ${opened.error.message}`);
+
+if (command.kind !== 'serve') {
+  const exitCode = await runPurgeCommand(
+    {
+      store: opened.value,
+      namespace,
+      now: () => toTimestamp(new Date()),
+      newId: () => randomUUID(),
+      databasePath,
+      write: (line) => process.stdout.write(`${line}\n`),
+    },
+    command,
+  );
+  process.exit(exitCode);
+}
 
 // The key goes to the Anthropic client and nowhere else. A call's usage is logged without it.
 const llm = createAnthropicLlmClient({

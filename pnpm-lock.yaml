@@ -266,6 +266,12 @@ importers:
       '@modelcontextprotocol/client':
         specifier: 'catalog:'
         version: 2.4.0
+      '@types/better-sqlite3':
+        specifier: 'catalog:'
+        version: 9.6.0
+      better-sqlite3:
+        specifier: 'catalog:'
+        version: 13.1.1
       fast-check:
         specifier: 'catalog:'
         version: 4.10.2

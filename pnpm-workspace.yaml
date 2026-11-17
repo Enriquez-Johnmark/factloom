@@ -28,7 +28,8 @@ catalog:
   "@types/better-sqlite3": 9.6.0
   # Types for the Node.js built-ins, on the line of the oldest supported Node.js.
   "@types/node": 22.19.0
-  # SQLite driver, synchronous, with FTS5 built in. Version 13.1.1 is the one the spikes ran.
+  # SQLite driver, synchronous, with FTS5 built in. Version 13.1.1 is the one the spikes ran. Used by
+  # packages/storage, and by apps/mcp-server's tests only, to read a database file after a command.
   better-sqlite3: 13.1.1
   # Property-based testing: generated sequences of changes, and generated tool inputs. Development only.
   fast-check: 4.10.2

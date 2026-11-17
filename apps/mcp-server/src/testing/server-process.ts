@@ -12,8 +12,13 @@ export type FinishedServer = {
  * Starts a server entry with the given variables and a home directory of its own, so that
  * nothing reaches the real one. Collects both outputs until the process ends.
  */
-export function startServerProcess(entry: string, variables: Readonly<Record<string, string>>, home: string) {
-  const child: ChildProcess = spawn(process.execPath, [entry], {
+export function startServerProcess(
+  entry: string,
+  variables: Readonly<Record<string, string>>,
+  home: string,
+  args: readonly string[] = [],
+) {
+  const child: ChildProcess = spawn(process.execPath, [entry, ...args], {
     env: { PATH: process.env.PATH ?? '', HOME: home, ...variables },
     stdio: ['pipe', 'pipe', 'pipe'],
   });

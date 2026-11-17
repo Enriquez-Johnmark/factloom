@@ -20,6 +20,8 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "catalog:",
+    "@types/better-sqlite3": "catalog:",
+    "better-sqlite3": "catalog:",
     "fast-check": "catalog:",
     "yaml": "catalog:"
   }
