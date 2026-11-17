@@ -1141,6 +1141,33 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
     changeSet('op-e5', '2026-06-01', [verify('pg16'), verify('node22')], verifying),
   );
 
+  test('E6: listVerifications returns the verifications of one fact in the order recorded, and none under another namespace', async () => {
+    const first = await store.commit(
+      changeSet('op-e6a', '2026-06-02', [verify('pg16', { id: 'vr-a', outcome: 'inconclusive' })], verifying),
+    );
+    const second = await store.commit(
+      changeSet(
+        'op-e6b',
+        '2026-06-01',
+        [
+          verify('pg16', { id: 'vr-b', outcome: 'confirmed', verifiedAt: at('2026-06-01') }),
+          verify('node22', { id: 'vr-c' }),
+        ],
+        verifying,
+      ),
+    );
+    expect([first.ok, second.ok]).toEqual([true, true]);
+
+    const listed = await store.listVerifications({ namespace: NAMESPACE, factId: 'pg16' });
+    const elsewhere = await store.listVerifications({ namespace: 'repo:other', factId: 'pg16' });
+
+    expect(listed.ok && listed.value.map((found) => [found.id, found.outcome, found.method])).toEqual([
+      ['vr-a', 'inconclusive', 'deterministic'],
+      ['vr-b', 'confirmed', 'deterministic'],
+    ]);
+    expect(elsewhere).toEqual({ ok: true, value: [] });
+  });
+
   // --- Stale and orphaned facts (FL-049) ---
   // At NOW the current facts are pg16, recorded 2026-04-02, and node22, recorded 2026-05-01.
   // pg14-ended is live but ended; pg14 and node20 are invalidated.

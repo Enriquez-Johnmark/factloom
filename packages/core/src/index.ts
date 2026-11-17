@@ -28,6 +28,7 @@ export { EntityMergeSchema } from './entity-merge.ts';
 export type { FactUsage } from './fact-usage.ts';
 export { FactUsageSchema } from './fact-usage.ts';
 export type { FactVerification, VerificationMethod, VerificationOutcome } from './fact-verification.ts';
+export { FactVerificationSchema } from './fact-verification.ts';
 export type { Feedback, FeedbackSignal } from './feedback.ts';
 export { FeedbackSchema, FeedbackSignalSchema } from './feedback.ts';
 export type {

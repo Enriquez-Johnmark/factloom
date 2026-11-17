@@ -12,6 +12,7 @@ import type {
 } from './fact.ts';
 import type { EntityMerge } from './entity-merge.ts';
 import type { FactUsage } from './fact-usage.ts';
+import type { FactVerification } from './fact-verification.ts';
 import type { Feedback } from './feedback.ts';
 import type { Result } from './result.ts';
 import type { Timestamp } from './timestamp.ts';
@@ -122,6 +123,12 @@ export interface MemoryStore {
     readonly namespace: Namespace;
     readonly factId: FactId;
   }): Promise<Result<readonly Feedback[]>>;
+
+  /** Phase 3. The verifications of one fact, in the order they were recorded. */
+  listVerifications(query: {
+    readonly namespace: Namespace;
+    readonly factId: FactId;
+  }): Promise<Result<readonly FactVerification[]>>;
 
   /**
    * Phase 3. Current facts at `currentAt` whose latest verification, or recording if none, is

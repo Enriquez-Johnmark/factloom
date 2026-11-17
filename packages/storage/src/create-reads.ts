@@ -16,12 +16,14 @@ import {
   type EntityMergeRow,
   type EntityRow,
   type FactRow,
+  type FactVerificationRow,
   type FeedbackRow,
   type SourceRow,
   toAuditEntry,
   toEntity,
   toEntityMerge,
   toFact,
+  toFactVerification,
   toFeedback,
   toSource,
 } from './row-mappers.ts';
@@ -114,6 +116,9 @@ export type SqliteReads = {
   readonly listFeedback: (
     query: Parameters<MemoryStore['listFeedback']>[0],
   ) => ReturnType<typeof toFeedback>[];
+  readonly listVerifications: (
+    query: Parameters<MemoryStore['listVerifications']>[0],
+  ) => ReturnType<typeof toFactVerification>[];
   readonly listStaleFacts: (
     query: Parameters<MemoryStore['listStaleFacts']>[0],
   ) => Result<readonly FactWithSources[]>;
@@ -223,6 +228,10 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
   const selectFeedback = db.prepare<[string, string], FeedbackRow>(
     `SELECT id, namespace, fact_id, signal, trigger, source_id, recorded_at FROM feedback
      WHERE namespace = ? AND fact_id = ? ORDER BY recorded_at, rowid`,
+  );
+  const selectVerifications = db.prepare<[string, string], FactVerificationRow>(
+    `SELECT id, namespace, fact_id, outcome, method, verified_at FROM fact_verification
+     WHERE namespace = ? AND fact_id = ? ORDER BY rowid`,
   );
   const selectStaleFacts = db.prepare<[Record<string, unknown>], FactRow>(STALE_FACTS_SQL);
   const selectOrphanedFacts = db.prepare<[Record<string, unknown>], FactRow>(ORPHANED_FACTS_SQL);
@@ -366,6 +375,10 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
 
     listFeedback(query) {
       return selectFeedback.all(query.namespace, query.factId).map(toFeedback);
+    },
+
+    listVerifications(query) {
+      return selectVerifications.all(query.namespace, query.factId).map(toFactVerification);
     },
 
     listStaleFacts(query) {

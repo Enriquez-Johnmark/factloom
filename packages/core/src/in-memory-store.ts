@@ -897,6 +897,13 @@ export function createInMemoryStore(): MemoryStore {
       return Promise.resolve(ok(structuredClone(found)));
     },
 
+    listVerifications(query) {
+      const found = state.verifications.filter(
+        (verification) => verification.namespace === query.namespace && verification.factId === query.factId,
+      );
+      return Promise.resolve(ok(structuredClone(found)));
+    },
+
     listStaleFacts(query) {
       if (!isValidLimit(query.limit)) return Promise.resolve(invalidLimit());
       const current = { validAt: query.currentAt, knownAt: query.currentAt };

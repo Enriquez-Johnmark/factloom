@@ -7,6 +7,8 @@ import {
   EntitySchema,
   type Fact,
   FactSchema,
+  type FactVerification,
+  FactVerificationSchema,
   type Feedback,
   FeedbackSchema,
   type Source,
@@ -143,6 +145,26 @@ export function toFeedback(row: FeedbackRow): Feedback {
     trigger: row.trigger,
     sourceId: row.source_id,
     recordedAt: row.recorded_at,
+  });
+}
+
+export type FactVerificationRow = {
+  readonly id: string;
+  readonly namespace: string;
+  readonly fact_id: string;
+  readonly outcome: string;
+  readonly method: string;
+  readonly verified_at: string;
+};
+
+export function toFactVerification(row: FactVerificationRow): FactVerification {
+  return parseRow(FactVerificationSchema, 'fact_verification', {
+    id: row.id,
+    namespace: row.namespace,
+    factId: row.fact_id,
+    outcome: row.outcome,
+    method: row.method,
+    verifiedAt: row.verified_at,
   });
 }
 

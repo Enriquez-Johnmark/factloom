@@ -315,6 +315,10 @@ interface RefMemoryStore {
     readonly namespace: RefNamespace;
     readonly factId: RefFactId;
   }): Promise<Result<readonly RefFeedback[]>>;
+  listVerifications(query: {
+    readonly namespace: RefNamespace;
+    readonly factId: RefFactId;
+  }): Promise<Result<readonly RefFactVerification[]>>;
   listStaleFacts(query: {
     readonly namespace: RefNamespace;
     readonly currentAt: Timestamp;
