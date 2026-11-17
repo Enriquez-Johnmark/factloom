@@ -16,6 +16,7 @@ export const OperationSchema = z.enum([
   'confidence_adjustment',
   'feedback',
   'purge',
+  'merge',
 ]);
 export type Operation = z.infer<typeof OperationSchema>;
 
@@ -29,6 +30,7 @@ export const ReasonCodeSchema = z.enum([
   'feedback_given',
   'erasure_requested',
   'secret_stored',
+  'same_entity',
 ]);
 export type ReasonCode = z.infer<typeof ReasonCodeSchema>;
 
@@ -43,6 +45,7 @@ export const AuditActionSchema = z.enum([
   'feedback.recorded',
   'source.purged',
   'fact.purged',
+  'entity.merged',
 ]);
 export type AuditAction = z.infer<typeof AuditActionSchema>;
 

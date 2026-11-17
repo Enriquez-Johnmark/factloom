@@ -9,15 +9,18 @@ import {
 import type { Database, Statement } from 'better-sqlite3';
 import { buildKeywordQuery } from './build-keyword-query.ts';
 import { CONFIDENCE_AT_KNOWN_AT, LATEST_CONFIDENCE } from './confidence-columns.ts';
+import { sameEntityIds, sameEntityIdsOfArray } from './entity-resolution-sql.ts';
 import { type EmbeddingModel, toBlob } from './embedding-model.ts';
 import {
   type AuditRow,
+  type EntityMergeRow,
   type EntityRow,
   type FactRow,
   type FeedbackRow,
   type SourceRow,
   toAuditEntry,
   toEntity,
+  toEntityMerge,
   toFact,
   toFeedback,
   toSource,
@@ -58,7 +61,8 @@ const SOURCE_COLUMNS =
  */
 export function buildListFactsSql(shape: ListFactsShape): string {
   const conditions = ['f.namespace = @namespace'];
-  if (shape.hasSubject) conditions.push('f.subject_entity_id = @subjectEntityId');
+  // An entity filter matches every identifier merged with the one asked for (FL-052).
+  if (shape.hasSubject) conditions.push(`f.subject_entity_id IN (${sameEntityIds('@subjectEntityId')})`);
   if (shape.hasPredicate) conditions.push('f.predicate = @predicate');
   if (shape.hasSupersededBy) conditions.push('f.superseded_by_fact_id = @supersededByFactId');
   if (shape.time === 'live') conditions.push('f.invalidated_at IS NULL');
@@ -74,7 +78,7 @@ export function buildListFactsSql(shape: ListFactsShape): string {
   // that each can use its own index; UNION drops a fact that both find. The identifiers are
   // bound as one JSON array and read with json_each.
   const touching = (column: string): string =>
-    select(`\n  AND f.${column} IN (SELECT value FROM json_each(@touchingEntityIds))`);
+    select(`\n  AND f.${column} IN (${sameEntityIdsOfArray('@touchingEntityIds')})`);
   return `SELECT * FROM (${touching('subject_entity_id')} UNION ${touching('object_entity_id')})
     ORDER BY created_at DESC, row_order DESC LIMIT @limit`;
 }
@@ -104,6 +108,9 @@ export type SqliteReads = {
   readonly findSourcesByContentHash: (
     query: Parameters<MemoryStore['findSourcesByContentHash']>[0],
   ) => ReturnType<typeof toSource>[];
+  readonly listEntityMerges: (
+    query: Parameters<MemoryStore['listEntityMerges']>[0],
+  ) => ReturnType<typeof toEntityMerge>[];
   readonly listFeedback: (
     query: Parameters<MemoryStore['listFeedback']>[0],
   ) => ReturnType<typeof toFeedback>[];
@@ -171,6 +178,14 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
   const selectSourcesByHash = db.prepare<[string, string], SourceRow>(
     `SELECT ${SOURCE_COLUMNS} FROM source WHERE namespace = ? AND content_hash = ? ORDER BY created_at, rowid`,
   );
+  const selectMergesFrom = db.prepare<[string, string], { from_entity_id: string; into_entity_id: string }>(
+    `SELECT from_entity_id, into_entity_id FROM entity_merge
+     WHERE namespace = ? AND undone_at IS NULL AND from_entity_id IN (SELECT value FROM json_each(?))`,
+  );
+  const selectMerges = db.prepare<[string], EntityMergeRow>(
+    `SELECT id, namespace, from_entity_id, into_entity_id, merged_at, undone_at FROM entity_merge
+     WHERE namespace = ? ORDER BY merged_at, rowid`,
+  );
   const selectFeedback = db.prepare<[string, string], FeedbackRow>(
     `SELECT id, namespace, fact_id, signal, trigger, source_id, recorded_at FROM feedback
      WHERE namespace = ? AND fact_id = ? ORDER BY recorded_at, rowid`,
@@ -180,11 +195,19 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
   // Three queries for any number of facts: the facts are given, then their entities, then their sources.
   const withSources = (rows: readonly FactRow[], namespace: string): FactWithSources[] => {
     if (rows.length === 0) return [];
-    const entityIds = new Set<string>();
+    const recorded = new Set<string>();
     for (const row of rows) {
-      entityIds.add(row.subject_entity_id);
-      if (row.object_entity_id !== null) entityIds.add(row.object_entity_id);
+      recorded.add(row.subject_entity_id);
+      if (row.object_entity_id !== null) recorded.add(row.object_entity_id);
     }
+    // A fact is shown under the entity each of its entities resolves to through merges.
+    const resolvedTo = new Map(
+      selectMergesFrom
+        .all(namespace, JSON.stringify([...recorded]))
+        .map((row) => [row.from_entity_id, row.into_entity_id]),
+    );
+    const resolve = (entityId: string): string => resolvedTo.get(entityId) ?? entityId;
+    const entityIds = new Set([...recorded].map(resolve));
     const entities = new Map(
       selectEntitiesByIds
         .all(namespace, JSON.stringify([...entityIds]))
@@ -197,10 +220,10 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
       sourcesOf.set(row.fact_id, sources);
     }
     return rows.flatMap((row) => {
-      const subject = entities.get(row.subject_entity_id);
+      const subject = entities.get(resolve(row.subject_entity_id));
       if (subject === undefined) return [];
       const objectEntity =
-        row.object_entity_id === null ? null : (entities.get(row.object_entity_id) ?? null);
+        row.object_entity_id === null ? null : (entities.get(resolve(row.object_entity_id)) ?? null);
       return [{ fact: toFact(row), subject, objectEntity, sources: sourcesOf.get(row.id) ?? [] }];
     });
   };
@@ -299,6 +322,10 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
 
     findSourcesByContentHash(query) {
       return selectSourcesByHash.all(query.namespace, query.contentHash).map(toSource);
+    },
+
+    listEntityMerges(query) {
+      return selectMerges.all(query.namespace).map(toEntityMerge);
     },
 
     listFeedback(query) {

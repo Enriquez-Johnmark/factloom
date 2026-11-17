@@ -100,6 +100,16 @@ export type Source = {
 
 export type Trigger = 'agent' | 'person' | 'feedback' | 'maintenance';
 
+/** Phase 3. That one entity is the same thing as another. Reads resolve `fromEntityId` to `intoEntityId` while `undoneAt` is null. */
+export type EntityMerge = {
+  readonly id: string;
+  readonly namespace: Namespace;
+  readonly fromEntityId: EntityId;
+  readonly intoEntityId: EntityId;
+  readonly mergedAt: Timestamp;
+  readonly undoneAt: Timestamp | null;
+};
+
 /** Phase 2. That someone found a recalled fact right, wrong or out of date. Changes no fact. */
 export type Feedback = {
   readonly id: string;
@@ -121,7 +131,8 @@ export type Operation =
   | 'retraction'
   | 'confidence_adjustment'
   | 'feedback'
-  | 'purge';
+  | 'purge'
+  | 'merge';
 
 /** Why, from a fixed list, so that the audit log holds no free text. Later phases add codes. */
 export type ReasonCode =
@@ -132,7 +143,8 @@ export type ReasonCode =
   | 'period_corrected'
   | 'feedback_given'
   | 'erasure_requested'
-  | 'secret_stored';
+  | 'secret_stored'
+  | 'same_entity';
 
 export type AuditAction =
   | 'entity.created'
@@ -143,7 +155,8 @@ export type AuditAction =
   | 'fact.confidence_adjusted'
   | 'feedback.recorded'
   | 'source.purged'
-  | 'fact.purged';
+  | 'fact.purged'
+  | 'entity.merged';
 
 export type AuditEntry = {
   readonly id: number;
@@ -249,6 +262,9 @@ export interface MemoryStore {
     readonly contentHash: string;
   }): Promise<Result<readonly Source[]>>;
 
+  /** Phase 3. Every merge of the namespace, undone ones included, in the order they were made. */
+  listEntityMerges(query: { readonly namespace: Namespace }): Promise<Result<readonly EntityMerge[]>>;
+
   /** Phase 2. The feedback on one fact, in the order it was given. */
   listFeedback(query: { readonly namespace: Namespace; readonly factId: FactId }): Promise<Result<readonly Feedback[]>>;
 
@@ -295,7 +311,9 @@ export type Change =
   /** Phase 2. Changes no fact. The fact may be invalidated. */
   | { readonly kind: 'record_feedback'; readonly feedback: Feedback }
   /** Phase 2. Replaces a fact's text, or a source's content and locator (ADR 0012). */
-  | { readonly kind: 'purge_content'; readonly targetKind: 'source' | 'fact'; readonly targetId: string };
+  | { readonly kind: 'purge_content'; readonly targetKind: 'source' | 'fact'; readonly targetId: string }
+  /** Phase 3. Records that one entity is the same as another; no entity or fact is rewritten. */
+  | { readonly kind: 'merge_entities'; readonly merge: EntityMerge };
 
 export type CommitReceipt = {
   readonly operationId: string;
@@ -650,8 +668,8 @@ export declare function undoEntityMerge(
 
 - **Verification is recorded, not applied.** `recordVerification` writes a row and an audit entry. What follows from a `contradicted` outcome, an invalidation or a lower confidence, is a separate call, so the audit log shows both the finding and the action. Errors: `invalid_input`, `not_found`, `already_invalidated`, `storage_failed`.
 - **`listStaleFacts` and `listOrphanedFacts` are reads.** They add two methods to `MemoryStore` in phase 3, backed by the `fact_verification` table. They return an empty list when nothing is due. Errors: `invalid_input`, `storage_failed`.
-- **A merge is a row, not an edit.** `mergeEntities` adds a row to an `entity_merge` table: from, into, when. No entity and no fact is rewritten. Reads resolve identifiers through the merges that have not been undone, following a chain if the target was itself merged later.
-- **A merge can be refused.** If the two entities hold live facts for the same single-valued predicate with different objects and overlapping valid periods, merging them would break the single-value rule. `mergeEntities` then returns `conflict` with those facts and merges nothing. Product 2 resolves them first. Two entities of different types can be merged, because the same thing is sometimes extracted under two types. Other errors: `not_found`; `invalid_input` for an entity merged with itself; `already_exists` when the first entity is already merged; `storage_failed`.
+- **A merge is a row, not an edit.** `mergeEntities` (FL-052) commits one `merge_entities` change under the operation `merge`, which adds a row to an `entity_merge` table: from, into, when. Its audit entry, action `entity.merged`, targets the entity merged from, with `detail` `{ intoEntityId, mergeId }`; the reason code for a duplicate is `same_entity`. `listEntityMerges` reads the merges of a namespace, undone ones included. No entity and no fact is rewritten. Reads resolve identifiers through the merges that have not been undone, following a chain if the target was itself merged later.
+- **A merge can be refused.** If the two entities hold live facts for the same single-valued predicate with different objects and overlapping valid periods, merging them would break the single-value rule. `mergeEntities` then returns `conflict` with those facts and merges nothing. Product 2 resolves them first. This refusal, undoing, and chains of merges are FL-063; until then a merge into an entity that is itself merged, or of an entity that others were merged into, is `invalid_input`. Two entities of different types can be merged, because the same thing is sometimes extracted under two types. Other errors: `not_found`; `invalid_input` for an entity merged with itself; `already_exists` when the first entity is already merged; `storage_failed`.
 - **Undoing a merge** sets `undone_at` on its row, once. Facts recorded against either entity before or after the merge stay with the entity they were recorded against, so nothing needs to be moved back. Errors: `not_found`, `already_exists` if already undone, `storage_failed`.
 
 ## Use cases

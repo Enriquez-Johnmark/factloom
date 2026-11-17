@@ -31,8 +31,8 @@ const registered = describeMemoryStoreContract('the SQLite store', async () => o
 describe('the contract suite against SQLite', () => {
   it('registers every case of every group, with none turned off', () => {
     expect(registered['time, reads, commit and refusals']).toBe(63);
-    // The nineteen cases the in-memory store runs, and P1 for two stores on one file.
-    expect(registered['single-value rule and namespaces']).toBe(20);
+    // The twenty-six cases the in-memory store runs, and P1 for two stores on one file.
+    expect(registered['single-value rule and namespaces']).toBe(27);
     expect(registered['keyword lane']).toBe(5);
     expect(registered['vector lane']).toBe(6);
   });

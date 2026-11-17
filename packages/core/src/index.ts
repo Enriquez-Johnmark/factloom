@@ -23,6 +23,8 @@ export { ChangeSchema, ChangeSetSchema, CommitReceiptSchema } from './change-set
 export type { Domain, PredicateDefinition } from './domain.ts';
 export { DomainSchema, PredicateDefinitionSchema } from './domain.ts';
 export type { Embedder } from './embedder.ts';
+export type { EntityMerge } from './entity-merge.ts';
+export { EntityMergeSchema } from './entity-merge.ts';
 export type { Feedback, FeedbackSignal } from './feedback.ts';
 export { FeedbackSchema, FeedbackSignalSchema } from './feedback.ts';
 export type {

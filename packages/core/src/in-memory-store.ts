@@ -10,6 +10,7 @@ import {
   type Source,
   type TimeFilter,
 } from './fact.ts';
+import type { EntityMerge } from './entity-merge.ts';
 import type { Feedback } from './feedback.ts';
 import type { MemoryStore } from './memory-store.ts';
 import { err, type Failure, ok } from './result.ts';
@@ -33,6 +34,8 @@ type State = {
   /** Confidence adjustments in the order they were recorded. The fact rows keep their confidence at recording. */
   readonly confidences: ConfidenceRow[];
   readonly feedback: Map<string, Feedback>;
+  /** Entity merges in the order they were made, undone ones included. */
+  readonly merges: EntityMerge[];
   /** The size of the vectors held, once the first one is recorded. */
   dimensions: number | null;
 };
@@ -48,6 +51,7 @@ function createEmptyState(): State {
     auditEntries: [],
     confidences: [],
     feedback: new Map(),
+    merges: [],
     dimensions: null,
   };
 }
@@ -64,6 +68,7 @@ function copyState(state: State): State {
     auditEntries: [...state.auditEntries],
     confidences: [...state.confidences],
     feedback: new Map(state.feedback),
+    merges: [...state.merges],
     dimensions: state.dimensions,
   };
 }
@@ -80,6 +85,7 @@ const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_conte
   invalidate_fact: 'fact.invalidated',
   adjust_confidence: 'fact.confidence_adjusted',
   record_feedback: 'feedback.recorded',
+  merge_entities: 'entity.merged',
 };
 
 /** What happened to the target of a change. A purge's action depends on what it purged. */
@@ -108,6 +114,8 @@ function targetOf(change: Change): {
       return { targetKind: 'feedback', targetId: change.feedback.id };
     case 'purge_content':
       return { targetKind: change.targetKind, targetId: change.targetId };
+    case 'merge_entities':
+      return { targetKind: 'entity', targetId: change.merge.fromEntityId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -200,6 +208,8 @@ function detailOf(change: Change, changes: readonly Change[], before: State): Au
       return { factId: change.feedback.factId };
     case 'purge_content':
       return null;
+    case 'merge_entities':
+      return { intoEntityId: change.merge.intoEntityId, mergeId: change.merge.id };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -216,6 +226,59 @@ function notLive(fact: Fact): Failure {
       : `The fact ${fact.id} was invalidated and superseded by ${superseded}. Use that fact.`,
     { relatedFactIds: superseded === null ? [] : [superseded] },
   );
+}
+
+/** The merges in force: those not undone. */
+function mergesInForce(merges: readonly EntityMerge[]): EntityMerge[] {
+  return merges.filter((merge) => merge.undoneAt === null);
+}
+
+/** The entity an identifier resolves to: the one it was merged into, or itself. */
+function resolveEntityId(merges: readonly EntityMerge[], entityId: string): string {
+  return mergesInForce(merges).find((merge) => merge.fromEntityId === entityId)?.intoEntityId ?? entityId;
+}
+
+/** Every identifier that resolves to the same entity as this one: it, what it resolves to, and what was merged into that. */
+function sameEntityIds(merges: readonly EntityMerge[], entityId: string): Set<string> {
+  const resolved = resolveEntityId(merges, entityId);
+  const ids = new Set([entityId, resolved]);
+  for (const merge of mergesInForce(merges)) if (merge.intoEntityId === resolved) ids.add(merge.fromEntityId);
+  return ids;
+}
+
+/**
+ * Records a merge. Until chains of merges are handled (FL-063), a merge into an entity that is
+ * itself merged, or of an entity that others were merged into, is refused.
+ */
+function recordMerge(draft: State, changeSet: ChangeSet, merge: EntityMerge): Failure | null {
+  for (const entityId of [merge.fromEntityId, merge.intoEntityId]) {
+    if (draft.entities.get(entityId)?.namespace !== changeSet.namespace) {
+      return err('not_found', `The entity ${entityId} does not exist.`);
+    }
+  }
+  if (merge.fromEntityId === merge.intoEntityId)
+    return err('invalid_input', 'An entity cannot be merged with itself.');
+  const inForce = mergesInForce(draft.merges);
+  if (draft.merges.some((known) => known.id === merge.id)) {
+    return err('already_exists', `The identifier ${merge.id} is already used by a merge.`);
+  }
+  if (inForce.some((known) => known.fromEntityId === merge.fromEntityId)) {
+    return err('already_exists', `The entity ${merge.fromEntityId} is already merged into another.`);
+  }
+  if (inForce.some((known) => known.fromEntityId === merge.intoEntityId)) {
+    return err(
+      'invalid_input',
+      `The entity ${merge.intoEntityId} is itself merged; merge into the one it was merged into.`,
+    );
+  }
+  if (inForce.some((known) => known.intoEntityId === merge.fromEntityId)) {
+    return err(
+      'invalid_input',
+      `Other entities were merged into ${merge.fromEntityId}; chains of merges are not handled yet.`,
+    );
+  }
+  draft.merges.push(merge);
+  return null;
 }
 
 /**
@@ -396,6 +459,8 @@ function applyChange(draft: State, changeSet: ChangeSet, change: Change): Failur
       draft.feedback.set(feedback.id, feedback);
       return null;
     }
+    case 'merge_entities':
+      return recordMerge(draft, changeSet, change.merge);
     case 'purge_content':
       return change.targetKind === 'fact'
         ? purgeFact(draft, changeSet, change.targetId)
@@ -417,12 +482,14 @@ function findSingleValueConflict(draft: State, changeSet: ChangeSet): Failure | 
     if (change.kind !== 'record_fact' || !change.singleValued) continue;
     const recorded = draft.facts.get(change.fact.id);
     if (recorded === undefined || recorded.invalidatedAt !== null) continue;
+    // The rule holds across merged entities: a fact about either is checked against both.
+    const sameSubjects = sameEntityIds(draft.merges, recorded.subjectEntityId);
     const overlapping = [...draft.facts.values()].filter(
       (other) =>
         other.id !== recorded.id &&
         other.namespace === recorded.namespace &&
         other.invalidatedAt === null &&
-        other.subjectEntityId === recorded.subjectEntityId &&
+        sameSubjects.has(other.subjectEntityId) &&
         other.predicate === recorded.predicate &&
         periodsOverlap(recorded, other),
     );
@@ -485,10 +552,13 @@ export function createInMemoryStore(): MemoryStore {
    */
   const withSources = (stored: Fact, knownAt: Timestamp | null): FactWithSources | null => {
     const fact = { ...stored, confidence: confidenceAt(state.confidences, stored, knownAt) };
-    const subject = state.entities.get(fact.subjectEntityId);
+    // Shown under the entity it resolves to through merges; the fact row keeps its own identifiers.
+    const subject = state.entities.get(resolveEntityId(state.merges, fact.subjectEntityId));
     if (subject === undefined) return null;
     const objectEntity =
-      fact.object.kind === 'entity' ? (state.entities.get(fact.object.entityId) ?? null) : null;
+      fact.object.kind === 'entity'
+        ? (state.entities.get(resolveEntityId(state.merges, fact.object.entityId)) ?? null)
+        : null;
     const sources = (state.factSources.get(fact.id) ?? []).flatMap((sourceId) => {
       const source = state.sources.get(sourceId);
       return source === undefined ? [] : [source];
@@ -570,10 +640,17 @@ export function createInMemoryStore(): MemoryStore {
     listFacts(query) {
       if (!isValidLimit(query.limit)) return Promise.resolve(invalidLimit());
       const { time } = query;
-      const touching = query.touchingEntityIds === null ? null : new Set(query.touchingEntityIds);
+      const touching =
+        query.touchingEntityIds === null
+          ? null
+          : new Set(
+              query.touchingEntityIds.flatMap((entityId) => [...sameEntityIds(state.merges, entityId)]),
+            );
+      const subjects =
+        query.subjectEntityId === null ? null : sameEntityIds(state.merges, query.subjectEntityId);
       const matches = (fact: Fact): boolean => {
         if (fact.namespace !== query.namespace) return false;
-        if (query.subjectEntityId !== null && fact.subjectEntityId !== query.subjectEntityId) return false;
+        if (subjects !== null && !subjects.has(fact.subjectEntityId)) return false;
         if (query.predicate !== null && fact.predicate !== query.predicate) return false;
         if (query.supersededByFactId !== null && fact.supersededByFactId !== query.supersededByFactId)
           return false;
@@ -668,6 +745,12 @@ export function createInMemoryStore(): MemoryStore {
         (source) => source.namespace === query.namespace && source.contentHash === query.contentHash,
       );
       return Promise.resolve(ok(structuredClone(found)));
+    },
+
+    listEntityMerges(query) {
+      return Promise.resolve(
+        ok(structuredClone(state.merges.filter((merge) => merge.namespace === query.namespace))),
+      );
     },
 
     listFeedback(query) {

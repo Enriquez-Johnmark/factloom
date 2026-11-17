@@ -8,6 +8,7 @@ import {
   SourceIdSchema,
   SourceSchema,
 } from './fact.ts';
+import { EntityMergeSchema } from './entity-merge.ts';
 import { FeedbackSchema } from './feedback.ts';
 import { TimestampSchema } from './timestamp.ts';
 
@@ -59,6 +60,8 @@ export const ChangeSchema = z.discriminatedUnion('kind', [
       targetId: z.string().min(1),
     })
     .readonly(),
+  /** Phase 3. Records that one entity is the same as another; no entity or fact is rewritten. */
+  z.strictObject({ kind: z.literal('merge_entities'), merge: EntityMergeSchema }).readonly(),
 ]);
 export type Change = z.infer<typeof ChangeSchema>;
 
@@ -76,6 +79,8 @@ function findForeignRow(namespace: string, change: Change): string | null {
     case 'adjust_confidence':
     case 'purge_content':
       return null;
+    case 'merge_entities':
+      return change.merge.namespace === namespace ? null : `merge ${change.merge.id}`;
     case 'record_feedback':
       return change.feedback.namespace === namespace ? null : `feedback ${change.feedback.id}`;
     default: {

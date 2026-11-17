@@ -10,6 +10,7 @@ import type {
   SourceId,
   TimeFilter,
 } from './fact.ts';
+import type { EntityMerge } from './entity-merge.ts';
 import type { Feedback } from './feedback.ts';
 import type { Result } from './result.ts';
 
@@ -89,6 +90,9 @@ export interface MemoryStore {
     readonly namespace: Namespace;
     readonly contentHash: string;
   }): Promise<Result<readonly Source[]>>;
+
+  /** Phase 3. Every merge of the namespace, undone ones included, in the order they were made. */
+  listEntityMerges(query: { readonly namespace: Namespace }): Promise<Result<readonly EntityMerge[]>>;
 
   /** Phase 2. The feedback on one fact, in the order it was given. */
   listFeedback(query: {

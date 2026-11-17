@@ -15,6 +15,7 @@ import {
 } from '@factloom/core';
 import type { Database } from 'better-sqlite3';
 import { LATEST_CONFIDENCE } from './confidence-columns.ts';
+import { sameEntityIds } from './entity-resolution-sql.ts';
 import { type EmbeddingModel, toBlob } from './embedding-model.ts';
 
 const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_content'>]: AuditAction } = {
@@ -25,6 +26,7 @@ const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_conte
   invalidate_fact: 'fact.invalidated',
   adjust_confidence: 'fact.confidence_adjusted',
   record_feedback: 'feedback.recorded',
+  merge_entities: 'entity.merged',
 };
 
 /** What happened to the target of a change. A purge's action depends on what it purged. */
@@ -53,6 +55,8 @@ function targetOf(change: Change): {
       return { targetKind: 'feedback', targetId: change.feedback.id };
     case 'purge_content':
       return { targetKind: change.targetKind, targetId: change.targetId };
+    case 'merge_entities':
+      return { targetKind: 'entity', targetId: change.merge.fromEntityId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -156,7 +160,7 @@ export function createCommit(
     { readonly id: string }
   >(
     `SELECT o.id FROM fact o
-     WHERE o.namespace = @namespace AND o.subject_entity_id = @subject AND o.predicate = @predicate
+     WHERE o.namespace = @namespace AND o.subject_entity_id IN (${sameEntityIds('@subject')}) AND o.predicate = @predicate
        AND o.invalidated_at IS NULL AND o.id <> @id
        AND (o.valid_from IS NULL OR @validTo IS NULL OR o.valid_from < @validTo)
        AND (@validFrom IS NULL OR o.valid_to IS NULL OR @validFrom < o.valid_to)
@@ -198,6 +202,17 @@ export function createCommit(
     `UPDATE source SET content = CASE WHEN content IS NULL THEN NULL ELSE @marker END,
        content_hash = NULL, locator = NULL, purged_at = @purgedAt
      WHERE id = @id AND namespace = @namespace AND purged_at IS NULL`,
+  );
+  const insertMerge = db.prepare(
+    `INSERT INTO entity_merge (id, namespace, from_entity_id, into_entity_id, merged_at, undone_at)
+     VALUES (@id, @namespace, @fromEntityId, @intoEntityId, @mergedAt, @undoneAt)`,
+  );
+  const isMergeIdUsed = db.prepare<[string], unknown>('SELECT 1 FROM entity_merge WHERE id = ?');
+  const isMergedFrom = db.prepare<[string, string], unknown>(
+    'SELECT 1 FROM entity_merge WHERE namespace = ? AND from_entity_id = ? AND undone_at IS NULL',
+  );
+  const hasMergedInto = db.prepare<[string, string], unknown>(
+    'SELECT 1 FROM entity_merge WHERE namespace = ? AND into_entity_id = ? AND undone_at IS NULL',
   );
   const insertAuditEntry = db.prepare(
     `INSERT INTO audit_log (namespace, operation_id, operation, action, target_kind, target_id,
@@ -387,6 +402,36 @@ export function createCommit(
         }
         insertFeedback.run(feedback);
         return { factId: feedback.factId };
+      }
+      case 'merge_entities': {
+        const { merge } = change;
+        for (const entityId of [merge.fromEntityId, merge.intoEntityId]) {
+          if (hasEntity.get(entityId, namespace) === undefined)
+            refuse('not_found', `The entity ${entityId} does not exist.`);
+        }
+        if (merge.fromEntityId === merge.intoEntityId)
+          refuse('invalid_input', 'An entity cannot be merged with itself.');
+        if (isMergeIdUsed.get(merge.id) !== undefined) {
+          refuse('already_exists', `The identifier ${merge.id} is already used by a merge.`);
+        }
+        if (isMergedFrom.get(namespace, merge.fromEntityId) !== undefined) {
+          refuse('already_exists', `The entity ${merge.fromEntityId} is already merged into another.`);
+        }
+        // Until chains of merges are handled (FL-063), neither end may already be part of one.
+        if (isMergedFrom.get(namespace, merge.intoEntityId) !== undefined) {
+          refuse(
+            'invalid_input',
+            `The entity ${merge.intoEntityId} is itself merged; merge into the one it was merged into.`,
+          );
+        }
+        if (hasMergedInto.get(namespace, merge.fromEntityId) !== undefined) {
+          refuse(
+            'invalid_input',
+            `Other entities were merged into ${merge.fromEntityId}; chains of merges are not handled yet.`,
+          );
+        }
+        insertMerge.run(merge);
+        return { intoEntityId: merge.intoEntityId, mergeId: merge.id };
       }
       case 'purge_content': {
         const { targetKind, targetId } = change;

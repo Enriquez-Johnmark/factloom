@@ -2,6 +2,8 @@ import {
   type AuditEntry,
   AuditEntrySchema,
   type Entity,
+  type EntityMerge,
+  EntityMergeSchema,
   EntitySchema,
   type Fact,
   FactSchema,
@@ -181,5 +183,25 @@ export function toAuditEntry(row: AuditRow): AuditEntry {
     sourceId: row.source_id,
     detail,
     occurredAt: row.occurred_at,
+  });
+}
+
+export type EntityMergeRow = {
+  readonly id: string;
+  readonly namespace: string;
+  readonly from_entity_id: string;
+  readonly into_entity_id: string;
+  readonly merged_at: string;
+  readonly undone_at: string | null;
+};
+
+export function toEntityMerge(row: EntityMergeRow): EntityMerge {
+  return parseRow(EntityMergeSchema, 'entity merge', {
+    id: row.id,
+    namespace: row.namespace,
+    fromEntityId: row.from_entity_id,
+    intoEntityId: row.into_entity_id,
+    mergedAt: row.merged_at,
+    undoneAt: row.undone_at,
   });
 }

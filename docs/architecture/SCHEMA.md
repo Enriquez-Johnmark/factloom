@@ -252,8 +252,8 @@ Notes on the columns:
 - **`source.locator` and `source.version`** together are the **anchor**. Both are optional: a note from an agent has neither.
 - **`source.content`** is optional and is the only place source text is kept.
 - **`fact_embedding.model` and `dimensions`** record which embedding model produced the vector. A database holds vectors from one model; the storage adapter refuses to start with a different one. Changing model means re-embedding, which is possible because `statement` is kept. The two columns are on every row, not in one settings row, because that lets a re-embedding run be resumed and an unfinished one be detected.
-- **`audit_log.operation`** names what was being done: `remember`, `revision`, `succession`, `correction`, `retraction`, and from phase 2 `confidence_adjustment` and `feedback`. **`action`** names what happened to one target: `entity.created`, `source.recorded`, `fact.recorded`, `fact.source_attached`, `fact.invalidated`, and from phase 2 `fact.confidence_adjusted` and `feedback.recorded`. **`target_kind`** is `entity`, `source`, `fact`, or from phase 2 `feedback`.
-- **`audit_log.reason_code`** says why, from a fixed list: `stated`, `restated`, `reported_wrong`, `reported_ended`, `period_corrected` (a valid period found to be wrong, phase 2), `feedback_given` (phase 2). **`source_id`** is the source that explains the change, if there is one. An agent's own words are never written to the log: they are stored as the content of a source of kind `agent_note`, and the entry points to it.
+- **`audit_log.operation`** names what was being done: `remember`, `revision`, `succession`, `correction`, `retraction`, and from phase 2 `confidence_adjustment`, `feedback`, `purge`, and from phase 3 `merge`. **`action`** names what happened to one target: `entity.created`, `source.recorded`, `fact.recorded`, `fact.source_attached`, `fact.invalidated`, and from phase 2 `fact.confidence_adjusted`, `feedback.recorded`, `source.purged`, `fact.purged`, and from phase 3 `entity.merged`. **`target_kind`** is `entity`, `source`, `fact`, or from phase 2 `feedback`.
+- **`audit_log.reason_code`** says why, from a fixed list: `stated`, `restated`, `reported_wrong`, `reported_ended`, `period_corrected` (a valid period found to be wrong, phase 2), `feedback_given` (phase 2), `erasure_requested` and `secret_stored` (purge, phase 2), `same_entity` (phase 3). **`source_id`** is the source that explains the change, if there is one. An agent's own words are never written to the log: they are stored as the content of a source of kind `agent_note`, and the entry points to it.
 - **`audit_log.detail`** is JSON restricted to identifiers and numbers, such as the identifier of the superseding fact. The restriction is in the core schema for an audit entry; the database checks only that the text is valid JSON.
 - **The lists of operations, actions, target kinds, triggers and reason codes** are closed lists in the core schema, not `CHECK` constraints. Later phases add values, and SQLite cannot alter a `CHECK` without rebuilding the table.
 
@@ -306,13 +306,19 @@ Designed in [ADR 0012](adr/0012-purge-is-the-one-exception.md), "The phase 2 des
 - **Freed pages.** They are cleared after the commit by `clearFreedPages` of `@factloom/storage`: `VACUUM`, then `wal_checkpoint(TRUNCATE)`.
 - **Completeness.** A test classifies every text and binary column of the migrated schema as content covered by purge or not content, and fails on a column that is in neither list.
 
+### `entity_merge`, migration `0005_add_entity_merge.sql` (FL-052)
+
+One row per merge: an identifier, the namespace, `from_entity_id`, `into_entity_id`, `merged_at`, and `undone_at`, which is set once. No entity row and no fact row is rewritten by a merge. A trigger refuses every delete and every update but setting `undone_at` once; a partial unique index lets an entity be merged into at most one other at a time.
+
+Every read resolves an entity identifier through the merges whose `undone_at` is `NULL`, in SQL (`packages/storage/src/entity-resolution-sql.ts`) and in the in-memory store: a filter by subject or by touching entities matches every identifier merged with the one asked for, and `subject` and `objectEntity` in results are the entity merged into. The single-value rule inside `commit` is checked across merged entities. A read with a past known-at date resolves through today's merges.
+
 ## Planned additions
 
 These are designed so that the interfaces in [`INTERFACES.md`](INTERFACES.md) are stable, but they are not in the first migration. Each is an added table or column, and purge also replaces two triggers, so none forces a rewrite of what exists.
 
 | Phase | Addition | Why it can wait |
 |---|---|---|
-| 3 | `entity_merge` table: from, into, `merged_at`, and `undone_at`, which is set once. An `entity_alias` table | Phase 1 resolves entities by exact name only and never merges. No entity and no fact is rewritten by a merge; reads resolve identifiers through the merges that are not undone |
+| 3 | An `entity_alias` table (FL-053) | Phase 1 resolves entities by exact name only |
 | 3 | `fact_verification` table: fact, outcome, method, time | Nothing verifies facts before phase 3 |
 | 3 | `fact_usage` table: fact, last recalled, count; and the record that a fact is an **archived fact** | Archiving by disuse starts counting when it is introduced. Keeping it out of phase 1 keeps recall a pure read |
 

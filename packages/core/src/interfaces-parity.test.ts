@@ -7,6 +7,7 @@ import type { AuditAction, AuditEntry, Operation, ReasonCode, Trigger } from './
 import type { Change, ChangeSet, CommitReceipt } from './change-set.ts';
 import type { Domain, PredicateDefinition } from './domain.ts';
 import type { Embedder } from './embedder.ts';
+import type { EntityMerge } from './entity-merge.ts';
 import type { Feedback } from './feedback.ts';
 import type {
   Entity,
@@ -88,7 +89,8 @@ type RefOperation =
   | 'retraction'
   | 'confidence_adjustment'
   | 'feedback'
-  | 'purge';
+  | 'purge'
+  | 'merge';
 type RefReasonCode =
   | 'stated'
   | 'restated'
@@ -97,7 +99,8 @@ type RefReasonCode =
   | 'period_corrected'
   | 'feedback_given'
   | 'erasure_requested'
-  | 'secret_stored';
+  | 'secret_stored'
+  | 'same_entity';
 type RefAuditAction =
   | 'entity.created'
   | 'source.recorded'
@@ -107,7 +110,8 @@ type RefAuditAction =
   | 'fact.confidence_adjusted'
   | 'feedback.recorded'
   | 'source.purged'
-  | 'fact.purged';
+  | 'fact.purged'
+  | 'entity.merged';
 
 type RefAuditEntry = {
   readonly id: number;
@@ -151,7 +155,17 @@ type RefChange =
     }
   | { readonly kind: 'adjust_confidence'; readonly factId: RefFactId; readonly confidence: number }
   | { readonly kind: 'record_feedback'; readonly feedback: RefFeedback }
-  | { readonly kind: 'purge_content'; readonly targetKind: 'source' | 'fact'; readonly targetId: string };
+  | { readonly kind: 'purge_content'; readonly targetKind: 'source' | 'fact'; readonly targetId: string }
+  | { readonly kind: 'merge_entities'; readonly merge: RefEntityMerge };
+
+type RefEntityMerge = {
+  readonly id: string;
+  readonly namespace: RefNamespace;
+  readonly fromEntityId: RefEntityId;
+  readonly intoEntityId: RefEntityId;
+  readonly mergedAt: Timestamp;
+  readonly undoneAt: Timestamp | null;
+};
 
 type RefFeedback = {
   readonly id: string;
@@ -259,6 +273,7 @@ interface RefMemoryStore {
     readonly namespace: RefNamespace;
     readonly contentHash: string;
   }): Promise<Result<readonly RefSource[]>>;
+  listEntityMerges(query: { readonly namespace: RefNamespace }): Promise<Result<readonly RefEntityMerge[]>>;
   listFeedback(query: {
     readonly namespace: RefNamespace;
     readonly factId: RefFactId;
@@ -294,6 +309,7 @@ const parity: {
   readonly PredicateDefinition: Same<PredicateDefinition, RefPredicateDefinition>;
   readonly Domain: Same<Domain, RefDomain>;
   readonly Feedback: Same<Feedback, RefFeedback>;
+  readonly EntityMerge: Same<EntityMerge, RefEntityMerge>;
   readonly Change: Same<Change, RefChange>;
   readonly ChangeSet: Same<ChangeSet, RefChangeSet>;
   readonly CommitReceipt: Same<CommitReceipt, RefCommitReceipt>;
@@ -320,6 +336,7 @@ const parity: {
   PredicateDefinition: true,
   Domain: true,
   Feedback: true,
+  EntityMerge: true,
   Change: true,
   ChangeSet: true,
   CommitReceipt: true,
@@ -334,6 +351,6 @@ describe('the types derived from the schemas', () => {
   it('have the shapes that INTERFACES.md commits to', () => {
     // The real check is the type of `parity` above, made by the compiler.
     expect(Object.values(parity).every((same) => same === true)).toBe(true);
-    expect(Object.keys(parity)).toHaveLength(25);
+    expect(Object.keys(parity)).toHaveLength(26);
   });
 });
