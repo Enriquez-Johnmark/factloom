@@ -94,7 +94,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-052 | Entity merge with read resolution | 3 | FL-015, FL-016, FL-017 | Completed |
 | FL-063 | Undo a merge and refuse a conflicting merge | 3 | FL-052 | Completed |
 | FL-053 | Duplicate entity detection by name | 3 | FL-048, FL-052, FL-063 | Completed |
-| FL-064 | Duplicate entity detection by similarity | 3 | FL-053, FL-028 | Pending |
+| FL-064 | Duplicate entity detection by similarity | 3 | FL-053, FL-028 | Under Review |
 | FL-054 | Anchor repair for moved and renamed files | 3 | FL-050 | Completed |
 | FL-055 | Usage tracking | 3 | FL-015, FL-031, FL-058 | Under Review |
 | FL-065 | Archive and unarchive operations | 3 | FL-055, FL-058 | Completed |
@@ -1314,7 +1314,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 3 |
 | Depends on | FL-053, FL-028 |
 | Requirements | REQ-20, REQ-24 |
@@ -1366,21 +1366,108 @@ Differences from the item:
 - `.claude/rules/testing.md`, "Evals": replayed responses; a missing recording fails the run.
 
 **Acceptance criteria.**
-- [ ] A unit test shows a pair above the threshold is sent to the LLM and a pair below it is not, with the fake embedder and a scripted LLM.
-- [ ] A unit test shows an "unsure" answer and a "different" answer from a scripted LLM both leave the pair unmerged, and a "same" answer merges it under `automatic`.
-- [ ] A unit test shows that without an LLM client no pair from stage 3 is merged, and the candidates are in the report.
-- [ ] A unit test shows a pair of different types with equal names reaches the LLM stage and is merged on "same".
-- [ ] A unit test shows the call limit: with the limit set to 2 and five candidates, two calls are made.
-- [ ] A unit test shows a failed LLM call leaves the pair unmerged and counts it as failed.
-- [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the entity pair eval in record mode from `apps/mcp-server` (`pnpm run record:entities`, which wraps the Anthropic client with the wrapper of FL-028 in record mode), reads the diff of the new recordings for secrets, and records the model identifier. A replayed run fails while a recording is missing, so the code and the recordings are committed together after this step, and the item is not `Completed` before it.
-- [ ] The entity pair eval runs under `pnpm eval` in replay and fails on a missing recording. Its output shows an over-merge count of 0 for pairs decided by stages 1 and 2. The over-merge and under-merge counts of stage 4 are printed and recorded; this item sets no target for them.
+- [x] A unit test shows a pair above the threshold is sent to the LLM and a pair below it is not, with the fake embedder and a scripted LLM.
+- [x] A unit test shows an "unsure" answer and a "different" answer from a scripted LLM both leave the pair unmerged, and a "same" answer merges it under `automatic`.
+- [x] A unit test shows that without an LLM client no pair from stage 3 is merged, and the candidates are in the report.
+- [x] A unit test shows a pair of different types with equal names reaches the LLM stage and is merged on "same".
+- [x] A unit test shows the call limit: with the limit set to 2 and five candidates, two calls are made.
+- [x] A unit test shows a failed LLM call leaves the pair unmerged and counts it as failed.
+- [x] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the entity pair eval in record mode from `apps/mcp-server` (`pnpm run record:entities`, which wraps the Anthropic client with the wrapper of FL-028 in record mode), reads the diff of the new recordings for secrets, and records the model identifier. A replayed run fails while a recording is missing, so the code and the recordings are committed together after this step, and the item is not `Completed` before it.
+- [x] The entity pair eval runs under `pnpm eval` in replay and fails on a missing recording. Its output shows an over-merge count of 0 for pairs decided by stages 1 and 2. The over-merge and under-merge counts of stage 4 are printed and recorded; this item sets no target for them.
 - [ ] The owner reads each pair of the set and its expected answer, and records "reviewed" and the date.
-- [ ] Every merge made by the two stages has an audit entry with trigger `maintenance`.
-- [ ] `pnpm check` exits 0 with no network access and no embedding model in the cache.
+- [x] Every merge made by the two stages has an audit entry with trigger `maintenance`.
+- [x] `pnpm check` exits 0 with no network access and no embedding model in the cache.
 
 **Validation.** Unit tests with scripted and failing LLM clients, the fake embedder and the in-memory store, on every check. The entity pair eval in replay under `pnpm eval`. One live run by hand: the owner runs the eval with recording on and the real embedder, and records the counts and the two similarity distributions.
 
 **Completion evidence.** The commit; the eval output; the threshold's value and the distributions it was chosen from; the model identifier the recordings were made with; Q-56 in `OPEN-QUESTIONS.md` brought up to date.
+
+**Recorded evidence.** Prepared on 2026-11-17 on Linux x64 with Node.js v22.23.4, in seven commits and this record:
+
+1. `docs: add the LLM task entity_matching to INTERFACES.md`;
+2. `feat(core): add the LLM task entity_matching, with its model in the task map`;
+3. `feat(maintenance): add the similarity and LLM stages of duplicate entity detection`;
+4. `feat(mcp-server): run the similarity and LLM stages in duplicate entity detection`;
+5. `test(mcp-server): add the entity pair set and its eval, recorded with the owner's key`;
+6. `docs: record the first data on entity matching in Q-56`;
+7. `docs(mcp-server): describe the similarity and LLM stages of duplicate detection`;
+
+The item is `Under Review`: the owner reads each pair of the set and its expected answer, and records "reviewed" and the date. That criterion is the owner's and is not ticked.
+
+Built:
+
+- **The task.** `LlmTask` gains `entity_matching`, in `INTERFACES.md`, the parity test and the task map, where it is `claude-haiku-5-5`.
+- **Stage results.** A duplicate stage now returns `same`, `candidate` (reported as `similar_name`), `failed`, `deferred` (counted as undecided) or null.
+- **Cross-type pairs.** A stage marked `crossType` is also offered pairs of two types whose names are equal under the strict normalisation of FL-053. The name stage is not, so FL-053's test that such a pair is not compared still holds with the name stage alone.
+- **The similarity stage.** `createSimilarityStage` holds stages 3 and 4.
+  - **Stage 3** embeds the names with `Embedder.embed` during the run and keeps them in memory, with no table. A pair of one type below `SIMILARITY_THRESHOLD` passes on.
+  - **Stage 4** asks the LLM, with the stable `ENTITY_MATCH_INSTRUCTIONS` and the two names, types and up to `FACTS_PER_ENTITY` (5) live facts each in `input`. Only `same` merges, `unsure` is reported, and `different` passes. A cross-type pair goes straight to stage 4.
+  - **No LLM client:** candidates are reported, not merged.
+  - **The call limit:** `MAX_ENTITY_MATCH_CALLS_PER_RUN` (20); candidates beyond it wait.
+  - **A failed call** is counted as failed. A pair decided `same` is merged or reported as in FL-053.
+- **The wiring.** The composition root runs the name stage and then the similarity stage, made anew for each run, with the key's LLM or none.
+
+**The threshold.** `SIMILARITY_THRESHOLD` = 0.65. It was chosen from the name similarities of the pair set with `bge-small-en-v1.5`, measured before any LLM call:
+
+| Pairs | Similarities |
+|---|---|
+| Expected the same, past stage 1 (9) | 0.669, 0.736, 0.756, 0.774, 0.845, 0.863, 0.878, 0.907, 0.923 |
+| Expected different, of one type (11) | 0.591, 0.595, 0.633, 0.718, 0.745, 0.762, 0.785, 0.826, 0.841, 0.848, 0.882 |
+
+The two ranges overlap from 0.669 to 0.882, so a threshold on names cannot separate them, as the research expected. The threshold sits just below the lowest true pair. Every true pair then reaches the LLM, and the three least similar different pairs are filtered out.
+
+**The pair set.** Twenty-four pairs in `apps/mcp-server/evals/entity-pairs/`, written by the agent. They include:
+
+- the research's two examples, "Postgres" and "PostgreSQL", and two different things called "Java";
+- short names (TS, JS), an abbreviation and its long form (k8s, Kubernetes);
+- two versions of one product (Python 2 and 3, Angular and AngularJS);
+- one thing under two types (squash merges as a convention and a decision);
+- two pairs that stage 1 decides.
+
+**The eval.** `entity-pairs.eval.test.ts` runs under `pnpm eval`, with the real embedder and the LLM replayed. With one recording removed, it failed with `No recording for the key …` and named the record command. The recordings were made in this session with the owner's key, set for the one command `pnpm run record:entities`: model `claude-haiku-5-5`, 19 calls, no key, token or password pattern in the files. The output:
+
+```text
+Stage 1, name: decided 2, over-merges 0.
+Stages 3 and 4, similarity and LLM: decided 10, over-merges 0.
+Under-merges, all stages: 0.
+```
+
+Of the 22 pairs past stage 1, 3 were below the threshold and 19 went to the LLM, the cross-type Java pair among them. The LLM answered `same` for the 10 true pairs and nothing else, and kept the two Javas apart. No stage 2 exists ([ADR 0021](../../architecture/adr/0021-no-alias-table-merges-serve-as-aliases.md)), so the eval runs three stages, not four. Q-56 is brought up to date with this data, and stays open until the set reaches about 50 pairs.
+
+Unit tests, with a hand-placed embedder, scripted LLMs and the in-memory store:
+
+- **The threshold:** a pair above it reaches the LLM and a pair below it does not; the scripted LLM has one answer, so a second call would throw.
+- **The answers:** `same` merges with an audit entry with trigger `maintenance`; `different` and `unsure` do not, and `unsure` is reported.
+- **No client:** nothing is merged and the candidate is reported.
+- **Cross-type:** a pair of two types with equal names reaches the LLM and is merged on `same`.
+- **The call limit:** with a limit of 2 and five candidates, two calls are made and three pairs are undecided.
+- **A failed call:** counted as failed, nothing merged.
+
+`pnpm check` passes with no network and no embedding model, because the eval file is named `*.eval.test.ts` and runs only under `pnpm eval`.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| No threshold | the threshold test, the call-limit test |
+| `unsure` merges | the different-and-unsure test |
+| No LLM client merges on similarity | the no-client test |
+| A recording removed | the entity pair eval |
+
+`pnpm check`:
+
+```text
+      Tests  1120 passed (1120)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the seventh commit: https://github.com/Johnmark-Tech/factloom/actions/runs/44029997298. The entity pair eval runs under `pnpm eval`, which the workflow runs only weekly or by hand; it was run here, on Linux x64, and not yet in the eval job.
+
+Differences from the item:
+
+- **The recordings were made by the agent in this session**, with the owner's approval to use the key, the key set for that command only.
+- **Three stages, not four**, by ADR 0021.
+- **An `unsure` answer is reported** as a candidate, not passed silently, so that a person sees the uncertain pairs.
+- **The pair set has 24 pairs.** The research suggested about 50 for Q-56, so Q-56 stays open.
 
 ### FL-054: Anchor repair for moved and renamed files
 
