@@ -6,5 +6,7 @@ export type { RepairMovedAnchorsDeps } from './repair-moved-anchors.ts';
 export { repairMovedAnchors } from './repair-moved-anchors.ts';
 export type { RepositoryReader } from './repository-reader.ts';
 export type { Anchor } from './find-anchor.ts';
+export type { DuplicateStage, EntityPair, FindDuplicateEntitiesDeps } from './find-duplicate-entities.ts';
+export { findDuplicateEntities, NAME_STAGE } from './find-duplicate-entities.ts';
 export type { VerificationRung, VerifyAnchoredFactsDeps } from './verify-anchored-facts.ts';
 export { VERIFICATION_INTERVAL_MS, verifyAnchoredFacts } from './verify-anchored-facts.ts';
