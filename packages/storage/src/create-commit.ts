@@ -23,6 +23,7 @@ const ACTION_OF_CHANGE: { readonly [Kind in Change['kind']]: AuditAction } = {
   attach_source: 'fact.source_attached',
   invalidate_fact: 'fact.invalidated',
   adjust_confidence: 'fact.confidence_adjusted',
+  record_feedback: 'feedback.recorded',
 };
 
 function targetOf(change: Change): {
@@ -40,6 +41,8 @@ function targetOf(change: Change): {
     case 'invalidate_fact':
     case 'adjust_confidence':
       return { targetKind: 'fact', targetId: change.factId };
+    case 'record_feedback':
+      return { targetKind: 'feedback', targetId: change.feedback.id };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -160,6 +163,11 @@ export function createCommit(
   const selectLatestConfidence = db.prepare<[string, string], { readonly confidence: number }>(
     `SELECT ${LATEST_CONFIDENCE} AS confidence FROM fact f WHERE f.id = ? AND f.namespace = ?`,
   );
+  const insertFeedback = db.prepare(
+    `INSERT INTO feedback (id, namespace, fact_id, signal, trigger, source_id, recorded_at)
+     VALUES (@id, @namespace, @factId, @signal, @trigger, @sourceId, @recordedAt)`,
+  );
+  const isFeedbackIdUsed = db.prepare<[string], unknown>('SELECT 1 FROM feedback WHERE id = ?');
   const insertAuditEntry = db.prepare(
     `INSERT INTO audit_log (namespace, operation_id, operation, action, target_kind, target_id,
                             trigger, reason_code, source_id, detail, occurred_at)
@@ -333,6 +341,21 @@ export function createCommit(
         const previous = selectLatestConfidence.get(change.factId, namespace);
         insertConfidence.run(change.factId, change.confidence, changeSet.occurredAt);
         return { previousConfidence: previous?.confidence ?? null, confidence: change.confidence };
+      }
+      case 'record_feedback': {
+        const { feedback } = change;
+        if (isFeedbackIdUsed.get(feedback.id) !== undefined) {
+          refuse('already_exists', `The identifier ${feedback.id} is already used by feedback.`);
+        }
+        // Feedback on an invalidated fact is kept: a fact recalled with a past known-at date can be one.
+        if (selectFactState.get(feedback.factId, namespace) === undefined) {
+          refuse('not_found', `The fact ${feedback.factId} does not exist.`);
+        }
+        if (feedback.sourceId !== null && hasSource.get(feedback.sourceId, namespace) === undefined) {
+          refuse('not_found', `The source ${feedback.sourceId} of feedback ${feedback.id} does not exist.`);
+        }
+        insertFeedback.run(feedback);
+        return { factId: feedback.factId };
       }
       default: {
         const unhandled: never = change;

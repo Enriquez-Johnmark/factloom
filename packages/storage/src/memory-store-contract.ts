@@ -2,10 +2,12 @@
 // @factloom/core and against each storage adapter, so that they cannot drift apart.
 // The suite calls only MemoryStore methods and builds every change set by hand.
 import type {
+  AuditEntry,
   Change,
   ChangeSet,
   Entity,
   Fact,
+  Feedback,
   MemoryStore,
   Source,
   TimeFilter,
@@ -266,7 +268,7 @@ export async function listFactIds(
   return listed.value.map((found) => found.fact.id);
 }
 
-async function auditEntries(store: MemoryStore, targetKind: 'entity' | 'source' | 'fact', targetId: string) {
+async function auditEntries(store: MemoryStore, targetKind: AuditEntry['targetKind'], targetId: string) {
   const listed = await store.listAuditEntries({ namespace: NAMESPACE, targetKind, targetId });
   if (!listed.ok) throw new Error(listed.error.message);
   return listed.value;
@@ -988,6 +990,80 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
     (related) => expect(related).toEqual(['pg14-ended']),
   );
 
+  // --- Feedback (FL-046) ---
+  const feedbackOn = (factId: string, fields: Partial<Feedback> = {}): Change => ({
+    kind: 'record_feedback',
+    feedback: {
+      id: 'fb-1',
+      namespace: NAMESPACE,
+      factId,
+      signal: 'wrong',
+      trigger: 'agent',
+      sourceId: null,
+      recordedAt: at('2026-06-01'),
+      ...fields,
+    },
+  });
+  const given = { operation: 'feedback', reasonCode: 'feedback_given' } as const;
+
+  test('G1: feedback writes one audit entry about the feedback, and changes no fact', async () => {
+    const before = await snapshot(store);
+
+    const result = await store.commit(changeSet('op-g1', '2026-06-01', [feedbackOn('pg16')], given));
+
+    expect(result.ok).toBe(true);
+    expect(await auditEntries(store, 'feedback', 'fb-1')).toMatchObject([
+      {
+        action: 'feedback.recorded',
+        operation: 'feedback',
+        reasonCode: 'feedback_given',
+        detail: { factId: 'pg16' },
+      },
+    ]);
+    expect(await snapshot(store)).toBe(before);
+  });
+  test('G2: feedback with a source records the source and the feedback in one commit', async () => {
+    const result = await store.commit(
+      changeSet(
+        'op-g2',
+        '2026-06-01',
+        [
+          {
+            kind: 'record_source',
+            source: source('s-feedback', '2026-06-01', 'That is no longer the version.'),
+          },
+          feedbackOn('pg16', { signal: 'outdated', sourceId: 's-feedback' }),
+        ],
+        { ...given, explainedBySourceId: 's-feedback' },
+      ),
+    );
+
+    expect(result.ok).toBe(true);
+    const entries = [
+      ...(await auditEntries(store, 'source', 's-feedback')),
+      ...(await auditEntries(store, 'feedback', 'fb-1')),
+    ];
+    expect(entries.map((entry) => [entry.action, entry.operationId, entry.sourceId])).toEqual([
+      ['source.recorded', 'op-g2', 's-feedback'],
+      ['feedback.recorded', 'op-g2', 's-feedback'],
+    ]);
+  });
+  test('G3: feedback on an invalidated fact is recorded', async () => {
+    const result = await store.commit(changeSet('op-g3', '2026-06-01', [feedbackOn('pg14')], given));
+
+    expect(result.ok).toBe(true);
+    expect(await auditEntries(store, 'feedback', 'fb-1')).toHaveLength(1);
+  });
+  refuses('G4: feedback on a missing fact returns not_found', 'not_found', () =>
+    changeSet('op-g4', '2026-06-01', [feedbackOn('missing')], given),
+  );
+  refuses('G5: feedback that names a missing source returns not_found', 'not_found', () =>
+    changeSet('op-g5', '2026-06-01', [feedbackOn('pg16', { sourceId: 's-missing' })], given),
+  );
+  refuses('G6: a second feedback with the same identifier returns already_exists', 'already_exists', () =>
+    changeSet('op-g6', '2026-06-01', [feedbackOn('pg16'), feedbackOn('node22')], given),
+  );
+
   /** A store holding only the first commit of the timeline, to read the receipt of the second. */
   async function createStoreWithFirstCommit(): Promise<MemoryStore> {
     const fresh = await createStore();
@@ -1269,6 +1345,30 @@ function registerSingleValueRuleAndNamespaces(
     const found = await cases.store().getFact({ namespace: OTHER, factId: 'other-pg16' });
     expect(found.ok && found.value?.fact.confidence).toBe(1);
     expect(await listFactIds(cases.store(), 'all', { namespace: OTHER })).toEqual(before);
+  });
+  cases.test('N7: feedback on a fact of the other namespace returns not_found', async () => {
+    const result = await commit(
+      [
+        {
+          kind: 'record_feedback',
+          feedback: {
+            id: 'fb-other',
+            namespace: NAMESPACE,
+            factId: 'other-pg16',
+            signal: 'wrong',
+            trigger: 'agent',
+            sourceId: null,
+            recordedAt: at('2026-06-01'),
+          },
+        },
+      ],
+      { operation: 'feedback', reasonCode: 'feedback_given' },
+    );
+    expect(result.ok ? null : result.error.code).toBe('not_found');
+    const entries = await cases
+      .store()
+      .listAuditEntries({ namespace: NAMESPACE, targetKind: 'feedback', targetId: 'fb-other' });
+    expect(entries.ok && entries.value).toEqual([]);
   });
   cases.test('N4: a supersession link to a fact of the other namespace returns not_found', async () => {
     const result = await commit([

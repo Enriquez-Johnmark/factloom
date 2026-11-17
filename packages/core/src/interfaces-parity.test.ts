@@ -7,6 +7,7 @@ import type { AuditAction, AuditEntry, Operation, ReasonCode, Trigger } from './
 import type { Change, ChangeSet, CommitReceipt } from './change-set.ts';
 import type { Domain, PredicateDefinition } from './domain.ts';
 import type { Embedder } from './embedder.ts';
+import type { Feedback } from './feedback.ts';
 import type {
   Entity,
   EntityId,
@@ -81,15 +82,23 @@ type RefOperation =
   | 'succession'
   | 'correction'
   | 'retraction'
-  | 'confidence_adjustment';
-type RefReasonCode = 'stated' | 'restated' | 'reported_wrong' | 'reported_ended' | 'period_corrected';
+  | 'confidence_adjustment'
+  | 'feedback';
+type RefReasonCode =
+  | 'stated'
+  | 'restated'
+  | 'reported_wrong'
+  | 'reported_ended'
+  | 'period_corrected'
+  | 'feedback_given';
 type RefAuditAction =
   | 'entity.created'
   | 'source.recorded'
   | 'fact.recorded'
   | 'fact.source_attached'
   | 'fact.invalidated'
-  | 'fact.confidence_adjusted';
+  | 'fact.confidence_adjusted'
+  | 'feedback.recorded';
 
 type RefAuditEntry = {
   readonly id: number;
@@ -97,7 +106,7 @@ type RefAuditEntry = {
   readonly operationId: string;
   readonly operation: RefOperation;
   readonly action: RefAuditAction;
-  readonly targetKind: 'entity' | 'source' | 'fact';
+  readonly targetKind: 'entity' | 'source' | 'fact' | 'feedback';
   readonly targetId: string;
   readonly trigger: RefTrigger;
   readonly reasonCode: RefReasonCode;
@@ -131,7 +140,18 @@ type RefChange =
       readonly factId: RefFactId;
       readonly supersededByFactId: RefFactId | null;
     }
-  | { readonly kind: 'adjust_confidence'; readonly factId: RefFactId; readonly confidence: number };
+  | { readonly kind: 'adjust_confidence'; readonly factId: RefFactId; readonly confidence: number }
+  | { readonly kind: 'record_feedback'; readonly feedback: RefFeedback };
+
+type RefFeedback = {
+  readonly id: string;
+  readonly namespace: RefNamespace;
+  readonly factId: RefFactId;
+  readonly signal: 'right' | 'wrong' | 'outdated';
+  readonly trigger: RefTrigger;
+  readonly sourceId: RefSourceId | null;
+  readonly recordedAt: Timestamp;
+};
 
 type RefChangeSet = {
   readonly namespace: RefNamespace;
@@ -251,6 +271,7 @@ const parity: {
   readonly TimeFilter: Same<TimeFilter, RefTimeFilter>;
   readonly PredicateDefinition: Same<PredicateDefinition, RefPredicateDefinition>;
   readonly Domain: Same<Domain, RefDomain>;
+  readonly Feedback: Same<Feedback, RefFeedback>;
   readonly Change: Same<Change, RefChange>;
   readonly ChangeSet: Same<ChangeSet, RefChangeSet>;
   readonly CommitReceipt: Same<CommitReceipt, RefCommitReceipt>;
@@ -276,6 +297,7 @@ const parity: {
   TimeFilter: true,
   PredicateDefinition: true,
   Domain: true,
+  Feedback: true,
   Change: true,
   ChangeSet: true,
   CommitReceipt: true,
@@ -290,6 +312,6 @@ describe('the types derived from the schemas', () => {
   it('have the shapes that INTERFACES.md commits to', () => {
     // The real check is the type of `parity` above, made by the compiler.
     expect(Object.values(parity).every((same) => same === true)).toBe(true);
-    expect(Object.keys(parity)).toHaveLength(24);
+    expect(Object.keys(parity)).toHaveLength(25);
   });
 });

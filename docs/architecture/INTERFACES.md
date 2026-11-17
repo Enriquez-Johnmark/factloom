@@ -96,6 +96,18 @@ export type Source = {
 
 export type Trigger = 'agent' | 'person' | 'feedback' | 'maintenance';
 
+/** Phase 2. That someone found a recalled fact right, wrong or out of date. Changes no fact. */
+export type Feedback = {
+  readonly id: string;
+  readonly namespace: Namespace;
+  readonly factId: FactId;
+  readonly signal: 'right' | 'wrong' | 'outdated';
+  readonly trigger: Trigger;
+  /** The source that holds what was said, if anything was. */
+  readonly sourceId: SourceId | null;
+  readonly recordedAt: Timestamp;
+};
+
 /** What was being done. Phases 2 and 3 add 'merge', 'verification', 'feedback' and 'purge'. */
 export type Operation =
   | 'remember'
@@ -103,10 +115,17 @@ export type Operation =
   | 'succession'
   | 'correction'
   | 'retraction'
-  | 'confidence_adjustment';
+  | 'confidence_adjustment'
+  | 'feedback';
 
 /** Why, from a fixed list, so that the audit log holds no free text. Later phases add codes. */
-export type ReasonCode = 'stated' | 'restated' | 'reported_wrong' | 'reported_ended' | 'period_corrected';
+export type ReasonCode =
+  | 'stated'
+  | 'restated'
+  | 'reported_wrong'
+  | 'reported_ended'
+  | 'period_corrected'
+  | 'feedback_given';
 
 export type AuditAction =
   | 'entity.created'
@@ -114,7 +133,8 @@ export type AuditAction =
   | 'fact.recorded'
   | 'fact.source_attached'
   | 'fact.invalidated'
-  | 'fact.confidence_adjusted';
+  | 'fact.confidence_adjusted'
+  | 'feedback.recorded';
 
 export type AuditEntry = {
   readonly id: number;
@@ -122,7 +142,7 @@ export type AuditEntry = {
   readonly operationId: string;
   readonly operation: Operation;
   readonly action: AuditAction;
-  readonly targetKind: 'entity' | 'source' | 'fact';
+  readonly targetKind: 'entity' | 'source' | 'fact' | 'feedback';
   readonly targetId: string;
   readonly trigger: Trigger;
   readonly reasonCode: ReasonCode;
@@ -145,7 +165,7 @@ export type TimeFilter = {
 Two points that are easy to miss:
 
 - **The audit log explains a change by pointing at a source.** When an agent says "this is wrong because we moved to Vitest", that sentence is stored as the content of a source, and the audit entry carries `reasonCode: 'reported_wrong'` and that source's identifier. A later **purge** can then remove the sentence without changing the log.
-- **`detail` is fixed per action.** For `fact.invalidated` it is `{ supersededByFactId }`. For `fact.recorded` it is `{ revisesFactId }` when the fact is a copy made by a revision, and `null` otherwise. For `fact.source_attached` it is `{ sourceId }`. For `fact.confidence_adjusted` it is `{ previousConfidence, confidence }`. For `entity.created` and `source.recorded` it is `null`.
+- **`detail` is fixed per action.** For `fact.invalidated` it is `{ supersededByFactId }`. For `fact.recorded` it is `{ revisesFactId }` when the fact is a copy made by a revision, and `null` otherwise. For `fact.source_attached` it is `{ sourceId }`. For `fact.confidence_adjusted` it is `{ previousConfidence, confidence }`. For `feedback.recorded`, whose target kind is `feedback`, it is `{ factId }`. For `entity.created` and `source.recorded` it is `null`.
 - **`Operation` is what was being done; `AuditAction` is what happened to one row.** A **succession** is one operation with three actions: a fact recorded, a fact invalidated, a fact recorded.
 
 ## Storage
@@ -247,7 +267,9 @@ export type Change =
   | { readonly kind: 'attach_source'; readonly factId: FactId; readonly sourceId: SourceId }
   | { readonly kind: 'invalidate_fact'; readonly factId: FactId; readonly supersededByFactId: FactId | null }
   /** Phase 2. The new confidence, from the change set's `occurredAt`. The fact row is not changed. */
-  | { readonly kind: 'adjust_confidence'; readonly factId: FactId; readonly confidence: number };
+  | { readonly kind: 'adjust_confidence'; readonly factId: FactId; readonly confidence: number }
+  /** Phase 2. Changes no fact. The fact may be invalidated. */
+  | { readonly kind: 'record_feedback'; readonly feedback: Feedback };
 
 export type CommitReceipt = {
   readonly operationId: string;

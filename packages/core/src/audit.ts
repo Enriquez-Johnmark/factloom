@@ -14,6 +14,7 @@ export const OperationSchema = z.enum([
   'correction',
   'retraction',
   'confidence_adjustment',
+  'feedback',
 ]);
 export type Operation = z.infer<typeof OperationSchema>;
 
@@ -24,6 +25,7 @@ export const ReasonCodeSchema = z.enum([
   'reported_wrong',
   'reported_ended',
   'period_corrected',
+  'feedback_given',
 ]);
 export type ReasonCode = z.infer<typeof ReasonCodeSchema>;
 
@@ -35,11 +37,12 @@ export const AuditActionSchema = z.enum([
   'fact.source_attached',
   'fact.invalidated',
   'fact.confidence_adjusted',
+  'feedback.recorded',
 ]);
 export type AuditAction = z.infer<typeof AuditActionSchema>;
 
 /** The kind of row an audit entry is about. */
-export const AuditTargetKindSchema = z.enum(['entity', 'source', 'fact']);
+export const AuditTargetKindSchema = z.enum(['entity', 'source', 'fact', 'feedback']);
 
 /**
  * One record of one change to memory. It holds identifiers and codes, never free text:

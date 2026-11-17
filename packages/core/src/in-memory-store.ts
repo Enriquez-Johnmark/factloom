@@ -2,6 +2,7 @@ import type { AuditAction, AuditEntry } from './audit.ts';
 import { type Change, type ChangeSet, ChangeSetSchema } from './change-set.ts';
 import { normaliseEntityName } from './entity-name.ts';
 import type { Entity, Fact, FactWithSources, Namespace, Source, TimeFilter } from './fact.ts';
+import type { Feedback } from './feedback.ts';
 import type { MemoryStore } from './memory-store.ts';
 import { err, type Failure, ok } from './result.ts';
 import type { Timestamp } from './timestamp.ts';
@@ -23,6 +24,7 @@ type State = {
   readonly auditEntries: AuditEntry[];
   /** Confidence adjustments in the order they were recorded. The fact rows keep their confidence at recording. */
   readonly confidences: ConfidenceRow[];
+  readonly feedback: Map<string, Feedback>;
   /** The size of the vectors held, once the first one is recorded. */
   dimensions: number | null;
 };
@@ -37,6 +39,7 @@ function createEmptyState(): State {
     vectors: new Map(),
     auditEntries: [],
     confidences: [],
+    feedback: new Map(),
     dimensions: null,
   };
 }
@@ -52,6 +55,7 @@ function copyState(state: State): State {
     vectors: new Map(state.vectors),
     auditEntries: [...state.auditEntries],
     confidences: [...state.confidences],
+    feedback: new Map(state.feedback),
     dimensions: state.dimensions,
   };
 }
@@ -67,6 +71,7 @@ const ACTION_OF_CHANGE: { readonly [Kind in Change['kind']]: AuditAction } = {
   attach_source: 'fact.source_attached',
   invalidate_fact: 'fact.invalidated',
   adjust_confidence: 'fact.confidence_adjusted',
+  record_feedback: 'feedback.recorded',
 };
 
 function targetOf(change: Change): {
@@ -84,6 +89,8 @@ function targetOf(change: Change): {
     case 'invalidate_fact':
     case 'adjust_confidence':
       return { targetKind: 'fact', targetId: change.factId };
+    case 'record_feedback':
+      return { targetKind: 'feedback', targetId: change.feedback.id };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -172,6 +179,8 @@ function detailOf(change: Change, changes: readonly Change[], before: State): Au
         ),
         confidence: change.confidence,
       };
+    case 'record_feedback':
+      return { factId: change.feedback.factId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -314,6 +323,21 @@ function applyChange(draft: State, changeSet: ChangeSet, change: Change): Failur
         confidence: change.confidence,
         adjustedAt: changeSet.occurredAt,
       });
+      return null;
+    }
+    case 'record_feedback': {
+      const { feedback } = change;
+      if (draft.feedback.has(feedback.id)) {
+        return err('already_exists', `The identifier ${feedback.id} is already used by feedback.`);
+      }
+      // Feedback on an invalidated fact is kept: a fact recalled with a past known-at date can be one.
+      if (findFact(feedback.factId) === undefined) {
+        return err('not_found', `The fact ${feedback.factId} does not exist.`);
+      }
+      if (feedback.sourceId !== null && !hasSource(feedback.sourceId)) {
+        return err('not_found', `The source ${feedback.sourceId} of feedback ${feedback.id} does not exist.`);
+      }
+      draft.feedback.set(feedback.id, feedback);
       return null;
     }
     default: {

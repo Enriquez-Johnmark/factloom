@@ -8,6 +8,7 @@ import {
   SourceIdSchema,
   SourceSchema,
 } from './fact.ts';
+import { FeedbackSchema } from './feedback.ts';
 import { TimestampSchema } from './timestamp.ts';
 
 /** A vector with at least one number. Its size is checked against the model by the store. */
@@ -49,6 +50,7 @@ export const ChangeSchema = z.discriminatedUnion('kind', [
       confidence: z.number().min(0).max(1),
     })
     .readonly(),
+  z.strictObject({ kind: z.literal('record_feedback'), feedback: FeedbackSchema }).readonly(),
 ]);
 export type Change = z.infer<typeof ChangeSchema>;
 
@@ -65,6 +67,8 @@ function findForeignRow(namespace: string, change: Change): string | null {
     case 'invalidate_fact':
     case 'adjust_confidence':
       return null;
+    case 'record_feedback':
+      return change.feedback.namespace === namespace ? null : `feedback ${change.feedback.id}`;
     default: {
       const unhandled: never = change;
       return unhandled;
