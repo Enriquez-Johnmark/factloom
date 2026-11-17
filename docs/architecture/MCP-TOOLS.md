@@ -19,6 +19,7 @@ Configuration, read from environment variables by the composition root:
 | `FACTLOOM_DB` | Path of the SQLite file | `~/.factloom/factloom.db` |
 | `FACTLOOM_NAMESPACE` | The namespace every tool call uses | None. Required |
 | `ANTHROPIC_API_KEY` | Key for extraction. Needed only by `remember` | none |
+| `FACTLOOM_ARCHIVE_AFTER_DAYS` | How many days a fact must go unrecalled before the maintenance command archives it (FL-073). A placeholder until Q-57 is answered. The tools do not read it | `180` |
 | `FACTLOOM_REPO` | The git repository that the maintenance command verifies facts against (FL-050). The tools do not read it | The working directory |
 
 `FACTLOOM_NAMESPACE` has no default. The server refuses to start without it and says why: the default database is one file per user, so a shared default namespace would mix the memory of every repository that user works in.
@@ -74,8 +75,9 @@ Use case: `recall`.
 | `as_of` | date | No | Return what was true in the world on this date. Default: the `known_at` date if one is given, otherwise now |
 | `known_at` | date | No | Return what Factloom believed on this date. Default: now |
 | `limit` | integer, 1 to 50 | No | Most facts to return. Default: 10 |
+| `include_archived` | boolean | No | Also return archived facts for a question about now. A question with `as_of` or `known_at` always includes them. Default: false (FL-073) |
 
-Output: `{ facts: RecalledFact[] }`, best match first.
+Output: `{ facts: RecalledFact[] }`, best match first. An **archived fact** is left out of a question about now unless `include_archived` is true. Recalling it does not unarchive it.
 
 | `as_of` | `known_at` | The question it answers |
 |---|---|---|
@@ -100,6 +102,8 @@ type RecalledFact = {
   invalidated_at: string | null;
   superseded_by_fact_id: string | null;
   score: number;
+  /** When the fact was archived, or null when it is not (FL-073). */
+  archived_at: string | null;
   sources: { kind: string; locator: string | null; version: string | null; observed_at: string }[];
 };
 ```
