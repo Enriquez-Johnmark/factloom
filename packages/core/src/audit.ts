@@ -33,6 +33,7 @@ export const ReasonCodeSchema = z.enum([
   'secret_stored',
   'same_entity',
   'verification_due',
+  'anchor_moved',
 ]);
 export type ReasonCode = z.infer<typeof ReasonCodeSchema>;
 

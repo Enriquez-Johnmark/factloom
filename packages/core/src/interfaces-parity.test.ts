@@ -104,7 +104,8 @@ type RefReasonCode =
   | 'erasure_requested'
   | 'secret_stored'
   | 'same_entity'
-  | 'verification_due';
+  | 'verification_due'
+  | 'anchor_moved';
 type RefAuditAction =
   | 'entity.created'
   | 'source.recorded'
