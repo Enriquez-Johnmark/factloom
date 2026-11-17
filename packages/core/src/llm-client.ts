@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import type { Result } from './result.ts';
 
 /** Phase 1 uses 'extraction'. Phase 2 adds conflict detection, phase 3 verification. */
-export type LlmTask = 'extraction' | 'conflict_detection' | 'verification';
+export type LlmTask = 'extraction' | 'conflict_detection' | 'verification' | 'entity_matching';
 
 /** The one thing Factloom asks of a language model. Outer packages implement it. */
 export interface LlmClient {

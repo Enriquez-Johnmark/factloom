@@ -15,6 +15,7 @@ export const DEFAULT_LLM_MODELS: LlmModelMap = {
   extraction: 'claude-haiku-5-5',
   conflict_detection: 'claude-haiku-5-5',
   verification: 'claude-haiku-5-5',
+  entity_matching: 'claude-haiku-5-5',
 };
 
 /**

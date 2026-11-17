@@ -14,6 +14,7 @@ const MODELS = {
   extraction: 'model-extract',
   conflict_detection: 'model-judge',
   verification: 'model-verify',
+  entity_matching: 'model-match',
 };
 /** Stands in for a key. Not a real credential format. */
 const MARKER_KEY = 'marker-key-7f3a9c1e';

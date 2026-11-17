@@ -242,7 +242,7 @@ type RefDomain = {
   readonly correctionPolicy: 'automatic' | 'human_approval';
 };
 
-type RefLlmTask = 'extraction' | 'conflict_detection' | 'verification';
+type RefLlmTask = 'extraction' | 'conflict_detection' | 'verification' | 'entity_matching';
 
 interface RefLlmClient {
   generateObject<T>(request: {
