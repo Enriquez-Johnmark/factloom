@@ -86,5 +86,7 @@ export type { RecordFeedbackInput } from './operations/record-feedback.ts';
 export { recordFeedback } from './operations/record-feedback.ts';
 export type { PurgeContentInput } from './operations/purge-content.ts';
 export { purgeContent } from './operations/purge-content.ts';
+export type { MergeEntitiesInput } from './operations/merge-entities.ts';
+export { mergeEntities } from './operations/merge-entities.ts';
 export type { FindConflictCandidatesInput } from './operations/find-conflict-candidates.ts';
 export { findConflictCandidates } from './operations/find-conflict-candidates.ts';
