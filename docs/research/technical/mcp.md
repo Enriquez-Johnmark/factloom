@@ -235,7 +235,11 @@ in.
 
 - Command: `claude mcp add [options] <name> -- <command> [args...]`. Options: `--transport`
   (`stdio` here), `--scope` (`local`, `project` or `user`), `--env KEY=value`. Everything after
-  `--` is the server command.
+  `--` is the server command. `--env` takes several values, so the name must come before it:
+  `claude mcp add --env A=1 factloom -- ...` fails with "Invalid environment variable format:
+  factloom", and `claude mcp add factloom --env A=1 -- ...` works. **confirmed** on 2026-11-17 by
+  running both with Claude Code 2.1.326 on Linux; `claude mcp add --help` shows
+  `-e, --env <env...>`.
 - Scopes: `local` (default; this project only, private, stored in `~/.claude.json`), `project`
   (stored in `.mcp.json` at the project root, meant to be committed), `user` (all projects, stored
   in `~/.claude.json`).
