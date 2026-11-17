@@ -36,6 +36,7 @@ function fakeRepository(head: Readonly<Record<string, string>>, readable = true)
     readContentId: async (commit, path) => ok(at(commit, path)),
     readText: async (commit, path) => ok(at(commit, path)),
     findRenamedPath: async () => ok(null),
+    listCommitsTouching: async () => ok([]),
   };
 }
 
@@ -95,7 +96,7 @@ function contradictingRung(placement: VerificationRung['placement'], ran: string
     placement,
     check: async () => {
       ran.push(placement);
-      return ok('contradicted');
+      return ok({ outcome: 'contradicted', successor: null } as const);
     },
   };
 }

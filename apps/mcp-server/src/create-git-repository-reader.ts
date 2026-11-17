@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { err, ok, type Result } from '@factloom/core';
+import { err, ok, type Result, toTimestamp } from '@factloom/core';
 import type { RepositoryReader } from '@factloom/maintenance';
 
 type GitRun = { readonly code: number; readonly standardOutput: string; readonly standardError: string };
@@ -119,6 +119,24 @@ export function createGitRepositoryReader(directory: string): RepositoryReader {
         if (status?.startsWith('R') && from === path && to !== undefined) return ok(to);
       }
       return ok(null);
+    },
+
+    async listCommitsTouching(path, fromCommit) {
+      // Check 4.3 of the research: commits with their committer times (%cI, strict ISO 8601).
+      // `<from>..HEAD` keeps those reachable from HEAD and not from the anchor (gitrevisions),
+      // `-- <path>` those that touch the path, and --reverse puts the oldest first (git-log).
+      const run = await git(['log', '--reverse', '--format=%H %cI', `${fromCommit}..HEAD`, '--', path]);
+      if (!run.ok) return run;
+      if (run.value.code !== 0) return unreadable(directory, run.value.standardError);
+      return ok(
+        run.value.standardOutput
+          .split('\n')
+          .filter((line) => line !== '')
+          .map((line) => {
+            const [commit = '', committedAt = ''] = line.split(' ');
+            return { commit, committedAt: toTimestamp(new Date(committedAt)) };
+          }),
+      );
     },
   };
 }

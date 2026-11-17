@@ -77,6 +77,20 @@ describe('the git repository reader', () => {
     ]);
   });
 
+  it('lists the commits after a commit that touched a path, oldest first, with their committer times', async () => {
+    const repository = createFixtureRepository();
+    cleanups.push(repository.remove);
+    const first = repository.commit({ 'package.json': '{}\n' }, 'Add the manifest');
+    repository.commit({ 'README.md': 'shop\n' }, 'Add a readme');
+    const third = repository.commit({ 'package.json': '{ "name": "shop" }\n' }, 'Name the package');
+    const reader = createGitRepositoryReader(repository.directory);
+
+    const listed = await reader.listCommitsTouching('package.json', first);
+
+    // The fixture's committer date is fixed at 2026-01-10T00:00:00Z.
+    expect(listed).toEqual({ ok: true, value: [{ commit: third, committedAt: '2026-01-10T00:00:00.000Z' }] });
+  });
+
   it('refuses with invalid_input to read HEAD of a directory that is not a repository', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'factloom-not-a-repo-'));
     cleanups.push(() => rmSync(directory, { recursive: true, force: true }));

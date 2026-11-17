@@ -22,7 +22,7 @@ export function createNameCheckRung(
       // The path exists at HEAD, as rung 2 found; a null text here is a file git cannot show.
       if (text.value === null) return ok(null);
       const isEveryNameFound = names.every((name) => containsWholeWord(text.value ?? '', name));
-      return ok(isEveryNameFound ? null : 'contradicted');
+      return ok(isEveryNameFound ? null : { outcome: 'contradicted', successor: null });
     },
   };
 }

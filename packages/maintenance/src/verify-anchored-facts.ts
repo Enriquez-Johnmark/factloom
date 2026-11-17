@@ -1,10 +1,12 @@
 import {
+  endFact,
   type FactWithSources,
   listStaleFacts,
   type OperationDeps,
   ok,
   type Result,
   recordVerification,
+  type Timestamp,
   toTimestamp,
   type VerificationOutcome,
 } from '@factloom/core';
@@ -18,10 +20,24 @@ export const VERIFICATION_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 /** The most stale facts one run considers. The rest wait for the next run. */
 const STALE_FACTS_PER_RUN = 500;
 
+/** What a rung found for a fact that its file contradicts: the value now, and when it changed. */
+export type Successor = {
+  readonly value: string;
+  readonly statement: string;
+  /** The committer time of the first commit after the anchor in which the value differs. */
+  readonly changedAt: Timestamp;
+};
+
+/** A rung's decision: the outcome, and for a value that changed, what replaces the fact. */
+export type RungDecision = {
+  readonly outcome: VerificationOutcome;
+  readonly successor: Successor | null;
+};
+
 /**
  * A rung that a domain adds to the ladder. `before_content_check` runs once the path is known
  * to exist; `after_content_changed` runs when the file differs from the anchor's commit. It
- * returns an outcome to decide, or null to leave the decision to the rungs after it.
+ * returns a decision, or null to leave the decision to the rungs after it.
  */
 export type VerificationRung = {
   readonly name: string;
@@ -31,30 +47,33 @@ export type VerificationRung = {
     readonly anchor: Anchor;
     readonly head: string;
     readonly repository: RepositoryReader;
-  }) => Promise<Result<VerificationOutcome | null>>;
+  }) => Promise<Result<RungDecision | null>>;
 };
 
-export type VerifyAnchoredFactsDeps = Pick<OperationDeps, 'store' | 'now' | 'newId'> & {
+export type VerifyAnchoredFactsDeps = OperationDeps & {
   readonly repository: RepositoryReader;
   readonly rungs: readonly VerificationRung[];
 };
+
+/** A decision with no successor. */
+const decided = (outcome: VerificationOutcome): RungDecision => ({ outcome, successor: null });
 
 /** Runs the domain's rungs of one placement in order, and returns the first decision. */
 async function runRungs(
   rungs: readonly VerificationRung[],
   placement: VerificationRung['placement'],
   input: Parameters<VerificationRung['check']>[0],
-): Promise<Result<VerificationOutcome | null>> {
+): Promise<Result<RungDecision | null>> {
   for (const rung of rungs) {
     if (rung.placement !== placement) continue;
-    const decided = await rung.check(input);
-    if (!decided.ok || decided.value !== null) return decided;
+    const decision = await rung.check(input);
+    if (!decision.ok || decision.value !== null) return decision;
   }
   return ok(null);
 }
 
 /**
- * The outcome of the ladder for one anchored fact, or null when the fact is out of scope
+ * The decision of the ladder for one anchored fact, or null when the fact is out of scope
  * because its commit is not on this branch. Rung 1: the commit is an ancestor of `HEAD`.
  * Rung 2: the path exists at `HEAD`, else `source_missing`. Then the domain's rungs placed
  * before the content check. Rung 3: the content is the same as at the anchor's commit, so
@@ -65,13 +84,13 @@ async function climbLadder(
   found: FactWithSources,
   anchor: Anchor,
   head: string,
-): Promise<Result<VerificationOutcome | null>> {
+): Promise<Result<RungDecision | null>> {
   const { repository } = deps;
   const onBranch = await repository.isAncestorOfHead(anchor.commit);
   if (!onBranch.ok || !onBranch.value) return onBranch.ok ? ok(null) : onBranch;
   const exists = await repository.pathExists(head, anchor.path);
   if (!exists.ok) return exists;
-  if (!exists.value) return ok('source_missing');
+  if (!exists.value) return ok(decided('source_missing'));
   const input = { found, anchor, head, repository };
   const before = await runRungs(deps.rungs, 'before_content_check', input);
   if (!before.ok || before.value !== null) return before;
@@ -81,19 +100,62 @@ async function climbLadder(
   ]);
   if (!then.ok) return then;
   if (!now.ok) return now;
-  if (then.value !== null && then.value === now.value) return ok('confirmed');
+  if (then.value !== null && then.value === now.value) return ok(decided('confirmed'));
   const after = await runRungs(deps.rungs, 'after_content_changed', input);
   if (!after.ok || after.value !== null) return after;
-  return ok('inconclusive');
+  return ok(decided('inconclusive'));
+}
+
+/**
+ * Ends a contradicted fact whose value changed, with the new value as its successor and the
+ * file at `HEAD` as the source. Returns whether a change was made; a fact that memory changed
+ * meanwhile (`conflict`, `already_invalidated`) was only examined.
+ */
+async function endChangedFact(
+  deps: VerifyAnchoredFactsDeps,
+  found: FactWithSources,
+  change: { readonly anchor: Anchor; readonly head: string; readonly successor: Successor },
+): Promise<Result<boolean>> {
+  const { fact } = found;
+  const ended = await endFact(deps, {
+    namespace: fact.namespace,
+    trigger: 'maintenance',
+    reasonCode: 'source_changed',
+    factId: fact.id,
+    validTo: change.successor.changedAt,
+    source: {
+      kind: 'file',
+      locator: change.anchor.path,
+      version: change.head,
+      content: null,
+      observedAt: deps.now(),
+    },
+    successor: {
+      fact: {
+        subjectEntityId: fact.subjectEntityId,
+        predicate: fact.predicate,
+        object: { kind: 'value', value: change.successor.value },
+        statement: change.successor.statement,
+        confidence: fact.confidence,
+        validFrom: null,
+        validTo: null,
+      },
+      newEntities: [],
+    },
+  });
+  if (ended.ok) return ok(true);
+  if (ended.error.code === 'conflict' || ended.error.code === 'already_invalidated') return ok(false);
+  return ended;
 }
 
 /**
  * The verification job: checks the stale facts of a namespace against the repository their
- * sources point at, and records each outcome with method `deterministic`. It changes no fact.
- * A fact whose file is gone, or that a rung finds contradicted, is
- * flagged for a person and stays live. A fact with no anchor, or
- * from a commit that is not on this branch, is examined and nothing is recorded. If the
- * repository cannot be read, the job fails before recording anything.
+ * sources point at, and records each outcome with method `deterministic`, before any change.
+ * A contradicted fact whose value a rung read anew is ended, with the new value as successor,
+ * under policy `automatic`. Any other contradicted fact, and one whose file is gone, is flagged
+ * for a person and stays live. A fact with no anchor, or from a commit that is not on this
+ * branch, is examined and nothing is recorded. If the repository cannot be read, the job fails
+ * before recording anything.
  */
 export async function verifyAnchoredFacts(
   deps: VerifyAnchoredFactsDeps,
@@ -110,20 +172,22 @@ export async function verifyAnchoredFacts(
   });
   if (!stale.ok) return stale;
 
+  let changed = 0;
   let failed = 0;
   const flaggedItems: { id: string; reason: string }[] = [];
   for (const found of stale.value) {
     const anchor = findAnchor(found.sources);
     if (anchor === null) continue;
-    const outcome = await climbLadder(deps, found, anchor, head.value);
-    if (!outcome.ok) return outcome;
-    if (outcome.value === null) continue;
+    const decision = await climbLadder(deps, found, anchor, head.value);
+    if (!decision.ok) return decision;
+    if (decision.value === null) continue;
+    const { outcome, successor } = decision.value;
     const recorded = await recordVerification(deps, {
       namespace: input.namespace,
       trigger: 'maintenance',
       reasonCode: 'verification_due',
       factId: found.fact.id,
-      outcome: outcome.value,
+      outcome,
       method: 'deterministic',
     });
     // A fact invalidated meanwhile by another process was examined, not failed.
@@ -131,16 +195,16 @@ export async function verifyAnchoredFacts(
       if (recorded.error.code !== 'already_invalidated') failed += 1;
       continue;
     }
-    // A file gone or a fact the file contradicts is left for a person, whatever the policy.
-    if (outcome.value === 'source_missing' || outcome.value === 'contradicted') {
-      flaggedItems.push({ id: found.fact.id, reason: outcome.value });
+    if (outcome === 'contradicted' && successor !== null && deps.domain.correctionPolicy === 'automatic') {
+      const ended = await endChangedFact(deps, found, { anchor, head: head.value, successor });
+      if (!ended.ok) failed += 1;
+      else if (ended.value) changed += 1;
+      continue;
+    }
+    // A file gone or a fact the file contradicts is left for a person.
+    if (outcome === 'source_missing' || outcome === 'contradicted') {
+      flaggedItems.push({ id: found.fact.id, reason: outcome });
     }
   }
-  return ok({
-    examined: stale.value.length,
-    changed: 0,
-    flagged: flaggedItems.length,
-    failed,
-    flaggedItems,
-  });
+  return ok({ examined: stale.value.length, changed, flagged: flaggedItems.length, failed, flaggedItems });
 }

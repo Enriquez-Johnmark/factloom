@@ -31,14 +31,21 @@ export function createFixtureRepository() {
     GIT_CONFIG_GLOBAL: '/dev/null',
     ...FIXED_IDENTITY,
   };
-  const git = (...args: string[]): string =>
-    execFileSync('git', ['-C', directory, ...args], { env: environment, encoding: 'utf8' }).trim();
+  const gitWith = (dates: Readonly<Record<string, string>>, args: readonly string[]): string =>
+    execFileSync('git', ['-C', directory, ...args], {
+      env: { ...environment, ...dates },
+      encoding: 'utf8',
+    }).trim();
+  const git = (...args: string[]): string => gitWith({}, args);
   git('init', '--quiet', '--initial-branch=main');
   return {
     directory,
     git,
-    /** Writes each file given as text and deletes each given as null, then commits everything. */
-    commit(files: Readonly<Record<string, string | null>>, message: string): string {
+    /**
+     * Writes each file given as text and deletes each given as null, then commits everything,
+     * at the fixed date or at `date`, an ISO 8601 time, as author and committer.
+     */
+    commit(files: Readonly<Record<string, string | null>>, message: string, date?: string): string {
       for (const [path, text] of Object.entries(files)) {
         const target = join(directory, path);
         if (text === null) {
@@ -49,7 +56,8 @@ export function createFixtureRepository() {
         }
       }
       git('add', '--all');
-      git('commit', '--quiet', '--allow-empty', '--message', message);
+      const dates = date === undefined ? {} : { GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date };
+      gitWith(dates, ['commit', '--quiet', '--allow-empty', '--message', message]);
       return git('rev-parse', 'HEAD');
     },
     remove(): void {

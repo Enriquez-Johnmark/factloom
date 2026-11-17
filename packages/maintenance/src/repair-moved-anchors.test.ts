@@ -30,6 +30,7 @@ function fakeRepository(
     readContentId: async (commit, path) => ok(at(commit, path)),
     readText: async (commit, path) => ok(at(commit, path)),
     findRenamedPath: async (path) => ok(renames[path] ?? null),
+    listCommitsTouching: async () => ok([]),
   };
 }
 

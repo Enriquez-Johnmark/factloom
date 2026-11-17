@@ -1,4 +1,4 @@
-import type { Result } from '@factloom/core';
+import type { Result, Timestamp } from '@factloom/core';
 
 /**
  * What the verification ladder reads from a repository, and nothing more. Paths are relative
@@ -23,4 +23,9 @@ export type RepositoryReader = {
    * twice needs two calls.
    */
   readonly findRenamedPath: (path: string) => Promise<Result<string | null>>;
+  /** The commits after `fromCommit`, up to and including HEAD, that touched a path, oldest first, with their committer times. */
+  readonly listCommitsTouching: (
+    path: string,
+    fromCommit: string,
+  ) => Promise<Result<readonly { readonly commit: string; readonly committedAt: Timestamp }[]>>;
 };
