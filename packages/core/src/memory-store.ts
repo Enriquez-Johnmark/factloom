@@ -123,5 +123,24 @@ export interface MemoryStore {
     readonly factId: FactId;
   }): Promise<Result<readonly Feedback[]>>;
 
+  /**
+   * Phase 3. Current facts at `currentAt` whose latest verification, or recording if none, is
+   * before `notVerifiedSince`, least recently verified first; with `confidenceBelow`, also
+   * current facts whose latest confidence is below it.
+   */
+  listStaleFacts(query: {
+    readonly namespace: Namespace;
+    readonly currentAt: Timestamp;
+    readonly notVerifiedSince: Timestamp;
+    readonly confidenceBelow: number | null;
+    readonly limit: number;
+  }): Promise<Result<readonly FactWithSources[]>>;
+
+  /** Phase 3. Live facts whose every source is purged, or whose latest verification is `source_missing`, oldest first. */
+  listOrphanedFacts(query: {
+    readonly namespace: Namespace;
+    readonly limit: number;
+  }): Promise<Result<readonly FactWithSources[]>>;
+
   close(): Promise<void>;
 }

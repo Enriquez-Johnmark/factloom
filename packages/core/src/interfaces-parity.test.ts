@@ -315,6 +315,17 @@ interface RefMemoryStore {
     readonly namespace: RefNamespace;
     readonly factId: RefFactId;
   }): Promise<Result<readonly RefFeedback[]>>;
+  listStaleFacts(query: {
+    readonly namespace: RefNamespace;
+    readonly currentAt: Timestamp;
+    readonly notVerifiedSince: Timestamp;
+    readonly confidenceBelow: number | null;
+    readonly limit: number;
+  }): Promise<Result<readonly RefFactWithSources[]>>;
+  listOrphanedFacts(query: {
+    readonly namespace: RefNamespace;
+    readonly limit: number;
+  }): Promise<Result<readonly RefFactWithSources[]>>;
   close(): Promise<void>;
 }
 

@@ -114,7 +114,41 @@ export type SqliteReads = {
   readonly listFeedback: (
     query: Parameters<MemoryStore['listFeedback']>[0],
   ) => ReturnType<typeof toFeedback>[];
+  readonly listStaleFacts: (
+    query: Parameters<MemoryStore['listStaleFacts']>[0],
+  ) => Result<readonly FactWithSources[]>;
+  readonly listOrphanedFacts: (
+    query: Parameters<MemoryStore['listOrphanedFacts']>[0],
+  ) => Result<readonly FactWithSources[]>;
 };
+
+/**
+ * Current facts, each with the time it counts as verified: its latest verification, or its
+ * recording. Those verified before `@notVerifiedSince`, or with a latest confidence below
+ * `@confidenceBelow` when that is given, least recently verified first, then in row order.
+ */
+export const STALE_FACTS_SQL = `SELECT * FROM (
+  SELECT ${FACT_COLUMNS_LATEST}, f.rowid AS row_order,
+    COALESCE((SELECT max(v.verified_at) FROM fact_verification v WHERE v.fact_id = f.id), f.created_at)
+      AS last_verified_at
+  FROM fact f
+  WHERE f.namespace = @namespace AND ${TIME_PREDICATE})
+WHERE last_verified_at < @notVerifiedSince
+   OR (@confidenceBelow IS NOT NULL AND confidence < @confidenceBelow)
+ORDER BY last_verified_at, row_order LIMIT @limit`;
+
+/**
+ * Live facts with no source left unpurged, or whose latest verification is `source_missing`:
+ * the latest time, then the latest rowid. In row order.
+ */
+export const ORPHANED_FACTS_SQL = `SELECT ${FACT_COLUMNS_LATEST} FROM fact f
+WHERE f.namespace = @namespace AND f.invalidated_at IS NULL
+  AND (NOT EXISTS (
+         SELECT 1 FROM fact_source fs JOIN source s ON s.id = fs.source_id
+         WHERE fs.fact_id = f.id AND s.purged_at IS NULL)
+       OR (SELECT v.outcome FROM fact_verification v WHERE v.fact_id = f.id
+           ORDER BY v.verified_at DESC, v.rowid DESC LIMIT 1) = 'source_missing')
+ORDER BY f.rowid LIMIT @limit`;
 
 /**
  * Builds the structural reads of a SQLite store. Statements are prepared once and reused;
@@ -190,6 +224,8 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
     `SELECT id, namespace, fact_id, signal, trigger, source_id, recorded_at FROM feedback
      WHERE namespace = ? AND fact_id = ? ORDER BY recorded_at, rowid`,
   );
+  const selectStaleFacts = db.prepare<[Record<string, unknown>], FactRow>(STALE_FACTS_SQL);
+  const selectOrphanedFacts = db.prepare<[Record<string, unknown>], FactRow>(ORPHANED_FACTS_SQL);
   const listStatements = new Map<string, Statement<[Record<string, unknown>], FactRow>>();
 
   // Three queries for any number of facts: the facts are given, then their entities, then their sources.
@@ -330,6 +366,25 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
 
     listFeedback(query) {
       return selectFeedback.all(query.namespace, query.factId).map(toFeedback);
+    },
+
+    listStaleFacts(query) {
+      if (!Number.isInteger(query.limit) || query.limit < 1) return invalidLimit();
+      const rows = selectStaleFacts.all({
+        namespace: query.namespace,
+        validAt: query.currentAt,
+        knownAt: query.currentAt,
+        notVerifiedSince: query.notVerifiedSince,
+        confidenceBelow: query.confidenceBelow,
+        limit: query.limit,
+      });
+      return ok(withSources(rows, query.namespace));
+    },
+
+    listOrphanedFacts(query) {
+      if (!Number.isInteger(query.limit) || query.limit < 1) return invalidLimit();
+      const rows = selectOrphanedFacts.all({ namespace: query.namespace, limit: query.limit });
+      return ok(withSources(rows, query.namespace));
     },
   };
 }

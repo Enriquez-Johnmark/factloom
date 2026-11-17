@@ -1141,6 +1141,124 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
     changeSet('op-e5', '2026-06-01', [verify('pg16'), verify('node22')], verifying),
   );
 
+  // --- Stale and orphaned facts (FL-049) ---
+  // At NOW the current facts are pg16, recorded 2026-04-02, and node22, recorded 2026-05-01.
+  // pg14-ended is live but ended; pg14 and node20 are invalidated.
+  const verifyOn = async (id: string, factId: string, outcome: FactVerification['outcome'], day: string) => {
+    const result = await store.commit(
+      changeSet(`op-${id}`, day, [verify(factId, { id, outcome, verifiedAt: at(day) })], verifying),
+    );
+    if (!result.ok) throw new Error(result.error.message);
+  };
+  const stale = async (notVerifiedSince: string, confidenceBelow: number | null = null, limit = 10) => {
+    const listed = await store.listStaleFacts({
+      namespace: NAMESPACE,
+      currentAt: NOW,
+      notVerifiedSince: at(notVerifiedSince),
+      confidenceBelow,
+      limit,
+    });
+    if (!listed.ok) throw new Error(listed.error.message);
+    return listed.value.map((found) => found.fact.id);
+  };
+  const orphaned = async (limit = 10) => {
+    const listed = await store.listOrphanedFacts({ namespace: NAMESPACE, limit });
+    if (!listed.ok) throw new Error(listed.error.message);
+    return listed.value.map((found) => found.fact.id);
+  };
+
+  test('L1: as of now, known at now, the stale list puts the fact verified long ago before the one never verified, and leaves out the one verified recently', async () => {
+    await verifyOn('vr-long-ago', 'pg16', 'confirmed', '2026-04-10');
+    await verifyOn('vr-recent', 'node22', 'confirmed', '2026-11-01');
+    const recorded = await store.commit(
+      changeSet('op-redis', '2026-06-01', [
+        recordFact(fact('redis', 'uses_cache', 'Redis', { createdAt: at('2026-06-01') }), {
+          singleValued: false,
+          embedding: new Float32Array([0, 0, 1, 0]),
+        }),
+      ]),
+    );
+    if (!recorded.ok) throw new Error(recorded.error.message);
+
+    expect(await stale('2026-10-01')).toEqual(['pg16', 'redis']);
+  });
+  test('L2: as of now, known at now, the stale list leaves out the ended fact and the invalidated facts', async () => {
+    expect(await stale('2026-11-13')).toEqual(['pg16', 'node22']);
+  });
+  test('L3: with confidenceBelow, the stale list adds a recently verified fact whose confidence was adjusted below it', async () => {
+    await verifyOn('vr-recent', 'node22', 'confirmed', '2026-11-01');
+    const lowered = await store.commit(
+      changeSet(
+        'op-lower',
+        '2026-11-02',
+        [{ kind: 'adjust_confidence', factId: 'node22', confidence: 0.3 }],
+        {
+          operation: 'confidence_adjustment',
+        },
+      ),
+    );
+    if (!lowered.ok) throw new Error(lowered.error.message);
+
+    expect(await stale('2026-10-01')).toEqual(['pg16']);
+    expect(await stale('2026-10-01', 0.5)).toEqual(['pg16', 'node22']);
+    expect(await stale('2026-10-01', 0.3)).toEqual(['pg16']);
+  });
+  test('L4: the orphaned list returns a fact whose latest verification found the source missing until a later one confirms it, and a fact whose only source was purged', async () => {
+    expect(await orphaned()).toEqual([]);
+
+    await verifyOn('vr-missing', 'pg16', 'source_missing', '2026-06-01');
+    const afterMissing = await orphaned();
+    await verifyOn('vr-found', 'pg16', 'confirmed', '2026-06-02');
+    const afterConfirmed = await orphaned();
+    const purged = await store.commit(
+      changeSet(
+        'op-purge-s3',
+        '2026-06-03',
+        [{ kind: 'purge_content', targetKind: 'source', targetId: 's-3' }],
+        {
+          operation: 'purge',
+          trigger: 'person',
+          reasonCode: 'erasure_requested',
+        },
+      ),
+    );
+    if (!purged.ok) throw new Error(purged.error.message);
+
+    expect(afterMissing).toEqual(['pg16']);
+    expect(afterConfirmed).toEqual([]);
+    expect(await orphaned()).toEqual(['node22']);
+  });
+  test('L5: of two verifications at the same time, the one recorded later is the latest', async () => {
+    await verifyOn('vr-a', 'pg16', 'confirmed', '2026-06-01');
+    await verifyOn('vr-b', 'pg16', 'source_missing', '2026-06-01');
+    await verifyOn('vr-c', 'node22', 'source_missing', '2026-06-01');
+    await verifyOn('vr-d', 'node22', 'confirmed', '2026-06-01');
+
+    expect(await orphaned()).toEqual(['pg16']);
+  });
+  test('L6: both lists respect the limit, and refuse a limit below 1 with invalid_input', async () => {
+    await verifyOn('vr-1', 'pg16', 'source_missing', '2026-06-01');
+    await verifyOn('vr-2', 'node22', 'source_missing', '2026-06-01');
+
+    expect(await stale('2026-11-13', null, 1)).toEqual(['pg16']);
+    expect(await orphaned(1)).toEqual(['pg16']);
+    const staleRefused = await store.listStaleFacts({
+      namespace: NAMESPACE,
+      currentAt: NOW,
+      notVerifiedSince: NOW,
+      confidenceBelow: null,
+      limit: 0,
+    });
+    const orphanedRefused = await store.listOrphanedFacts({ namespace: NAMESPACE, limit: 0 });
+    expect([staleRefused, orphanedRefused].map((result) => (result.ok ? null : result.error.code))).toEqual([
+      'invalid_input',
+      'invalid_input',
+    ]);
+  });
+  test('L7: the stale list is empty when every current fact was verified or recorded since the date', async () => {
+    expect(await stale('2026-04-01')).toEqual([]);
+  });
+
   // --- Purge (FL-061) ---
   // k-1 recorded from s-key, whose text and locator hold the marker; k-1 ended as k-1e with
   // the note s-rotated; k-1e corrected by k-2 from s-fix, which quotes the marker. The
@@ -2156,6 +2274,50 @@ function registerSingleValueRuleAndNamespaces(
       .store()
       .listAuditEntries({ namespace: OTHER, targetKind: 'fact', targetId: 'other-pg16' });
     expect(entries.ok && entries.value.map((entry) => entry.action)).not.toContain('fact.verified');
+  });
+  cases.test('N10: the stale and orphaned lists return no fact of the other namespace', async () => {
+    const missing = await cases.store().commit(
+      changeSet(
+        'other-op-missing',
+        '2026-06-01',
+        [
+          {
+            kind: 'record_verification',
+            verification: {
+              id: 'vr-other-missing',
+              namespace: OTHER,
+              factId: 'other-pg16',
+              outcome: 'source_missing',
+              method: 'deterministic',
+              verifiedAt: at('2026-06-01'),
+            },
+          },
+        ],
+        {
+          namespace: OTHER,
+          operation: 'verification',
+          trigger: 'maintenance',
+          reasonCode: 'verification_due',
+        },
+      ),
+    );
+    if (!missing.ok) throw new Error(missing.error.message);
+    const ids = async (namespace: string) => {
+      const staleFacts = await cases.store().listStaleFacts({
+        namespace,
+        currentAt: NOW,
+        notVerifiedSince: NOW,
+        confidenceBelow: null,
+        limit: 10,
+      });
+      const orphanedFacts = await cases.store().listOrphanedFacts({ namespace, limit: 10 });
+      if (!staleFacts.ok || !orphanedFacts.ok) throw new Error('A list failed.');
+      return [staleFacts.value, orphanedFacts.value].map((list) => list.map((found) => found.fact.id));
+    };
+
+    // other-pg16 counts as verified on 2026-06-01, so it comes after other-node22, recorded 2026-05-01.
+    expect(await ids(NAMESPACE)).toEqual([['pg16', 'node22'], []]);
+    expect(await ids(OTHER)).toEqual([['other-node22', 'other-pg16'], ['other-pg16']]);
   });
   cases.test(
     'N8: usage recorded for a fact of the other namespace changes nothing, and usage is not read across namespaces',

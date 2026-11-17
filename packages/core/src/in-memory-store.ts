@@ -272,6 +272,19 @@ function sameEntityIds(merges: readonly EntityMerge[], entityId: string): Set<st
   return ids;
 }
 
+/** The latest verification of a fact: the latest time, and of two with one time the later recorded. */
+function latestVerification(
+  verifications: readonly FactVerification[],
+  factId: string,
+): FactVerification | null {
+  let latest: FactVerification | null = null;
+  for (const verification of verifications) {
+    if (verification.factId !== factId) continue;
+    if (latest === null || verification.verifiedAt >= latest.verifiedAt) latest = verification;
+  }
+  return latest;
+}
+
 /** Whether two live facts disagree: different objects, as stored, with overlapping valid periods. */
 function disagree(first: Fact, second: Fact): boolean {
   return !sameObject(first, second) && periodsOverlap(first, second);
@@ -882,6 +895,49 @@ export function createInMemoryStore(): MemoryStore {
         (feedback) => feedback.namespace === query.namespace && feedback.factId === query.factId,
       );
       return Promise.resolve(ok(structuredClone(found)));
+    },
+
+    listStaleFacts(query) {
+      if (!isValidLimit(query.limit)) return Promise.resolve(invalidLimit());
+      const current = { validAt: query.currentAt, knownAt: query.currentAt };
+      const stale = factsInTime(query.namespace, current).flatMap((fact) => {
+        const verifiedAt = latestVerification(state.verifications, fact.id)?.verifiedAt ?? fact.createdAt;
+        const isLowConfidence =
+          query.confidenceBelow !== null &&
+          confidenceAt(state.confidences, fact, null) < query.confidenceBelow;
+        return verifiedAt < query.notVerifiedSince || isLowConfidence ? [{ fact, verifiedAt }] : [];
+      });
+      // A stable sort: facts verified at one moment keep the order they were recorded in.
+      const results = stale
+        .sort((a, b) => (a.verifiedAt === b.verifiedAt ? 0 : a.verifiedAt < b.verifiedAt ? -1 : 1))
+        .slice(0, query.limit)
+        .flatMap(({ fact }) => {
+          const result = withSources(fact, null);
+          return result === null ? [] : [result];
+        });
+      return Promise.resolve(ok(results));
+    },
+
+    listOrphanedFacts(query) {
+      if (!isValidLimit(query.limit)) return Promise.resolve(invalidLimit());
+      const isOrphaned = (fact: Fact): boolean => {
+        const sourceIds = state.factSources.get(fact.id) ?? [];
+        const allPurged = sourceIds.every((sourceId) => {
+          const source = state.sources.get(sourceId);
+          return source !== undefined && source.purgedAt !== null;
+        });
+        return allPurged || latestVerification(state.verifications, fact.id)?.outcome === 'source_missing';
+      };
+      const results = [...state.facts.values()]
+        .filter(
+          (fact) => fact.namespace === query.namespace && fact.invalidatedAt === null && isOrphaned(fact),
+        )
+        .slice(0, query.limit)
+        .flatMap((fact) => {
+          const result = withSources(fact, null);
+          return result === null ? [] : [result];
+        });
+      return Promise.resolve(ok(results));
     },
 
     close() {
