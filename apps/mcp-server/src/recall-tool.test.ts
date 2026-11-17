@@ -1,4 +1,5 @@
 import {
+  archiveFacts,
   createTestDeps,
   endFact,
   err,
@@ -182,7 +183,55 @@ describe('the recall tool', () => {
     const properties = z
       .record(z.string(), z.object({ description: z.string().min(1) }))
       .parse(tools[0]?.inputSchema.properties);
-    expect(Object.keys(properties).sort()).toEqual(['as_of', 'known_at', 'limit', 'question']);
+    expect(Object.keys(properties).sort()).toEqual([
+      'as_of',
+      'include_archived',
+      'known_at',
+      'limit',
+      'question',
+    ]);
+  });
+
+  it('returns an archived fact only with include_archived, says so, and leaves it archived with no audit entry written', async () => {
+    const memory = await recordMemory();
+    const archived = await archiveFacts(
+      createTestDeps({ now: '2026-03-20', store: memory.store, newId: memory.newId }),
+      {
+        namespace: NAMESPACE,
+        trigger: 'person',
+        reasonCode: 'requested',
+        factIds: [memory.facts.vitest],
+      },
+    );
+    if (!archived.ok) throw new Error(archived.error.message);
+    const entriesBefore = await memory.store.listAuditEntries({
+      namespace: NAMESPACE,
+      targetKind: 'fact',
+      targetId: memory.facts.vitest,
+    });
+    const client = await connect(memory.store, memory.newId);
+
+    // As-of date: now (2026-04-01). Known-at date: now.
+    const byDefault = await callRecall(client, { question: QUESTION });
+    const included = await client.callTool({
+      name: 'recall',
+      arguments: { question: QUESTION, include_archived: true },
+    });
+
+    expect(byDefault.structuredContent.facts.map((fact) => fact.fact_id)).not.toContain(memory.facts.vitest);
+    const facts = z
+      .object({ facts: z.array(z.object({ fact_id: z.string(), archived_at: z.string().nullable() })) })
+      .parse(included.structuredContent).facts;
+    expect(facts.find((fact) => fact.fact_id === memory.facts.vitest)?.archived_at).toBe(at('2026-03-20'));
+    const found = await memory.store.getFact({ namespace: NAMESPACE, factId: memory.facts.vitest });
+    expect(found.ok && found.value?.archivedAt).toBe(at('2026-03-20'));
+    expect(
+      await memory.store.listAuditEntries({
+        namespace: NAMESPACE,
+        targetKind: 'fact',
+        targetId: memory.facts.vitest,
+      }),
+    ).toEqual(entriesBefore);
   });
 
   it('declares an output schema and the read-only annotation', async () => {

@@ -28,10 +28,24 @@ const RecallInputSchema = z.object({
     .max(50)
     .optional()
     .describe('Most facts to return, from 1 to 50. Default: 10.'),
+  include_archived: z
+    .boolean()
+    .optional()
+    .describe(
+      'Also return archived facts: facts left out because they have not been used for a long time. A question with as_of or known_at always includes them. Default: false.',
+    ),
 });
 
 const RecallOutputSchema = z.object({
-  facts: z.array(FactOutputSchema.extend({ score: z.number() })),
+  facts: z.array(
+    FactOutputSchema.extend({
+      score: z.number(),
+      archived_at: z
+        .string()
+        .nullable()
+        .describe('When the fact was archived, or null when it is not archived.'),
+    }),
+  ),
 });
 
 const DEFAULT_LIMIT = 10;
@@ -68,7 +82,7 @@ export const registerRecallTool: RegisterTool = (server, deps) => {
       outputSchema: RecallOutputSchema,
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async ({ question, as_of, known_at, limit }) => {
+    async ({ question, as_of, known_at, limit, include_archived }) => {
       const validAt = readOptionalDate('as_of', as_of);
       if (!validAt.ok) return toToolError(validAt.error);
       const knownAt = readOptionalDate('known_at', known_at);
@@ -80,6 +94,7 @@ export const registerRecallTool: RegisterTool = (server, deps) => {
         validAt: validAt.value,
         knownAt: knownAt.value,
         limit: limit ?? DEFAULT_LIMIT,
+        includeArchived: include_archived ?? false,
       });
       if (!recalled.ok) return toToolError(recalled.error);
       recordUsage(
@@ -87,7 +102,11 @@ export const registerRecallTool: RegisterTool = (server, deps) => {
         recalled.value.facts.map((found) => found.fact.id),
       );
       return toToolSuccess({
-        facts: recalled.value.facts.map((found) => ({ ...toFactOutput(found), score: found.score })),
+        facts: recalled.value.facts.map((found) => ({
+          ...toFactOutput(found),
+          score: found.score,
+          archived_at: found.archivedAt,
+        })),
       });
     },
   );
