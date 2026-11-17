@@ -99,6 +99,7 @@ export function runOn(day: string, store: MemoryStore, repositoryDirectory: stri
       ...deps,
       namespace: NAMESPACE,
       repository: createGitRepositoryReader(repositoryDirectory),
+      archiveAfterDays: 180,
     }),
   );
 }

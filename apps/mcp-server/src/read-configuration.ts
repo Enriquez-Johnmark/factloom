@@ -12,7 +12,12 @@ export type ServerConfiguration = {
   readonly modelCacheDirectory: string;
   /** The git repository that maintenance verifies facts against. */
   readonly repositoryDirectory: string;
+  /** How many days a fact must go unrecalled before maintenance archives it. */
+  readonly archiveAfterDays: number;
 };
+
+/** The default archiving period: a placeholder until Q-57 is answered. */
+export const DEFAULT_ARCHIVE_AFTER_DAYS = 180;
 
 /** A variable that is set but empty counts as not set, as it does in most shells. */
 const optionalText = z.preprocess((value) => (value === '' ? undefined : value), z.string().optional());
@@ -22,12 +27,17 @@ const EnvironmentSchema = z.object({
   FACTLOOM_NAMESPACE: optionalText,
   ANTHROPIC_API_KEY: optionalText,
   FACTLOOM_REPO: optionalText,
+  FACTLOOM_ARCHIVE_AFTER_DAYS: z.preprocess(
+    (value) => (value === '' || value === undefined ? undefined : Number(value)),
+    z.number().int().positive().optional(),
+  ),
 });
 
 /**
  * Reads the server's configuration from the given environment variables. `FACTLOOM_DB`
  * defaults to `~/.factloom/factloom.db`; `FACTLOOM_NAMESPACE` is required; `ANTHROPIC_API_KEY`
- * is optional; `FACTLOOM_REPO` defaults to the working directory. Pure: the caller passes the
+ * is optional; `FACTLOOM_REPO` defaults to the working directory; `FACTLOOM_ARCHIVE_AFTER_DAYS`
+ * defaults to 180. Pure: the caller passes the
  * environment and the two directories.
  */
 export function readConfiguration(
@@ -36,7 +46,8 @@ export function readConfiguration(
 ): Result<ServerConfiguration> {
   const parsed = EnvironmentSchema.safeParse(environment);
   if (!parsed.success) return err('invalid_input', z.prettifyError(parsed.error));
-  const { FACTLOOM_DB, FACTLOOM_NAMESPACE, ANTHROPIC_API_KEY, FACTLOOM_REPO } = parsed.data;
+  const { FACTLOOM_DB, FACTLOOM_NAMESPACE, ANTHROPIC_API_KEY, FACTLOOM_REPO, FACTLOOM_ARCHIVE_AFTER_DAYS } =
+    parsed.data;
 
   if (FACTLOOM_NAMESPACE === undefined) {
     return err(
@@ -60,5 +71,6 @@ export function readConfiguration(
     anthropicApiKey: ANTHROPIC_API_KEY ?? null,
     modelCacheDirectory: join(factloomDirectory, 'models'),
     repositoryDirectory: FACTLOOM_REPO ?? directories.workingDirectory,
+    archiveAfterDays: FACTLOOM_ARCHIVE_AFTER_DAYS ?? DEFAULT_ARCHIVE_AFTER_DAYS,
   });
 }

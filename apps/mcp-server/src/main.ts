@@ -41,8 +41,14 @@ const configuration = readConfiguration(process.env, {
   workingDirectory: process.cwd(),
 });
 if (!configuration.ok) stop(configuration.error.message);
-const { databasePath, namespace, modelCacheDirectory, anthropicApiKey, repositoryDirectory } =
-  configuration.value;
+const {
+  databasePath,
+  namespace,
+  modelCacheDirectory,
+  anthropicApiKey,
+  repositoryDirectory,
+  archiveAfterDays,
+} = configuration.value;
 
 mkdirSync(dirname(databasePath), { recursive: true });
 // The model is loaded on the first embedding, not here, so the server answers the host at once.
@@ -67,6 +73,7 @@ if (command.kind === 'maintenance') {
       now,
       newId: () => randomUUID(),
       repository: createGitRepositoryReader(repositoryDirectory),
+      archiveAfterDays,
     }),
   );
   await opened.value.close();

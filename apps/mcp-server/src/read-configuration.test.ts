@@ -20,6 +20,20 @@ describe('readConfiguration', () => {
     expect(configuration.value.modelCacheDirectory).toBe(join(HOME, '.factloom', 'models'));
   });
 
+  it('archives after the days given in FACTLOOM_ARCHIVE_AFTER_DAYS, and refuses a number that is not a whole positive one', () => {
+    const given = readConfiguration(
+      { FACTLOOM_NAMESPACE: 'repo:shop-api', FACTLOOM_ARCHIVE_AFTER_DAYS: '90' },
+      { homeDirectory: HOME, workingDirectory: WORKING },
+    );
+    const refused = readConfiguration(
+      { FACTLOOM_NAMESPACE: 'repo:shop-api', FACTLOOM_ARCHIVE_AFTER_DAYS: 'soon' },
+      { homeDirectory: HOME, workingDirectory: WORKING },
+    );
+
+    expect(given.ok && given.value.archiveAfterDays).toBe(90);
+    expect(refused.ok ? null : refused.error.code).toBe('invalid_input');
+  });
+
   it('verifies against the working directory when FACTLOOM_REPO is not set', () => {
     const configuration = readConfiguration(
       { FACTLOOM_NAMESPACE: 'repo:shop-api', FACTLOOM_REPO: '' },
@@ -48,6 +62,7 @@ describe('readConfiguration', () => {
         anthropicApiKey: TEST_KEY,
         modelCacheDirectory: join(HOME, '.factloom', 'models'),
         repositoryDirectory: '/repos/shop-api',
+        archiveAfterDays: 180,
       },
     });
   });

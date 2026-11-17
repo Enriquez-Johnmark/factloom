@@ -74,6 +74,16 @@ describe('the maintenance command', () => {
         failed: 0,
         flaggedItems: [],
       },
+      {
+        name: 'archive_unused_facts',
+        status: 'ok',
+        error: null,
+        examined: 0,
+        changed: 0,
+        flagged: 0,
+        failed: 0,
+        flaggedItems: [],
+      },
     ]);
   }, 30_000);
 
@@ -99,6 +109,7 @@ describe('the maintenance command', () => {
       { name: 'verify_anchored_facts', status: 'failed', error: 'invalid_input' },
       { name: 'repair_moved_anchors', status: 'failed', error: 'invalid_input' },
       { name: 'find_duplicate_entities', status: 'ok' },
+      { name: 'archive_unused_facts', status: 'ok' },
     ]);
   }, 30_000);
 

@@ -1,4 +1,5 @@
 import {
+  archiveUnusedFacts,
   findDuplicateEntities,
   type MaintenanceJob,
   NAME_STAGE,
@@ -10,13 +11,15 @@ import type { ServerDeps } from './create-factloom-server.ts';
 
 /**
  * The maintenance jobs, in the order they run, bound to the composition root's dependencies.
- * FL-073 adds one here. Every change a job makes carries the trigger
+ * The archiving job runs last, after the jobs that repair and verify. Every change a job makes carries the trigger
  * `maintenance`. The anchor repair runs after verification, so that a file found missing in
  * this run is looked for in the same run.
  */
 export function buildMaintenanceJobs(
   deps: Pick<ServerDeps, 'store' | 'embedder' | 'domain' | 'namespace' | 'now' | 'newId'> & {
     readonly repository: RepositoryReader;
+    /** How many days a fact must go unrecalled before it is archived. */
+    readonly archiveAfterDays: number;
   },
 ): readonly MaintenanceJob[] {
   const { namespace } = deps;
@@ -31,6 +34,14 @@ export function buildMaintenanceJobs(
     {
       name: 'find_duplicate_entities',
       run: () => findDuplicateEntities({ ...deps, stages: [NAME_STAGE] }, { namespace }),
+    },
+    {
+      name: 'archive_unused_facts',
+      run: () =>
+        archiveUnusedFacts(
+          { ...deps, archivePeriodMs: deps.archiveAfterDays * 24 * 60 * 60 * 1000 },
+          { namespace },
+        ),
     },
   ];
 }
