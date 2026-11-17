@@ -87,7 +87,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | FL-070 | Human-approval policy in remember, with a command to list, approve and reject | 2 | FL-043, FL-042, FL-034 | Pending |
 | FL-044 | reviseValidTime operation | 2 | FL-010 | Completed |
 | FL-045 | Confidence history and adjustConfidence | 2 | FL-015, FL-016, FL-017 | Completed |
-| FL-046 | Feedback operation and migration | 2 | FL-015, FL-022 | Pending |
+| FL-046 | Feedback operation and migration | 2 | FL-015, FL-022 | Completed |
 | FL-059 | give_feedback tool | 2 | FL-046, FL-036, FL-058 | Pending |
 | FL-060 | Acting on feedback | 2 | FL-046, FL-045, FL-042 | Pending |
 | FL-047 | Purge design, proven by a spike | 2 | FL-015 | Pending |
@@ -783,7 +783,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-015, FL-022 |
 | Requirements | REQ-18, REQ-24 |
@@ -831,17 +831,72 @@ The original item was split in three. This one records feedback. The MCP tool is
 - [`SCHEMA.md`](../../architecture/SCHEMA.md), "Migrations": a new numbered file.
 
 **Acceptance criteria.**
-- [ ] Contract suite cases pass against both stores: a feedback row is recorded with one audit entry whose action is `feedback.recorded`; a missing fact is `not_found`; a fact in another namespace is `not_found`; feedback on an invalidated fact is recorded; no fact row changes.
-- [ ] A contract case shows feedback with a source records the source and the feedback in one commit, with one operation identifier.
-- [ ] Unit tests of `giveFeedback` with the in-memory store pass with these names: "records feedback with the comment as the content of a source", "records feedback with no source when there is no comment", "refuses a comment that contains a secret and stores nothing", "returns not_found for a fact in another namespace", "says that nothing followed".
-- [ ] A unit test asserts that no audit entry written by the call contains the comment.
-- [ ] A SQLite adapter test shows a direct `UPDATE` or `DELETE` on `feedback` is refused.
-- [ ] A SQLite adapter test opens a database created by the earlier migrations only, applies the new one, and records feedback on an existing fact.
-- [ ] `pnpm check` exits 0.
+- [x] Contract suite cases pass against both stores: a feedback row is recorded with one audit entry whose action is `feedback.recorded`; a missing fact is `not_found`; a fact in another namespace is `not_found`; feedback on an invalidated fact is recorded; no fact row changes.
+- [x] A contract case shows feedback with a source records the source and the feedback in one commit, with one operation identifier.
+- [x] Unit tests of `giveFeedback` with the in-memory store pass with these names: "records feedback with the comment as the content of a source", "records feedback with no source when there is no comment", "refuses a comment that contains a secret and stores nothing", "returns not_found for a fact in another namespace", "says that nothing followed".
+- [x] A unit test asserts that no audit entry written by the call contains the comment.
+- [x] A SQLite adapter test shows a direct `UPDATE` or `DELETE` on `feedback` is refused.
+- [x] A SQLite adapter test opens a database created by the earlier migrations only, applies the new one, and records feedback on an existing fact.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Contract suite against both stores. Unit tests of the operation and the use case. SQLite adapter tests for the triggers and the migration. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the updated `INTERFACES.md`, `SCHEMA.md` and `SYSTEM-BOUNDARIES.md`.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in four commits: `feat(storage): add the feedback migration`, `feat(core): add the record_feedback change to both stores`, `feat(core): add the recordFeedback operation`, and `feat(graph-rag): add the giveFeedback use case`.
+
+The proposed names are kept: the `Change` kind `record_feedback`, the operation `feedback`, the action `feedback.recorded`, the reason code `feedback_given` and the target kind `feedback`. The row is a new core schema, `FeedbackSchema` with `FeedbackSignalSchema`, in `packages/core/src/feedback.ts`, and the `Feedback` type is in `INTERFACES.md` and the parity test. The audit entry's `detail` is `{ factId }`.
+
+The migration is `0003_add_feedback.sql`, sha256 `04f3ad5dd10ca9d9e1b06dbb4a8fa7a4062cfa79a28ed02b6ed58a54f8cbcf90`. It holds the table, an index on `(namespace, fact_id, recorded_at)`, two triggers that refuse update and delete, and a comment on Postgres. Unlike `fact_confidence`, the row has its own identifier and a `namespace` column, because a feedback row is a thing of its own that an audit entry names.
+
+Contract cases, against both stores:
+
+- **G1** one audit entry, `feedback.recorded`, with `{ factId }`, and no fact or fixture audit entry changes.
+- **G2** a source and feedback in one change set share one operation identifier and name the source.
+- **G3** feedback on an invalidated fact is recorded.
+- **G4 to G6** a missing fact and a missing source are `not_found`; a repeated identifier is `already_exists`.
+- **N7** a fact of the other namespace is `not_found`.
+
+Registered counts rise to 58 in the first group, and to 19 and 20 in the second.
+
+SQLite adapter tests, in `feedback-migration.test.ts`. A direct `UPDATE` or `DELETE` on `feedback` is refused. A database is made with only the first two migrations and a fact; opening it applies the third, and a commit records feedback on that fact.
+
+Unit tests:
+
+- **`recordFeedback`, 5 tests:** with a source, with none, on a fact no longer live, no fact changes, a missing fact.
+- **`giveFeedback`, 6 tests,** under the five names the item gives and "writes no audit entry that contains the comment". The secret is a GitHub token assembled from fragments, so that the scan of tracked files of FL-022 does not find it.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| SQLite refuses feedback on a fact that is not live | G3 |
+| The in-memory store skips the check that the fact exists | G4, N7 |
+| `giveFeedback` ignores the result of the secret check | "refuses a comment that contains a secret and stores nothing" |
+
+`pnpm check`:
+
+```text
+$ biome format .
+Checked 293 files. No fixes applied.
+$ biome lint .
+Checked 293 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  80 passed (80)
+      Tests  870 passed (870)
+```
+
+`INTERFACES.md` gains `Feedback`, the new `Change`, `Operation`, `ReasonCode`, action and target kind, `giveFeedback` with `FeedbackFollowUp` under "Use cases", and the detail of `feedback.recorded`. `SCHEMA.md` describes the table under "Added by later migrations", lists the new values in the notes on the columns, and drops the row from "Planned additions". `SYSTEM-BOUNDARIES.md` lists `recordFeedback` in `core` and `giveFeedback` in `graph-rag`.
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the fourth commit: https://github.com/Johnmark-Tech/factloom/actions/runs/43992326872.
+
+Differences from the item:
+
+- A blank comment is treated as no comment, so no empty source is stored.
+- The feedback row records the trigger given to the call, which is also the change set's trigger.
+- When the operation commit was made, `pnpm check` ran with the use case's new files present in the working tree but not yet exported; the use case was committed and checked next.
 
 ### FL-059: give_feedback tool
 
