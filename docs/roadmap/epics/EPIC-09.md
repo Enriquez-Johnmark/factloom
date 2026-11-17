@@ -98,7 +98,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-054 | Anchor repair for moved and renamed files | 3 | FL-050 | Completed |
 | FL-055 | Usage tracking | 3 | FL-015, FL-031, FL-058 | Under Review |
 | FL-065 | Archive and unarchive operations | 3 | FL-055, FL-058 | Completed |
-| FL-073 | Archived facts left out of recall, and the archiving job | 3 | FL-065, FL-048, FL-058 | Pending |
+| FL-073 | Archived facts left out of recall, and the archiving job | 3 | FL-065, FL-048, FL-058 | Completed |
 
 ### FL-048: Maintenance run entry point
 
@@ -1537,7 +1537,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-065, FL-048, FL-058 |
 | Requirements | REQ-23, REQ-03, REQ-24 |
@@ -1583,17 +1583,89 @@ Differences from the item:
 - [`GLOSSARY.md`](../../../GLOSSARY.md): an archived fact is still a live fact.
 
 **Acceptance criteria.**
-- [ ] Contract cases, against both stores, with a fixed clock: an archived fact is not returned by either search lane or by `listFacts` with `touchingEntityIds` when archived facts are excluded, and is returned by each when they are included; `getFact` returns it; `listFacts` by subject and predicate returns it.
-- [ ] A contract case shows that with a limit of 1, a lane returns a matching fact that is not archived although an archived fact matches better: the filter runs before the limit.
-- [ ] A unit test of `recall` shows an archived fact is left out by default, returned with `includeArchived`, and returned when an as-of date is given.
-- [ ] A test of the `recall` tool handler shows that an archived fact returned with `include_archived` is still archived afterwards, and that no audit entry was written by the call.
-- [ ] Unit tests of the job with a fixed clock: a current fact recorded 200 days ago with no usage is archived; one recalled 10 days ago is not; an ended fact is not; a fact recorded 10 days ago is not.
-- [ ] A unit test shows that in a store whose usage tracking began 30 days ago, a fact recorded 200 days ago is not archived.
-- [ ] A unit test shows that under `human_approval` nothing is archived and the fact is counted as flagged.
-- [ ] Every audit entry written by the job has trigger `maintenance` and reason code `unused`.
-- [ ] A test of the tool list shows the `recall` tool's input schema includes `include_archived` with a description, and the stdio test of the `recall` tool (FL-058) still passes.
-- [ ] `pnpm check` exits 0.
+- [x] Contract cases, against both stores, with a fixed clock: an archived fact is not returned by either search lane or by `listFacts` with `touchingEntityIds` when archived facts are excluded, and is returned by each when they are included; `getFact` returns it; `listFacts` by subject and predicate returns it.
+- [x] A contract case shows that with a limit of 1, a lane returns a matching fact that is not archived although an archived fact matches better: the filter runs before the limit.
+- [x] A unit test of `recall` shows an archived fact is left out by default, returned with `includeArchived`, and returned when an as-of date is given.
+- [x] A test of the `recall` tool handler shows that an archived fact returned with `include_archived` is still archived afterwards, and that no audit entry was written by the call.
+- [x] Unit tests of the job with a fixed clock: a current fact recorded 200 days ago with no usage is archived; one recalled 10 days ago is not; an ended fact is not; a fact recorded 10 days ago is not.
+- [x] A unit test shows that in a store whose usage tracking began 30 days ago, a fact recorded 200 days ago is not archived.
+- [x] A unit test shows that under `human_approval` nothing is archived and the fact is counted as flagged.
+- [x] Every audit entry written by the job has trigger `maintenance` and reason code `unused`.
+- [x] A test of the tool list shows the `recall` tool's input schema includes `include_archived` with a description, and the stdio test of the `recall` tool (FL-058) still passes.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests of `recall`, the handler and the job. The contract suite against both stores. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the updated `INTERFACES.md`, `SCHEMA.md` and `MCP-TOOLS.md`.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in eight commits and this record:
+
+1. `docs: design leaving archived facts out of recall and listing unused facts in INTERFACES.md`;
+2. `feat(core): leave archived facts out of the lanes on request, and add listUnusedFacts, in both stores`;
+3. `feat(graph-rag): leave archived facts out of recall for a question about now, unless includeArchived`;
+4. `feat(mcp-server): add include_archived to the recall tool and archived_at to its output`;
+5. `feat(maintenance): add the job that archives unused facts`;
+6. `feat(mcp-server): run the archiving job in maintenance, after FACTLOOM_ARCHIVE_AFTER_DAYS`;
+7. `docs: add include_archived, archived_at and FACTLOOM_ARCHIVE_AFTER_DAYS to MCP-TOOLS.md`;
+8. `docs(mcp-server): describe the archiving job`;
+
+The item was started while FL-048, on which it depends, was `Under Review`. Only the owner's run of the session start hooks remains there.
+
+Built:
+
+- **The filter in the lanes.** `searchFactsByVector`, `searchFactsByKeyword` and `listFacts` take an optional `excludeArchived`. The stores apply it with the time predicate, before the limit: in SQLite it is a `NOT EXISTS` on the archiving in force in the same query; in `listFacts` it is one more fixed fragment of the query's shape. Every other read returns archived facts.
+- **`recall`** gains `includeArchived`. It passes `excludeArchived` to all three lanes, the graph lane included, only when neither an as-of nor a known-at date is given and `includeArchived` is not set. The result's facts carry `archivedAt` from FL-065.
+- **The tool.** `recall` takes `include_archived`, with a description, and returns `archived_at` for each fact. The handler only translates the option and records usage, as FL-055 specifies.
+- **`listUnusedFacts`**, added to `MemoryStore` in both stores, returns the current facts at a moment that are not archived, were recorded before a date and were not recalled since it. It returns nothing until usage tracking began on or before that date, so requirement 5 is met inside each store. In SQLite it is one query.
+- **The job.** `archiveUnusedFacts` archives each fact `listUnusedFacts` returns, one commit each, with trigger `maintenance` and reason `unused`. Under `human_approval` it archives nothing and reports each one as flagged. It is registered last, as `archive_unused_facts`.
+- **The period.** `FACTLOOM_ARCHIVE_AFTER_DAYS`, a whole positive number with a default of 180, is labelled in `MCP-TOOLS.md` as a placeholder until Q-57 is answered.
+
+Contract cases, against both stores, with a fixed clock (as of now and known at now):
+
+- **Y1:** with `pg16` archived, the keyword lane, the vector lane and `listFacts` with `touchingEntityIds` leave it out when asked, and return it otherwise. `getFact` returns it with its `archivedAt`, and `listFacts` by subject and predicate returns it.
+- **Y2:** with a limit of 1, the vector lane returns `node22` although the archived `pg16` is nearer.
+- **Y3:** `listUnusedFacts` returns nothing before usage tracking began, `pg16` once tracking began before the date, nothing for a date before tracking began, and nothing once `pg16` is archived.
+
+The count of group 1 is now 89.
+
+Other tests:
+
+- **`recall`, unit tests:** an archived fact is left out by default, and returned with `includeArchived` and with an as-of date. A second test, with only the graph lane weighted, shows the graph lane leaves it out too; the default weights give that lane 0, so no other test could see it.
+- **The tool:**
+  - an archived fact is left out by default;
+  - with `include_archived` it is returned with its `archived_at`;
+  - it is still archived afterwards, and the call wrote no audit entry;
+  - the tool list shows `include_archived` with a description;
+  - the stdio test of FL-058 still passes.
+- **The job, unit tests with a fixed clock:**
+  - a current fact recorded 200 days ago and never recalled is archived, with trigger `maintenance` and reason `unused`;
+  - none is archived that was recalled 10 days ago, has ended, or was recorded 10 days ago;
+  - nothing is archived when tracking began 30 days ago;
+  - under `human_approval` nothing is archived and the fact is flagged.
+- **The configuration:** `FACTLOOM_ARCHIVE_AFTER_DAYS` is read, and a value that is not a whole positive number is refused with `invalid_input`.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| `recall` leaves archived facts out of dated questions too | the recall unit test |
+| The graph lane ignores the filter | the graph-lane unit test |
+| The job ignores `human_approval` | the human-approval test |
+| The in-memory store ignores when tracking began | the 30-day test and Y3 |
+| The in-memory store ignores recent usage | the 200-day test, the human-approval test and Y3 |
+
+The first graph-lane break passed the default-settings test. That is why the test with only the graph lane weighted was added.
+
+`pnpm check`:
+
+```text
+      Tests  1074 passed (1074)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the sixth commit, which holds all of the code: https://github.com/Johnmark-Tech/factloom/actions/runs/44008028719.
+
+Differences from the item:
+
+- **The filter is an optional input** of the three store reads, `excludeArchived`, so that their other callers are unchanged.
+- **`archived_at` is in the `recall` output only.** The other tools' fact output is unchanged.
+- **The archiving is one commit per fact**, so that a fact invalidated meanwhile does not stop the others.
