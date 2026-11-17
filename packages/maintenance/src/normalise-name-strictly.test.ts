@@ -13,6 +13,12 @@ describe('normaliseNameStrictly', () => {
     expect(normaliseNameStrictly('conﬁg')).toBe(normaliseNameStrictly('config'));
   });
 
+  it('keeps C, C++ and C# apart, whose names differ only in a sign that carries meaning', () => {
+    const forms = ['C', 'C++', 'C#', 'F#'].map(normaliseNameStrictly);
+
+    expect(new Set(forms).size).toBe(4);
+  });
+
   it('keeps names with different letters apart', () => {
     expect(normaliseNameStrictly('Postgres')).not.toBe(normaliseNameStrictly('PostgreSQL'));
     expect(normaliseNameStrictly('pnpm')).not.toBe(normaliseNameStrictly('npm'));
