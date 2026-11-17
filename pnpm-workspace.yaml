@@ -9,6 +9,15 @@ allowBuilds:
   onnxruntime-node: false
   protobufjs: false
 
+# Versions forced on dependencies of Stryker, which is run by hand and never by `pnpm check`, to
+# clear advisories that its newest release (10.1.1) still pulls in: typed-rest-client pins qs 6.15.1
+# (GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g, GHSA-6pq8-jhm2-2vcw), and Stryker
+# asks for minimatch ~10.2.4 (GHSA-g3hv-75wg-m249, fixed only in 11.0.1). Stryker calls minimatch(),
+# Minimatch#hasMagic and Minimatch#match, which version 11 keeps. Remove both once Stryker moves on.
+overrides:
+  "typed-rest-client>qs": 6.17.1
+  "@stryker-mutator/core>minimatch": 11.0.9
+
 # Every shared version is pinned here, once, and exactly. A package.json refers to it with "catalog:".
 catalog:
   # The Anthropic API client, used only by apps/mcp-server for the LlmClient. It releases often, so it is pinned and upgraded on purpose.
@@ -43,3 +52,6 @@ catalog:
   yaml: 2.9.1
   # Schemas and validation. Every data type is derived from a Zod schema.
   zod: 4.6.7
+
+minimumReleaseAgeExclude:
+  - minimatch@11.0.9
