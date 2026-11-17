@@ -1,0 +1,17 @@
+{
+  "name": "factloom-spike-purge",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Standalone spike: applies the purge design of FL-047 to a database built from the project's migrations and searches for the purged text. Not part of the workspace.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "check": "node check.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "13.1.1",
+    "sqlite-vec": "0.1.9"
+  }
+}
