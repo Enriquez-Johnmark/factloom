@@ -91,7 +91,9 @@ The agent's own plan and Factloom's key are separate ([`MCP-TOOLS.md`](../../doc
 
 ## Running maintenance
 
-Factloom runs no daemon. Maintenance is the command above, started by hand, by a scheduler, or by a host's session start hook. It runs each job once, one after another, and prints the report to standard output as one JSON document: the start and end times, and for each job its name, `ok` or `failed`, and the items it examined, changed, flagged for a person, and failed on. It exits with 0 when no job failed. No job exists yet; the jobs of EPIC-09 are added to `src/maintenance-jobs.ts`.
+Factloom runs no daemon. Maintenance is the command above, started by hand, by a scheduler, or by a host's session start hook. It runs each job once, one after another, and prints the report to standard output as one JSON document: the start and end times, and for each job its name, `ok` or `failed`, and the items it examined, changed, flagged for a person, and failed on, with the identifier and reason of each flagged item. It exits with 0 when no job failed. The jobs of EPIC-09 are added to `src/maintenance-jobs.ts`.
+
+The one job so far is `verify_anchored_facts` (FL-050). It reads the git repository at `FACTLOOM_REPO`, by default the working directory, at `HEAD` and never the working tree. For each fact not verified for seven days whose source is a file at a commit, it records `confirmed` when the file is unchanged since that commit, `inconclusive` when it changed, and `source_missing` when it is gone, which flags the fact for a person. It changes no fact and needs no API key. A fact from a commit that is not on the current branch is skipped. If `FACTLOOM_REPO` is not a git repository, the job fails and the command exits with 1.
 
 By hand, from `apps/mcp-server`:
 
