@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-17:** the first feature code exists. 47 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-024, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-035, FL-036, FL-037, FL-040, FL-044, FL-056, FL-057, FL-058, FL-066, FL-067, FL-068, FL-075, FL-076, FL-077. 2 are `Under Review`, waiting for the owner: FL-041, FL-069. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-17:** the first feature code exists. 48 of 77 work items are `Completed`: FL-001, FL-002, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-024, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-035, FL-036, FL-037, FL-040, FL-044, FL-045, FL-056, FL-057, FL-058, FL-066, FL-067, FL-068, FL-075, FL-076, FL-077. 2 are `Under Review`, waiting for the owner: FL-041, FL-069. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -106,7 +106,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-042](epics/EPIC-08.md#fl-042-automatic-correction-inside-remember) | Automatic correction inside remember | EPIC-08 | FL-035, FL-041, FL-039 | Pending |
 | [FL-043](epics/EPIC-08.md#fl-043-proposed-changes-storage-and-operations) | Proposed changes: storage and operations | EPIC-08 | FL-042 | Pending |
 | [FL-044](epics/EPIC-08.md#fl-044-revisevalidtime-operation) | reviseValidTime operation | EPIC-08 | FL-010 | Completed |
-| [FL-045](epics/EPIC-08.md#fl-045-confidence-history-and-adjustconfidence) | Confidence history and adjustConfidence | EPIC-08 | FL-015, FL-016, FL-017 | Pending |
+| [FL-045](epics/EPIC-08.md#fl-045-confidence-history-and-adjustconfidence) | Confidence history and adjustConfidence | EPIC-08 | FL-015, FL-016, FL-017 | Completed |
 | [FL-046](epics/EPIC-08.md#fl-046-feedback-operation-and-migration) | Feedback operation and migration | EPIC-08 | FL-015, FL-022 | Pending |
 | [FL-047](epics/EPIC-08.md#fl-047-purge-design-proven-by-a-spike) | Purge design, proven by a spike | EPIC-08 | FL-015 | Pending |
 | [FL-059](epics/EPIC-08.md#fl-059-givefeedback-tool) | give_feedback tool | EPIC-08 | FL-046, FL-036, FL-058 | Pending |
