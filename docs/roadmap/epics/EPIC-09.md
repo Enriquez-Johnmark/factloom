@@ -93,7 +93,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-051 | LLM verification as the last rung | 3 | FL-062, FL-028, FL-022 | Pending |
 | FL-052 | Entity merge with read resolution | 3 | FL-015, FL-016, FL-017 | Completed |
 | FL-063 | Undo a merge and refuse a conflicting merge | 3 | FL-052 | Completed |
-| FL-053 | Duplicate entity detection by name | 3 | FL-048, FL-052, FL-063 | Pending |
+| FL-053 | Duplicate entity detection by name | 3 | FL-048, FL-052, FL-063 | Completed |
 | FL-064 | Duplicate entity detection by similarity | 3 | FL-053, FL-028 | Pending |
 | FL-054 | Anchor repair for moved and renamed files | 3 | FL-050 | Completed |
 | FL-055 | Usage tracking | 3 | FL-015, FL-031, FL-058 | Under Review |
@@ -949,7 +949,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-048, FL-052, FL-063 |
 | Requirements | REQ-20, REQ-24 |
@@ -1005,21 +1005,94 @@ The original item was split in two. This one builds the job and its two stages t
 - `.claude/rules/engineering-principles.md`: no abstraction and no table without a use.
 
 **Acceptance criteria.**
-- [ ] The decision on the alias table is recorded in a decision record that names the use, or says there is none.
-- [ ] Contract suite cases for `listEntities` pass against both stores: paging returns every entity once; no entity of another namespace is returned.
-- [ ] A unit test for stage 1 passes with an LLM client and an embedder that both fail if called: two entities whose names differ only in punctuation and case are merged under `automatic`, into the one created earlier.
-- [ ] A unit test shows two entities with equal names and different types are not compared.
-- [ ] A unit test shows that under `human_approval` the same pair is reported and no merge row is written.
-- [ ] A unit test shows a pair with an undone merge is not merged again. The store given to the job is wrapped so that `listEntityMerges` returns one merge of the pair with `undone_at` set.
-- [ ] A unit test shows a merge refused with `conflict` is counted as flagged and the run continues. The store given to the job is wrapped so that the commit of the merge returns `conflict`.
-- [ ] A unit test shows a second run over the same memory makes no further merge.
-- [ ] Unit tests of the stricter normalisation pass with these names: "treats names that differ only in punctuation as equal", "treats compatibility forms of a character as equal", "keeps names with different letters apart".
-- [ ] Every merge made by the job has an audit entry with trigger `maintenance`.
-- [ ] `pnpm check` exits 0.
+- [x] The decision on the alias table is recorded in a decision record that names the use, or says there is none.
+- [x] Contract suite cases for `listEntities` pass against both stores: paging returns every entity once; no entity of another namespace is returned.
+- [x] A unit test for stage 1 passes with an LLM client and an embedder that both fail if called: two entities whose names differ only in punctuation and case are merged under `automatic`, into the one created earlier.
+- [x] A unit test shows two entities with equal names and different types are not compared.
+- [x] A unit test shows that under `human_approval` the same pair is reported and no merge row is written.
+- [x] A unit test shows a pair with an undone merge is not merged again. The store given to the job is wrapped so that `listEntityMerges` returns one merge of the pair with `undone_at` set.
+- [x] A unit test shows a merge refused with `conflict` is counted as flagged and the run continues. The store given to the job is wrapped so that the commit of the merge returns `conflict`.
+- [x] A unit test shows a second run over the same memory makes no further merge.
+- [x] Unit tests of the stricter normalisation pass with these names: "treats names that differ only in punctuation as equal", "treats compatibility forms of a character as equal", "keeps names with different letters apart".
+- [x] Every merge made by the job has an audit entry with trigger `maintenance`.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests with failing LLM and embedder clients and the in-memory store. The contract suite for the new read. `pnpm check`.
 
 **Completion evidence.** The commit; the decision record on the alias table; the passing check output.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in seven commits and this record:
+
+1. `docs: add ADR 0021, no alias table because merges serve as aliases`;
+2. `docs: drop the planned alias table from SCHEMA.md and the watch list`;
+3. `docs: add listEntities to the MemoryStore of INTERFACES.md`;
+4. `feat(core): add listEntities, paged by identifier, in both stores`;
+5. `feat(maintenance): add duplicate entity detection by strict name, with stages FL-064 can extend`;
+6. `feat(mcp-server): run duplicate entity detection in maintenance`;
+7. `docs(mcp-server): describe the duplicate entity job`;
+
+The item was started while FL-048, on which it depends, was `Under Review`. Only the owner's run of the session start hooks remains there, and this item changes neither hook.
+
+**The alias table.** [ADR 0021](../../architecture/adr/0021-no-alias-table-merges-serve-as-aliases.md) records that no use was found that merge resolution does not serve, and the table is not built:
+
+- the entity merged from keeps its row and name;
+- resolution at write time finds it by name;
+- reads resolve it to the entity merged into;
+- no work item writes an alias.
+
+Stage 2 is therefore left out, and requirement 7 does not apply. The planned row is removed from `SCHEMA.md`, and the watch list in `OPEN-QUESTIONS.md`, section C, points to the decision.
+
+Built:
+
+- **`listEntities`.** Added to `MemoryStore` in both stores, paged by a limit and the identifier after which to start, in identifier order. In SQLite it is one query on the primary key. Contract cases:
+  - **X1:** paging two at a time returns every entity once;
+  - **X2:** a limit below 1 is `invalid_input`;
+  - **N11:** no entity of the other namespace is returned.
+
+  The counts are now 81 for group 1, and 38 (in-memory) and 40 (SQLite) for group 2.
+- **`normaliseNameStrictly`** in `@factloom/maintenance`: NFKC, then `normaliseEntityName`, then every punctuation mark, symbol and space removed.
+- **The job.** `findDuplicateEntities`:
+  - reads every entity page by page, and the merges;
+  - compares pairs of the same type among the entities not merged into another, leaving out any pair whose merge was undone;
+  - runs the stages in order, passing on the pairs no stage decided; the only stage now is `NAME_STAGE`, and FL-064 adds its two after it;
+  - under `automatic`, merges a pair found the same into the entity created earlier with `mergeEntities`, trigger `maintenance` and reason `same_entity`;
+  - under `human_approval`, reports the pair as flagged;
+  - flags a merge refused with `conflict`, with the facts in the way, and counts any other refusal as failed;
+  - skips any pair whose entity this run merged into another.
+
+  It is registered as `find_duplicate_entities`, after the anchor repair.
+
+Unit tests, each with an LLM client and an embedder that fail if called:
+
+- **Stage 1:** `Node.js` and `nodejs` are merged into the earlier one, with an audit entry with trigger `maintenance`.
+- **Types:** equal names of two types are not compared.
+- **Policy:** `human_approval` reports the pair and writes no merge.
+- **Undone merges:** a store wrapped so that `listEntityMerges` returns an undone merge of the pair makes no merge.
+- **Conflicts:** a store wrapped so that the merge's commit returns `conflict` gives one flagged pair, `merge_conflict: f-1, f-2`, and the next pair is still merged.
+- **A second run** makes no further merge.
+- **The strict normalisation:** the three named tests, "treats names that differ only in punctuation as equal", "treats compatibility forms of a character as equal" (full-width letters and the ligature ﬁ) and "keeps names with different letters apart".
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| Merge into the later entity | the stage 1, conflict and second-run tests |
+| Compare entities of different types | the different-types test |
+| Ignore undone merges | the undone-merge test |
+| Ignore `human_approval` | the human-approval test |
+
+`pnpm check`:
+
+```text
+      Tests  1045 passed (1045)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the sixth commit: https://github.com/Johnmark-Tech/factloom/actions/runs/44005684674.
+
+Differences from the item:
+
+- **No alias stage, and no alias table**, by ADR 0021.
+- **A flagged pair's identifier** is written `<merged from>-><merged into>`. Its reason is `same_entity` under `human_approval`, or `merge_conflict:` followed by the facts in the way.
 
 ### FL-064: Duplicate entity detection by similarity
 
