@@ -91,7 +91,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-071 | Deterministic verification: function check by text search | 3 | FL-050, FL-018 | Pending |
 | FL-062 | Deterministic verification: manifest version check and succession | 3 | FL-050, FL-018 | Pending |
 | FL-051 | LLM verification as the last rung | 3 | FL-062, FL-028, FL-022 | Pending |
-| FL-052 | Entity merge with read resolution | 3 | FL-015, FL-016, FL-017 | Pending |
+| FL-052 | Entity merge with read resolution | 3 | FL-015, FL-016, FL-017 | Completed |
 | FL-063 | Undo a merge and refuse a conflicting merge | 3 | FL-052 | Pending |
 | FL-053 | Duplicate entity detection by name | 3 | FL-048, FL-052, FL-063 | Pending |
 | FL-064 | Duplicate entity detection by similarity | 3 | FL-053, FL-028 | Pending |
@@ -542,7 +542,7 @@ The repository interface is declared in `@factloom/maintenance`, its only consum
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-015, FL-016, FL-017 |
 | Requirements | REQ-20 (REQ-CA-05), REQ-15, REQ-24 |
@@ -596,20 +596,83 @@ The original item was split in two. This one adds the table, the operation `merg
 - REQ-CA-05: every merge writes an audit entry, and no operation deletes a fact row.
 
 **Acceptance criteria.**
-- [ ] Contract suite cases pass against both stores: two entities of one type, each with facts; after `mergeEntities`, `listFacts` by either identifier returns the facts of both with `subject` set to the entity merged into; each search lane returns a fact recorded against the merged entity with the same `subject`.
-- [ ] A contract case shows the number and content of entity rows and fact rows are identical before the merge and after it.
-- [ ] A contract case shows two entities of different types are merged, and `listFacts` by either identifier returns the facts of both.
-- [ ] A contract case shows that after the merge of two entities, recording a second open-ended value for a single-valued predicate against the merged identifier fails with `conflict`, when the other entity holds an open-ended value for that predicate.
-- [ ] Contract cases cover the refusals: a self-merge is `invalid_input`; a merge of an already merged entity is `already_exists`; a merge into an entity that is itself merged is `invalid_input`; an entity in another namespace is `not_found`.
-- [ ] A contract case shows one audit entry for the merge, with operation `merge` and action `entity.merged`.
-- [ ] A contract case shows `listEntityMerges` returns the merge with its two entities, its time and a null `undone_at`, and returns nothing from another namespace.
-- [ ] A SQLite adapter test shows a direct `DELETE` on `entity_merge`, and any `UPDATE` other than setting `undone_at` once, are refused.
-- [ ] A SQLite adapter test opens a database created by the earlier migrations only, applies the new one, and reads an existing fact unchanged.
-- [ ] `pnpm check` exits 0.
+- [x] Contract suite cases pass against both stores: two entities of one type, each with facts; after `mergeEntities`, `listFacts` by either identifier returns the facts of both with `subject` set to the entity merged into; each search lane returns a fact recorded against the merged entity with the same `subject`.
+- [x] A contract case shows the number and content of entity rows and fact rows are identical before the merge and after it.
+- [x] A contract case shows two entities of different types are merged, and `listFacts` by either identifier returns the facts of both.
+- [x] A contract case shows that after the merge of two entities, recording a second open-ended value for a single-valued predicate against the merged identifier fails with `conflict`, when the other entity holds an open-ended value for that predicate.
+- [x] Contract cases cover the refusals: a self-merge is `invalid_input`; a merge of an already merged entity is `already_exists`; a merge into an entity that is itself merged is `invalid_input`; an entity in another namespace is `not_found`.
+- [x] A contract case shows one audit entry for the merge, with operation `merge` and action `entity.merged`.
+- [x] A contract case shows `listEntityMerges` returns the merge with its two entities, its time and a null `undone_at`, and returns nothing from another namespace.
+- [x] A SQLite adapter test shows a direct `DELETE` on `entity_merge`, and any `UPDATE` other than setting `undone_at` once, are refused.
+- [x] A SQLite adapter test opens a database created by the earlier migrations only, applies the new one, and reads an existing fact unchanged.
+- [x] `pnpm check` exits 0.
 
 **Validation.** The contract suite against both stores. SQLite adapter tests for the triggers and the migration. Unit tests of the operation with the in-memory store. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the updated `INTERFACES.md` and `SCHEMA.md` with the names this item settled.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in three commits, each checked on its own: `feat(storage): add the entity merge migration`, `feat(core): add merge_entities and resolution through merges to both stores`, and `feat(core): add the mergeEntities operation`.
+
+The proposed names are kept: the change `merge_entities`, the operation `merge`, the action `entity.merged`, the reason code `same_entity`, and the read `listEntityMerges`.
+
+- **The merge row.** `EntityMerge` is a core schema in `packages/core/src/entity-merge.ts`, in `INTERFACES.md` and the parity test, whose count rises to 26.
+- **The audit entry** targets the entity merged from, with `detail` `{ intoEntityId, mergeId }`.
+- **The migration** is `0005_add_entity_merge.sql`, sha256 `97d6364d7f5526a2ecefb4a34fcdea65ac22b4ccf73433d993252de0b101bd24`. It holds the table, with `from <> into` and `undone_at >= merged_at` checks, a partial unique index so that an entity is merged into at most one other at a time, and an index for resolution. Its triggers refuse a delete and every update but setting `undone_at` once, so FL-063 needs no migration. It carries the comment on Postgres. The purge inventory of FL-061 required its six columns to be classified, and they are listed as not content.
+
+Resolution through the merges in force is done in the store, in both:
+
+- **SQLite.** The fragments are in `packages/storage/src/entity-resolution-sql.ts`, each filtering on the namespace. A subject filter and a touching filter of `listFacts` expand to every identifier merged with the ones asked for. `withSources` shows `subject` and `objectEntity` as the entity merged into, so both lanes and every read return the same resolution. The single-value query of `commit` expands the subject the same way.
+- **The in-memory store** follows the same rules.
+
+The fact rows keep their own identifiers; the read methods do not change shape.
+
+Contract cases, against both stores, in the group "single-value rule and namespaces":
+
+- **M1:**
+  - after merging `e-twin` into `e-repo`, `listFacts` by either identifier returns the facts of both, with `subject` `e-repo`;
+  - both lanes return the twin's fact with `subject` `e-repo`;
+  - a touching filter on `e-repo` finds it.
+- **M2:** the entity rows and every fact row, read with `time: 'all'`, are byte for byte the same before and after the merge.
+- **M3:** entities of different types merge and are read together.
+- **M4:** after the merge, an open-ended value recorded against `e-twin` for a single-valued predicate fails with `conflict` naming `e-repo`'s `pg16`.
+- **M5:** a self-merge is `invalid_input`; merging an entity already merged is `already_exists`; a merge into a merged entity is `invalid_input`; an entity of the other namespace is `not_found`.
+- **M6:** one audit entry, operation `merge`, action `entity.merged`.
+- **M7:** `listEntityMerges` returns the merge with a null `undone_at`, and nothing for the other namespace.
+
+The count of the group is 26 for the in-memory store and 27 for SQLite.
+
+SQLite adapter tests, in `entity-merge-migration.test.ts`:
+
+- **Triggers.** A delete and an update of `into_entity_id` or `merged_at` are refused. Setting `undone_at` is accepted once, and refused the second time.
+- **Upgrade.** A database built by the first four migrations, with a fact, opens with the fifth applied and reads the fact unchanged.
+
+`mergeEntities` has 4 unit tests with the in-memory store: the merge recorded and returned; the trigger and reason code in the audit entry; a self-merge refused with nothing recorded; a missing entity.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| SQLite's subject filter not resolved | M1, M3 |
+| SQLite's results not shown under the entity merged into | M1 |
+| SQLite's single-value rule not resolved | M4 |
+| The in-memory store's resolution turned off | M1, M3, M4 |
+| The in-memory store accepts a merge into a merged entity | M5 |
+
+`pnpm check`:
+
+```text
+ Test Files  88 passed (88)
+      Tests  926 passed (926)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the third commit: https://github.com/Johnmark-Tech/factloom/actions/runs/43997138148.
+
+`INTERFACES.md`, `SCHEMA.md` ("Added by later migrations", the lists of operations, actions and reason codes, and "Planned additions", which keeps only `entity_alias`) and `SYSTEM-BOUNDARIES.md` record the names.
+
+Differences from the item:
+
+- **`findEntities`** is not resolved: it finds entity rows by name, and the item's list of resolved reads does not name it.
+- **Merge identifiers** are unique, and a repeated one is `already_exists`.
 
 ### FL-063: Undo a merge and refuse a conflicting merge
 
