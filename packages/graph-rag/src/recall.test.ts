@@ -11,6 +11,7 @@ import {
   type NewSource,
   type OperationDeps,
   parseDateInput,
+  purgeContent,
   recordFacts,
   type Timestamp,
 } from '@factloom/core';
@@ -500,6 +501,51 @@ describe('recall', () => {
       redisNeedsJemalloc,
       shopUsesVitest,
     ]);
+  });
+
+  it('leaves a purged fact out of the graph lane, even for a known-at date before the purge', async () => {
+    const memory = createMemory();
+    const shopUsesRedis = await recordOne(
+      memory.on('2026-01-10'),
+      draft({
+        subject: SHOP,
+        predicate: 'depends_on',
+        object: REDIS,
+        statement: 'The shop API keeps its sessions in redis.',
+        validFrom: null,
+        newEntities: [SHOP, REDIS],
+      }),
+    );
+    const shopUsesVitest = await recordOne(
+      memory.on('2026-01-11'),
+      draft({
+        subject: SHOP,
+        predicate: 'depends_on',
+        object: 'vitest',
+        statement: 'The shop API is tested with vitest.',
+        validFrom: null,
+      }),
+    );
+    const vitest = await memory.store.getFact({ namespace: NAMESPACE, factId: shopUsesVitest });
+    const sourceId = vitest.ok ? vitest.value?.sources[0]?.id : undefined;
+    if (sourceId === undefined) throw new Error('The source is missing.');
+    const purged = await purgeContent(memory.on('2026-02-01'), {
+      namespace: NAMESPACE,
+      trigger: 'person',
+      reasonCode: 'secret_stored',
+      sourceId,
+    });
+    if (!purged.ok) throw new Error(purged.error.message);
+    const found = await memory.store.getFact({ namespace: NAMESPACE, factId: shopUsesRedis });
+    if (!found.ok || found.value === null) throw new Error('The fact is missing.');
+
+    // As-of date: now (2026-04-01). Known-at date: 2026-01-20, when the purged fact was still believed.
+    const ranked = await searchFactsByGraph(
+      { store: memory.store },
+      { namespace: NAMESPACE, time: { validAt: at(NOW), knownAt: at('2026-01-20') }, found: [found.value] },
+    );
+
+    expect(ranked.ok && ranked.value.map((fact) => fact.fact.id)).toEqual([shopUsesRedis]);
   });
 
   it('asks each lane for as many facts as the limit when the limit is larger than 50', async () => {

@@ -66,7 +66,7 @@ function entitiesOf(fact: FactWithSources): EntityId[] {
 /**
  * The graph lane: the facts that pass the time filter and touch an entity of the facts the
  * other lanes found, ranked by how many of those entities each touches, then by how recently
- * it was recorded, then by identifier.
+ * it was recorded, then by identifier. A purged fact is left out.
  */
 export async function searchFactsByGraph(
   deps: Pick<OperationDeps, 'store'>,
@@ -90,12 +90,16 @@ export async function searchFactsByGraph(
   if (!touching.ok) return touching;
   const touchedSeeds = (fact: FactWithSources): number =>
     entitiesOf(fact).filter((entityId) => seeds.has(entityId)).length;
-  const ranked = [...touching.value].sort(
-    (a, b) =>
-      touchedSeeds(b) - touchedSeeds(a) ||
-      b.fact.createdAt.localeCompare(a.fact.createdAt) ||
-      a.fact.id.localeCompare(b.fact.id),
-  );
+  // A purged fact has no keyword or vector entry, and the graph lane leaves it out as well
+  // (ADR 0012, "The phase 2 design", question 5): its text is the marker.
+  const ranked = touching.value
+    .filter((found) => found.fact.purgedAt === null)
+    .sort(
+      (a, b) =>
+        touchedSeeds(b) - touchedSeeds(a) ||
+        b.fact.createdAt.localeCompare(a.fact.createdAt) ||
+        a.fact.id.localeCompare(b.fact.id),
+    );
   return ok(ranked);
 }
 
