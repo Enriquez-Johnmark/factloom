@@ -92,7 +92,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-062 | Deterministic verification: manifest version check and succession | 3 | FL-050, FL-018 | Pending |
 | FL-051 | LLM verification as the last rung | 3 | FL-062, FL-028, FL-022 | Pending |
 | FL-052 | Entity merge with read resolution | 3 | FL-015, FL-016, FL-017 | Completed |
-| FL-063 | Undo a merge and refuse a conflicting merge | 3 | FL-052 | Pending |
+| FL-063 | Undo a merge and refuse a conflicting merge | 3 | FL-052 | Completed |
 | FL-053 | Duplicate entity detection by name | 3 | FL-048, FL-052, FL-063 | Pending |
 | FL-064 | Duplicate entity detection by similarity | 3 | FL-053, FL-028 | Pending |
 | FL-054 | Anchor repair for moved and renamed files | 3 | FL-050 | Pending |
@@ -678,7 +678,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-052 |
 | Requirements | REQ-20 (REQ-CA-05), REQ-15, REQ-24 |
@@ -725,20 +725,79 @@ Differences from the item:
 - REQ-CA-05: every merge writes an audit entry, and no operation deletes a fact row.
 
 **Acceptance criteria.**
-- [ ] A contract case, against both stores, shows that after `undoEntityMerge`, `listFacts` by each identifier returns exactly the facts recorded against it, including one recorded while the merge was in force.
-- [ ] A contract case shows the number and content of entity rows and fact rows are identical before the merge, after it, and after its undo.
-- [ ] A contract case shows a chain: A merged into B, then B into C; `listFacts` by A returns the facts of all three under C, and each search lane returns them with the same `subject`.
-- [ ] A contract case shows that undoing the merge of B into C leaves the facts of A and B read under B, and those of C under C.
-- [ ] A contract case shows a merge is refused with `conflict`, with both facts in `relatedFactIds`, when the two entities hold different current values for a single-valued predicate, and that `listEntityMerges` then returns no merge.
-- [ ] A contract case shows two entities of different types that hold different current values for a single-valued predicate are refused in the same way, and are merged when they do not.
-- [ ] A contract case for an adapter that keeps its data in a file: one connection commits a merge while a second commits a conflicting fact for the other entity. Exactly one of the two commits succeeds.
-- [ ] Contract cases cover the other refusals: a second undo is `already_exists`; an unknown merge is `not_found`; a merge in another namespace is `not_found`; a cycle is `invalid_input`.
-- [ ] A contract case shows one audit entry for the undo, with operation `merge` and action `entity.merge_undone`.
-- [ ] `pnpm check` exits 0.
+- [x] A contract case, against both stores, shows that after `undoEntityMerge`, `listFacts` by each identifier returns exactly the facts recorded against it, including one recorded while the merge was in force.
+- [x] A contract case shows the number and content of entity rows and fact rows are identical before the merge, after it, and after its undo.
+- [x] A contract case shows a chain: A merged into B, then B into C; `listFacts` by A returns the facts of all three under C, and each search lane returns them with the same `subject`.
+- [x] A contract case shows that undoing the merge of B into C leaves the facts of A and B read under B, and those of C under C.
+- [x] A contract case shows a merge is refused with `conflict`, with both facts in `relatedFactIds`, when the two entities hold different current values for a single-valued predicate, and that `listEntityMerges` then returns no merge.
+- [x] A contract case shows two entities of different types that hold different current values for a single-valued predicate are refused in the same way, and are merged when they do not.
+- [x] A contract case for an adapter that keeps its data in a file: one connection commits a merge while a second commits a conflicting fact for the other entity. Exactly one of the two commits succeeds.
+- [x] Contract cases cover the other refusals: a second undo is `already_exists`; an unknown merge is `not_found`; a merge in another namespace is `not_found`; a cycle is `invalid_input`.
+- [x] A contract case shows one audit entry for the undo, with operation `merge` and action `entity.merge_undone`.
+- [x] `pnpm check` exits 0.
 
 **Validation.** The contract suite against both stores. Unit tests of the two operations with the in-memory store. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the section of `INTERFACES.md` that records the answer to technical requirement 5.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in three commits:
+
+1. `docs: settle in INTERFACES.md the single-value rule after a merge`, written before the code, as technical requirement 5 asks;
+2. `feat(core): resolve chains of merges, refuse conflicting merges and undo merges in both stores`;
+3. `feat(core): add the undoEntityMerge operation`.
+
+The answer to technical requirement 5 is in `INTERFACES.md`, "The single-value rule after a merge":
+
+- **The refusal.** A merge is refused when the two entities, each with everything already merged into it, hold live facts for a single-valued predicate with different objects as stored and overlapping valid periods.
+- **Same objects.** Two such facts with the same object stay, both live, restating each other.
+- **Later commits.** The store's rule inside `commit` keeps checking only the facts a change set records, so a later different value is still refused.
+
+Built:
+
+- **The changes.** `merge_entities` now carries `singleValuedPredicates`, which `mergeEntities` takes from its domain, as `singleValued` reaches the store for a recorded fact. A new change, `undo_entity_merge`, with the action `entity.merge_undone` and `detail` `{ mergeId }`, sets `undone_at` once. `undoEntityMerge` reads the merge, refuses an unknown one with `not_found` and an undone one with `already_exists`, and commits it.
+- **Chains.** Resolution follows whole chains of merges. In SQLite it is one recursive query per fragment, in `entity-resolution-sql.ts`: up the chain from the identifiers asked, to the ends of the chains, then down to everything merged into them. The in-memory store follows the same chain.
+- **Cycles.** FL-052's interim refusal of chains is removed. A merge whose target resolves to the entity merged from would make a cycle and is `invalid_input`, which also bounds the chains.
+- **The conflict check** is a query inside the commit's transaction, in both stores.
+
+Contract cases, against both stores:
+
+- **M8:** after an undo, each identifier reads exactly its own facts, a fact recorded during the merge included.
+- **M9:** the entity and fact rows are the same before a merge, after it, and after its undo.
+- **M10:** a chain, A into B and B into C; a read by A returns the facts of all three under C, and both lanes return A's fact with `subject` C.
+- **M11:** undoing B into C leaves the facts of A and B under B, and C's under C.
+- **M12:** different current values for `uses_database_version` refuse the merge with `conflict`, naming both facts, and no merge is recorded.
+- **M13:** two entities of different types with the same current value are merged, and both facts stay live under the entity merged into; a third entity with a different value is refused.
+- **M14:** a second undo is `already_exists`; an unknown merge, and a merge asked for in the other namespace, are `not_found`.
+- **M15:** one audit entry, operation `merge`, action `entity.merge_undone`, and `undoneAt` set.
+- **M5, rewritten:** a cycle is `invalid_input`, where a chain used to be refused.
+- **P2, for SQLite with two stores on one file:** the second store commits a conflicting fact for the entity to be merged, then the first commits the merge; exactly one succeeds, and the other is `conflict`.
+
+The count of the group is 35 for the in-memory store and 37 for SQLite. `undoEntityMerge` has 3 unit tests with the in-memory store.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| SQLite skips the merge conflict check | M12, M13, P2 |
+| SQLite resolves one step of a chain only | M10 |
+| SQLite skips the cycle check | M5 |
+| The in-memory store skips the merge conflict check | M12, M13 |
+
+P2 at first ran the merge before the fact, and passed with the merge's check removed, because the fact's own single-value check then refused it. It now commits the fact first, so that only the check inside the merge's commit can refuse, which is the case technical requirement 1 names.
+
+`pnpm check`:
+
+```text
+ Test Files  91 passed (91)
+      Tests  960 passed (960)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the third commit: https://github.com/Johnmark-Tech/factloom/actions/runs/43999339047.
+
+Differences from the item:
+
+- **The undo change** carries the merged-from entity, so that its audit entry can target it without a read in the store. The store checks that it matches the merge.
+- **Objects are compared as stored**, not resolved through merges, as the restatement rule compares them.
 
 ### FL-053: Duplicate entity detection by name
 
