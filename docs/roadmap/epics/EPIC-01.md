@@ -66,7 +66,7 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 |---|---|---|---|---|
 | FL-001 | Scaffold the pnpm workspace with one check command | 0 | None | Completed |
 | FL-002 | Run the check in continuous integration on Linux and macOS arm64 | 0 | FL-001 | Completed |
-| FL-003 | Install the packed server on a clean machine in CI | 1 | FL-002, FL-037 | Pending |
+| FL-003 | Install the packed server on a clean machine in CI | 1 | FL-002, FL-037 | Completed |
 
 ### FL-001: Scaffold the pnpm workspace with one check command
 
@@ -428,7 +428,7 @@ Two choices made while writing the workflow:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-002, FL-037 |
 | Requirements | REQ-12, REQ-29, REQ-11 |
@@ -476,13 +476,70 @@ Two choices made while writing the workflow:
 - [Git rules](../../../.claude/rules/git.md): no secret in the workflow.
 
 **Acceptance criteria.**
-- [ ] A workflow run shows the clean-install job passing on Linux and on macOS arm64. Its address is recorded.
-- [ ] The job log shows the five tool names and the recalled fact.
-- [ ] The job log shows the measured install size for each operating system. The two sizes are recorded in this work item.
-- [ ] With the server's entry file renamed in a local run of the job's script, the script exits non-zero. The output is recorded and the change removed.
-- [ ] `pnpm check` exits 0 with no built output present, and `git status --short` is empty after the build and pack commands.
-- [ ] Every `package.json` still has `"private": true`.
+- [x] A workflow run shows the clean-install job passing on Linux and on macOS arm64. Its address is recorded.
+- [x] The job log shows the five tool names and the recalled fact.
+- [x] The job log shows the measured install size for each operating system. The two sizes are recorded in this work item.
+- [x] With the server's entry file renamed in a local run of the job's script, the script exits non-zero. The output is recorded and the change removed.
+- [x] `pnpm check` exits 0 with no built output present, and `git status --short` is empty after the build and pack commands.
+- [x] Every `package.json` still has `"private": true`.
 
 **Validation.** The clean-install job on both operating systems; the local failure run; `pnpm check`.
 
 **Completion evidence.** The commits, the address of the passing workflow run, the measured sizes, and the output of the failure run.
+
+**Recorded evidence.** Completed on 2026-11-17, in four commits:
+
+1. `build: compile and pack the five workspace members for a clean install`, whose message states the choice of five archives and its reason;
+2. `test(mcp-server): share the stdio session runner and add the check of an installed server`;
+3. `ci: install the packed server on a clean machine on Linux and macOS arm64`;
+4. `docs: describe the clean-install job in TESTING.md`.
+
+Built:
+
+- **The build.** `pnpm run build` runs `tsc -b apps/mcp-server/tsconfig.build.json`. Each member has a `tsconfig.build.json` that sets `rewriteRelativeImportExtensions`, `noEmitOnError` and `outDir: dist`; the four libraries are composite projects that the server's configuration references. The server is compiled from `src/main.ts` alone, so that the development scripts beside it, which import `evals/`, are left out. The development type check is unchanged and emits nothing.
+- **The pack.** `pnpm run pack:archives` packs the five members into `dist/archives`. pnpm 12.18.0, run here, replaced `exports` with `publishConfig.exports` (`./dist/index.js`), wrote `workspace:*` and `catalog:` as exact versions, and packed packages marked private. `files` holds `dist`, and for storage also `migrations`, which it reads at run time.
+- **Five archives, not one.** pnpm already rewrites the specifiers, so each package keeps its one entry, compiled, and nothing is bundled. No package's `exports` changes in development, so no ADR is written.
+- **The job script.** `scripts/clean-install/run.sh`:
+  - runs the pin test of FL-001, builds and packs;
+  - installs the archives with npm, from `https://registry.npmjs.org/` only, into a new directory made by `mktemp -d`;
+  - fails if any `@factloom` package there is a link;
+  - runs `apps/mcp-server/src/check-installed-server.ts` on it and prints the size with `du`.
+- **The check.** It starts `node_modules/@factloom/mcp-server/dist/main.js` through `runServerRequests`, the session runner of the FL-037 smoke test, now shared in `testing/server-process.ts`. It initialises, lists the tools, records one fact and recalls it, with the real embedding model and no API key, and exits 1 if the tools or the recalled fact differ. It passes on the proxy variables of its own environment, which GitHub's runners do not set, so that it also runs behind a proxy.
+- **The workflow job.** `clean install`, on `ubuntu-24.04` and `macos-26`, on every push, with Node.js 22, a 30-minute limit and no secret. The check job now has a 15-minute limit, so that this job's limit is the longer, as technical requirement 6 asks.
+
+The workflow run with the job passing on both operating systems: https://github.com/Johnmark-Tech/factloom/actions/runs/44002099189. From its logs:
+
+| | Linux x64 | macOS arm64 |
+|---|---|---|
+| Tools | recall, remember, record_fact, invalidate_fact, get_fact_history, give_feedback | the same |
+| Recalled | `shop-api is deployed to Fly.io.` | the same |
+| Answer times, ms (list, record, recall) | 516, 1535, 1556 | 692, 3036, 3056 |
+| Installed size | 839040 KiB (820M) | 569556 KiB (556M) |
+
+The Linux size is close to the 745 MB that ADR 0014 records for the embedding runtime alone.
+
+The failure run, done here on Linux x64 with Node.js v22.23.4: the script, with `mv apps/mcp-server/dist/main.js apps/mcp-server/dist/main.renamed.js` added before the pack, exited 1. Its last lines:
+
+```text
+added 66 packages in 18s
+The server stopped before answering request 1: node:internal/modules/cjs/loader:1433
+...
+Error: Cannot find module '/tmp/tmp.4FAkeM5ivo/node_modules/@factloom/mcp-server/dist/main.js'
+```
+
+The line was then removed and the built output deleted.
+
+With no built output present, `pnpm check` passed:
+
+```text
+ Test Files  95 passed (95)
+      Tests  997 passed (997)
+```
+
+After the build and pack commands, `git status --short` was empty: `dist/` is ignored, and Biome now skips it too. Every `package.json` still has `"private": true`.
+
+Differences from the item:
+
+- **Five members, not four.** `@factloom/maintenance` joined the workspace in FL-040.
+- **Six tools, not five.** `give_feedback` was added in phase 2, so the check expects the six of `MCP-TOOLS.md`. FL-059 had already updated this expectation in the smoke test.
+- **The check job gained a time limit**, of 15 minutes, which it had not had, so that the clean-install job's 30 minutes is the longer.
