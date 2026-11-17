@@ -11,7 +11,13 @@ export const OperationSchema = z.enum(['remember', 'revision', 'succession', 'co
 export type Operation = z.infer<typeof OperationSchema>;
 
 /** Why, from a fixed list, so that the audit log holds no free text. Later phases add codes. */
-export const ReasonCodeSchema = z.enum(['stated', 'restated', 'reported_wrong', 'reported_ended']);
+export const ReasonCodeSchema = z.enum([
+  'stated',
+  'restated',
+  'reported_wrong',
+  'reported_ended',
+  'period_corrected',
+]);
 export type ReasonCode = z.infer<typeof ReasonCodeSchema>;
 
 /** What happened to one row. */

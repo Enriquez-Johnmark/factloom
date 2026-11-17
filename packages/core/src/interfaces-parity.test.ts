@@ -76,7 +76,7 @@ type RefSource = {
 
 type RefTrigger = 'agent' | 'person' | 'feedback' | 'maintenance';
 type RefOperation = 'remember' | 'revision' | 'succession' | 'correction' | 'retraction';
-type RefReasonCode = 'stated' | 'restated' | 'reported_wrong' | 'reported_ended';
+type RefReasonCode = 'stated' | 'restated' | 'reported_wrong' | 'reported_ended' | 'period_corrected';
 type RefAuditAction =
   | 'entity.created'
   | 'source.recorded'

@@ -100,7 +100,7 @@ export type Trigger = 'agent' | 'person' | 'feedback' | 'maintenance';
 export type Operation = 'remember' | 'revision' | 'succession' | 'correction' | 'retraction';
 
 /** Why, from a fixed list, so that the audit log holds no free text. Later phases add codes. */
-export type ReasonCode = 'stated' | 'restated' | 'reported_wrong' | 'reported_ended';
+export type ReasonCode = 'stated' | 'restated' | 'reported_wrong' | 'reported_ended' | 'period_corrected';
 
 export type AuditAction =
   | 'entity.created'
@@ -503,12 +503,12 @@ export declare function purgeContent(
 ): Promise<Result<{ readonly purgedSourceId: SourceId; readonly purgedFactIds: readonly FactId[] }>>;
 ```
 
-- **`reviseValidTime`** exists for the case one fact at a time cannot express: moving the date of a succession means changing the end of one fact and the start of the next together. Each fact is invalidated and superseded by a copy with the new period, and the single-value rule is checked once, on the result. Errors: as `endFact`.
+- **`reviseValidTime`** exists for the case one fact at a time cannot express: moving the date of a succession means changing the end of one fact and the start of the next together. Each fact is invalidated and superseded by a copy with the new period, and the single-value rule is checked once, on the result. Each copy keeps the original's sources, gains the given one, and copies the original's vector, so the embedder is not called. `revisedFactIds` lists the copies in the order of the input. Errors: as `endFact`, and `invalid_input` for an empty list, a fact listed twice, or a period that does not end after it starts.
 - **`adjustConfidence` does not copy the fact.** It appends a row to a `fact_confidence` table (fact, confidence, time), and reads return the latest confidence recorded at or before the known-at date. A copy per adjustment would change the fact's identifier and its recorded date every time. Confidence changes on feedback or on a failed verification, never on a timer. Errors: `invalid_input`, `not_found`, `already_invalidated`, `storage_failed`.
 - **`recordFeedback` decides nothing.** Product 2 reads feedback and then calls `invalidateFact`, `endFact` or `adjustConfidence` under the domain's correction policy. Errors: `invalid_input`, `not_found`, `storage_failed`.
 - **`purgeContent`** is specified in outline in [ADR 0012](adr/0012-purge-is-the-one-exception.md). Its full design is a phase 2 work item, with the requirements the review of this design found: it must cover every copy of a purged fact, the keyword and vector entries, the source's locator, and the content of any source that explained a change to those facts. Errors: `not_found`, `storage_failed`.
 
-Each phase 2 operation adds what it needs: a `Change` kind, an `Operation` name, `AuditAction` values and reason codes. `reviseValidTime` needs none, because it is made of existing changes. Adding a kind does not change the existing ones.
+Each phase 2 operation adds what it needs: a `Change` kind, an `Operation` name, `AuditAction` values and reason codes. `reviseValidTime` adds only the reason code `period_corrected`: it is made of `record_fact` and `invalidate_fact` changes, and its operation is the existing `revision`. Adding a kind does not change the existing ones.
 
 ### Conflict judge
 
