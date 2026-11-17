@@ -8,6 +8,7 @@ import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import { toTimestamp } from '@factloom/core';
 import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { runMaintenance } from '@factloom/maintenance';
 import { openSqliteMemoryStore } from '@factloom/storage';
 import {
   createAnthropicLlmClient,
@@ -17,6 +18,7 @@ import {
 import type { Logger } from './create-factloom-server.ts';
 import { FACTLOOM_TOOLS } from './factloom-tools.ts';
 import { createLocalEmbedder } from './create-local-embedder.ts';
+import { buildMaintenanceJobs } from './maintenance-jobs.ts';
 import { readCommand } from './read-command.ts';
 import { readConfiguration } from './read-configuration.ts';
 import { runPurgeCommand } from './run-purge-command.ts';
@@ -46,6 +48,18 @@ const opened = openSqliteMemoryStore({
   embeddingDimensions: embedder.dimensions,
 });
 if (!opened.ok) stop(`${opened.error.code}: ${opened.error.message}`);
+
+if (command.kind === 'maintenance') {
+  // A run is not an MCP server: the report is the one JSON document on standard output.
+  const now = () => toTimestamp(new Date());
+  const report = await runMaintenance(
+    { now },
+    buildMaintenanceJobs({ store: opened.value, namespace, now, newId: () => randomUUID() }),
+  );
+  await opened.value.close();
+  process.stdout.write(`${JSON.stringify(report)}\n`);
+  process.exit(report.jobs.some((job) => job.status === 'failed') ? 1 : 0);
+}
 
 if (command.kind !== 'serve') {
   const exitCode = await runPurgeCommand(
