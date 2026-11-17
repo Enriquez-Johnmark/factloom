@@ -71,6 +71,7 @@ export function openSqliteMemoryStore(options: SqliteMemoryStoreOptions): Result
       listFactsOfSources: (query) => read(() => ok(reads.listFactsOfSources(query))),
       findSourcesByContentHash: (query) => read(() => ok(reads.findSourcesByContentHash(query))),
       listFeedback: (query) => read(() => ok(reads.listFeedback(query))),
+      listEntities: (query) => read(() => reads.listEntities(query)),
       listVerifications: (query) => read(() => ok(reads.listVerifications(query))),
       listStaleFacts: (query) => read(() => reads.listStaleFacts(query)),
       listOrphanedFacts: (query) => read(() => reads.listOrphanedFacts(query)),

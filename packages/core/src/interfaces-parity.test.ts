@@ -316,6 +316,11 @@ interface RefMemoryStore {
     readonly namespace: RefNamespace;
     readonly factId: RefFactId;
   }): Promise<Result<readonly RefFeedback[]>>;
+  listEntities(query: {
+    readonly namespace: RefNamespace;
+    readonly afterEntityId: RefEntityId | null;
+    readonly limit: number;
+  }): Promise<Result<readonly RefEntity[]>>;
   listVerifications(query: {
     readonly namespace: RefNamespace;
     readonly factId: RefFactId;

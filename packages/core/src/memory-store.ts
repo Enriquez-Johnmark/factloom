@@ -124,6 +124,16 @@ export interface MemoryStore {
     readonly factId: FactId;
   }): Promise<Result<readonly Feedback[]>>;
 
+  /**
+   * Phase 3. The entities of a namespace as stored, merged ones included, in the order of their
+   * identifiers: those after `afterEntityId`, or from the first when it is null, up to `limit`.
+   */
+  listEntities(query: {
+    readonly namespace: Namespace;
+    readonly afterEntityId: EntityId | null;
+    readonly limit: number;
+  }): Promise<Result<readonly Entity[]>>;
+
   /** Phase 3. The verifications of one fact, in the order they were recorded. */
   listVerifications(query: {
     readonly namespace: Namespace;

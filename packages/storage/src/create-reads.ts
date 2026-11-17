@@ -116,6 +116,9 @@ export type SqliteReads = {
   readonly listFeedback: (
     query: Parameters<MemoryStore['listFeedback']>[0],
   ) => ReturnType<typeof toFeedback>[];
+  readonly listEntities: (
+    query: Parameters<MemoryStore['listEntities']>[0],
+  ) => Result<readonly ReturnType<typeof toEntity>[]>;
   readonly listVerifications: (
     query: Parameters<MemoryStore['listVerifications']>[0],
   ) => ReturnType<typeof toFactVerification>[];
@@ -228,6 +231,11 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
   const selectFeedback = db.prepare<[string, string], FeedbackRow>(
     `SELECT id, namespace, fact_id, signal, trigger, source_id, recorded_at FROM feedback
      WHERE namespace = ? AND fact_id = ? ORDER BY recorded_at, rowid`,
+  );
+  // Paged by identifier: SQLite orders by the primary key and stops at the limit.
+  const selectEntityPage = db.prepare<{ namespace: string; after: string | null; limit: number }, EntityRow>(
+    `SELECT id, namespace, type, name, created_at FROM entity
+     WHERE namespace = @namespace AND (@after IS NULL OR id > @after) ORDER BY id LIMIT @limit`,
   );
   const selectVerifications = db.prepare<[string, string], FactVerificationRow>(
     `SELECT id, namespace, fact_id, outcome, method, verified_at FROM fact_verification
@@ -375,6 +383,15 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
 
     listFeedback(query) {
       return selectFeedback.all(query.namespace, query.factId).map(toFeedback);
+    },
+
+    listEntities(query) {
+      if (!Number.isInteger(query.limit) || query.limit < 1) return invalidLimit();
+      return ok(
+        selectEntityPage
+          .all({ namespace: query.namespace, after: query.afterEntityId, limit: query.limit })
+          .map(toEntity),
+      );
     },
 
     listVerifications(query) {

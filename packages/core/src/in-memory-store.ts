@@ -897,6 +897,19 @@ export function createInMemoryStore(): MemoryStore {
       return Promise.resolve(ok(structuredClone(found)));
     },
 
+    listEntities(query) {
+      if (!isValidLimit(query.limit)) return Promise.resolve(invalidLimit());
+      const { afterEntityId } = query;
+      const page = [...state.entities.values()]
+        .filter(
+          (entity) =>
+            entity.namespace === query.namespace && (afterEntityId === null || entity.id > afterEntityId),
+        )
+        .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+        .slice(0, query.limit);
+      return Promise.resolve(ok(structuredClone(page)));
+    },
+
     listVerifications(query) {
       const found = state.verifications.filter(
         (verification) => verification.namespace === query.namespace && verification.factId === query.factId,

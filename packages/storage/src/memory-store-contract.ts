@@ -1168,6 +1168,37 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
     expect(elsewhere).toEqual({ ok: true, value: [] });
   });
 
+  // --- Listing entities (FL-053) ---
+  test('X1: listEntities pages through every entity of the namespace once, in the order of their identifiers', async () => {
+    const created = await store.commit(
+      changeSet(
+        'op-x1',
+        '2026-06-01',
+        ['e-b', 'e-a', 'e-c'].map(
+          (id) => ({ kind: 'create_entity', entity: entity(id, `name ${id}`) }) as const,
+        ),
+      ),
+    );
+    if (!created.ok) throw new Error(created.error.message);
+    const seen: string[] = [];
+    let after: string | null = null;
+    for (let page = 0; page < 10; page += 1) {
+      const listed = await store.listEntities({ namespace: NAMESPACE, afterEntityId: after, limit: 2 });
+      if (!listed.ok) throw new Error(listed.error.message);
+      if (listed.value.length === 0) break;
+      expect(listed.value.length).toBeLessThanOrEqual(2);
+      seen.push(...listed.value.map((found) => found.id));
+      after = listed.value.at(-1)?.id ?? null;
+    }
+
+    expect(seen).toEqual(['e-a', 'e-b', 'e-c', 'e-repo']);
+  });
+  test('X2: listEntities refuses a limit below 1 with invalid_input', async () => {
+    const listed = await store.listEntities({ namespace: NAMESPACE, afterEntityId: null, limit: 0 });
+
+    expect(listed.ok ? null : listed.error.code).toBe('invalid_input');
+  });
+
   // --- Stale and orphaned facts (FL-049) ---
   // At NOW the current facts are pg16, recorded 2026-04-02, and node22, recorded 2026-05-01.
   // pg14-ended is live but ended; pg14 and node20 are invalidated.
@@ -2345,6 +2376,13 @@ function registerSingleValueRuleAndNamespaces(
     // other-pg16 counts as verified on 2026-06-01, so it comes after other-node22, recorded 2026-05-01.
     expect(await ids(NAMESPACE)).toEqual([['pg16', 'node22'], []]);
     expect(await ids(OTHER)).toEqual([['other-node22', 'other-pg16'], ['other-pg16']]);
+  });
+  cases.test('N11: listEntities returns no entity of the other namespace', async () => {
+    const mine = await cases.store().listEntities({ namespace: NAMESPACE, afterEntityId: null, limit: 100 });
+    const theirs = await cases.store().listEntities({ namespace: OTHER, afterEntityId: null, limit: 100 });
+
+    expect(mine.ok && mine.value.map((found) => found.id)).toEqual(['e-repo']);
+    expect(theirs.ok && theirs.value.map((found) => found.id)).toEqual(['other-e-repo']);
   });
   cases.test(
     'N8: usage recorded for a fact of the other namespace changes nothing, and usage is not read across namespaces',
