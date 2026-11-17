@@ -92,7 +92,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | FL-060 | Acting on feedback | 2 | FL-046, FL-045, FL-042 | Pending |
 | FL-047 | Purge design, proven by a spike | 2 | FL-015 | Completed |
 | FL-061 | Purge operation | 2 | FL-047, FL-016, FL-017 | Completed |
-| FL-072 | Purge command | 2 | FL-061, FL-034 | Pending |
+| FL-072 | Purge command | 2 | FL-061, FL-034 | Completed |
 
 ### FL-040: Create the maintenance package and its boundary rules
 
@@ -1346,7 +1346,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-061, FL-034 |
 | Requirements | REQ-19 |
@@ -1385,12 +1385,61 @@ Differences from the item:
 - [Architecture rules](../../../.claude/rules/architecture.md): an entry point translates and calls one use case or operation.
 
 **Acceptance criteria.**
-- [ ] A test starts the command as a child process on a temporary database that holds a fact with a marker string in its source, lists the fact's sources, purges the source with the reason `secret_stored`, and then finds the string in no line the command printed and in no table. The audit entries of the purge carry the trigger `person` and the reason code `secret_stored`.
-- [ ] A test starts the command with a source identifier and no reason and shows a non-zero exit code and an unchanged database.
-- [ ] A test starts the command with no namespace and shows a non-zero exit code.
-- [ ] A test that lists the tools of the server built by the composition root finds no tool for purge.
-- [ ] `pnpm check` exits 0.
+- [x] A test starts the command as a child process on a temporary database that holds a fact with a marker string in its source, lists the fact's sources, purges the source with the reason `secret_stored`, and then finds the string in no line the command printed and in no table. The audit entries of the purge carry the trigger `person` and the reason code `secret_stored`.
+- [x] A test starts the command with a source identifier and no reason and shows a non-zero exit code and an unchanged database.
+- [x] A test starts the command with no namespace and shows a non-zero exit code.
+- [x] A test that lists the tools of the server built by the composition root finds no tool for purge.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Child-process tests of the command. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the README section.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in three commits: `feat(mcp-server): add the purge command`, `docs: describe the purge command in the README`, and `docs: record in ADR 0012 the purge command as built`.
+
+The entry point:
+
+- `readCommand` in `apps/mcp-server/src/read-command.ts` is the one small function that reads the arguments. FL-070 is not built yet, so this item wrote it.
+- No argument serves MCP over stdio, as before.
+- `purge sources <fact-id>` and `purge source <source-id> --reason erasure_requested|secret_stored` run the command. Anything else is refused with a usage line and exit code 2.
+
+The command:
+
+- `run-purge-command.ts` uses the server's configuration from `main.ts`, which refuses to start without a namespace.
+- The listing prints, for each source of the fact and of the facts linked to it by supersession in either direction, its identifier, kind, locator and observed time, tab-separated, and never content.
+- A purge calls `purgeContent` with the trigger `person` and the reason, prints the identifiers it purged, closes the store, runs `clearFreedPages`, and says whether the checkpoint finished.
+- Output goes to standard output, because the command is not an MCP server.
+
+Tests, in `purge-command.test.ts`. Three of them run `main.ts` as a child process on a temporary database whose fact and source hold a marker string:
+
+- **The listing and the purge.** The listing prints exactly the one source line and exits 0. The purge with `secret_stored` exits 0, prints the purged identifiers and "Freed pages cleared.", and neither output holds the marker. No column of any table of the file holds it afterwards. The purge's audit entries carry the trigger `person` and the reason code `secret_stored`.
+- **No reason.** A purge without a reason exits non-zero with `invalid_input:` and leaves the marker and no purge audit entry in the database.
+- **No namespace.** With no namespace, the command exits non-zero and says `FACTLOOM_NAMESPACE is not set`.
+- **No purge tool.** The tools of the server built by the composition root include no tool whose name holds "purge".
+
+The test database is written with the local embedder's model name and size, so the command's store opens it; no model is loaded. To read the file directly, `apps/mcp-server` gains `better-sqlite3` and `@types/better-sqlite3` as development dependencies, at the workspace's catalog versions, with the reason in `pnpm-workspace.yaml`.
+
+Rules broken by hand, each then restored:
+
+| Break | Test that failed |
+|---|---|
+| A purge with no reason defaults to `secret_stored` | The no-reason test |
+| The listing also prints the content | The listing and purge test |
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the third commit, including the child-process tests: https://github.com/Johnmark-Tech/factloom/actions/runs/43995854944.
+
+The README has a section, "Removing content: purge", with the two commands. ADR 0012's answer to question 10 now describes the command as built; its earlier draft, a search by text and a `--yes` flag, did not match this item's requirements.
+
+`pnpm check`:
+
+```text
+$ biome format .
+Checked 302 files. No fixes applied.
+$ biome lint .
+Checked 302 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  84 passed (84)
+      Tests  901 passed (901)
+```
