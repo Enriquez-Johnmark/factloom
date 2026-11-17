@@ -47,6 +47,7 @@ describe('openSqliteMemoryStore', () => {
       { number: 3, name: 'add_feedback' },
       { number: 4, name: 'purge' },
       { number: 5, name: 'add_entity_merge' },
+      { number: 6, name: 'add_fact_usage' },
     ]);
   });
 
