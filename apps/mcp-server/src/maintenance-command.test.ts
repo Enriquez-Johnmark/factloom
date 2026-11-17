@@ -1,9 +1,11 @@
-// The maintenance command of FL-048, run as a child process of the real entry point.
+// The maintenance command of FL-048, run as a child process of the real entry point, with the
+// verification job of FL-050 on a fixture repository.
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MaintenanceReportSchema } from '@factloom/maintenance';
 import { afterEach, describe, expect, it } from 'vitest';
+import { createFixtureRepository } from './testing/fixture-repository.ts';
 import { startServerProcess } from './testing/server-process.ts';
 
 const MAIN = join(import.meta.dirname, 'main.ts');
@@ -20,11 +22,50 @@ function createTemporaryDirectory(): string {
 }
 
 describe('the maintenance command', () => {
-  it('runs with no jobs on a new database, prints a report and exits with 0', async () => {
+  it('runs the verification job on a new database, prints a report and exits with 0', async () => {
+    const directory = createTemporaryDirectory();
+    const repository = createFixtureRepository();
+    repository.commit({ 'README.md': 'shop-api\n' }, 'Start');
+    const started = startServerProcess(
+      MAIN,
+      {
+        FACTLOOM_DB: join(directory, 'factloom.db'),
+        FACTLOOM_NAMESPACE: 'repo:shop-api',
+        FACTLOOM_REPO: repository.directory,
+      },
+      directory,
+      ['maintenance'],
+    );
+    started.close();
+
+    const finished = await started.finished;
+    repository.remove();
+
+    expect(finished.code).toBe(0);
+    const report = MaintenanceReportSchema.parse(JSON.parse(finished.standardOutput));
+    expect(report.jobs).toEqual([
+      {
+        name: 'verify_anchored_facts',
+        status: 'ok',
+        error: null,
+        examined: 0,
+        changed: 0,
+        flagged: 0,
+        failed: 0,
+        flaggedItems: [],
+      },
+    ]);
+  }, 30_000);
+
+  it('reports the verification job as failed and exits with 1 when FACTLOOM_REPO is not a git repository', async () => {
     const directory = createTemporaryDirectory();
     const started = startServerProcess(
       MAIN,
-      { FACTLOOM_DB: join(directory, 'factloom.db'), FACTLOOM_NAMESPACE: 'repo:shop-api' },
+      {
+        FACTLOOM_DB: join(directory, 'factloom.db'),
+        FACTLOOM_NAMESPACE: 'repo:shop-api',
+        FACTLOOM_REPO: directory,
+      },
       directory,
       ['maintenance'],
     );
@@ -32,9 +73,11 @@ describe('the maintenance command', () => {
 
     const finished = await started.finished;
 
-    expect(finished.code).toBe(0);
+    expect(finished.code).toBe(1);
     const report = MaintenanceReportSchema.parse(JSON.parse(finished.standardOutput));
-    expect(report.jobs).toEqual([]);
+    expect(report.jobs).toMatchObject([
+      { name: 'verify_anchored_facts', status: 'failed', error: 'invalid_input' },
+    ]);
   }, 30_000);
 
   it('refuses to start with no namespace, and says why on standard error', async () => {

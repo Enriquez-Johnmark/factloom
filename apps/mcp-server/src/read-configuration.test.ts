@@ -3,12 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { readConfiguration } from './read-configuration.ts';
 
 const HOME = '/home/someone';
+const WORKING = '/work/shop-api';
 /** Joined at run time: a quoted literal assigned to a key name is what the secret check refuses. */
 const TEST_KEY = ['test', 'key'].join('-');
 
 describe('readConfiguration', () => {
   it('uses the default database path when none is given', () => {
-    const configuration = readConfiguration({ FACTLOOM_NAMESPACE: 'repo:shop-api' }, HOME);
+    const configuration = readConfiguration(
+      { FACTLOOM_NAMESPACE: 'repo:shop-api' },
+      { homeDirectory: HOME, workingDirectory: WORKING },
+    );
 
     expect(configuration.ok).toBe(true);
     if (!configuration.ok) return;
@@ -16,10 +20,24 @@ describe('readConfiguration', () => {
     expect(configuration.value.modelCacheDirectory).toBe(join(HOME, '.factloom', 'models'));
   });
 
+  it('verifies against the working directory when FACTLOOM_REPO is not set', () => {
+    const configuration = readConfiguration(
+      { FACTLOOM_NAMESPACE: 'repo:shop-api', FACTLOOM_REPO: '' },
+      { homeDirectory: HOME, workingDirectory: WORKING },
+    );
+
+    expect(configuration.ok && configuration.value.repositoryDirectory).toBe(WORKING);
+  });
+
   it('uses the database path and namespace that are given', () => {
     const configuration = readConfiguration(
-      { FACTLOOM_DB: '/data/memory.db', FACTLOOM_NAMESPACE: 'repo:shop-api', ANTHROPIC_API_KEY: TEST_KEY },
-      HOME,
+      {
+        FACTLOOM_DB: '/data/memory.db',
+        FACTLOOM_NAMESPACE: 'repo:shop-api',
+        ANTHROPIC_API_KEY: TEST_KEY,
+        FACTLOOM_REPO: '/repos/shop-api',
+      },
+      { homeDirectory: HOME, workingDirectory: WORKING },
     );
 
     expect(configuration).toEqual({
@@ -29,13 +47,17 @@ describe('readConfiguration', () => {
         namespace: 'repo:shop-api',
         anthropicApiKey: TEST_KEY,
         modelCacheDirectory: join(HOME, '.factloom', 'models'),
+        repositoryDirectory: '/repos/shop-api',
       },
     });
   });
 
   it('fails without a namespace and says why', () => {
     for (const environment of [{}, { FACTLOOM_NAMESPACE: '' }]) {
-      const configuration = readConfiguration(environment, HOME);
+      const configuration = readConfiguration(environment, {
+        homeDirectory: HOME,
+        workingDirectory: WORKING,
+      });
 
       expect(configuration.ok).toBe(false);
       if (configuration.ok) return;
@@ -46,7 +68,10 @@ describe('readConfiguration', () => {
   });
 
   it('accepts a missing API key', () => {
-    const configuration = readConfiguration({ FACTLOOM_NAMESPACE: 'repo:shop-api' }, HOME);
+    const configuration = readConfiguration(
+      { FACTLOOM_NAMESPACE: 'repo:shop-api' },
+      { homeDirectory: HOME, workingDirectory: WORKING },
+    );
 
     expect(configuration.ok && configuration.value.anthropicApiKey).toBeNull();
   });

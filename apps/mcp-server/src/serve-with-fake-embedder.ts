@@ -22,7 +22,10 @@ const log: Logger = (message) => {
   process.stderr.write(`factloom (fake embedder): ${message}\n`);
 };
 
-const configuration = readConfiguration(process.env, homedir());
+const configuration = readConfiguration(process.env, {
+  homeDirectory: homedir(),
+  workingDirectory: process.cwd(),
+});
 if (!configuration.ok) {
   log(configuration.error.message);
   process.exit(1);

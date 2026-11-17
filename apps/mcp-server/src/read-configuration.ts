@@ -10,6 +10,8 @@ export type ServerConfiguration = {
   readonly anthropicApiKey: string | null;
   /** Where the local embedding model is kept: `models` beside the default database. */
   readonly modelCacheDirectory: string;
+  /** The git repository that maintenance verifies facts against. */
+  readonly repositoryDirectory: string;
 };
 
 /** A variable that is set but empty counts as not set, as it does in most shells. */
@@ -19,20 +21,22 @@ const EnvironmentSchema = z.object({
   FACTLOOM_DB: optionalText,
   FACTLOOM_NAMESPACE: optionalText,
   ANTHROPIC_API_KEY: optionalText,
+  FACTLOOM_REPO: optionalText,
 });
 
 /**
  * Reads the server's configuration from the given environment variables. `FACTLOOM_DB`
  * defaults to `~/.factloom/factloom.db`; `FACTLOOM_NAMESPACE` is required; `ANTHROPIC_API_KEY`
- * is optional. Pure: the caller passes the environment and the home directory.
+ * is optional; `FACTLOOM_REPO` defaults to the working directory. Pure: the caller passes the
+ * environment and the two directories.
  */
 export function readConfiguration(
   environment: Readonly<Record<string, string | undefined>>,
-  homeDirectory: string,
+  directories: { readonly homeDirectory: string; readonly workingDirectory: string },
 ): Result<ServerConfiguration> {
   const parsed = EnvironmentSchema.safeParse(environment);
   if (!parsed.success) return err('invalid_input', z.prettifyError(parsed.error));
-  const { FACTLOOM_DB, FACTLOOM_NAMESPACE, ANTHROPIC_API_KEY } = parsed.data;
+  const { FACTLOOM_DB, FACTLOOM_NAMESPACE, ANTHROPIC_API_KEY, FACTLOOM_REPO } = parsed.data;
 
   if (FACTLOOM_NAMESPACE === undefined) {
     return err(
@@ -49,11 +53,12 @@ export function readConfiguration(
     );
   }
 
-  const factloomDirectory = join(homeDirectory, '.factloom');
+  const factloomDirectory = join(directories.homeDirectory, '.factloom');
   return ok({
     databasePath: FACTLOOM_DB ?? join(factloomDirectory, 'factloom.db'),
     namespace: namespace.data,
     anthropicApiKey: ANTHROPIC_API_KEY ?? null,
     modelCacheDirectory: join(factloomDirectory, 'models'),
+    repositoryDirectory: FACTLOOM_REPO ?? directories.workingDirectory,
   });
 }

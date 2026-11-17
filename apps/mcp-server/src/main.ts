@@ -17,6 +17,7 @@ import {
 } from './create-anthropic-llm-client.ts';
 import type { Logger } from './create-factloom-server.ts';
 import { FACTLOOM_TOOLS } from './factloom-tools.ts';
+import { createGitRepositoryReader } from './create-git-repository-reader.ts';
 import { createLocalEmbedder } from './create-local-embedder.ts';
 import { buildMaintenanceJobs } from './maintenance-jobs.ts';
 import { readCommand } from './read-command.ts';
@@ -35,9 +36,13 @@ function stop(message: string): never {
 }
 
 const command = readCommand(process.argv.slice(2));
-const configuration = readConfiguration(process.env, homedir());
+const configuration = readConfiguration(process.env, {
+  homeDirectory: homedir(),
+  workingDirectory: process.cwd(),
+});
 if (!configuration.ok) stop(configuration.error.message);
-const { databasePath, namespace, modelCacheDirectory, anthropicApiKey } = configuration.value;
+const { databasePath, namespace, modelCacheDirectory, anthropicApiKey, repositoryDirectory } =
+  configuration.value;
 
 mkdirSync(dirname(databasePath), { recursive: true });
 // The model is loaded on the first embedding, not here, so the server answers the host at once.
@@ -54,7 +59,13 @@ if (command.kind === 'maintenance') {
   const now = () => toTimestamp(new Date());
   const report = await runMaintenance(
     { now },
-    buildMaintenanceJobs({ store: opened.value, namespace, now, newId: () => randomUUID() }),
+    buildMaintenanceJobs({
+      store: opened.value,
+      namespace,
+      now,
+      newId: () => randomUUID(),
+      repository: createGitRepositoryReader(repositoryDirectory),
+    }),
   );
   await opened.value.close();
   process.stdout.write(`${JSON.stringify(report)}\n`);
