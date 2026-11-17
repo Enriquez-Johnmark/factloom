@@ -97,6 +97,8 @@ The first job is `verify_anchored_facts` (FL-050). It reads the git repository a
 
 The second job, `repair_moved_anchors` (FL-054), runs after it. For each fact whose file was found missing, it asks git where the file went. If the file was renamed, once or several times, the fact gains a source at the new path at `HEAD`, recorded with the reason `anchor_moved`, and a fresh verification: `confirmed` if the file is unchanged and `inconclusive` if it was also edited. The fact keeps its identifier. If git shows no rename, the fact stays flagged.
 
+The third job, `find_duplicate_entities` (FL-053), compares the entities of the namespace within each type. Two whose names are equal once case, punctuation, spaces and Unicode compatibility forms are set aside, such as `Node.js` and `nodejs`, are merged into the one created earlier. The domain's correction policy decides whether it merges or only reports the pair. A pair whose merge someone undid is not merged again, and a merge refused because the two hold different values is reported with the facts in the way. It needs no embedding model and no API key.
+
 By hand, from `apps/mcp-server`:
 
 ```sh
