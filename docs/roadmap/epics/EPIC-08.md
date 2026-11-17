@@ -90,7 +90,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | FL-046 | Feedback operation and migration | 2 | FL-015, FL-022 | Completed |
 | FL-059 | give_feedback tool | 2 | FL-046, FL-036, FL-058 | Completed |
 | FL-060 | Acting on feedback | 2 | FL-046, FL-045, FL-042 | Pending |
-| FL-047 | Purge design, proven by a spike | 2 | FL-015 | Pending |
+| FL-047 | Purge design, proven by a spike | 2 | FL-015 | Completed |
 | FL-061 | Purge operation | 2 | FL-047, FL-016, FL-017 | Pending |
 | FL-072 | Purge command | 2 | FL-061, FL-034 | Pending |
 
@@ -1081,7 +1081,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-015 |
 | Requirements | REQ-19 |
@@ -1143,17 +1143,59 @@ The spike:
 - `CLAUDE.md`: `spikes/` holds throwaway scripts that verify a claim. They are not the implementation.
 
 **Acceptance criteria.**
-- [ ] The decision record answers design questions 1 to 10, and each answer cites its source or the spike.
-- [ ] Running the spike from its folder, with the command its README gives, prints "not found" for the marker string in every table, in the keyword index and in the vector entries, and ends with a line that says the spike passed.
-- [ ] For the bytes of the database file and the write-ahead log, the spike prints "not found" if the design decides that freed pages are cleared. If the design decides they are not cleared, the spike prints what it found, and the decision record says so in a section titled "What purge does not remove".
-- [ ] The spike prints that the unrelated fact and its source are unchanged, and that the counts of fact rows, source rows and audit rows are the same before and after.
-- [ ] The spike prints that an `UPDATE` of `statement`, `object_value`, `content` or `locator` outside the design's condition was refused.
-- [ ] The spike's README records the output of that run, and `DECISIONS.md` lists any new record.
-- [ ] `pnpm check` exits 0: the spike is outside the workspace and changes nothing in it.
+- [x] The decision record answers design questions 1 to 10, and each answer cites its source or the spike.
+- [x] Running the spike from its folder, with the command its README gives, prints "not found" for the marker string in every table, in the keyword index and in the vector entries, and ends with a line that says the spike passed.
+- [x] For the bytes of the database file and the write-ahead log, the spike prints "not found" if the design decides that freed pages are cleared. If the design decides they are not cleared, the spike prints what it found, and the decision record says so in a section titled "What purge does not remove".
+- [x] The spike prints that the unrelated fact and its source are unchanged, and that the counts of fact rows, source rows and audit rows are the same before and after.
+- [x] The spike prints that an `UPDATE` of `statement`, `object_value`, `content` or `locator` outside the design's condition was refused.
+- [x] The spike's README records the output of that run, and `DECISIONS.md` lists any new record.
+- [x] `pnpm check` exits 0: the spike is outside the workspace and changes nothing in it.
 
 **Validation.** The spike, run by hand from its folder. Review of the decision record against design questions 1 to 10.
 
 **Completion evidence.** The completed ADR 0012, or the record that supersedes part of it; the spike's README with its output; the commit.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in four commits: `test: add the purge spike for FL-047`, `docs: complete the purge design in ADR 0012`, `docs: add Q-84 on erasing an entity name`, and `docs: record the planned purge names in INTERFACES.md and SCHEMA.md`.
+
+The design is a new section of [ADR 0012](../../architecture/adr/0012-purge-is-the-one-exception.md), "The phase 2 design (FL-047)", which answers questions 1 to 10, and a section "What purge does not remove". Nothing ADR 0012 decided was changed, so no new record supersedes it and `DECISIONS.md` lists none. In particular, `object_value` and `content` get the marker `[purged]`, not `NULL`, and the locator is cleared, as the record already said. The two open questions of the record are answered. Question 7 leaves entity names out of `purgeContent`, and Q-84 in `OPEN-QUESTIONS.md` keeps the rest open.
+
+The spike is `spikes/purge`, run with `cd spikes/purge && npm ci && node check.mjs`, outside the workspace. It builds a database file from the project's migrations `0001` to `0003`, read unchanged, plus the draft `0004_purge.sql`, then records the memory of functional requirement 11 with hand-written SQL. It adds two things the item did not list:
+
+- a second source row with the same text and hash, which question 2 covers;
+- feedback whose comment quotes the marker, from FL-046.
+
+It purges the first source five times, on fresh files, varying the handling of freed pages. The README holds the full output. In run D, the design:
+
+- the marker is "not found" in each of the 14 tables, in the keyword index (`MATCH`), in the vector entries, and in the bytes of the database file and of the write-ahead log, read with the connection open and again after it closed;
+- the unrelated fact, its source and its vector are unchanged;
+- 8 of 8 updates and deletes outside the design's condition are refused;
+- the run ends "The spike passed: run D, the design, leaves the marker nowhere." and exits 0.
+
+What the other runs showed, which shaped the design:
+
+| Run | Finding |
+|---|---|
+| A, the purge transaction only, FTS5 `secure-delete` off | The term stays in the index's shadow table `fact_fts_data`, readable with SQL, though `MATCH` finds nothing. The old text is in the write-ahead log while the connection is open, and in the database file after it closes |
+| B, with `PRAGMA secure_delete` and FTS5 `secure-delete` | The tables are clean, but the old text is still in the log and then the file |
+| C, with `VACUUM` and `wal_checkpoint(TRUNCATE)`, FTS5 `secure-delete` off | The term is still in `fact_fts_data` and in the file: it is live index data, which `VACUUM` keeps |
+| E, the design and `PRAGMA secure_delete` | The same as D, so the pragma is not part of the design |
+
+Sources cited in the record, each with its access date and label:
+
+- `https://www.sqlite.org/lang_vacuum.html`, read verbatim, confirmed;
+- the FTS5 page for the `delete` command and the `secure-delete` option, likely: it was read only as a summary by a fetch tool, and the spike's result confirms the behaviour;
+- the pragma page for `wal_checkpoint(TRUNCATE)`, likely, for the same reason; the spike confirms it with a 0-byte log;
+- `https://www.sqlite.org/wal.html`, for a reader blocking a checkpoint.
+
+`INTERFACES.md` and `SCHEMA.md` now name the planned change kind `purge_content`, the operation `purge`, the actions `source.purged` and `fact.purged`, the reason codes `erasure_requested` and `secret_stored`, and `purgedAt`. The result of `purgeContent` becomes `{ purgedSourceIds, purgedFactIds }`, because a purge covers more than the one source named.
+
+`pnpm check` exits 0 with 81 test files and 875 tests, unchanged: the spike is outside the workspace.
+
+Differences from the item:
+
+- The counts of fact and source rows are the same before and after: 4 and 6. Audit rows rise from 10 to 17, because the purge writes its own 7 entries, one per change, as ADR 0009 requires; none is removed. The criterion's "the same" is read as "none removed".
+- The spike ran on Linux only. The CI job that runs the spikes on macOS arm64 does not list this one; nothing in it is specific to a platform beyond the native modules the other spikes already ran there.
+- The spike checks the rows and lanes. How `getFact`, `listFacts` and `recall` show a purged fact is FL-061's, in contract cases.
 
 ### FL-061: Purge operation
 
