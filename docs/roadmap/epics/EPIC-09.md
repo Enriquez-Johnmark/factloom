@@ -96,7 +96,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-053 | Duplicate entity detection by name | 3 | FL-048, FL-052, FL-063 | Pending |
 | FL-064 | Duplicate entity detection by similarity | 3 | FL-053, FL-028 | Pending |
 | FL-054 | Anchor repair for moved and renamed files | 3 | FL-050 | Pending |
-| FL-055 | Usage tracking | 3 | FL-015, FL-031, FL-058 | Pending |
+| FL-055 | Usage tracking | 3 | FL-015, FL-031, FL-058 | Under Review |
 | FL-065 | Archive and unarchive operations | 3 | FL-055, FL-058 | Pending |
 | FL-073 | Archived facts left out of recall, and the archiving job | 3 | FL-065, FL-048, FL-058 | Pending |
 
@@ -953,7 +953,7 @@ The original item was split in two. This one builds the job and its two stages t
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 3 |
 | Depends on | FL-015, FL-031, FL-058 |
 | Requirements | REQ-23 |
@@ -1002,20 +1002,72 @@ The original item was split in two. This one builds the job and its two stages t
 - [ADR 0011](../../architecture/adr/0011-namespace-on-every-row.md): a usage row belongs to the namespace of its fact.
 
 **Acceptance criteria.**
-- [ ] A unit test of `recall` with the in-memory store shows the store's whole content, usage included, is identical before and after the call. A SQLite adapter test shows the same by comparing a dump of every table before and after the lane queries.
-- [ ] A test of the `recall` tool handler shows that after a call the usage of each returned fact has a count of 1 and the time of the call, and after a second call a count of 2.
-- [ ] A test of the `recall` tool handler with a store whose usage write always fails shows the tool result is returned unchanged and without error.
-- [ ] A contract suite case, against both stores, shows that recording usage for three facts sets their time and raises each count by one, in one call, and that `listAuditEntries` for each fact returns the same entries as before.
-- [ ] A contract case shows usage recorded for a fact of another namespace, or for an unknown fact, changes nothing and returns no error.
-- [ ] A SQLite adapter test shows the row counts of `fact`, `source`, `entity` and `audit_log` are unchanged by a usage write.
-- [ ] A test shows `get_fact_history` records no usage.
-- [ ] The test over stdio of the `recall` tool (FL-058) still passes.
+- [x] A unit test of `recall` with the in-memory store shows the store's whole content, usage included, is identical before and after the call. A SQLite adapter test shows the same by comparing a dump of every table before and after the lane queries.
+- [x] A test of the `recall` tool handler shows that after a call the usage of each returned fact has a count of 1 and the time of the call, and after a second call a count of 2.
+- [x] A test of the `recall` tool handler with a store whose usage write always fails shows the tool result is returned unchanged and without error.
+- [x] A contract suite case, against both stores, shows that recording usage for three facts sets their time and raises each count by one, in one call, and that `listAuditEntries` for each fact returns the same entries as before.
+- [x] A contract case shows usage recorded for a fact of another namespace, or for an unknown fact, changes nothing and returns no error.
+- [x] A SQLite adapter test shows the row counts of `fact`, `source`, `entity` and `audit_log` are unchanged by a usage write.
+- [x] A test shows `get_fact_history` records no usage.
+- [x] The test over stdio of the `recall` tool (FL-058) still passes.
 - [ ] The owner records the two timings of technical requirement 5 in `OPEN-QUESTIONS.md`.
-- [ ] `pnpm check` exits 0.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests of `recall` and of the handler. The contract suite against both stores. The stdio test of the `recall` tool. The owner's timing run. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the updated `INTERFACES.md`, `SCHEMA.md` and `MCP-TOOLS.md`; the timings added to `OPEN-QUESTIONS.md`.
+
+**Recorded evidence.** Done on 2026-11-17 on Linux x64 with Node.js v22.23.4, after `feat(storage): add the fact usage migration`, in three commits, each checked on its own: `feat(core): add usage tracking to both stores`, `feat(mcp-server): record the usage of recalled facts after recall`, and `docs: record the first usage timings in Q-11`. The item is `Under Review` until the owner repeats the timing of technical requirement 5; the agent ran it once in process.
+
+The migration is `0006_add_fact_usage.sql`, sha256 `239231e00a1f217b00cad12954da7f9c8dc27c40cfa4148a16b7e2661c0da2c0`. It adds `fact_usage`, one row per fact updated in place, and `fact_usage_tracking`, the time of a namespace's first usage write, which tells "never used" from "not yet counted". The purge inventory classifies their five text columns as not content.
+
+`MemoryStore` gains three methods, in both stores, in `INTERFACES.md` and the parity test, with the core schema `FactUsage`:
+
+- **`recordFactUsage({ namespace, factIds, recalledAt })`** writes, outside `commit` and with no audit entry. In SQLite it is one batched `INSERT ... ON CONFLICT DO UPDATE` over the facts of the namespace, plus the first-write time, in one transaction. The in-memory store keeps usage beside its state, not in it.
+- **`getFactUsage`** reads one fact's usage.
+- **`getUsageTrackingStart`** reads when counting began.
+
+The `recall` tool calls `recordFactUsage` after its result is produced, without waiting, and logs and drops a failure. No other tool, operation or eval calls it. `MCP-TOOLS.md`, "What a handler does", says so.
+
+Tests:
+
+- **`recall` is still a pure read.** A unit test records the shop timeline and recalls: every fact row, every fact's audit entries and usage, and the tracking start are identical before and after. A SQLite adapter test dumps every row of every table, and the dump is the same before and after the keyword lane, the vector lane and a touching read.
+- **The tool handler, in `recall-usage.test.ts`.** After one call the returned fact has a count of 1 and the call's time; after a second, 2. With a store whose usage write fails, the tool result is the same as without the failure and is not an error. `get_fact_history` records no usage.
+- **Contract cases, against both stores:**
+  - **W1:** three facts recorded twice have a count of 2 and the second time; their audit entries are unchanged; the tracking start is the first write's time.
+  - **W2:** an unknown fact changes nothing.
+  - **W3:** a fact never recalled has none.
+  - **N8:** a fact of the other namespace is skipped, and usage is not read across namespaces.
+
+  The counts rise to 66 and to 27 and 28.
+- **Row counts.** A SQLite adapter test shows the rows of `fact`, `source`, `entity`, `fact_source`, `fact_embedding` and `audit_log` unchanged by a usage write.
+- **Over stdio.** The recall tool's test over stdio (FL-058) still passes.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| SQLite's usage write ignores the namespace | N8 |
+| SQLite's count is not raised | W1 |
+| The recall tool records no usage | The count test of the handler |
+
+The timing of technical requirement 5 was run once by the agent, in process, not with a separate server:
+
+- **Setup.** A SQLite file in WAL mode with 10,000 facts from the benchmark's synthetic namespace; 100 `recall` tool calls through an in-process MCP client, in three alternating rounds after a warm-up.
+- **Off:** 1,844, 1,915 and 1,940 ms.
+- **On:** 2,107, 2,197 and 2,114 ms, about 2 ms or 10% more per call.
+- **Limits.** One process wrote, so this measures the cost of the write, not contention. The numbers are in Q-11, labelled as one run by the agent, and the script was not kept.
+
+`pnpm check`:
+
+```text
+ Test Files  90 passed (90)
+      Tests  940 passed (940)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the third commit: https://github.com/Johnmark-Tech/factloom/actions/runs/43998180414.
+
+For the owner's review: repeat the timing with the server running against a database of 10,000 facts, on the Mac, and record both numbers in Q-11.
 
 ### FL-065: Archive and unarchive operations
 
