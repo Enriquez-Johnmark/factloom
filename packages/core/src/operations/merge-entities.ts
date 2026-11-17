@@ -11,8 +11,10 @@ export type MergeEntitiesInput = ChangeContext & {
 /**
  * Records that one entity is the same thing as another, in one commit. No entity and no fact
  * is rewritten: from now on every read resolves `fromEntityId` to `intoEntityId`, and facts
- * about either are read together. Entities of different types can be merged. Until FL-063, a
- * merge that would form a chain is refused with `invalid_input`.
+ * about either are read together, through whole chains of merges. Entities of different types
+ * can be merged. A merge is refused with `conflict` when the two entities hold different live
+ * values for a predicate the domain says is single-valued, and with `invalid_input` when it
+ * would make a cycle.
  */
 export async function mergeEntities(
   deps: Pick<OperationDeps, 'store' | 'domain' | 'now' | 'newId'>,
@@ -42,6 +44,9 @@ export async function mergeEntities(
           mergedAt: now,
           undoneAt: null,
         },
+        singleValuedPredicates: deps.domain.predicates
+          .filter((predicate) => predicate.cardinality === 'single')
+          .map((predicate) => predicate.name),
       },
     ],
   });

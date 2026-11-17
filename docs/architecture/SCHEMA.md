@@ -310,7 +310,7 @@ Designed in [ADR 0012](adr/0012-purge-is-the-one-exception.md), "The phase 2 des
 
 One row per merge: an identifier, the namespace, `from_entity_id`, `into_entity_id`, `merged_at`, and `undone_at`, which is set once. No entity row and no fact row is rewritten by a merge. A trigger refuses every delete and every update but setting `undone_at` once; a partial unique index lets an entity be merged into at most one other at a time.
 
-Every read resolves an entity identifier through the merges whose `undone_at` is `NULL`, in SQL (`packages/storage/src/entity-resolution-sql.ts`) and in the in-memory store: a filter by subject or by touching entities matches every identifier merged with the one asked for, and `subject` and `objectEntity` in results are the entity merged into. The single-value rule inside `commit` is checked across merged entities. A read with a past known-at date resolves through today's merges.
+Every read resolves an entity identifier through the merges whose `undone_at` is `NULL`, in SQL (`packages/storage/src/entity-resolution-sql.ts`) and in the in-memory store: a filter by subject or by touching entities matches every identifier merged with the one asked for, through whole chains of merges in one recursive query, and `subject` and `objectEntity` in results are the entity at the end of the chain. The single-value rule inside `commit` is checked across merged entities. A merge is refused inside its commit when it would make a cycle, or when the two entities hold different live values for a single-valued predicate (FL-063); `undo_entity_merge` sets `undone_at` once. A read with a past known-at date resolves through today's merges.
 
 ### `fact_usage` and `fact_usage_tracking`, migration `0006_add_fact_usage.sql` (FL-055)
 

@@ -112,7 +112,8 @@ type RefAuditAction =
   | 'feedback.recorded'
   | 'source.purged'
   | 'fact.purged'
-  | 'entity.merged';
+  | 'entity.merged'
+  | 'entity.merge_undone';
 
 type RefAuditEntry = {
   readonly id: number;
@@ -157,7 +158,12 @@ type RefChange =
   | { readonly kind: 'adjust_confidence'; readonly factId: RefFactId; readonly confidence: number }
   | { readonly kind: 'record_feedback'; readonly feedback: RefFeedback }
   | { readonly kind: 'purge_content'; readonly targetKind: 'source' | 'fact'; readonly targetId: string }
-  | { readonly kind: 'merge_entities'; readonly merge: RefEntityMerge };
+  | {
+      readonly kind: 'merge_entities';
+      readonly merge: RefEntityMerge;
+      readonly singleValuedPredicates: readonly string[];
+    }
+  | { readonly kind: 'undo_entity_merge'; readonly mergeId: string; readonly fromEntityId: RefEntityId };
 
 type RefFactUsage = {
   readonly factId: RefFactId;

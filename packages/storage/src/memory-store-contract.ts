@@ -1582,6 +1582,7 @@ function registerSingleValueRuleAndNamespaces(
       mergedAt: at('2026-06-02'),
       undoneAt: null,
     },
+    singleValuedPredicates: [DATABASE, NODE],
   });
   const merged = { operation: 'merge', reasonCode: 'same_entity' } as const;
   const mergeTwin = async (): Promise<void> => {
@@ -1703,7 +1704,7 @@ function registerSingleValueRuleAndNamespaces(
     expect(await listFactIds(cases.store(), 'all')).toEqual(before);
   });
   cases.test(
-    'M5: a merge is refused for one entity, an entity already merged, a target that is merged, or another namespace',
+    'M5: a merge is refused for one entity, an entity already merged, a cycle, or another namespace',
     async () => {
       await twinCommit();
       const code = async (change: Change) => {
@@ -1714,8 +1715,7 @@ function registerSingleValueRuleAndNamespaces(
       expect(await code(mergeChange('m-self', 'e-repo', 'e-repo'))).toBe('invalid_input');
       await mergeTwin();
       expect(await code(mergeChange('m-again', 'e-twin', 'e-repo'))).toBe('already_exists');
-      await commit([{ kind: 'create_entity', entity: entity('e-third', 'example-three', 'repository') }]);
-      expect(await code(mergeChange('m-chain', 'e-third', 'e-twin'))).toBe('invalid_input');
+      expect(await code(mergeChange('m-cycle', 'e-repo', 'e-twin'))).toBe('invalid_input');
       expect(await code(mergeChange('m-other', 'other-e-repo', 'e-repo'))).toBe('not_found');
     },
   );
@@ -1753,6 +1753,211 @@ function registerSingleValueRuleAndNamespaces(
         ok: true,
         value: [],
       });
+    },
+  );
+
+  // --- Undo, chains and refused merges (FL-063) ---
+  const undoChange = (mergeId: string, fromEntityId: string): Change => ({
+    kind: 'undo_entity_merge',
+    mergeId,
+    fromEntityId,
+  });
+  const thirdCommit = () =>
+    commit([
+      { kind: 'create_entity', entity: entity('e-third', 'example-three', 'repository') },
+      recordFact(
+        fact('third-zod', 'depends_on', 'zod', { subjectEntityId: 'e-third', createdAt: at('2026-06-01') }),
+        {
+          singleValued: false,
+          embedding: new Float32Array([0, 1, 1, 0]),
+        },
+      ),
+    ]);
+  const idsOf = async (subjectEntityId: string) =>
+    (await liveOf(subjectEntityId)).map(({ fact }) => fact.id).sort();
+  const subjectsOf = async (subjectEntityId: string) =>
+    new Set((await liveOf(subjectEntityId)).map(({ subject }) => subject.id));
+  const mergeWith = (id: string, from: string, into: string) =>
+    cases.store().commit(changeSet('op-m', '2026-06-02', [mergeChange(id, from, into)], merged));
+  const undo = (mergeId: string, from: string) =>
+    cases.store().commit(changeSet('op-undo', '2026-06-04', [undoChange(mergeId, from)], merged));
+
+  cases.test(
+    'M8: after an undo, each identifier reads exactly its own facts, one recorded during the merge included',
+    async () => {
+      await twinCommit();
+      await mergeTwin();
+      const during = await commit([
+        recordFact(
+          fact('twin-zod', 'depends_on', 'zod', { subjectEntityId: 'e-twin', createdAt: at('2026-06-03') }),
+          { singleValued: false },
+        ),
+      ]);
+      expect(during.ok).toBe(true);
+
+      expect((await undo('m-1', 'e-twin')).ok).toBe(true);
+
+      expect(await idsOf('e-twin')).toEqual(['twin-redis', 'twin-zod']);
+      expect(await subjectsOf('e-twin')).toEqual(new Set(['e-twin']));
+      expect(await idsOf('e-repo')).toEqual(['node22', 'pg14-ended', 'pg16']);
+    },
+  );
+  cases.test(
+    'M9: the entity and fact rows are the same before a merge, after it, and after its undo',
+    async () => {
+      await twinCommit();
+      const rows = async () => {
+        const facts = await cases.store().listFacts({
+          namespace: NAMESPACE,
+          subjectEntityId: null,
+          predicate: null,
+          touchingEntityIds: null,
+          supersededByFactId: null,
+          time: 'all',
+          limit: 1000,
+        });
+        return JSON.stringify([
+          await cases.store().findEntities({ namespace: NAMESPACE, name: 'example-two', type: null }),
+          facts.ok ? facts.value.map(({ fact }) => fact) : null,
+        ]);
+      };
+      const before = await rows();
+      await mergeTwin();
+      const afterMerge = await rows();
+      await undo('m-1', 'e-twin');
+
+      expect([afterMerge, await rows()]).toEqual([before, before]);
+    },
+  );
+  cases.test(
+    'M10: in a chain, A into B and B into C, a read by A returns the facts of all three under C, in both lanes too',
+    async () => {
+      await twinCommit();
+      await thirdCommit();
+      expect((await mergeWith('m-ab', 'e-third', 'e-twin')).ok).toBe(true);
+      expect((await mergeWith('m-bc', 'e-twin', 'e-repo')).ok).toBe(true);
+
+      expect(await idsOf('e-third')).toEqual(['node22', 'pg14-ended', 'pg16', 'third-zod', 'twin-redis']);
+      expect(await subjectsOf('e-third')).toEqual(new Set(['e-repo']));
+      const now = { validAt: NOW, knownAt: NOW };
+      const byKeyword = await cases
+        .store()
+        .searchFactsByKeyword({ namespace: NAMESPACE, text: 'zod', time: now, limit: 5 });
+      const byVector = await cases.store().searchFactsByVector({
+        namespace: NAMESPACE,
+        vector: new Float32Array([0, 1, 1, 0]),
+        time: now,
+        limit: 1,
+      });
+      expect(byKeyword.ok && byKeyword.value.map(({ fact, subject }) => [fact.id, subject.id])).toEqual([
+        ['third-zod', 'e-repo'],
+      ]);
+      expect(byVector.ok && byVector.value.map(({ fact, subject }) => [fact.id, subject.id])).toEqual([
+        ['third-zod', 'e-repo'],
+      ]);
+    },
+  );
+  cases.test(
+    'M11: undoing the merge of B into C separates the chain there and leaves A merged into B',
+    async () => {
+      await twinCommit();
+      await thirdCommit();
+      await mergeWith('m-ab', 'e-third', 'e-twin');
+      await mergeWith('m-bc', 'e-twin', 'e-repo');
+
+      await undo('m-bc', 'e-twin');
+
+      expect(await idsOf('e-third')).toEqual(['third-zod', 'twin-redis']);
+      expect(await subjectsOf('e-third')).toEqual(new Set(['e-twin']));
+      expect(await idsOf('e-repo')).toEqual(['node22', 'pg14-ended', 'pg16']);
+      expect(await subjectsOf('e-repo')).toEqual(new Set(['e-repo']));
+    },
+  );
+  cases.test(
+    'M12: a merge of entities with different current values for a single-valued predicate is refused, naming both facts',
+    async () => {
+      await twinCommit();
+      await commit([
+        recordFact(
+          fact('twin-pg17', DATABASE, 'PostgreSQL 17', {
+            subjectEntityId: 'e-twin',
+            validFrom: at('2026-05-01'),
+            createdAt: at('2026-06-01'),
+          }),
+        ),
+      ]);
+
+      const result = await mergeWith('m-1', 'e-twin', 'e-repo');
+
+      expect(result.ok ? null : result.error.code).toBe('conflict');
+      if (!result.ok) expect([...result.error.relatedFactIds].sort()).toEqual(['pg16', 'twin-pg17']);
+      expect(await cases.store().listEntityMerges({ namespace: NAMESPACE })).toEqual({ ok: true, value: [] });
+    },
+  );
+  cases.test(
+    'M13: entities of different types are merged when their values agree, both facts kept, and refused when they differ',
+    async () => {
+      await twinCommit('dependency');
+      await commit([
+        recordFact(
+          fact('twin-pg16', DATABASE, 'PostgreSQL 16', {
+            subjectEntityId: 'e-twin',
+            validFrom: at('2026-03-15'),
+            createdAt: at('2026-06-01'),
+          }),
+        ),
+      ]);
+
+      expect((await mergeWith('m-1', 'e-twin', 'e-repo')).ok).toBe(true);
+      expect((await idsOf('e-repo')).filter((id) => id.includes('pg16'))).toEqual(['pg16', 'twin-pg16']);
+
+      await commit([
+        { kind: 'create_entity', entity: entity('e-fourth', 'example-four', 'dependency') },
+        recordFact(
+          fact('fourth-pg13', DATABASE, 'PostgreSQL 13', {
+            subjectEntityId: 'e-fourth',
+            createdAt: at('2026-06-01'),
+          }),
+        ),
+      ]);
+      const refused = await mergeWith('m-2', 'e-fourth', 'e-repo');
+      expect(refused.ok ? null : refused.error.code).toBe('conflict');
+    },
+  );
+  cases.test(
+    'M14: a second undo is already_exists, and an unknown merge or one of another namespace is not_found',
+    async () => {
+      await twinCommit();
+      await mergeTwin();
+      const code = async (change: Change, namespace = NAMESPACE) => {
+        const result = await cases
+          .store()
+          .commit(changeSet('op-undo', '2026-06-04', [change], { ...merged, namespace }));
+        return result.ok ? null : result.error.code;
+      };
+
+      expect(await code(undoChange('m-1', 'e-twin'))).toBeNull();
+      expect(await code(undoChange('m-1', 'e-twin'))).toBe('already_exists');
+      expect(await code(undoChange('m-missing', 'e-twin'))).toBe('not_found');
+      expect(await code(undoChange('m-1', 'e-twin'), OTHER_PLACE.namespace)).toBe('not_found');
+    },
+  );
+  cases.test(
+    'M15: an undo writes one audit entry about the entity merged from, and sets undoneAt',
+    async () => {
+      await twinCommit();
+      await mergeTwin();
+
+      await undo('m-1', 'e-twin');
+
+      const entries = await cases
+        .store()
+        .listAuditEntries({ namespace: NAMESPACE, targetKind: 'entity', targetId: 'e-twin' });
+      expect(
+        entries.ok && entries.value.filter(({ action }) => action === 'entity.merge_undone'),
+      ).toMatchObject([{ operation: 'merge', detail: { mergeId: 'm-1' } }]);
+      const merges = await cases.store().listEntityMerges({ namespace: NAMESPACE });
+      expect(merges.ok && merges.value[0]?.undoneAt).toBe(at('2026-06-04'));
     },
   );
 
@@ -1958,6 +2163,76 @@ function registerSingleValueRuleAndNamespaces(
           expect(
             results.map((result) => (result.ok ? null : result.error.code)).filter((code) => code !== null),
           ).toEqual(['conflict']);
+        } finally {
+          await first.close();
+          await second.close();
+        }
+      },
+    );
+    cases.test(
+      'P2: a merge on one store after a conflicting fact on another, on one file, is refused inside its commit',
+      async () => {
+        const [first, second] = await openTwoStoresOnOneFile();
+        try {
+          const shared = { namespace: 'repo:shared' };
+          expect((await first.commit(firstCommit({ namespace: 'repo:shared', prefix: 'shared-' }))).ok).toBe(
+            true,
+          );
+          const twin = await first.commit(
+            changeSet(
+              'op-twin',
+              '2026-06-01',
+              [
+                {
+                  kind: 'create_entity',
+                  entity: entity('shared-e-twin', 'twin', 'repository', 'repo:shared'),
+                },
+              ],
+              shared,
+            ),
+          );
+          expect(twin.ok).toBe(true);
+          const mergeIt = changeSet(
+            'op-merge',
+            '2026-06-02',
+            [
+              {
+                kind: 'merge_entities',
+                merge: {
+                  id: 'm-shared',
+                  namespace: 'repo:shared',
+                  fromEntityId: 'shared-e-twin',
+                  intoEntityId: 'shared-e-repo',
+                  mergedAt: at('2026-06-02'),
+                  undoneAt: null,
+                },
+                singleValuedPredicates: [DATABASE],
+              },
+            ],
+            { ...shared, operation: 'merge', reasonCode: 'same_entity' },
+          );
+          const conflictingFact = changeSet(
+            'op-pg17',
+            '2026-06-02',
+            [
+              recordFact(
+                fact('shared-twin-pg17', DATABASE, 'PostgreSQL 17', {
+                  namespace: 'repo:shared',
+                  subjectEntityId: 'shared-e-twin',
+                  createdAt: at('2026-06-02'),
+                }),
+                { sourceIds: ['shared-s-1'] },
+              ),
+            ],
+            shared,
+          );
+
+          // The fact is committed first, by the other store, after a caller of mergeEntities could
+          // have checked; only the check inside the merge's own commit can then refuse it.
+          const results = [await second.commit(conflictingFact), await first.commit(mergeIt)];
+
+          expect(results.filter((result) => result.ok)).toHaveLength(1);
+          expect(results.flatMap((result) => (result.ok ? [] : [result.error.code]))).toEqual(['conflict']);
         } finally {
           await first.close();
           await second.close();

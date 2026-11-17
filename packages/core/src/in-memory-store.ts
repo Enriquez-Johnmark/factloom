@@ -87,6 +87,7 @@ const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_conte
   adjust_confidence: 'fact.confidence_adjusted',
   record_feedback: 'feedback.recorded',
   merge_entities: 'entity.merged',
+  undo_entity_merge: 'entity.merge_undone',
 };
 
 /** What happened to the target of a change. A purge's action depends on what it purged. */
@@ -117,6 +118,8 @@ function targetOf(change: Change): {
       return { targetKind: change.targetKind, targetId: change.targetId };
     case 'merge_entities':
       return { targetKind: 'entity', targetId: change.merge.fromEntityId };
+    case 'undo_entity_merge':
+      return { targetKind: 'entity', targetId: change.fromEntityId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -211,6 +214,8 @@ function detailOf(change: Change, changes: readonly Change[], before: State): Au
       return null;
     case 'merge_entities':
       return { intoEntityId: change.merge.intoEntityId, mergeId: change.merge.id };
+    case 'undo_entity_merge':
+      return { mergeId: change.mergeId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -234,24 +239,45 @@ function mergesInForce(merges: readonly EntityMerge[]): EntityMerge[] {
   return merges.filter((merge) => merge.undoneAt === null);
 }
 
-/** The entity an identifier resolves to: the one it was merged into, or itself. */
+/** The entity an identifier resolves to: the end of its chain of merges in force, or itself. */
 function resolveEntityId(merges: readonly EntityMerge[], entityId: string): string {
-  return mergesInForce(merges).find((merge) => merge.fromEntityId === entityId)?.intoEntityId ?? entityId;
+  const inForce = mergesInForce(merges);
+  let current = entityId;
+  // Bounded by the refusal of cycles: each step moves to an entity not seen before.
+  for (let step = 0; step <= inForce.length; step += 1) {
+    const next = inForce.find((merge) => merge.fromEntityId === current)?.intoEntityId;
+    if (next === undefined) return current;
+    current = next;
+  }
+  return current;
 }
 
-/** Every identifier that resolves to the same entity as this one: it, what it resolves to, and what was merged into that. */
+/** Every identifier that resolves to the same entity as this one, through the whole chain. */
 function sameEntityIds(merges: readonly EntityMerge[], entityId: string): Set<string> {
   const resolved = resolveEntityId(merges, entityId);
   const ids = new Set([entityId, resolved]);
-  for (const merge of mergesInForce(merges)) if (merge.intoEntityId === resolved) ids.add(merge.fromEntityId);
+  for (const merge of mergesInForce(merges)) {
+    if (resolveEntityId(merges, merge.fromEntityId) === resolved) ids.add(merge.fromEntityId);
+  }
   return ids;
 }
 
+/** Whether two live facts disagree: different objects, as stored, with overlapping valid periods. */
+function disagree(first: Fact, second: Fact): boolean {
+  return !sameObject(first, second) && periodsOverlap(first, second);
+}
+
 /**
- * Records a merge. Until chains of merges are handled (FL-063), a merge into an entity that is
- * itself merged, or of an entity that others were merged into, is refused.
+ * Records a merge, refusing an entity already merged, a cycle, and a merge whose two entities,
+ * with everything merged into each, hold different live values for a single-valued predicate
+ * (INTERFACES.md, "The single-value rule after a merge").
  */
-function recordMerge(draft: State, changeSet: ChangeSet, merge: EntityMerge): Failure | null {
+function recordMerge(
+  draft: State,
+  changeSet: ChangeSet,
+  merge: EntityMerge,
+  singleValuedPredicates: readonly string[],
+): Failure | null {
   for (const entityId of [merge.fromEntityId, merge.intoEntityId]) {
     if (draft.entities.get(entityId)?.namespace !== changeSet.namespace) {
       return err('not_found', `The entity ${entityId} does not exist.`);
@@ -259,26 +285,69 @@ function recordMerge(draft: State, changeSet: ChangeSet, merge: EntityMerge): Fa
   }
   if (merge.fromEntityId === merge.intoEntityId)
     return err('invalid_input', 'An entity cannot be merged with itself.');
-  const inForce = mergesInForce(draft.merges);
   if (draft.merges.some((known) => known.id === merge.id)) {
     return err('already_exists', `The identifier ${merge.id} is already used by a merge.`);
   }
-  if (inForce.some((known) => known.fromEntityId === merge.fromEntityId)) {
+  if (mergesInForce(draft.merges).some((known) => known.fromEntityId === merge.fromEntityId)) {
     return err('already_exists', `The entity ${merge.fromEntityId} is already merged into another.`);
   }
-  if (inForce.some((known) => known.fromEntityId === merge.intoEntityId)) {
+  if (resolveEntityId(draft.merges, merge.intoEntityId) === merge.fromEntityId) {
     return err(
       'invalid_input',
-      `The entity ${merge.intoEntityId} is itself merged; merge into the one it was merged into.`,
+      `Merging ${merge.fromEntityId} into ${merge.intoEntityId} would make a cycle of merges.`,
     );
   }
-  if (inForce.some((known) => known.intoEntityId === merge.fromEntityId)) {
+  const before = {
+    from: sameEntityIds(draft.merges, merge.fromEntityId),
+    into: sameEntityIds(draft.merges, merge.intoEntityId),
+  };
+  const live = (subjects: Set<string>, predicate: string) =>
+    [...draft.facts.values()].filter(
+      (fact) =>
+        fact.namespace === changeSet.namespace &&
+        fact.invalidatedAt === null &&
+        fact.predicate === predicate &&
+        subjects.has(fact.subjectEntityId),
+    );
+  const conflicting = new Set<string>();
+  for (const predicate of singleValuedPredicates) {
+    const intoFacts = live(before.into, predicate);
+    for (const fromFact of live(before.from, predicate)) {
+      for (const intoFact of intoFacts) {
+        if (disagree(fromFact, intoFact)) {
+          conflicting.add(fromFact.id);
+          conflicting.add(intoFact.id);
+        }
+      }
+    }
+  }
+  if (conflicting.size > 0) {
+    const ids = [...conflicting].sort();
     return err(
-      'invalid_input',
-      `Other entities were merged into ${merge.fromEntityId}; chains of merges are not handled yet.`,
+      'conflict',
+      `Merging ${merge.fromEntityId} into ${merge.intoEntityId} would give one entity different values at once: ${ids.join(', ')}.`,
+      { relatedFactIds: ids },
     );
   }
   draft.merges.push(merge);
+  return null;
+}
+
+/** Undoes a merge, once. */
+function undoMerge(
+  draft: State,
+  changeSet: ChangeSet,
+  mergeId: string,
+  fromEntityId: string,
+): Failure | null {
+  const index = draft.merges.findIndex(
+    (merge) => merge.id === mergeId && merge.namespace === changeSet.namespace,
+  );
+  const merge = draft.merges[index];
+  if (merge === undefined || merge.fromEntityId !== fromEntityId)
+    return err('not_found', `No merge ${mergeId} in this namespace.`);
+  if (merge.undoneAt !== null) return err('already_exists', `The merge ${mergeId} was already undone.`);
+  draft.merges[index] = { ...merge, undoneAt: changeSet.occurredAt };
   return null;
 }
 
@@ -461,7 +530,9 @@ function applyChange(draft: State, changeSet: ChangeSet, change: Change): Failur
       return null;
     }
     case 'merge_entities':
-      return recordMerge(draft, changeSet, change.merge);
+      return recordMerge(draft, changeSet, change.merge, change.singleValuedPredicates);
+    case 'undo_entity_merge':
+      return undoMerge(draft, changeSet, change.mergeId, change.fromEntityId);
     case 'purge_content':
       return change.targetKind === 'fact'
         ? purgeFact(draft, changeSet, change.targetId)

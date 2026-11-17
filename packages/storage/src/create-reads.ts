@@ -9,7 +9,7 @@ import {
 import type { Database, Statement } from 'better-sqlite3';
 import { buildKeywordQuery } from './build-keyword-query.ts';
 import { CONFIDENCE_AT_KNOWN_AT, LATEST_CONFIDENCE } from './confidence-columns.ts';
-import { sameEntityIds, sameEntityIdsOfArray } from './entity-resolution-sql.ts';
+import { resolveEntityIdsOfArray, sameEntityIds, sameEntityIdsOfArray } from './entity-resolution-sql.ts';
 import { type EmbeddingModel, toBlob } from './embedding-model.ts';
 import {
   type AuditRow,
@@ -178,10 +178,10 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
   const selectSourcesByHash = db.prepare<[string, string], SourceRow>(
     `SELECT ${SOURCE_COLUMNS} FROM source WHERE namespace = ? AND content_hash = ? ORDER BY created_at, rowid`,
   );
-  const selectMergesFrom = db.prepare<[string, string], { from_entity_id: string; into_entity_id: string }>(
-    `SELECT from_entity_id, into_entity_id FROM entity_merge
-     WHERE namespace = ? AND undone_at IS NULL AND from_entity_id IN (SELECT value FROM json_each(?))`,
-  );
+  const selectMergesFrom = db.prepare<
+    { namespace: string; ids: string },
+    { from_entity_id: string; into_entity_id: string }
+  >(resolveEntityIdsOfArray('@ids'));
   const selectMerges = db.prepare<[string], EntityMergeRow>(
     `SELECT id, namespace, from_entity_id, into_entity_id, merged_at, undone_at FROM entity_merge
      WHERE namespace = ? ORDER BY merged_at, rowid`,
@@ -203,7 +203,7 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
     // A fact is shown under the entity each of its entities resolves to through merges.
     const resolvedTo = new Map(
       selectMergesFrom
-        .all(namespace, JSON.stringify([...recorded]))
+        .all({ namespace, ids: JSON.stringify([...recorded]) })
         .map((row) => [row.from_entity_id, row.into_entity_id]),
     );
     const resolve = (entityId: string): string => resolvedTo.get(entityId) ?? entityId;

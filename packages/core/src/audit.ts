@@ -46,6 +46,7 @@ export const AuditActionSchema = z.enum([
   'source.purged',
   'fact.purged',
   'entity.merged',
+  'entity.merge_undone',
 ]);
 export type AuditAction = z.infer<typeof AuditActionSchema>;
 

@@ -61,7 +61,22 @@ export const ChangeSchema = z.discriminatedUnion('kind', [
     })
     .readonly(),
   /** Phase 3. Records that one entity is the same as another; no entity or fact is rewritten. */
-  z.strictObject({ kind: z.literal('merge_entities'), merge: EntityMergeSchema }).readonly(),
+  z
+    .strictObject({
+      kind: z.literal('merge_entities'),
+      merge: EntityMergeSchema,
+      /** The domain's single-valued predicates, set by core, for the store's refusal of a conflicting merge. */
+      singleValuedPredicates: z.array(z.string().min(1)).readonly(),
+    })
+    .readonly(),
+  /** Phase 3. Withdraws a merge: sets its `undoneAt`, once. */
+  z
+    .strictObject({
+      kind: z.literal('undo_entity_merge'),
+      mergeId: z.string().min(1),
+      fromEntityId: z.string().min(1),
+    })
+    .readonly(),
 ]);
 export type Change = z.infer<typeof ChangeSchema>;
 
@@ -81,6 +96,8 @@ function findForeignRow(namespace: string, change: Change): string | null {
       return null;
     case 'merge_entities':
       return change.merge.namespace === namespace ? null : `merge ${change.merge.id}`;
+    case 'undo_entity_merge':
+      return null;
     case 'record_feedback':
       return change.feedback.namespace === namespace ? null : `feedback ${change.feedback.id}`;
     default: {

@@ -15,7 +15,7 @@ import {
 } from '@factloom/core';
 import type { Database } from 'better-sqlite3';
 import { LATEST_CONFIDENCE } from './confidence-columns.ts';
-import { sameEntityIds } from './entity-resolution-sql.ts';
+import { resolvedEntityId, sameEntityIds } from './entity-resolution-sql.ts';
 import { type EmbeddingModel, toBlob } from './embedding-model.ts';
 
 const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_content'>]: AuditAction } = {
@@ -27,6 +27,7 @@ const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_conte
   adjust_confidence: 'fact.confidence_adjusted',
   record_feedback: 'feedback.recorded',
   merge_entities: 'entity.merged',
+  undo_entity_merge: 'entity.merge_undone',
 };
 
 /** What happened to the target of a change. A purge's action depends on what it purged. */
@@ -57,6 +58,8 @@ function targetOf(change: Change): {
       return { targetKind: change.targetKind, targetId: change.targetId };
     case 'merge_entities':
       return { targetKind: 'entity', targetId: change.merge.fromEntityId };
+    case 'undo_entity_merge':
+      return { targetKind: 'entity', targetId: change.fromEntityId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -211,8 +214,30 @@ export function createCommit(
   const isMergedFrom = db.prepare<[string, string], unknown>(
     'SELECT 1 FROM entity_merge WHERE namespace = ? AND from_entity_id = ? AND undone_at IS NULL',
   );
-  const hasMergedInto = db.prepare<[string, string], unknown>(
-    'SELECT 1 FROM entity_merge WHERE namespace = ? AND into_entity_id = ? AND undone_at IS NULL',
+  const selectResolved = db.prepare<{ namespace: string; id: string }, { id: string }>(
+    `SELECT ${resolvedEntityId('@id')} AS id`,
+  );
+  // Live facts of the two entities, each with everything merged into it, that disagree for a
+  // single-valued predicate: different objects as stored, overlapping valid periods.
+  const selectMergeConflicts = db.prepare<
+    { namespace: string; fromEntityId: string; intoEntityId: string; predicates: string },
+    { a: string; b: string }
+  >(
+    `SELECT a.id AS a, b.id AS b FROM fact a JOIN fact b ON b.predicate = a.predicate
+     WHERE a.namespace = @namespace AND b.namespace = @namespace
+       AND a.invalidated_at IS NULL AND b.invalidated_at IS NULL
+       AND a.predicate IN (SELECT value FROM json_each(@predicates))
+       AND a.subject_entity_id IN (${sameEntityIds('@fromEntityId')})
+       AND b.subject_entity_id IN (${sameEntityIds('@intoEntityId')})
+       AND NOT (a.object_entity_id IS b.object_entity_id AND a.object_value IS b.object_value)
+       AND (a.valid_from IS NULL OR b.valid_to IS NULL OR a.valid_from < b.valid_to)
+       AND (b.valid_from IS NULL OR a.valid_to IS NULL OR b.valid_from < a.valid_to)`,
+  );
+  const selectMerge = db.prepare<[string, string], { from_entity_id: string; undone_at: string | null }>(
+    'SELECT from_entity_id, undone_at FROM entity_merge WHERE id = ? AND namespace = ?',
+  );
+  const undoMerge = db.prepare(
+    'UPDATE entity_merge SET undone_at = @undoneAt WHERE id = @id AND namespace = @namespace AND undone_at IS NULL',
   );
   const insertAuditEntry = db.prepare(
     `INSERT INTO audit_log (namespace, operation_id, operation, action, target_kind, target_id,
@@ -417,21 +442,40 @@ export function createCommit(
         if (isMergedFrom.get(namespace, merge.fromEntityId) !== undefined) {
           refuse('already_exists', `The entity ${merge.fromEntityId} is already merged into another.`);
         }
-        // Until chains of merges are handled (FL-063), neither end may already be part of one.
-        if (isMergedFrom.get(namespace, merge.intoEntityId) !== undefined) {
+        if (selectResolved.get({ namespace, id: merge.intoEntityId })?.id === merge.fromEntityId) {
           refuse(
             'invalid_input',
-            `The entity ${merge.intoEntityId} is itself merged; merge into the one it was merged into.`,
+            `Merging ${merge.fromEntityId} into ${merge.intoEntityId} would make a cycle of merges.`,
           );
         }
-        if (hasMergedInto.get(namespace, merge.fromEntityId) !== undefined) {
+        // The refusal of a conflicting merge is made here, inside the commit's transaction, so
+        // that a fact another process records meanwhile is seen (INTERFACES.md).
+        const conflicts = selectMergeConflicts.all({
+          namespace,
+          fromEntityId: merge.fromEntityId,
+          intoEntityId: merge.intoEntityId,
+          predicates: JSON.stringify(change.singleValuedPredicates),
+        });
+        if (conflicts.length > 0) {
+          const ids = [...new Set(conflicts.flatMap((row) => [row.a, row.b]))].sort();
           refuse(
-            'invalid_input',
-            `Other entities were merged into ${merge.fromEntityId}; chains of merges are not handled yet.`,
+            'conflict',
+            `Merging ${merge.fromEntityId} into ${merge.intoEntityId} would give one entity different values at once: ${ids.join(', ')}.`,
+            { relatedFactIds: ids },
           );
         }
         insertMerge.run(merge);
         return { intoEntityId: merge.intoEntityId, mergeId: merge.id };
+      }
+      case 'undo_entity_merge': {
+        const known = selectMerge.get(change.mergeId, namespace);
+        if (known === undefined || known.from_entity_id !== change.fromEntityId) {
+          refuse('not_found', `No merge ${change.mergeId} in this namespace.`);
+        }
+        if (known.undone_at !== null)
+          refuse('already_exists', `The merge ${change.mergeId} was already undone.`);
+        undoMerge.run({ id: change.mergeId, namespace, undoneAt: changeSet.occurredAt });
+        return { mergeId: change.mergeId };
       }
       case 'purge_content': {
         const { targetKind, targetId } = change;
