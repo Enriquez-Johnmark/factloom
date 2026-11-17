@@ -63,6 +63,7 @@ describe('the anchor repair job on a git repository', () => {
     expect(report.jobs.map((job) => [job.name, job.status, job.changed, job.flagged])).toEqual([
       ['verify_anchored_facts', 'ok', 0, 1],
       ['repair_moved_anchors', 'ok', 1, 0],
+      ['find_duplicate_entities', 'ok', 0, 0],
     ]);
     expect(await sourcesOf(store, factId)).toEqual([
       ['file', PATH, expect.any(String)],

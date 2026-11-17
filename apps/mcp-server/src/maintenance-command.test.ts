@@ -64,6 +64,16 @@ describe('the maintenance command', () => {
         failed: 0,
         flaggedItems: [],
       },
+      {
+        name: 'find_duplicate_entities',
+        status: 'ok',
+        error: null,
+        examined: 0,
+        changed: 0,
+        flagged: 0,
+        failed: 0,
+        flaggedItems: [],
+      },
     ]);
   }, 30_000);
 
@@ -88,6 +98,7 @@ describe('the maintenance command', () => {
     expect(report.jobs).toMatchObject([
       { name: 'verify_anchored_facts', status: 'failed', error: 'invalid_input' },
       { name: 'repair_moved_anchors', status: 'failed', error: 'invalid_input' },
+      { name: 'find_duplicate_entities', status: 'ok' },
     ]);
   }, 30_000);
 

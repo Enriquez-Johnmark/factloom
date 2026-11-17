@@ -125,6 +125,7 @@ describe('the verification job on a git repository', () => {
     expect(report.jobs).toMatchObject([
       { name: 'verify_anchored_facts', status: 'failed', error: 'invalid_input' },
       { name: 'repair_moved_anchors', status: 'failed', error: 'invalid_input' },
+      { name: 'find_duplicate_entities', status: 'ok' },
     ]);
     expect(await verificationsOf(store, factId)).toEqual([]);
     expect(await factRows(store)).toEqual(before);
