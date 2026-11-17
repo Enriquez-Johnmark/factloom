@@ -8,6 +8,7 @@ import type {
   ChangeSet,
   Entity,
   Fact,
+  FactVerification,
   Feedback,
   MemoryStore,
   Source,
@@ -1068,6 +1069,78 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
     changeSet('op-g6', '2026-06-01', [feedbackOn('pg16'), feedbackOn('node22')], given),
   );
 
+  // --- Verification (FL-049) ---
+  const verify = (factId: string, fields: Partial<FactVerification> = {}): Change => ({
+    kind: 'record_verification',
+    verification: {
+      id: 'vr-1',
+      namespace: NAMESPACE,
+      factId,
+      outcome: 'confirmed',
+      method: 'deterministic',
+      verifiedAt: at('2026-06-01'),
+      ...fields,
+    },
+  });
+  const verifying = {
+    operation: 'verification',
+    trigger: 'maintenance',
+    reasonCode: 'verification_due',
+  } as const;
+
+  test('E1: a verification writes one audit entry on the fact, naming it, and changes no fact', async () => {
+    const before = await store.listFacts({
+      namespace: NAMESPACE,
+      subjectEntityId: null,
+      predicate: null,
+      touchingEntityIds: null,
+      supersededByFactId: null,
+      time: 'all',
+      limit: 100,
+    });
+    const entriesBefore = await auditEntries(store, 'fact', 'pg16');
+
+    const result = await store.commit(changeSet('op-e1', '2026-06-01', [verify('pg16')], verifying));
+
+    expect(result.ok).toBe(true);
+    expect((await auditEntries(store, 'fact', 'pg16')).slice(entriesBefore.length)).toMatchObject([
+      {
+        operationId: 'op-e1',
+        operation: 'verification',
+        action: 'fact.verified',
+        trigger: 'maintenance',
+        reasonCode: 'verification_due',
+        detail: { verificationId: 'vr-1' },
+      },
+    ]);
+    expect(
+      await store.listFacts({
+        namespace: NAMESPACE,
+        subjectEntityId: null,
+        predicate: null,
+        touchingEntityIds: null,
+        supersededByFactId: null,
+        time: 'all',
+        limit: 100,
+      }),
+    ).toEqual(before);
+  });
+  refuses('E2: verifying a missing fact returns not_found', 'not_found', () =>
+    changeSet('op-e2', '2026-06-01', [verify('missing')], verifying),
+  );
+  refuses(
+    'E3: verifying an invalidated fact returns already_invalidated and names the superseding fact',
+    'already_invalidated',
+    () => changeSet('op-e3', '2026-06-01', [verify('pg14')], verifying),
+    (related) => expect(related).toEqual(['pg14-ended']),
+  );
+  refuses('E4: a verification with an outcome outside the list returns invalid_input', 'invalid_input', () =>
+    changeSet('op-e4', '2026-06-01', [verify('pg16', { outcome: malformed('probably') })], verifying),
+  );
+  refuses('E5: a second verification with the same identifier returns already_exists', 'already_exists', () =>
+    changeSet('op-e5', '2026-06-01', [verify('pg16'), verify('node22')], verifying),
+  );
+
   // --- Purge (FL-061) ---
   // k-1 recorded from s-key, whose text and locator hold the marker; k-1 ended as k-1e with
   // the note s-rotated; k-1e corrected by k-2 from s-fix, which quotes the marker. The
@@ -2060,6 +2133,29 @@ function registerSingleValueRuleAndNamespaces(
       .store()
       .listAuditEntries({ namespace: NAMESPACE, targetKind: 'feedback', targetId: 'fb-other' });
     expect(entries.ok && entries.value).toEqual([]);
+  });
+  cases.test('N9: a verification of a fact of the other namespace returns not_found', async () => {
+    const result = await commit(
+      [
+        {
+          kind: 'record_verification',
+          verification: {
+            id: 'vr-other',
+            namespace: NAMESPACE,
+            factId: 'other-pg16',
+            outcome: 'source_missing',
+            method: 'deterministic',
+            verifiedAt: at('2026-06-01'),
+          },
+        },
+      ],
+      { operation: 'verification', trigger: 'maintenance', reasonCode: 'verification_due' },
+    );
+    expect(result.ok ? null : result.error.code).toBe('not_found');
+    const entries = await cases
+      .store()
+      .listAuditEntries({ namespace: OTHER, targetKind: 'fact', targetId: 'other-pg16' });
+    expect(entries.ok && entries.value.map((entry) => entry.action)).not.toContain('fact.verified');
   });
   cases.test(
     'N8: usage recorded for a fact of the other namespace changes nothing, and usage is not read across namespaces',

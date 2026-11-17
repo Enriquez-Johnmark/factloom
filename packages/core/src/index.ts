@@ -27,6 +27,7 @@ export type { EntityMerge } from './entity-merge.ts';
 export { EntityMergeSchema } from './entity-merge.ts';
 export type { FactUsage } from './fact-usage.ts';
 export { FactUsageSchema } from './fact-usage.ts';
+export type { FactVerification, VerificationMethod, VerificationOutcome } from './fact-verification.ts';
 export type { Feedback, FeedbackSignal } from './feedback.ts';
 export { FeedbackSchema, FeedbackSignalSchema } from './feedback.ts';
 export type {
@@ -86,6 +87,8 @@ export type { AdjustConfidenceInput } from './operations/adjust-confidence.ts';
 export { adjustConfidence } from './operations/adjust-confidence.ts';
 export type { RecordFeedbackInput } from './operations/record-feedback.ts';
 export { recordFeedback } from './operations/record-feedback.ts';
+export type { RecordVerificationInput } from './operations/record-verification.ts';
+export { recordVerification } from './operations/record-verification.ts';
 export type { PurgeContentInput } from './operations/purge-content.ts';
 export { purgeContent } from './operations/purge-content.ts';
 export type { MergeEntitiesInput } from './operations/merge-entities.ts';

@@ -28,6 +28,7 @@ const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_conte
   record_feedback: 'feedback.recorded',
   merge_entities: 'entity.merged',
   undo_entity_merge: 'entity.merge_undone',
+  record_verification: 'fact.verified',
 };
 
 /** What happened to the target of a change. A purge's action depends on what it purged. */
@@ -60,6 +61,8 @@ function targetOf(change: Change): {
       return { targetKind: 'entity', targetId: change.merge.fromEntityId };
     case 'undo_entity_merge':
       return { targetKind: 'entity', targetId: change.fromEntityId };
+    case 'record_verification':
+      return { targetKind: 'fact', targetId: change.verification.factId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -185,6 +188,11 @@ export function createCommit(
      VALUES (@id, @namespace, @factId, @signal, @trigger, @sourceId, @recordedAt)`,
   );
   const isFeedbackIdUsed = db.prepare<[string], unknown>('SELECT 1 FROM feedback WHERE id = ?');
+  const insertVerification = db.prepare(
+    `INSERT INTO fact_verification (id, namespace, fact_id, outcome, method, verified_at)
+     VALUES (@id, @namespace, @factId, @outcome, @method, @verifiedAt)`,
+  );
+  const isVerificationIdUsed = db.prepare<[string], unknown>('SELECT 1 FROM fact_verification WHERE id = ?');
   const selectPurgedAt = {
     fact: db.prepare<[string, string], { readonly purged_at: string | null }>(
       'SELECT purged_at FROM fact WHERE id = ? AND namespace = ?',
@@ -476,6 +484,15 @@ export function createCommit(
           refuse('already_exists', `The merge ${change.mergeId} was already undone.`);
         undoMerge.run({ id: change.mergeId, namespace, undoneAt: changeSet.occurredAt });
         return { mergeId: change.mergeId };
+      }
+      case 'record_verification': {
+        const { verification } = change;
+        if (isVerificationIdUsed.get(verification.id) !== undefined) {
+          refuse('already_exists', `The identifier ${verification.id} is already used by a verification.`);
+        }
+        requireLiveFact(verification.factId, namespace);
+        insertVerification.run(verification);
+        return { verificationId: verification.id };
       }
       case 'purge_content': {
         const { targetKind, targetId } = change;

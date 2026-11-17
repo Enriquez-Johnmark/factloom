@@ -9,6 +9,7 @@ import type { Domain, PredicateDefinition } from './domain.ts';
 import type { Embedder } from './embedder.ts';
 import type { EntityMerge } from './entity-merge.ts';
 import type { FactUsage } from './fact-usage.ts';
+import type { FactVerification } from './fact-verification.ts';
 import type { Feedback } from './feedback.ts';
 import type {
   Entity,
@@ -91,7 +92,8 @@ type RefOperation =
   | 'confidence_adjustment'
   | 'feedback'
   | 'purge'
-  | 'merge';
+  | 'merge'
+  | 'verification';
 type RefReasonCode =
   | 'stated'
   | 'restated'
@@ -101,7 +103,8 @@ type RefReasonCode =
   | 'feedback_given'
   | 'erasure_requested'
   | 'secret_stored'
-  | 'same_entity';
+  | 'same_entity'
+  | 'verification_due';
 type RefAuditAction =
   | 'entity.created'
   | 'source.recorded'
@@ -113,7 +116,8 @@ type RefAuditAction =
   | 'source.purged'
   | 'fact.purged'
   | 'entity.merged'
-  | 'entity.merge_undone';
+  | 'entity.merge_undone'
+  | 'fact.verified';
 
 type RefAuditEntry = {
   readonly id: number;
@@ -163,7 +167,17 @@ type RefChange =
       readonly merge: RefEntityMerge;
       readonly singleValuedPredicates: readonly string[];
     }
-  | { readonly kind: 'undo_entity_merge'; readonly mergeId: string; readonly fromEntityId: RefEntityId };
+  | { readonly kind: 'undo_entity_merge'; readonly mergeId: string; readonly fromEntityId: RefEntityId }
+  | { readonly kind: 'record_verification'; readonly verification: RefFactVerification };
+
+type RefFactVerification = {
+  readonly id: string;
+  readonly namespace: RefNamespace;
+  readonly factId: RefFactId;
+  readonly outcome: 'confirmed' | 'contradicted' | 'source_missing' | 'inconclusive';
+  readonly method: 'deterministic' | 'llm';
+  readonly verifiedAt: Timestamp;
+};
 
 type RefFactUsage = {
   readonly factId: RefFactId;
@@ -334,6 +348,7 @@ const parity: {
   readonly Feedback: Same<Feedback, RefFeedback>;
   readonly EntityMerge: Same<EntityMerge, RefEntityMerge>;
   readonly FactUsage: Same<FactUsage, RefFactUsage>;
+  readonly FactVerification: Same<FactVerification, RefFactVerification>;
   readonly Change: Same<Change, RefChange>;
   readonly ChangeSet: Same<ChangeSet, RefChangeSet>;
   readonly CommitReceipt: Same<CommitReceipt, RefCommitReceipt>;
@@ -362,6 +377,7 @@ const parity: {
   Feedback: true,
   EntityMerge: true,
   FactUsage: true,
+  FactVerification: true,
   Change: true,
   ChangeSet: true,
   CommitReceipt: true,
@@ -376,6 +392,6 @@ describe('the types derived from the schemas', () => {
   it('have the shapes that INTERFACES.md commits to', () => {
     // The real check is the type of `parity` above, made by the compiler.
     expect(Object.values(parity).every((same) => same === true)).toBe(true);
-    expect(Object.keys(parity)).toHaveLength(27);
+    expect(Object.keys(parity)).toHaveLength(28);
   });
 });

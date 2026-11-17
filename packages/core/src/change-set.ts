@@ -9,6 +9,7 @@ import {
   SourceSchema,
 } from './fact.ts';
 import { EntityMergeSchema } from './entity-merge.ts';
+import { FactVerificationSchema } from './fact-verification.ts';
 import { FeedbackSchema } from './feedback.ts';
 import { TimestampSchema } from './timestamp.ts';
 
@@ -77,6 +78,8 @@ export const ChangeSchema = z.discriminatedUnion('kind', [
       fromEntityId: z.string().min(1),
     })
     .readonly(),
+  /** Phase 3. Appends a verification. Changes no fact. The fact must be live. */
+  z.strictObject({ kind: z.literal('record_verification'), verification: FactVerificationSchema }).readonly(),
 ]);
 export type Change = z.infer<typeof ChangeSchema>;
 
@@ -100,6 +103,8 @@ function findForeignRow(namespace: string, change: Change): string | null {
       return null;
     case 'record_feedback':
       return change.feedback.namespace === namespace ? null : `feedback ${change.feedback.id}`;
+    case 'record_verification':
+      return change.verification.namespace === namespace ? null : `verification ${change.verification.id}`;
     default: {
       const unhandled: never = change;
       return unhandled;
