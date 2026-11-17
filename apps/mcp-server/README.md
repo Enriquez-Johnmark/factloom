@@ -4,6 +4,80 @@ The MCP server that Claude Code and Codex start as a local process, and the comp
 
 It is an application and exports nothing. Its entry point is `src/main.ts`. A tool handler only translates input, calls one use case, and translates the result.
 
+## Register the server
+
+Claude Code and Codex each start the server as a local process over stdio. The steps below start it from a clone of this repository; nothing is published. The commands follow the "Claude Code" and "OpenAI Codex" sections of the [MCP research](../../docs/research/technical/mcp.md), which read them from each host's documentation. They have not yet been run on a Mac in either host: the owner runs them in FL-038, and this section then carries the date and the versions they were confirmed with.
+
+**Prerequisites.** Node.js `^22.18.0 || >=24`, the range in the root `package.json` ([ADR 0015](../../docs/architecture/adr/0015-toolchain.md)). A clone of the repository, and `pnpm install` at its root. Replace `/absolute/path/to/factloom` below with the path of the clone: the guide uses absolute paths because the working directory a host starts a server in is unverified (Q-16).
+
+**Configuration.** The server reads three variables ([`MCP-TOOLS.md`](../../docs/architecture/MCP-TOOLS.md)):
+
+| Variable | Meaning | Default |
+|---|---|---|
+| `FACTLOOM_NAMESPACE` | The memory every tool call reads and writes. Use one name per repository, such as `repo:shop-api` | None. Required: the server does not start without it |
+| `FACTLOOM_DB` | Path of the SQLite file | `~/.factloom/factloom.db` |
+| `ANTHROPIC_API_KEY` | Key for `remember`, the one tool that calls an LLM | None. The other five tools work without it |
+
+The first tool call that embeds a text, `record_fact`, `remember` or `recall`, downloads the embedding model from huggingface.co into `~/.factloom/models`, so it needs network access and takes longer than later calls. Never write a real key into a command or a file you commit: the examples show the variable's name only.
+
+**Claude Code.** In the repository whose memory this is, register the server for that project only (`local` scope, stored in `~/.claude.json`):
+
+```sh
+claude mcp add --transport stdio --scope local --env FACTLOOM_NAMESPACE=repo:shop-api factloom -- node /absolute/path/to/factloom/apps/mcp-server/src/main.ts
+```
+
+To let `remember` work, add `--env ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY` before `factloom`: the shell puts in the key from your environment, and Claude Code stores it in `~/.claude.json`, which is not in any repository. The equivalent entry in a project's `.mcp.json`, which is meant to be committed, takes the key from the environment Claude Code runs in and is empty when none is set:
+
+```json
+{
+  "mcpServers": {
+    "factloom": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/absolute/path/to/factloom/apps/mcp-server/src/main.ts"],
+      "env": {
+        "FACTLOOM_NAMESPACE": "repo:shop-api",
+        "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY:-}"
+      }
+    }
+  }
+}
+```
+
+Claude Code asks before it uses a server from `.mcp.json` in an interactive session. Check the registration with `claude mcp list`, or with `/mcp` in a session, which shows the server as connected with its six tools.
+
+**Codex.** Register the server in `~/.codex/config.toml`:
+
+```sh
+codex mcp add factloom --env FACTLOOM_NAMESPACE=repo:shop-api -- node /absolute/path/to/factloom/apps/mcp-server/src/main.ts
+```
+
+The equivalent table in `~/.codex/config.toml`. `env_vars` passes `ANTHROPIC_API_KEY` on from the environment Codex runs in, so the key is never written to the file. Codex stops a tool call after `tool_timeout_sec`, 60 seconds by default; the larger value leaves room for the model download on the first call:
+
+```toml
+[mcp_servers.factloom]
+command = "node"
+args = ["/absolute/path/to/factloom/apps/mcp-server/src/main.ts"]
+env_vars = ["ANTHROPIC_API_KEY"]
+tool_timeout_sec = 300
+
+[mcp_servers.factloom.env]
+FACTLOOM_NAMESPACE = "repo:shop-api"
+```
+
+Check the registration with `codex mcp list`, or with `/mcp` in a session.
+
+### Subscriptions and API keys
+
+The agent's own plan and Factloom's key are separate ([`MCP-TOOLS.md`](../../docs/architecture/MCP-TOOLS.md), "Subscriptions and API keys"). Factloom is a local process the agent starts, so the agent's plan should not change how it is registered. Only `remember` needs `ANTHROPIC_API_KEY`, and a subscription cannot stand in for it. Without a key, the agent records what it learns with `record_fact`, as the server's instructions tell it to.
+
+| Set-up | Registered as above | Tools that work with no key of Factloom's own | Confirmed |
+|---|---|---|---|
+| Claude Code on a subscription | Expected (Q-79) | All but `remember` | Not yet (FL-038) |
+| Claude Code on an API key | Expected (Q-79) | All but `remember` | Not yet (FL-038) |
+| Codex on a subscription | Expected (Q-79) | All but `remember` | Not yet (FL-038) |
+| Codex on an API key | Expected (Q-79). An OpenAI key does not serve `remember`, which calls Anthropic | All but `remember` | Not yet (FL-038) |
+
 ## Modes
 
 `src/main.ts` reads its database and namespace from `FACTLOOM_DB` (default `~/.factloom/factloom.db`) and `FACTLOOM_NAMESPACE` (required), in every mode.
