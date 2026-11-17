@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import {
   createFakeEmbedder,
   createTestDeps,
+  type Domain,
   type MemoryStore,
   recordFacts,
   TEST_DOMAIN,
@@ -132,9 +133,55 @@ export async function recordSymbolFact(
   return recorded.value.factIds[0] ?? 'none';
 }
 
+/** Records, with the software development domain, that `dependency` is pinned at `version`, from a manifest at a commit. */
+export async function recordVersionFact(
+  store: MemoryStore,
+  commit: string,
+  dependency: string,
+  version: string,
+): Promise<string> {
+  const recorded = await recordFacts(
+    createTestDeps({ now: '2026-01-10', domain: softwareDevelopmentDomain, store }),
+    {
+      namespace: NAMESPACE,
+      trigger: 'agent',
+      reasonCode: 'stated',
+      source: {
+        kind: 'file',
+        locator: 'package.json',
+        version: commit,
+        content: `${dependency} is pinned at ${version}.`,
+        observedAt: toTimestamp(new Date('2026-01-10')),
+      },
+      drafts: [
+        {
+          fact: {
+            subjectEntityId: `dependency-${dependency}`,
+            predicate: 'pins_version',
+            object: { kind: 'value', value: version },
+            statement: `${dependency} is pinned at version ${version}.`,
+            confidence: 0.9,
+            validFrom: null,
+            validTo: null,
+          },
+          newEntities: [{ id: `dependency-${dependency}`, type: 'dependency', name: dependency }],
+        },
+      ],
+      restatedFactIds: [],
+    },
+  );
+  if (!recorded.ok) throw new Error(recorded.error.message);
+  return recorded.value.factIds[0] ?? 'none';
+}
+
 /** Runs maintenance once on a day, with an LLM client among the dependencies that fails if called. */
-export function runOn(day: string, store: MemoryStore, repositoryDirectory: string) {
-  const deps = createTestDeps({ now: day, store });
+export function runOn(
+  day: string,
+  store: MemoryStore,
+  repositoryDirectory: string,
+  domain: Domain = softwareDevelopmentDomain,
+) {
+  const deps = createTestDeps({ now: day, store, domain });
   return runMaintenance(
     deps,
     buildMaintenanceJobs({

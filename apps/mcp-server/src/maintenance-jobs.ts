@@ -1,7 +1,8 @@
-import { findSymbolNames } from '@factloom/graph-rag';
+import { describeDependencyVersion, findSymbolNames, readDependencyVersion } from '@factloom/graph-rag';
 import {
   archiveUnusedFacts,
   createNameCheckRung,
+  createStructuredValueRung,
   findDuplicateEntities,
   type MaintenanceJob,
   NAME_STAGE,
@@ -10,6 +11,20 @@ import {
   verifyAnchoredFacts,
 } from '@factloom/maintenance';
 import type { ServerDeps } from './create-factloom-server.ts';
+
+/**
+ * The rungs of the software development domain: the name check of FL-071, and the version
+ * check of FL-062, which reads a dependency's version from its `package.json`.
+ */
+const VERIFICATION_RUNGS = [
+  createNameCheckRung(findSymbolNames),
+  createStructuredValueRung({
+    pins_version: {
+      readValue: (found, text) => readDependencyVersion(text, found.subject.name),
+      describeSuccessor: (found, version) => describeDependencyVersion(found.subject.name, version),
+    },
+  }),
+];
 
 /**
  * The maintenance jobs, in the order they run, bound to the composition root's dependencies.
@@ -28,10 +43,7 @@ export function buildMaintenanceJobs(
   return [
     {
       name: 'verify_anchored_facts',
-      // The rungs come from the software development domain: the name check of FL-071, and
-      // the version check of FL-062.
-      run: () =>
-        verifyAnchoredFacts({ ...deps, rungs: [createNameCheckRung(findSymbolNames)] }, { namespace }),
+      run: () => verifyAnchoredFacts({ ...deps, rungs: VERIFICATION_RUNGS }, { namespace }),
     },
     { name: 'repair_moved_anchors', run: () => repairMovedAnchors(deps, { namespace }) },
     // FL-064 adds the embedding and LLM stages after the name stage.
