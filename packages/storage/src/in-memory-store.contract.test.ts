@@ -8,8 +8,8 @@ describe('the contract suite', () => {
   it('registers every case of every group for a store that runs them all', () => {
     // T1 to T8, R1 to R14, C1 to C8, and F1 to F10 with F5 in two cases.
     expect(registered['time, reads, commit and refusals']).toBe(43);
-    // S1 to S6, A1 to A4 and N1 to N5. P1 needs a file, which the in-memory store has not.
-    expect(registered['single-value rule and namespaces']).toBe(16);
+    // S1 to S6, A1 to A6 and N1 to N5. P1 needs a file, which the in-memory store has not.
+    expect(registered['single-value rule and namespaces']).toBe(17);
     expect(registered['keyword lane']).toBe(5);
     expect(registered['vector lane']).toBe(6);
   });

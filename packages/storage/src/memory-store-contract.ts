@@ -1010,6 +1010,51 @@ function registerSingleValueRuleAndNamespaces(
     ).toBe(true);
   });
 
+  // The change set of reviseValidTime (FL-044): the upgrade moved from 15 March to 1 March.
+  const movedBoundary = {
+    endedCopy: recordFact(databaseFact('pg14-revised', 'PostgreSQL 14', '2025-06-01', '2026-03-01'), {
+      embedding: { copyFromFactId: 'pg14-ended' },
+    }),
+    endedInvalidated: { kind: 'invalidate_fact', factId: 'pg14-ended', supersededByFactId: 'pg14-revised' },
+    successorCopy: recordFact(databaseFact('pg16-revised', 'PostgreSQL 16', '2026-03-01', null), {
+      embedding: { copyFromFactId: 'pg16' },
+    }),
+    successorInvalidated: { kind: 'invalidate_fact', factId: 'pg16', supersededByFactId: 'pg16-revised' },
+  } as const;
+  cases.test(
+    'A6: a change set that moves the boundary between two neighbouring facts is accepted, and half of it is refused',
+    async () => {
+      const revision = { operation: 'revision', reasonCode: 'period_corrected' } as const;
+      const before = await listFactIds(cases.store(), 'all');
+      const half = await commit([movedBoundary.successorCopy, movedBoundary.successorInvalidated], revision);
+      expect(half.ok ? null : half.error.code).toBe('conflict');
+      if (!half.ok) expect(half.error.relatedFactIds).toEqual(['pg14-ended']);
+      expect(await listFactIds(cases.store(), 'all')).toEqual(before);
+
+      const whole = await commit(
+        [
+          movedBoundary.endedCopy,
+          movedBoundary.endedInvalidated,
+          movedBoundary.successorCopy,
+          movedBoundary.successorInvalidated,
+        ],
+        revision,
+      );
+      expect(whole.ok).toBe(true);
+      expect((await listFactIds(cases.store(), 'live', { predicate: DATABASE })).sort()).toEqual([
+        'pg14-revised',
+        'pg16-revised',
+      ]);
+      expect(
+        await listFactIds(
+          cases.store(),
+          { validAt: at('2026-03-10'), knownAt: NOW },
+          { predicate: DATABASE },
+        ),
+      ).toEqual(['pg16-revised']);
+    },
+  );
+
   // --- Namespaces ---
   const OTHER = OTHER_PLACE.namespace;
   cases.test('N1: no read in one namespace returns a row of the other', async () => {
