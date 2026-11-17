@@ -227,7 +227,10 @@ describe('what the schema refuses', () => {
   it('an entity, a source and a source link cannot be changed or deleted', () => {
     expect(run("UPDATE entity SET name = 'x' WHERE id = 'e-repo'")).toThrow(/never changed/);
     expect(run("DELETE FROM entity WHERE id = 'e-repo'")).toThrow(/never deleted/);
-    expect(run("UPDATE source SET content = 'x' WHERE id = 's-1'")).toThrow(/never changed/);
+    // Since the fourth migration, a source changes only by a purge, which this update is not.
+    expect(run("UPDATE source SET content = 'x' WHERE id = 's-1'")).toThrow(
+      /changes only by being purged once/,
+    );
     expect(run("DELETE FROM source WHERE id = 's-1'")).toThrow(/never deleted/);
     expect(run("UPDATE fact_source SET source_id = 's-1' WHERE fact_id = 'pg16'")).toThrow(
       /keeps its sources/,
