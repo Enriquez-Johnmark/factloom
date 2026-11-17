@@ -97,7 +97,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-064 | Duplicate entity detection by similarity | 3 | FL-053, FL-028 | Pending |
 | FL-054 | Anchor repair for moved and renamed files | 3 | FL-050 | Completed |
 | FL-055 | Usage tracking | 3 | FL-015, FL-031, FL-058 | Under Review |
-| FL-065 | Archive and unarchive operations | 3 | FL-055, FL-058 | Pending |
+| FL-065 | Archive and unarchive operations | 3 | FL-055, FL-058 | Completed |
 | FL-073 | Archived facts left out of recall, and the archiving job | 3 | FL-065, FL-048, FL-058 | Pending |
 
 ### FL-048: Maintenance run entry point
@@ -1416,7 +1416,7 @@ For the owner's review: repeat the timing with the server running against a data
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-055, FL-058 |
 | Requirements | REQ-23, REQ-24 |
@@ -1461,16 +1461,77 @@ The original item was split to fit one session. This one adds the operations and
 - [`GLOSSARY.md`](../../../GLOSSARY.md): an archived fact is still a live fact.
 
 **Acceptance criteria.**
-- [ ] A contract case, against both stores, shows archive then unarchive leaves the fact row unchanged, writes two audit entries with operation `archive`, and that `getFact` reports the fact archived after the first and not after the second.
-- [ ] A contract case shows a commit that records a second open-ended value for a single-valued predicate still fails with `conflict` when the existing fact is archived.
-- [ ] Contract cases cover the refusals: archiving an archived fact is `already_exists`; unarchiving a fact that is not archived is `already_exists`; archiving an invalidated fact is `already_invalidated`; a fact in another namespace is `not_found`.
-- [ ] A SQLite adapter test opens a database created by the earlier migrations only, applies the new one, and archives an existing fact.
-- [ ] `git grep -n "unarchiveFact" -- apps/mcp-server/src` shows no call in the `recall` tool handler.
-- [ ] `pnpm check` exits 0.
+- [x] A contract case, against both stores, shows archive then unarchive leaves the fact row unchanged, writes two audit entries with operation `archive`, and that `getFact` reports the fact archived after the first and not after the second.
+- [x] A contract case shows a commit that records a second open-ended value for a single-valued predicate still fails with `conflict` when the existing fact is archived.
+- [x] Contract cases cover the refusals: archiving an archived fact is `already_exists`; unarchiving a fact that is not archived is `already_exists`; archiving an invalidated fact is `already_invalidated`; a fact in another namespace is `not_found`.
+- [x] A SQLite adapter test opens a database created by the earlier migrations only, applies the new one, and archives an existing fact.
+- [x] `git grep -n "unarchiveFact" -- apps/mcp-server/src` shows no call in the `recall` tool handler.
+- [x] `pnpm check` exits 0.
 
 **Validation.** The contract suite against both stores. A SQLite adapter test of the migration. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the updated `INTERFACES.md` and `SCHEMA.md`.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in three commits:
+
+1. `docs: design archiving and unarchiving facts in INTERFACES.md`;
+2. `feat(core): add archiving and unarchiving of facts in both stores`;
+3. `docs: describe fact_archive in SCHEMA.md`.
+
+The item was started while FL-055, on which it depends, was `Under Review`. FL-055's code is complete: only the owner's repeat of the usage timing remains, and this item does not change usage.
+
+Built:
+
+- **The vocabulary.** `Operation` `archive`; `AuditAction` `fact.archived` and `fact.unarchived`; reason codes `unused` and `requested`; the changes `archive_fact` and `unarchive_fact`.
+- **The operations.** `archiveFacts` archives several live facts in one commit, with one audit entry each. `unarchiveFact` ends one archiving. Both are in `@factloom/core`, and the caller gives the reason code.
+- **The returned fact.** `FactWithSources.archivedAt` is the start of the archiving in force, or null. Every read in both stores returns it. In SQLite it is one extra query per read, for any number of facts. The parity test of `INTERFACES.md` covers it.
+- **The migration.** `0008_add_fact_archive.sql`, sha256 `851c3802f02121f2db63ba6a362ce81082fa982f0aeb1d9f4d9dd0bdab06bbaf`, holds:
+  - the table;
+  - a partial unique index so that a fact has at most one archiving in force;
+  - a trigger that refuses a delete, and one that refuses every update but setting `unarchived_at` once;
+  - the comment on Postgres.
+
+  The purge inventory of FL-061 lists its five columns as not content.
+- **The fact row is not changed** by either operation. The single-value rule still reads only fact rows, so an archived fact keeps counting.
+
+Contract cases, against both stores:
+
+- **H1:** archive and then unarchive leaves the fact row as it was. It writes two audit entries with operation `archive` and the same `archiveId`. `getFact` and `listFacts` report the fact archived, and `getFact` reports it not archived after the unarchive.
+- **H2:** with `pg16` archived, recording a second open-ended database version fails with `conflict`.
+- **H3:** archiving an archived fact is `already_exists`.
+- **H4:** unarchiving a fact that is not archived is `already_exists`.
+- **H5:** archiving an invalidated fact is `already_invalidated`, naming its successor.
+- **N12:** archiving or unarchiving a fact of the other namespace is `not_found`.
+
+The counts are 86 for group 1, and 39 (in-memory) and 41 (SQLite) for group 2.
+
+Other tests:
+
+- **SQLite, in `fact-archive-migration.test.ts`:** the triggers refuse a delete, a change of `archived_at` and a second unarchive. A database made by migrations 1 to 7, with a fact in it, takes migration 8 and the fact is archived.
+- **The operations, with the in-memory store:** two facts are archived in one commit and one is unarchived. A batch that names a missing fact archives nothing.
+- **The handler check:** `git grep -n "unarchiveFact" -- apps/mcp-server/src` finds nothing (exit 1).
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| The in-memory store archives an invalidated fact | H5 |
+| The in-memory store archives a fact twice | H3 |
+| SQLite reads leave out `archivedAt` | H1, H3 |
+| SQLite unarchives a fact that is not archived | H4 |
+
+`pnpm check`:
+
+```text
+      Tests  1061 passed (1061)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the third commit, which holds the code of the second, with both clean installs: https://github.com/Johnmark-Tech/factloom/actions/runs/44006607723.
+
+Differences from the item:
+
+- **The archived state is `archivedAt` on `FactWithSources`**, beside the fact, as proposed. The `Fact` itself is not changed.
+- **The audit entries carry `{ archiveId }`.** The unarchive entry names the archiving it ends.
 
 ### FL-073: Archived facts left out of recall, and the archiving job
 
