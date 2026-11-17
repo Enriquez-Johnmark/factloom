@@ -91,7 +91,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | FL-059 | give_feedback tool | 2 | FL-046, FL-036, FL-058 | Completed |
 | FL-060 | Acting on feedback | 2 | FL-046, FL-045, FL-042 | Pending |
 | FL-047 | Purge design, proven by a spike | 2 | FL-015 | Completed |
-| FL-061 | Purge operation | 2 | FL-047, FL-016, FL-017 | Pending |
+| FL-061 | Purge operation | 2 | FL-047, FL-016, FL-017 | Completed |
 | FL-072 | Purge command | 2 | FL-061, FL-034 | Pending |
 
 ### FL-040: Create the maintenance package and its boundary rules
@@ -1201,7 +1201,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-047, FL-016, FL-017 |
 | Requirements | REQ-19, REQ-24 |
@@ -1252,19 +1252,95 @@ The item was split to fit one session. It keeps the migration, the operation and
 - [`TESTING.md`](../../architecture/TESTING.md): "no operation reducing the number of fact rows" still holds.
 
 **Acceptance criteria.**
-- [ ] A contract suite case, against both stores, builds this memory: a fact recorded from a source whose text contains a marker string; the fact ended, so a copy exists; the copy corrected, with an explanation that quotes the string; a second, unrelated fact from another source. After `purgeContent` on the first source, every `MemoryStore` read method is called for every identifier involved, and the string appears in no returned value.
-- [ ] The same case shows the keyword lane and the vector lane return none of the purged facts for a question made of the string.
-- [ ] The same case shows the unrelated fact and its source are unchanged, the number of fact rows, source rows and audit entries present before the purge has not fallen, and one audit entry with operation `purge` exists for each purged row.
-- [ ] A SQLite adapter test dumps every column of every table, including the keyword index and the embeddings, after the purge, and the string is not found.
-- [ ] If the design decided that freed pages are cleared, and how: a SQLite adapter test reads the database file and its write-ahead log as bytes after the purge and finds neither the string nor the purged statement. Otherwise that limit, as the decision record states it under "What purge does not remove", is repeated in the doc comment of `purgeContent`, and no test or document of this item claims more.
-- [ ] A SQLite adapter test shows that an `UPDATE` of `statement`, `object_value`, `content` or `locator` that does not meet the design's condition is still refused.
-- [ ] The schema inventory test passes, and fails when a text column is added to a table in a test migration without being classified.
-- [ ] A contract case shows purging an already purged source succeeds and writes no further audit entries, and purging a source in another namespace is `not_found`.
-- [ ] `pnpm check` exits 0.
+- [x] A contract suite case, against both stores, builds this memory: a fact recorded from a source whose text contains a marker string; the fact ended, so a copy exists; the copy corrected, with an explanation that quotes the string; a second, unrelated fact from another source. After `purgeContent` on the first source, every `MemoryStore` read method is called for every identifier involved, and the string appears in no returned value.
+- [x] The same case shows the keyword lane and the vector lane return none of the purged facts for a question made of the string.
+- [x] The same case shows the unrelated fact and its source are unchanged, the number of fact rows, source rows and audit entries present before the purge has not fallen, and one audit entry with operation `purge` exists for each purged row.
+- [x] A SQLite adapter test dumps every column of every table, including the keyword index and the embeddings, after the purge, and the string is not found.
+- [x] If the design decided that freed pages are cleared, and how: a SQLite adapter test reads the database file and its write-ahead log as bytes after the purge and finds neither the string nor the purged statement. Otherwise that limit, as the decision record states it under "What purge does not remove", is repeated in the doc comment of `purgeContent`, and no test or document of this item claims more.
+- [x] A SQLite adapter test shows that an `UPDATE` of `statement`, `object_value`, `content` or `locator` that does not meet the design's condition is still refused.
+- [x] The schema inventory test passes, and fails when a text column is added to a table in a test migration without being classified.
+- [x] A contract case shows purging an already purged source succeeds and writes no further audit entries, and purging a source in another namespace is `not_found`.
+- [x] `pnpm check` exits 0.
 
 **Validation.** The contract suite against both stores. SQLite adapter tests for the triggers, the full dump, the inventory and, if the design clears freed pages, the file bytes. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output, including the dump test and the inventory test.
+
+**Recorded evidence.** Completed on 2026-11-17 on Linux x64 with Node.js v22.23.4, in five commits, each of which passed `pnpm check` on its own with the later ones stashed:
+
+1. `feat(storage): add the purge migration`
+2. `feat(core): add purge_content and the reads purge needs to both stores`
+3. `feat(core): add the purgeContent operation`
+4. `feat(graph-rag): leave purged facts out of the graph lane`
+5. `feat(storage): add clearFreedPages and the SQLite tests of purge`
+
+What was built, from ADR 0012 as FL-047 completed it:
+
+- **The migration.** `0004_purge.sql`, sha256 `17e1e87aa1e9558877b4addd50b11b4cbface2140b6ede7eb16411e1d538d1a8`, is the spike's draft with a header and the comment on Postgres. It adds `purged_at` to `fact` and `source`, and replaces the two triggers with ones that permit one purge and nothing more. It adds the keyword-entry trigger, turns on FTS5 `secure-delete`, and guards vector deletes.
+- **The core types.** `Fact` and `Source` gain `purgedAt`, and core exports `PURGED_MARKER`, `[purged]`. The new values are the change `purge_content`, the operation `purge`, the actions `fact.purged` and `source.purged`, and the reason codes `erasure_requested` and `secret_stored`. They are in `INTERFACES.md` and the parity test.
+- **New store reads.** `MemoryStore` gains three reads that the purge set needs and that nothing else provided: `listFactsOfSources`, `findSourcesByContentHash` and `listFeedback`. Both stores implement them.
+- **`purgeContent`.** It collects the purge set by the record's rule, from the target and the sources with the same hash. It invalidates and purges each covered fact, and purges each source in the set and each explaining source, in one commit. It returns `{ purgedSourceIds, purgedFactIds }`.
+- **The graph lane.** `recall`'s graph lane leaves purged facts out.
+- **`clearFreedPages`.** `clearFreedPages(path)` in `@factloom/storage` runs `VACUUM` and `wal_checkpoint(TRUNCATE)`, and says whether the checkpoint finished. FL-072's command calls it.
+
+Contract cases, against both stores, in the first group:
+
+- **U1** builds the memory of the first acceptance criterion with hand-written change sets. Before the purge, the marker is found in the reads; after `purgeContent` on the first source, `JSON.stringify` of every read method, called for every identifier involved, holds no trace of it. The reads are `getFact`, `listFacts` with each time and filter, `getSource`, `listAuditEntries`, `findEntities`, `listFactsOfSources`, `findSourcesByContentHash`, `listFeedback` and both lanes.
+- **U2** with a known-at date before the purge, the keyword lane returns nothing for the marker, and the vector lane does not return the purged fact for its own vector.
+- **U3**:
+  - the unrelated facts and their source are unchanged, and no fact or source row is gone;
+  - `k-1` and `k-1e` are purged, and so are `s-key` and the explaining sources `s-rotated` and `s-fix`;
+  - there are five audit entries with operation `purge` and action `fact.purged` or `source.purged`, one per purged row.
+- **U4** a second purge succeeds and writes no audit entry.
+- **U5** another namespace is `not_found`.
+
+The suite's header now says that the purge cases run `purgeContent`, because what they test is what it leaves readable. The count of the first group is 63.
+
+SQLite adapter tests, in `purge-sqlite.test.ts`:
+
+- **Dump.** After the purge, no column of any table, the FTS5 table and its shadow tables and `fact_embedding` included, holds the marker; before it, some did.
+- **Bytes.** After the purge, closing the store and `clearFreedPages`, the checkpoint finished, and neither the database file nor the write-ahead log holds the marker or the purged statement.
+- **Triggers.** Seven updates and deletes outside the condition are refused: of `statement`, `object_value`, `content`, `locator`, a second purge, a purge to `NULL`, and a vector delete.
+- **Inventory.** Every text and binary column of the migrated schema is in one of two lists, "content, covered by purge" (9 columns) or "not content". Adding `source.summary TEXT` in a test makes the check report exactly `source.summary`.
+
+Unit tests:
+
+- **`purgeContent`, 6 tests:** the purge set with copies, the same text and explaining sources; the orphaned correction left; a fact another source states kept; a live fact invalidated, then purged; a second purge writing nothing; another namespace.
+- **The graph lane, 1 test:** it leaves a purged fact out for a known-at date before the purge.
+
+Rules broken by hand, each then restored:
+
+| Break | Tests that failed |
+|---|---|
+| No FTS5 `secure-delete` in the migration | The dump and the bytes tests |
+| No `VACUUM` in `clearFreedPages` | The bytes test |
+| Explaining sources not purged | U1, U3, and the purge-set unit test |
+| Copies not followed | U1, U3, and the purge-set unit test |
+| SQLite keeps a purged fact's vector | U2 |
+| The graph lane keeps purged facts | The graph lane test |
+
+`pnpm check`:
+
+```text
+$ biome format .
+Checked 299 files. No fixes applied.
+$ biome lint .
+Checked 299 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  83 passed (83)
+      Tests  897 passed (897)
+```
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the fifth commit, so the migration, the FTS5 option and `VACUUM` ran on Apple Silicon: https://github.com/Johnmark-Tech/factloom/actions/runs/43995392839.
+
+Differences from the item:
+
+- **Three new read methods** on `MemoryStore`. The purge set cannot be found from the phase 1 reads. They are exercised by U1 and the purge tests, not by cases of their own.
+- **A second purge of a row** inside one change set is refused by the store with `invalid_input`; the operation never sends one. Functional requirement 3, a second purge of a source succeeding, is met at the operation's level (U4).
+- **Two existing tests changed their expectation**, not their subject. The first-migration test's update of a source is now refused by the new trigger, with its message. The schema test's rejected operation is now `deletion`, because `purge` is valid.
+- **About 35 test fixtures and builders** gained `purgedAt: null`.
 
 ### FL-072: Purge command
 
