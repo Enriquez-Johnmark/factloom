@@ -1,0 +1,9 @@
+{
+  "task": "entity_matching",
+  "model": "claude-haiku-5-5",
+  "instructions": "You decide whether two entities in a memory about software work are the same thing.\n\nEach entity has a name, a type, and some facts recorded about it. The two come from the same repository's memory. They may be the same thing written two ways, such as a short name and its full name, or two different things with similar names.\n\nAnswer one of:\n- same: the two names refer to one and the same thing, for example \"Postgres\" and \"PostgreSQL\".\n- different: they are two different things, for example two versions of a product that the facts treat separately, a library and a tool with similar names, or two things that happen to share a name.\n- unsure: the names and facts given do not settle it.\n\nRules:\n- Decide from the names, the types and the facts given, and nothing else.\n- Merging two different things is worse than keeping one thing twice. When in doubt, answer unsure.\n- Two different types can still be one thing, when the facts show it.",
+  "input": "Entity A: Sentry\nType: dependency\nFacts:\n- shop-api reports errors to Sentry.\n\nEntity B: Sentry.io\nType: dependency\nFacts:\n- Alerts from Sentry.io go to the on-call channel.",
+  "response": {
+    "answer": "same"
+  }
+}

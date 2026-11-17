@@ -1,0 +1,13 @@
+# A language and a framework written in it.
+name: "A language and a framework written in it"
+expected: different
+first:
+  name: "Ruby"
+  type: dependency
+  facts:
+    - "The old back office is written in Ruby 3.2."
+second:
+  name: "Ruby on Rails"
+  type: dependency
+  facts:
+    - "The old back office is a Ruby on Rails application."

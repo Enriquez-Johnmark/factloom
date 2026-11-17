@@ -1,0 +1,13 @@
+# An abbreviation and the full name of a cloud.
+name: "An abbreviation and the full name of a cloud"
+expected: same
+first:
+  name: "GCP"
+  type: dependency
+  facts:
+    - "The data warehouse runs on GCP."
+second:
+  name: "Google Cloud"
+  type: dependency
+  facts:
+    - "BigQuery on Google Cloud holds the sales events."

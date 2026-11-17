@@ -1,0 +1,13 @@
+# A broker and a separate tool built on it.
+name: "A broker and a separate tool built on it"
+expected: different
+first:
+  name: "Kafka"
+  type: dependency
+  facts:
+    - "Click events are streamed through Kafka."
+second:
+  name: "Kafka Connect"
+  type: dependency
+  facts:
+    - "Kafka Connect copies the orders table into the warehouse."

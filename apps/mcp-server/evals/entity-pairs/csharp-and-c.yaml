@@ -1,0 +1,13 @@
+# Two languages whose names differ by a sign.
+name: "Two languages whose names differ by a sign"
+expected: different
+first:
+  name: "C#"
+  type: dependency
+  facts:
+    - "The payments adapter is written in C#."
+second:
+  name: "C"
+  type: dependency
+  facts:
+    - "The image codec is a C library."

@@ -1,0 +1,13 @@
+# A repository name written two ways: stage 1 decides it.
+name: "A repository name written two ways: stage 1 decides it"
+expected: same
+first:
+  name: "billing-worker"
+  type: repository
+  facts:
+    - "billing-worker sends the monthly invoices."
+second:
+  name: "Billing Worker"
+  type: repository
+  facts:
+    - "The Billing Worker runs as a cron job on Fly.io."

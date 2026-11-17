@@ -1,0 +1,13 @@
+# A tool and a longer description of it.
+name: "A tool and a longer description of it"
+expected: same
+first:
+  name: "Prettier"
+  type: dependency
+  facts:
+    - "shop-web formats its code with Prettier."
+second:
+  name: "Prettier formatter"
+  type: dependency
+  facts:
+    - "The Prettier formatter runs in a pre-commit hook."

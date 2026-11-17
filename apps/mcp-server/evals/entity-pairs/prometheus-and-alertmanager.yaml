@@ -1,0 +1,13 @@
+# A monitoring system and its separate alert service.
+name: "A monitoring system and its separate alert service"
+expected: different
+first:
+  name: "Prometheus"
+  type: dependency
+  facts:
+    - "Metrics are scraped by Prometheus."
+second:
+  name: "Prometheus Alertmanager"
+  type: dependency
+  facts:
+    - "Prometheus Alertmanager routes alerts to the on-call phone."

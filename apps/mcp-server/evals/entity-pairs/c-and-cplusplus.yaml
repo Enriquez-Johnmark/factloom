@@ -1,0 +1,13 @@
+# Two languages whose names differ by a sign.
+name: "Two languages whose names differ by a sign"
+expected: different
+first:
+  name: "C"
+  type: dependency
+  facts:
+    - "The image codec is a C library."
+second:
+  name: "C++"
+  type: dependency
+  facts:
+    - "The search ranker is written in C++."

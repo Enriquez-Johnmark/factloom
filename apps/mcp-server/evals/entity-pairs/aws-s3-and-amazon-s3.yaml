@@ -1,0 +1,13 @@
+# A service under its provider's two names.
+name: "A service under its provider's two names"
+expected: same
+first:
+  name: "AWS S3"
+  type: dependency
+  facts:
+    - "Uploaded images are stored in AWS S3."
+second:
+  name: "Amazon S3"
+  type: dependency
+  facts:
+    - "The Amazon S3 bucket shop-images keeps product photos."

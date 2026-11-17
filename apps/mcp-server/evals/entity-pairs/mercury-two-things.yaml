@@ -1,0 +1,13 @@
+# Two different things that share a name, under two types.
+name: "Two different things that share a name, under two types"
+expected: different
+first:
+  name: "Mercury"
+  type: dependency
+  facts:
+    - "shop-api sends transactional mail through the Mercury mail API."
+second:
+  name: "Mercury"
+  type: repository
+  facts:
+    - "The Mercury repository holds the team's internal planning tool."

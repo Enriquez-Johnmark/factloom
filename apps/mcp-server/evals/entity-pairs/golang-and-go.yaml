@@ -1,0 +1,13 @@
+# A language's nickname and its name.
+name: "A language's nickname and its name"
+expected: same
+first:
+  name: "Golang"
+  type: dependency
+  facts:
+    - "The image resizer is written in Golang."
+second:
+  name: "Go"
+  type: dependency
+  facts:
+    - "The image resizer builds with Go 1.23."

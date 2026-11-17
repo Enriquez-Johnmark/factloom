@@ -1,0 +1,13 @@
+# A tool written with a space and with a hyphen: stage 1 decides it.
+name: "A tool written with a space and with a hyphen: stage 1 decides it"
+expected: same
+first:
+  name: "Docker Compose"
+  type: dependency
+  facts:
+    - "The local stack starts with Docker Compose."
+second:
+  name: "docker-compose"
+  type: dependency
+  facts:
+    - "docker-compose.yml defines the db and cache services."

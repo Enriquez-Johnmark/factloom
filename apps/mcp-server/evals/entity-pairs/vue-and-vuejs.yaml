@@ -1,0 +1,13 @@
+# A framework with and without its suffix.
+name: "A framework with and without its suffix"
+expected: same
+first:
+  name: "Vue"
+  type: dependency
+  facts:
+    - "The admin widgets are written in Vue."
+second:
+  name: "Vue.js"
+  type: dependency
+  facts:
+    - "Vue.js 3 renders the order dashboard."

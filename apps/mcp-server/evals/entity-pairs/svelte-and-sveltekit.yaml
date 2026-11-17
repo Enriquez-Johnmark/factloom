@@ -1,0 +1,13 @@
+# A framework and the application framework built on it.
+name: "A framework and the application framework built on it"
+expected: different
+first:
+  name: "Svelte"
+  type: dependency
+  facts:
+    - "The checkout widget is a Svelte component."
+second:
+  name: "SvelteKit"
+  type: dependency
+  facts:
+    - "The status page is a SvelteKit app."

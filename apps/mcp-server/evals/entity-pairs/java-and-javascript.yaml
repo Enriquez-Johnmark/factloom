@@ -1,0 +1,13 @@
+# Two languages whose names are often confused.
+name: "Two languages whose names are often confused"
+expected: different
+first:
+  name: "Java"
+  type: dependency
+  facts:
+    - "billing-worker is written in Java 21."
+second:
+  name: "JavaScript"
+  type: dependency
+  facts:
+    - "shop-web is written in JavaScript."

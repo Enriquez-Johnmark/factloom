@@ -1,0 +1,13 @@
+# A service and its domain name.
+name: "A service and its domain name"
+expected: same
+first:
+  name: "Sentry"
+  type: dependency
+  facts:
+    - "shop-api reports errors to Sentry."
+second:
+  name: "Sentry.io"
+  type: dependency
+  facts:
+    - "Alerts from Sentry.io go to the on-call channel."

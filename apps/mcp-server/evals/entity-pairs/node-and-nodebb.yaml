@@ -1,0 +1,13 @@
+# A runtime and a forum product with a similar name.
+name: "A runtime and a forum product with a similar name"
+expected: different
+first:
+  name: "Node"
+  type: dependency
+  facts:
+    - "CI runs on Node 22."
+second:
+  name: "NodeBB"
+  type: dependency
+  facts:
+    - "The community forum runs NodeBB."

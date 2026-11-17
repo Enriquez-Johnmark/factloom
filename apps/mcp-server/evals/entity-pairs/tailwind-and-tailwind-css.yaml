@@ -1,0 +1,13 @@
+# A library with and without its suffix.
+name: "A library with and without its suffix"
+expected: same
+first:
+  name: "Tailwind"
+  type: dependency
+  facts:
+    - "shop-web styles its pages with Tailwind."
+second:
+  name: "Tailwind CSS"
+  type: dependency
+  facts:
+    - "shop-web upgraded Tailwind CSS to version 4."

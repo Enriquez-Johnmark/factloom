@@ -1,0 +1,13 @@
+# A tool and its abbreviation.
+name: "A tool and its abbreviation"
+expected: same
+first:
+  name: "Terraform"
+  type: dependency
+  facts:
+    - "The infrastructure is managed with Terraform."
+second:
+  name: "TF"
+  type: dependency
+  facts:
+    - "TF state is kept in a remote backend."

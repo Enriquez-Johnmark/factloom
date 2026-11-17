@@ -1,0 +1,13 @@
+# A message broker and its short name.
+name: "A message broker and its short name"
+expected: same
+first:
+  name: "RabbitMQ"
+  type: dependency
+  facts:
+    - "Order events are published to RabbitMQ."
+second:
+  name: "Rabbit"
+  type: dependency
+  facts:
+    - "The Rabbit queue order-events is consumed by billing-worker."

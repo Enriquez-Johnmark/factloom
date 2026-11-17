@@ -1,0 +1,13 @@
+# A project and its usual abbreviation.
+name: "A project and its usual abbreviation"
+expected: same
+first:
+  name: "OpenTelemetry"
+  type: dependency
+  facts:
+    - "shop-api exports traces with OpenTelemetry."
+second:
+  name: "OTel"
+  type: dependency
+  facts:
+    - "The OTel collector forwards traces to the backend."

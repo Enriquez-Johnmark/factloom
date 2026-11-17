@@ -1,0 +1,13 @@
+# A bundler and a gem that wraps it.
+name: "A bundler and a gem that wraps it"
+expected: different
+first:
+  name: "Webpack"
+  type: dependency
+  facts:
+    - "shop-web bundled with Webpack before moving to Vite."
+second:
+  name: "Webpacker"
+  type: dependency
+  facts:
+    - "The old Rails back office used Webpacker."

@@ -1,0 +1,13 @@
+# A product written as one word and as two: stage 1 decides it.
+name: "A product written as one word and as two: stage 1 decides it"
+expected: same
+first:
+  name: "Elasticsearch"
+  type: dependency
+  facts:
+    - "Product search runs on Elasticsearch 8."
+second:
+  name: "Elastic Search"
+  type: dependency
+  facts:
+    - "The Elastic Search index is rebuilt every night."
