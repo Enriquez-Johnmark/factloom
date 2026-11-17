@@ -62,6 +62,7 @@ describe('the server over stdio', () => {
           { name: 'record_fact' },
           { name: 'invalidate_fact' },
           { name: 'get_fact_history' },
+          { name: 'give_feedback' },
         ],
       },
     });

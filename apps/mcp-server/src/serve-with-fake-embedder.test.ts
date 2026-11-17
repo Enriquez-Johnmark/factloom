@@ -175,7 +175,7 @@ describe('the server over stdio', () => {
         .object({ tools: z.array(z.object({ name: z.string() })) })
         .parse(listed)
         .tools.map((tool) => tool.name),
-    ).toEqual(['recall', 'remember', 'record_fact', 'invalidate_fact', 'get_fact_history']);
+    ).toEqual(['recall', 'remember', 'record_fact', 'invalidate_fact', 'get_fact_history', 'give_feedback']);
     // The host research names 10 seconds as one host's default start-up limit.
     expect(first.answeredAt[0]).toBeLessThan(10_000);
     const fact = z
@@ -189,6 +189,7 @@ describe('the server over stdio', () => {
     const second = await runServerSession(directory, [
       callTool('recall', QUESTION),
       callTool('get_fact_history', { fact_id: fact.fact_id }),
+      callTool('give_feedback', { fact_id: fact.fact_id, signal: 'wrong' }),
       callTool('invalidate_fact', {
         fact_id: fact.fact_id,
         because: 'was_wrong',
@@ -198,7 +199,7 @@ describe('the server over stdio', () => {
     ]);
 
     expect(second.code).toBe(0);
-    const [recalled, history, invalidated, recalledAfter] = second.answers.map((answer) =>
+    const [recalled, history, feedback, invalidated, recalledAfter] = second.answers.map((answer) =>
       ToolResultSchema.parse(answer),
     );
     const factIds = (result: z.infer<typeof ToolResultSchema> | undefined) =>
@@ -211,6 +212,14 @@ describe('the server over stdio', () => {
       .object({ entries: z.array(z.object({ changes: z.array(z.object({ action: z.string() })) })) })
       .parse(history?.structuredContent).entries;
     expect(entries.map((entry) => entry.changes.map((change) => change.action))).toEqual([['fact.recorded']]);
+    expect(
+      z
+        .object({
+          feedback_id: z.string().min(1),
+          follow_up: z.enum(['confidence_raised', 'confidence_lowered', 'retracted', 'ended', 'none']),
+        })
+        .safeParse(feedback?.structuredContent).success,
+    ).toBe(true);
     expect(invalidated?.isError).toBeUndefined();
     expect(factIds(recalledAfter)).not.toContain(fact.fact_id);
 

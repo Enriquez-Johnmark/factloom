@@ -8,6 +8,6 @@ export const SERVER_INSTRUCTIONS = [
   'Call recall before answering a question about the project, and pass as_of or known_at to ask about the past.',
   'When you learn something lasting, such as a dependency, a decision, a convention or how to build and test, save it: record_fact for one fact you can state as subject, predicate and object, or remember to extract facts from text.',
   'remember needs an Anthropic API key; without one, use record_fact.',
-  'When a stored fact is wrong or no longer true, call invalidate_fact rather than recording a contradiction. get_fact_history shows how a fact changed and why.',
+  'When a stored fact is wrong or no longer true, call invalidate_fact rather than recording a contradiction. get_fact_history shows how a fact changed and why. When you only know a recalled fact was found right, wrong or out of date, call give_feedback.',
   'Never store a secret.',
 ].join(' ');

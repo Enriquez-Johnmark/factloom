@@ -21,7 +21,7 @@ async function listTools() {
 const PropertiesSchema = z.record(z.string(), z.object({ description: z.string().min(1) }));
 
 describe('the tools of the server', () => {
-  it('lists the five tools in order with their annotations', async () => {
+  it('lists the six tools in order with their annotations', async () => {
     const tools = await listTools();
 
     // The annotations of MCP-TOOLS.md, "Annotations".
@@ -32,6 +32,7 @@ describe('the tools of the server', () => {
       ['record_fact', { ...writes, openWorldHint: false }],
       ['invalidate_fact', { ...writes, openWorldHint: false }],
       ['get_fact_history', { readOnlyHint: true, openWorldHint: false }],
+      ['give_feedback', { ...writes, openWorldHint: false }],
     ]);
     for (const tool of tools) {
       expect(tool.outputSchema, tool.name).toBeDefined();

@@ -1,5 +1,6 @@
 import type { RegisterTool } from './create-factloom-server.ts';
 import { registerGetFactHistoryTool } from './get-fact-history-tool.ts';
+import { registerGiveFeedbackTool } from './give-feedback-tool.ts';
 import { registerInvalidateFactTool } from './invalidate-fact-tool.ts';
 import { registerRecallTool } from './recall-tool.ts';
 import { registerRecordFactTool } from './record-fact-tool.ts';
@@ -12,4 +13,5 @@ export const FACTLOOM_TOOLS: readonly RegisterTool[] = [
   registerRecordFactTool,
   registerInvalidateFactTool,
   registerGetFactHistoryTool,
+  registerGiveFeedbackTool,
 ];

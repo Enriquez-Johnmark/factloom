@@ -7,7 +7,7 @@ import { connectInProcess, UNREACHABLE_LLM } from './connect-in-process.ts';
 const TextContentSchema = z.array(z.object({ text: z.string() }));
 
 /**
- * One memory, reached through the five tools by a client connected anew for each call, on
+ * One memory, reached through the six tools by a client connected anew for each call, on
  * the day the call names. The LLM fails the test if it is called. `close` closes every client.
  */
 export function createToolSession() {
