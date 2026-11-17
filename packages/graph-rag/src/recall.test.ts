@@ -1,4 +1,5 @@
 import {
+  archiveFacts,
   createTestDeps,
   endFact,
   err,
@@ -200,6 +201,7 @@ async function recallFactIds(
   deps: OperationDeps,
   dates: { readonly validAt: string | null; readonly knownAt: string | null },
   question = QUESTION,
+  includeArchived = false,
 ): Promise<FactId[]> {
   const recalled = await recall(deps, {
     namespace: NAMESPACE,
@@ -207,6 +209,7 @@ async function recallFactIds(
     validAt: dates.validAt === null ? null : at(dates.validAt),
     knownAt: dates.knownAt === null ? null : at(dates.knownAt),
     limit: 50,
+    includeArchived,
   });
   if (!recalled.ok) throw new Error(recalled.error.message);
   return recalled.value.facts.map((found) => found.fact.id).sort();
@@ -336,6 +339,53 @@ describe('recall', () => {
 
       expect(found).toEqual([facts.redis, facts.vitest, facts.postgres15].sort());
     });
+  });
+
+  it('leaves an archived fact out by default, and returns it with includeArchived or an as-of date', async () => {
+    const { memory, facts } = await recordShopTimeline();
+    const archived = await archiveFacts(memory.on('2026-03-20'), {
+      namespace: NAMESPACE,
+      trigger: 'person',
+      reasonCode: 'requested',
+      factIds: [facts.redis],
+    });
+    if (!archived.ok) throw new Error(archived.error.message);
+
+    // As-of date: now (2026-04-01). Known-at date: now.
+    const byDefault = await recallFactIds(memory.on(NOW), { validAt: null, knownAt: null });
+    const included = await recallFactIds(memory.on(NOW), { validAt: null, knownAt: null }, QUESTION, true);
+    // As-of date: 2026-04-01, given. Known-at date: the same.
+    const dated = await recallFactIds(memory.on(NOW), { validAt: NOW, knownAt: null });
+
+    expect(byDefault).toEqual([facts.vitest, facts.postgres16].sort());
+    expect(included).toEqual([facts.redis, facts.vitest, facts.postgres16].sort());
+    expect(dated).toEqual([facts.redis, facts.vitest, facts.postgres16].sort());
+  });
+
+  it('leaves an archived fact out of the graph lane too, for a question about now', async () => {
+    const { memory, facts } = await recordShopTimeline();
+    const archived = await archiveFacts(memory.on('2026-03-20'), {
+      namespace: NAMESPACE,
+      trigger: 'person',
+      reasonCode: 'requested',
+      factIds: [facts.redis],
+    });
+    if (!archived.ok) throw new Error(archived.error.message);
+    const graphOnly = {
+      laneWeights: { vector: 0, keyword: 0, graph: 1 },
+      laneListLength: 50,
+      fusionConstant: 1,
+    };
+
+    // As-of date: now (2026-04-01). Known-at date: now.
+    const recalled = await recallWithSettings(
+      memory.on(NOW),
+      { namespace: NAMESPACE, question: QUESTION, validAt: null, knownAt: null, limit: 50 },
+      graphOnly,
+    );
+
+    if (!recalled.ok) throw new Error(recalled.error.message);
+    expect(recalled.value.facts.map((found) => found.fact.id)).not.toContain(facts.redis);
   });
 
   it('returns no more facts than the limit', async () => {

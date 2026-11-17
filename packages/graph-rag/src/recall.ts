@@ -19,6 +19,11 @@ export type RecallInput = {
   /** The known-at date. Defaults to now. */
   readonly knownAt: Timestamp | null;
   readonly limit: number;
+  /**
+   * Also return archived facts for a question about now (FL-073). A question with an as-of or
+   * known-at date always includes them. Default false.
+   */
+  readonly includeArchived?: boolean;
 };
 
 export type RecalledFact = FactWithSources & {
@@ -74,6 +79,8 @@ export async function searchFactsByGraph(
     readonly namespace: Namespace;
     readonly time: TimeFilter;
     readonly found: readonly FactWithSources[];
+    /** Leave out archived facts, before the read's limit. Default false. */
+    readonly excludeArchived?: boolean;
   },
 ): Promise<Result<readonly FactWithSources[]>> {
   const seeds = new Set(query.found.flatMap(entitiesOf));
@@ -86,6 +93,7 @@ export async function searchFactsByGraph(
     supersededByFactId: null,
     time: query.time,
     limit: GRAPH_LANE_READ_LIMIT,
+    excludeArchived: query.excludeArchived === true,
   });
   if (!touching.ok) return touching;
   const touchedSeeds = (fact: FactWithSources): number =>
@@ -122,6 +130,9 @@ export async function recallWithSettings(
   const { namespace } = input;
   const time = buildTimeFilter(input, deps.now());
   const laneLimit = settings.laneListLength;
+  // Archived facts are left out of a question about now only: a dated question asks about the
+  // past, and archiving is about tidiness, not belief (FL-073).
+  const excludeArchived = input.validAt === null && input.knownAt === null && input.includeArchived !== true;
 
   const embedded = await deps.embedder.embed([input.question], 'question');
   if (!embedded.ok) return embedded;
@@ -129,19 +140,27 @@ export async function recallWithSettings(
   if (vector === undefined)
     return err('embedding_failed', 'The embedder returned no vector for the question.');
 
-  const byVector = await deps.store.searchFactsByVector({ namespace, vector, time, limit: laneLimit });
+  const byVector = await deps.store.searchFactsByVector({
+    namespace,
+    vector,
+    time,
+    limit: laneLimit,
+    excludeArchived,
+  });
   if (!byVector.ok) return byVector;
   const byKeyword = await deps.store.searchFactsByKeyword({
     namespace,
     text: input.question,
     time,
     limit: laneLimit,
+    excludeArchived,
   });
   if (!byKeyword.ok) return byKeyword;
   const byGraph = await searchFactsByGraph(deps, {
     namespace,
     time,
     found: [...byVector.value, ...byKeyword.value],
+    excludeArchived,
   });
   if (!byGraph.ok) return byGraph;
 
