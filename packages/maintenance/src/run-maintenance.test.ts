@@ -25,6 +25,7 @@ describe('runMaintenance', () => {
               changed: 1,
               flagged: 1,
               failed: 0,
+              undecided: 0,
               flaggedItems: [{ id: 'f-1', reason: 'source_missing' }],
             })
           : err('storage_failed', 'Disk full.');
@@ -51,7 +52,10 @@ describe('runMaintenance', () => {
       { name: 'throws', run: () => Promise.reject(new Error('boom')) },
       {
         name: 'after',
-        run: () => Promise.resolve(ok({ examined: 0, changed: 0, flagged: 0, failed: 0, flaggedItems: [] })),
+        run: () =>
+          Promise.resolve(
+            ok({ examined: 0, changed: 0, flagged: 0, failed: 0, undecided: 0, flaggedItems: [] }),
+          ),
       },
     ]);
 

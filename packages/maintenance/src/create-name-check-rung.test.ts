@@ -56,13 +56,13 @@ function check(names: readonly string[], text: string, read: string[] = []) {
 describe('the name check rung', () => {
   it('decides contradicted when a name is no longer in the file at HEAD', async () => {
     expect(await check(['parseDate'], 'export function toTimestamp() {}\n')).toEqual(
-      ok({ outcome: 'contradicted', successor: null }),
+      ok({ outcome: 'contradicted', method: 'deterministic', successor: null, note: null }),
     );
   });
 
   it('decides contradicted when only a longer name holds it', async () => {
     expect(await check(['parseDate'], 'export function parseDateInput() {}\n')).toEqual(
-      ok({ outcome: 'contradicted', successor: null }),
+      ok({ outcome: 'contradicted', method: 'deterministic', successor: null, note: null }),
     );
   });
 

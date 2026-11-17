@@ -6,6 +6,11 @@ export type { RepairMovedAnchorsDeps } from './repair-moved-anchors.ts';
 export { repairMovedAnchors } from './repair-moved-anchors.ts';
 export type { RepositoryReader } from './repository-reader.ts';
 export type { ArchiveUnusedFactsDeps } from './archive-unused-facts.ts';
+export {
+  createLlmVerificationRung,
+  MAX_LLM_CALLS_PER_RUN,
+  MAX_VERIFIED_TEXT_LENGTH,
+} from './create-llm-verification-rung.ts';
 export { createNameCheckRung } from './create-name-check-rung.ts';
 export type { CheckedValue, StructuredCheck } from './create-structured-value-rung.ts';
 export { createStructuredValueRung } from './create-structured-value-rung.ts';
@@ -19,4 +24,4 @@ export type {
   VerificationRung,
   VerifyAnchoredFactsDeps,
 } from './verify-anchored-facts.ts';
-export { VERIFICATION_INTERVAL_MS, verifyAnchoredFacts } from './verify-anchored-facts.ts';
+export { CONFIDENCE_STEP, VERIFICATION_INTERVAL_MS, verifyAnchoredFacts } from './verify-anchored-facts.ts';

@@ -44,6 +44,7 @@ describe('the verification job on a git repository', () => {
       changed: 0,
       flagged: 1,
       failed: 0,
+      undecided: 0,
       flaggedItems: [{ id: factId, reason: 'source_missing' }],
     });
     expect(await verificationsOf(store, factId)).toEqual(['source_missing']);

@@ -86,7 +86,9 @@ describe('the structured value rung', () => {
       { commit: 'c-2', text: 'level=1\nname=shop\n', day: '2026-02-01' },
     ]);
 
-    expect(result).toEqual(ok({ outcome: 'confirmed', successor: null }));
+    expect(result).toEqual(
+      ok({ outcome: 'confirmed', method: 'deterministic', successor: null, note: null }),
+    );
   });
 
   it('contradicts a fact whose value changed, naming the new value and the first commit in which it differs', async () => {
@@ -100,6 +102,8 @@ describe('the structured value rung', () => {
     expect(result).toEqual(
       ok({
         outcome: 'contradicted',
+        method: 'deterministic',
+        note: null,
         successor: {
           value: '2',
           statement: 'The level is 2.',
@@ -115,7 +119,9 @@ describe('the structured value rung', () => {
       { commit: 'c-2', text: 'name=shop\n', day: '2026-02-01' },
     ]);
 
-    expect(result).toEqual(ok({ outcome: 'contradicted', successor: null }));
+    expect(result).toEqual(
+      ok({ outcome: 'contradicted', method: 'deterministic', successor: null, note: null }),
+    );
   });
 
   it('decides nothing for a predicate the domain has no check for', async () => {

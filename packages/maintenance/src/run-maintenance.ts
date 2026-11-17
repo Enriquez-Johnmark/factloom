@@ -9,6 +9,8 @@ export type JobCounts = {
   /** Left for a person to decide. */
   readonly flagged: number;
   readonly failed: number;
+  /** Left undecided, or left for the next run, by a step that could not run, such as an LLM rung with no key. */
+  readonly undecided: number;
   /** What was flagged, each with a word that says why, so that a person can find it. */
   readonly flaggedItems: readonly { readonly id: string; readonly reason: string }[];
 };
@@ -40,6 +42,7 @@ export const MaintenanceReportSchema = z.strictObject({
       changed: CountSchema,
       flagged: CountSchema,
       failed: CountSchema,
+      undecided: CountSchema,
       flaggedItems: z
         .array(z.strictObject({ id: z.string().min(1), reason: z.string().min(1) }).readonly())
         .readonly(),
@@ -48,7 +51,7 @@ export const MaintenanceReportSchema = z.strictObject({
 });
 export type MaintenanceReport = z.infer<typeof MaintenanceReportSchema>;
 
-const NOTHING: JobCounts = { examined: 0, changed: 0, flagged: 0, failed: 0, flaggedItems: [] };
+const NOTHING: JobCounts = { examined: 0, changed: 0, flagged: 0, failed: 0, undecided: 0, flaggedItems: [] };
 
 /**
  * Runs the jobs once, one after another in the order given, and collects their reports. A job

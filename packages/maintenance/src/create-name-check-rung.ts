@@ -1,6 +1,6 @@
 import { type FactWithSources, ok } from '@factloom/core';
 import { containsWholeWord } from './contains-whole-word.ts';
-import type { VerificationRung } from './verify-anchored-facts.ts';
+import { decided, type VerificationRung } from './verify-anchored-facts.ts';
 
 /**
  * The rung that checks that a fact's named functions or symbols are still named in its
@@ -22,7 +22,7 @@ export function createNameCheckRung(
       // The path exists at HEAD, as rung 2 found; a null text here is a file git cannot show.
       if (text.value === null) return ok(null);
       const isEveryNameFound = names.every((name) => containsWholeWord(text.value ?? '', name));
-      return ok(isEveryNameFound ? null : { outcome: 'contradicted', successor: null });
+      return ok(isEveryNameFound ? null : decided('contradicted'));
     },
   };
 }

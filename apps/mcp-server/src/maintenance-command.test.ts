@@ -52,6 +52,7 @@ describe('the maintenance command', () => {
         changed: 0,
         flagged: 0,
         failed: 0,
+        undecided: 0,
         flaggedItems: [],
       },
       {
@@ -62,6 +63,7 @@ describe('the maintenance command', () => {
         changed: 0,
         flagged: 0,
         failed: 0,
+        undecided: 0,
         flaggedItems: [],
       },
       {
@@ -72,6 +74,7 @@ describe('the maintenance command', () => {
         changed: 0,
         flagged: 0,
         failed: 0,
+        undecided: 0,
         flaggedItems: [],
       },
       {
@@ -82,6 +85,7 @@ describe('the maintenance command', () => {
         changed: 0,
         flagged: 0,
         failed: 0,
+        undecided: 0,
         flaggedItems: [],
       },
     ]);

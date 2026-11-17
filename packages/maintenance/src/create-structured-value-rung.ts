@@ -1,6 +1,6 @@
 import { type FactWithSources, ok, type Result } from '@factloom/core';
 import type { RepositoryReader } from './repository-reader.ts';
-import type { RungDecision, VerificationRung } from './verify-anchored-facts.ts';
+import { decided, type RungDecision, type VerificationRung } from './verify-anchored-facts.ts';
 
 /** What a structured check read in a file: a value, no value, or a file it cannot read. */
 export type CheckedValue =
@@ -53,8 +53,8 @@ export function createStructuredValueRung(
       if (then.value.kind !== 'value' || now.value.kind !== 'value') return ok(null);
       const before = then.value.value;
       const after = now.value.value;
-      if (before === after) return ok({ outcome: 'confirmed', successor: null });
-      if (after === null) return ok({ outcome: 'contradicted', successor: null });
+      if (before === after) return ok(decided('confirmed'));
+      if (after === null) return ok(decided('contradicted'));
       const commits = await repository.listCommitsTouching(anchor.path, anchor.commit);
       if (!commits.ok) return commits;
       for (const { commit, committedAt } of commits.value) {
@@ -63,13 +63,13 @@ export function createStructuredValueRung(
         if (value.value.kind === 'value' && value.value.value !== before) {
           const statement = check.describeSuccessor(found, after);
           return ok({
-            outcome: 'contradicted',
+            ...decided('contradicted'),
             successor: { value: after, statement, changedAt: committedAt },
           });
         }
       }
       // HEAD differs, so some commit must; without one the change cannot be dated.
-      return ok({ outcome: 'contradicted', successor: null });
+      return ok(decided('contradicted'));
     },
   };
 }

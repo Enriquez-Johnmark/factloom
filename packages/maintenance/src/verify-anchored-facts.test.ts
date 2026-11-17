@@ -96,7 +96,7 @@ function contradictingRung(placement: VerificationRung['placement'], ran: string
     placement,
     check: async () => {
       ran.push(placement);
-      return ok({ outcome: 'contradicted', successor: null } as const);
+      return ok({ outcome: 'contradicted', method: 'deterministic', successor: null, note: null } as const);
     },
   };
 }
@@ -110,7 +110,7 @@ describe('verifyAnchoredFacts', () => {
 
     expect(result).toEqual({
       ok: true,
-      value: { examined: 1, changed: 0, flagged: 0, failed: 0, flaggedItems: [] },
+      value: { examined: 1, changed: 0, flagged: 0, failed: 0, undecided: 0, flaggedItems: [] },
     });
     expect(await outcomes(store, factId)).toEqual([['confirmed', 'deterministic']]);
   });
@@ -137,6 +137,7 @@ describe('verifyAnchoredFacts', () => {
       changed: 0,
       flagged: 1,
       failed: 0,
+      undecided: 0,
       flaggedItems: [{ id: factId, reason: 'source_missing' }],
     });
     expect(await outcomes(store, factId)).toEqual([['source_missing', 'deterministic']]);

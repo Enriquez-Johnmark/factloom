@@ -110,5 +110,5 @@ export async function repairMovedAnchors(
     if (repaired.ok) changed += 1;
     else if (repaired.error.code !== 'already_invalidated') failed += 1;
   }
-  return ok({ examined, changed, flagged: flaggedItems.length, failed, flaggedItems });
+  return ok({ examined, changed, flagged: flaggedItems.length, failed, undecided: 0, flaggedItems });
 }

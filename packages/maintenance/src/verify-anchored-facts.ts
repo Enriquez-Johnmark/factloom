@@ -1,4 +1,5 @@
 import {
+  adjustConfidence,
   endFact,
   type FactWithSources,
   listStaleFacts,
@@ -8,6 +9,7 @@ import {
   recordVerification,
   type Timestamp,
   toTimestamp,
+  type VerificationMethod,
   type VerificationOutcome,
 } from '@factloom/core';
 import { type Anchor, findAnchor } from './find-anchor.ts';
@@ -28,11 +30,22 @@ export type Successor = {
   readonly changedAt: Timestamp;
 };
 
-/** A rung's decision: the outcome, and for a value that changed, what replaces the fact. */
+/**
+ * A rung's decision: the outcome, how it was reached, and for a value that changed, what
+ * replaces the fact. `note` says what else the run reports: `failed` for a check that could
+ * not be made, recorded as `inconclusive`; `undecided` for a check that cannot run here, such
+ * as an LLM with no key, also recorded; `deferred` for a fact left for the next run, recorded
+ * not at all.
+ */
 export type RungDecision = {
   readonly outcome: VerificationOutcome;
+  readonly method: VerificationMethod;
   readonly successor: Successor | null;
+  readonly note: 'failed' | 'undecided' | 'deferred' | null;
 };
+
+/** How much an LLM verdict of `contradicted` lowers a fact's confidence (FL-051). */
+export const CONFIDENCE_STEP = 0.2;
 
 /**
  * A rung that a domain adds to the ladder. `before_content_check` runs once the path is known
@@ -56,7 +69,12 @@ export type VerifyAnchoredFactsDeps = OperationDeps & {
 };
 
 /** A decision with no successor. */
-const decided = (outcome: VerificationOutcome): RungDecision => ({ outcome, successor: null });
+export const decided = (outcome: VerificationOutcome): RungDecision => ({
+  outcome,
+  method: 'deterministic',
+  successor: null,
+  note: null,
+});
 
 /** Runs the domain's rungs of one placement in order, and returns the first decision. */
 async function runRungs(
@@ -174,6 +192,7 @@ export async function verifyAnchoredFacts(
 
   let changed = 0;
   let failed = 0;
+  let undecided = 0;
   const flaggedItems: { id: string; reason: string }[] = [];
   for (const found of stale.value) {
     const anchor = findAnchor(found.sources);
@@ -181,18 +200,37 @@ export async function verifyAnchoredFacts(
     const decision = await climbLadder(deps, found, anchor, head.value);
     if (!decision.ok) return decision;
     if (decision.value === null) continue;
-    const { outcome, successor } = decision.value;
+    const { outcome, method, successor, note } = decision.value;
+    if (note === 'deferred') {
+      undecided += 1;
+      continue;
+    }
+    if (note === 'undecided') undecided += 1;
     const recorded = await recordVerification(deps, {
       namespace: input.namespace,
       trigger: 'maintenance',
       reasonCode: 'verification_due',
       factId: found.fact.id,
       outcome,
-      method: 'deterministic',
+      method,
     });
     // A fact invalidated meanwhile by another process was examined, not failed.
     if (!recorded.ok) {
       if (recorded.error.code !== 'already_invalidated') failed += 1;
+      continue;
+    }
+    if (note === 'failed') failed += 1;
+    // An LLM verdict changes no fact: it lowers the confidence, and a person looks.
+    if (outcome === 'contradicted' && method === 'llm') {
+      const lowered = await adjustConfidence(deps, {
+        namespace: input.namespace,
+        trigger: 'maintenance',
+        reasonCode: 'verification_failed',
+        factId: found.fact.id,
+        confidence: Math.max(0, found.fact.confidence - CONFIDENCE_STEP),
+      });
+      if (!lowered.ok && lowered.error.code !== 'already_invalidated') failed += 1;
+      flaggedItems.push({ id: found.fact.id, reason: 'contradicted' });
       continue;
     }
     if (outcome === 'contradicted' && successor !== null && deps.domain.correctionPolicy === 'automatic') {
@@ -206,5 +244,12 @@ export async function verifyAnchoredFacts(
       flaggedItems.push({ id: found.fact.id, reason: outcome });
     }
   }
-  return ok({ examined: stale.value.length, changed, flagged: flaggedItems.length, failed, flaggedItems });
+  return ok({
+    examined: stale.value.length,
+    changed,
+    flagged: flaggedItems.length,
+    failed,
+    undecided,
+    flaggedItems,
+  });
 }

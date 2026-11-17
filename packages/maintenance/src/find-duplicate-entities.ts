@@ -143,5 +143,5 @@ export async function findDuplicateEntities(
       failed += 1;
     }
   }
-  return ok({ examined, changed, flagged: flaggedItems.length, failed, flaggedItems });
+  return ok({ examined, changed, flagged: flaggedItems.length, failed, undecided: 0, flaggedItems });
 }

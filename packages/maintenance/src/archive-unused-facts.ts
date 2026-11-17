@@ -55,5 +55,12 @@ export async function archiveUnusedFacts(
     else if (archived.error.code !== 'already_invalidated' && archived.error.code !== 'already_exists')
       failed += 1;
   }
-  return ok({ examined: unused.value.length, changed, flagged: flaggedItems.length, failed, flaggedItems });
+  return ok({
+    examined: unused.value.length,
+    changed,
+    flagged: flaggedItems.length,
+    failed,
+    undecided: 0,
+    flaggedItems,
+  });
 }
