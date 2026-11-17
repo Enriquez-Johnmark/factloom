@@ -137,7 +137,15 @@ describe('softwareDevelopmentDomain', () => {
     expect(describedAs?.cardinality).toBe('multi');
   });
 
-  it('has exactly five entity types and seven predicates', () => {
+  it("the software development domain has a single-valued predicate for a dependency's version", () => {
+    const pinsVersion = softwareDevelopmentDomain.predicates.find(
+      (predicate) => predicate.name === 'pins_version',
+    );
+    expect(pinsVersion?.cardinality).toBe('single');
+    expect(pinsVersion?.description).toContain('dependency');
+  });
+
+  it('has exactly five entity types and eight predicates', () => {
     expect(softwareDevelopmentDomain.entityTypes).toEqual([
       'repository',
       'dependency',
@@ -152,6 +160,7 @@ describe('softwareDevelopmentDomain', () => {
       'listens_on_port',
       'follows_convention',
       'has_status',
+      'pins_version',
       'described_as',
     ]);
   });

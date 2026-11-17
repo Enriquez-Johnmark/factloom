@@ -19,6 +19,8 @@ export type { RecordStructuredFactsInput } from './record-structured-facts.ts';
 export { recordStructuredFacts } from './record-structured-facts.ts';
 export type { RememberDeps, RememberInput, RememberResult, SkippedFact } from './remember.ts';
 export { remember } from './remember.ts';
+export type { DependencyVersion } from './read-dependency-version.ts';
+export { describeDependencyVersion, readDependencyVersion } from './read-dependency-version.ts';
 export { findSymbolNames, softwareDevelopmentDomain } from './software-development-domain.ts';
 export type { SourceInput } from './source-input.ts';
 export type { StructuredFactInput } from './structured-fact-input.ts';

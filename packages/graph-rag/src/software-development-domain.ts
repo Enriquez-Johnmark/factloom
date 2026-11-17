@@ -48,6 +48,12 @@ export const softwareDevelopmentDomain: Domain = {
       cardinality: 'single',
     },
     {
+      name: 'pins_version',
+      description:
+        'A dependency is pinned at a version, given as a value, for example the dependency vitest pins_version "5.1.0".',
+      cardinality: 'single',
+    },
+    {
       name: 'described_as',
       description:
         'A symbol does what a value says, for example the function parseDate described_as "parses a calendar date".',
@@ -61,7 +67,7 @@ export const softwareDevelopmentDomain: Domain = {
     'A convention is a way of working that a repository follows, such as conventional commits.',
     'A decision is a choice the team made, named by what was chosen, such as "use SQLite first".',
     'A symbol is a function, class, type or constant in the code, named exactly as the code names it, such as parseDate.',
-    'A deployment target, a port and a status are values, not entities. Write a port as its digits only.',
+    'A deployment target, a port, a status and a version are values, not entities. Write a port as its digits only, and a version as the text gives it.',
     'Keep a name as the text writes it; do not expand or shorten it.',
   ].join('\n'),
   correctionPolicy: 'automatic',
