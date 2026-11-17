@@ -44,6 +44,7 @@ describe('openSqliteMemoryStore', () => {
     expect(rows.prepare('SELECT number, name FROM schema_migration').all()).toEqual([
       { number: 1, name: 'initial' },
       { number: 2, name: 'add_fact_confidence' },
+      { number: 3, name: 'add_feedback' },
     ]);
   });
 
