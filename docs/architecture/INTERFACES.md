@@ -527,17 +527,17 @@ export declare function recordFeedback(
   },
 ): Promise<Result<{ readonly feedbackId: string }>>;
 
-/** Removes the content of a source, and of every fact that has no other source. */
+/** Removes the content of a source, of every fact that has no other source and of its copies, and of the sources that explained changes to them. */
 export declare function purgeContent(
   deps: Pick<OperationDeps, 'store' | 'now' | 'newId'>,
   input: ChangeContext & { readonly sourceId: SourceId },
-): Promise<Result<{ readonly purgedSourceId: SourceId; readonly purgedFactIds: readonly FactId[] }>>;
+): Promise<Result<{ readonly purgedSourceIds: readonly SourceId[]; readonly purgedFactIds: readonly FactId[] }>>;
 ```
 
 - **`reviseValidTime`** exists for the case one fact at a time cannot express: moving the date of a succession means changing the end of one fact and the start of the next together. Each fact is invalidated and superseded by a copy with the new period, and the single-value rule is checked once, on the result. Each copy keeps the original's sources, gains the given one, and copies the original's vector, so the embedder is not called. `revisedFactIds` lists the copies in the order of the input. Errors: as `endFact`, and `invalid_input` for an empty list, a fact listed twice, or a period that does not end after it starts.
 - **`adjustConfidence` does not copy the fact.** It commits one `adjust_confidence` change under the operation `confidence_adjustment`, which appends a row to the `fact_confidence` table (fact, confidence, time), and reads return the latest confidence recorded at or before the known-at date; `getFact` and `listFacts` with `live` or `all` return the latest. `previousConfidence` is the confidence a read returned just before the call. A copy per adjustment would change the fact's identifier and its recorded date every time. Confidence changes on feedback or on a failed verification, never on a timer. Errors: `invalid_input`, `not_found`, `already_invalidated`, `storage_failed`.
 - **`recordFeedback` decides nothing.** Product 2 reads feedback and then calls `invalidateFact`, `endFact` or `adjustConfidence` under the domain's correction policy. Errors: `invalid_input`, `not_found`, `storage_failed`.
-- **`purgeContent`** is specified in outline in [ADR 0012](adr/0012-purge-is-the-one-exception.md). Its full design is a phase 2 work item, with the requirements the review of this design found: it must cover every copy of a purged fact, the keyword and vector entries, the source's locator, and the content of any source that explained a change to those facts. Errors: `not_found`, `storage_failed`.
+- **`purgeContent`** is designed in [ADR 0012](adr/0012-purge-is-the-one-exception.md), "The phase 2 design", proven by the [purge spike](../../spikes/purge/README.md), and built in FL-061. It covers the target source and every source with the same content hash; every fact whose sources are all among them, and every copy of one, a copy being a fact linked by supersession with the same subject, predicate and object; and the content of every source that explained a change to those facts. Facts that came only from an explaining source are left, as orphaned facts. Purged text becomes `[purged]`, a source's locator and hash become `null`, a live purged fact is also invalidated, and its keyword and vector entries are removed. Planned names: the change kind `purge_content`, `{ kind: 'purge_content', targetKind: 'source' | 'fact', targetId }`; the operation `purge`; the actions `source.purged` and `fact.purged`; the reason codes `erasure_requested` and `secret_stored`; and `purgedAt: Timestamp | null` on `Fact` and `Source`. Errors: `not_found`, `storage_failed`.
 
 Each phase 2 operation adds what it needs: a `Change` kind, an `Operation` name, `AuditAction` values and reason codes. `reviseValidTime` adds only the reason code `period_corrected`: it is made of `record_fact` and `invalidate_fact` changes, and its operation is the existing `revision`. Adding a kind does not change the existing ones.
 
