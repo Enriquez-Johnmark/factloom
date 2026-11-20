@@ -304,7 +304,7 @@ describe('remember', () => {
     expect(after.ok && after.value.map((entity) => entity.type)).toEqual(['repository']);
   });
 
-  it('writes everything in one commit', async () => {
+  it('writes everything but the corrections in one commit', async () => {
     const memory = createMemory();
     const first = await memory.run({
       now: '2026-01-10',

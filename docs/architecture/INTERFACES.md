@@ -169,7 +169,9 @@ export type ReasonCode =
   | 'unused'
   | 'requested'
   | 'source_changed'
-  | 'verification_failed';
+  | 'verification_failed'
+  | 'judged_ended'
+  | 'judged_wrong';
 
 export type AuditAction =
   | 'entity.created'
@@ -795,7 +797,11 @@ export declare function undoEntityMerge(
 The use cases in `@factloom/graph-rag`, one per file. Phase 1. An MCP tool handler calls exactly one.
 
 ```ts
-export type RememberDeps = OperationDeps & { readonly llm: LlmClient };
+export type RememberDeps = OperationDeps & {
+  readonly llm: LlmClient;
+  /** Phase 2 (FL-042). Without it, or under the policy `human_approval`, a conflict is skipped as in phase 1. */
+  readonly judge?: ConflictJudge;
+};
 
 /** Where new information came from, as a caller gives it. */
 export type SourceInput = { readonly kind: string; readonly locator: string | null; readonly version: string | null };
@@ -816,6 +822,8 @@ export type StructuredFactInput = {
 export type RememberedFact = FactWithSources & {
   /** 'restated' when the fact was already live and only gained a source. */
   readonly outcome: 'recorded' | 'restated';
+  /** Phase 2 (FL-042). The stored fact this one took the place of, and how, or null. */
+  readonly supersedes: { readonly factId: FactId; readonly kind: 'succession' | 'correction' } | null;
 };
 
 /** An extracted fact that was not recorded. */
@@ -908,7 +916,7 @@ export type ExplainedAuditEntry = AuditEntry & { readonly explanation: string | 
 export type FactHistoryEntry = FactWithSources & { readonly auditEntries: readonly ExplainedAuditEntry[] };
 ```
 
-- **`remember`** asks the LLM for facts using the domain's entity types and predicates, which the extraction schema lists as closed sets. It resolves each entity by name, preferring an existing entity of any type when exactly one has that name. It then sorts the extracted facts with `findConflictCandidates`: a fact that restates a live one gains the source; a fact that conflicts with a stored fact, or with another fact from the same text, is returned in `skipped`; the rest are recorded. One call to `recordFacts` writes everything. A fact whose text gives no date has `validFrom: null`, meaning the start is unknown, so it is returned for any earlier as-of date.
+- **`remember`** asks the LLM for facts using the domain's entity types and predicates, which the extraction schema lists as closed sets. It resolves each entity by name, preferring an existing entity of any type when exactly one has that name. It then sorts the extracted facts with `findConflictCandidates`: a fact that restates a live one gains the source; a fact that conflicts with a stored fact, or with another fact from the same text, is returned in `skipped`; the rest are recorded. One call to `recordFacts` writes everything but the corrections. From phase 2 (FL-042), with a conflict judge in its dependencies and the correction policy `automatic`, a fact that conflicts with a stored fact goes to the judge: on `succession` the stored fact is ended by `endFact` with the new fact as successor, on `correction` it is invalidated by `invalidateFact` with the new fact as replacement, each in its own commit after the first, with its own source holding the same text and the reason code `judged_ended` or `judged_wrong` ([ADR 0022](adr/0022-remember-commits-each-correction-on-its-own.md)). Purge covers every one of those sources, since they share a content hash. A fact judged `unrelated` that still overlaps, a judge that fails, a succession whose moment of change is not after the stored fact's start, and a fact that more than one stored fact would give way to are skipped as in phase 1. A fact whose text gives no date has `validFrom: null`, meaning the start is unknown, so it is returned for any earlier as-of date.
 - **`recordStructuredFacts`** applies the same restatement rule, and returns `conflict` instead of skipping.
 - **Secrets are refused.** `remember`, `recordStructuredFacts`, `changeFact` and `giveFeedback` check their text against a fixed list of secret patterns before anything is stored or sent to the LLM, and return `invalid_input` naming the kind of secret, never the secret.
 - **`giveFeedback`** checks the comment against the secret patterns and refuses it with `invalid_input` before anything is stored. Otherwise it calls `recordFeedback` once, with reason code `feedback_given` and the comment, if any, as the content of a source observed now. `followUp` says what product 2 did about it.

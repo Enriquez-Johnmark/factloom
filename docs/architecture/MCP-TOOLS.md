@@ -133,6 +133,8 @@ type RecordedFact = {
   valid_from: string | null;
   valid_to: string | null;
   outcome: 'recorded' | 'restated';
+  /** Phase 2. The stored fact this one took the place of, and how, or null. */
+  supersedes: { fact_id: string; kind: 'succession' | 'correction' } | null;
 };
 
 type SkippedFact = {
@@ -148,6 +150,8 @@ In phase 1 `remember` does not judge conflicts. It applies two deterministic rul
 - **Single-value rule.** For a single-valued predicate, a fact whose valid period overlaps that of a live fact with a different object is not recorded. It is returned in `skipped` with `reason: "conflicts_with_stored_fact"` and the identifiers of the facts in the way. Two facts from the same text that would overlap each other are both skipped, with `reason: "conflicts_within_text"` and an empty `conflicting_fact_ids`, because neither has an identifier.
 
 The agent then decides, and calls `invalidate_fact` with a replacement if the stored fact should give way. Phase 2 replaces the second rule with conflict detection and the domain's correction policy.
+
+From phase 2 (FL-042), under the correction policy `automatic`, a fact that conflicts with a stored fact goes to the conflict judge. On `succession` the stored fact is ended at the moment of change and the new fact is recorded as its successor; on `correction` the stored fact is invalidated and the new fact replaces it. The new fact is returned with `supersedes` naming the stored fact and which of the two it was. Every other outcome leaves the fact in `skipped`, as above. The facts that need no correction are recorded with one source, as in phase 1, and each succession or correction is its own commit with its own source holding the same text ([ADR 0022](adr/0022-remember-commits-each-correction-on-its-own.md)). If one of those commits finds memory changed by another process, its fact is returned in `skipped` and the rest of the call stands.
 
 ### `record_fact`
 

@@ -35,7 +35,7 @@ Factloom can take new information and record it as entities and facts with a **s
 ## Boundaries and constraints
 
 - `graph-rag` imports only `@factloom/core` and `zod`. The Anthropic client lives in `apps/mcp-server` and reaches a use case as an argument ([`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md), [ADR 0003](../../architecture/adr/0003-dependencies-point-inward-with-manual-injection.md)).
-- A use case changes memory only by calling a fact operation in `core`, and each call of a use case makes at most one commit ([ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md)).
+- A use case changes memory only by calling a fact operation in `core`, and each call of a use case makes at most one commit ([ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md)), except `remember` from phase 2, which commits each succession and correction on its own ([ADR 0022](../../architecture/adr/0022-remember-commits-each-correction-on-its-own.md)).
 - Expected failures are `Result` values with a code from the shared list ([ADR 0004](../../architecture/adr/0004-zod-schemas-and-result-values.md)).
 - A conflict is keyed by subject and predicate, and only for a **single-valued predicate** ([ADR 0010](../../architecture/adr/0010-conflicts-are-keyed-by-subject-and-predicate.md)).
 - The LLM is reached only through the one-method `LlmClient` interface ([ADR 0013](../../architecture/adr/0013-claude-behind-a-one-method-interface.md)).
