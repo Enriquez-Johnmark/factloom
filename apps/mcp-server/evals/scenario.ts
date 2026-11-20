@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { type Domain, err, ok, parseDateInput, type Result } from '@factloom/core';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
@@ -124,4 +126,30 @@ export function findNamesOutsideDomain(scenario: Scenario, domain: Domain): stri
     if ('history' in entry) check(`expect ${index + 1}`, entry.history.subject, entry.history.predicate);
   });
   return problems;
+}
+
+/** Where the scenario files are. */
+export const SCENARIOS_DIRECTORY = join(import.meta.dirname, 'scenarios');
+
+/** A scenario with the name of the file it was read from. */
+export type ScenarioFile = { readonly file: string; readonly scenario: Scenario };
+
+/**
+ * Reads every scenario of a directory, in file name order. Fails before any step runs when a
+ * file is not valid or names a predicate or an entity type the domain does not have, with the
+ * file and the name.
+ */
+export function loadScenarios(directory: string, domain: Domain): Result<ScenarioFile[]> {
+  const scenarios: ScenarioFile[] = [];
+  const fileNames = readdirSync(directory)
+    .filter((name) => name.endsWith('.yaml'))
+    .sort();
+  for (const file of fileNames) {
+    const parsed = parseScenario(readFileSync(join(directory, file), 'utf8'));
+    if (!parsed.ok) return err('invalid_input', `${file}: ${parsed.error.message}`);
+    const problems = findNamesOutsideDomain(parsed.value, domain);
+    if (problems.length > 0) return err('invalid_input', `${file}: ${problems.join('; ')}.`);
+    scenarios.push({ file, scenario: parsed.value });
+  }
+  return ok(scenarios);
 }
