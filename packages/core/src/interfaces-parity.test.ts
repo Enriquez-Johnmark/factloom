@@ -110,7 +110,9 @@ type RefReasonCode =
   | 'unused'
   | 'requested'
   | 'source_changed'
-  | 'verification_failed';
+  | 'verification_failed'
+  | 'judged_ended'
+  | 'judged_wrong';
 type RefAuditAction =
   | 'entity.created'
   | 'source.recorded'

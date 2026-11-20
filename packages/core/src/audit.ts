@@ -39,6 +39,8 @@ export const ReasonCodeSchema = z.enum([
   'requested',
   'source_changed',
   'verification_failed',
+  'judged_ended',
+  'judged_wrong',
 ]);
 export type ReasonCode = z.infer<typeof ReasonCodeSchema>;
 
