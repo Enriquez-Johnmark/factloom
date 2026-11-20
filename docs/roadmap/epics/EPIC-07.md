@@ -75,7 +75,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-027 | Timeline scenarios as reviewed data | 0 | FL-006, FL-018 | Completed |
 | FL-028 | Record-and-replay wrapper for the LLM client | 1 | FL-006, FL-027 | Completed |
 | FL-029 | Extraction cases | 1 | FL-018, FL-027 | Completed |
-| FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Pending |
+| FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Under Review |
 | FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Completed |
 | FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Pending |
 | FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Completed |
@@ -448,7 +448,7 @@ Choices made where the item left one, for the owner to confirm in the review:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 2 |
 | Depends on | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 |
 | Requirements | REQ-30 |
@@ -515,23 +515,109 @@ The `remember` steps need LLM recordings, and a recording can only be made with 
 - [Git rules](../../../.claude/rules/git.md): recordings are checked for secrets before they are pushed.
 
 **Acceptance criteria.**
-- [ ] `pnpm check` exits 0 with no API key set, and its output contains the report with the four metrics and one line per scenario.
+- [x] `pnpm check` exits 0 with no API key set, and its output contains the report with the four metrics and one line per scenario.
 - [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs `pnpm run record:scenarios` from `apps/mcp-server`. It ends with exit code 0. The owner reads the diff of the new recordings for secrets and records the model identifier. Until this step is done nothing of this item is committed, and the item is not `Completed`.
-- [ ] Nine scenarios pass: restatement, multi-valued predicate, unrelated fact about the same subject, older fact arriving late, a known name mentioned under a different entity type, a date in the text, no date in the text, a plan, and retraction.
-- [ ] Unit test "an entities expectation counts the entities with a name of any type" passes, on an inline scenario.
-- [ ] The succession and correction scenarios are run and reported as failing, with the stale value named. Staleness rate, false invalidation rate, missed invalidation rate and historical accuracy are recorded as the baseline before self-correction.
-- [ ] False invalidation rate is 0 on the nine passing scenarios.
-- [ ] Unit test "a listed scenario that passes fails the check" passes, on an inline scenario.
-- [ ] Unit test "an ask reads memory through listFacts with both dates" passes: with a store wrapper that fails on `searchFactsByVector` and `searchFactsByKeyword`, a scenario still runs to the end.
-- [ ] Unit tests of the four metric functions pass, each against a hand-computed value written in the test.
-- [ ] Unit test "fails with the file and the predicate when a scenario names a predicate the domain does not have" passes.
-- [ ] With one recording removed in a local run, `pnpm check` exits non-zero and names the missing recording. The output is recorded and the file restored.
-- [ ] Two runs of `pnpm test` in a row print the same report, byte for byte.
+- [x] Nine scenarios pass: restatement, multi-valued predicate, unrelated fact about the same subject, older fact arriving late, a known name mentioned under a different entity type, a date in the text, no date in the text, a plan, and retraction.
+- [x] Unit test "an entities expectation counts the entities with a name of any type" passes, on an inline scenario.
+- [x] The succession and correction scenarios are run and reported as failing, with the stale value named. Staleness rate, false invalidation rate, missed invalidation rate and historical accuracy are recorded as the baseline before self-correction.
+- [x] False invalidation rate is 0 on the nine passing scenarios.
+- [x] Unit test "a listed scenario that passes fails the check" passes, on an inline scenario.
+- [x] Unit test "an ask reads memory through listFacts with both dates" passes: with a store wrapper that fails on `searchFactsByVector` and `searchFactsByKeyword`, a scenario still runs to the end.
+- [x] Unit tests of the four metric functions pass, each against a hand-computed value written in the test.
+- [x] Unit test "fails with the file and the predicate when a scenario names a predicate the domain does not have" passes.
+- [x] With one recording removed in a local run, `pnpm check` exits non-zero and names the missing recording. The output is recorded and the file restored.
+- [x] Two runs of `pnpm test` in a row print the same report, byte for byte.
 - [ ] `git grep -n "API_KEY" -- apps/mcp-server/evals` shows no line that holds a key's value. The owner reads the diff of the recordings before the push and records that it was done.
 
 **Validation.** Eval: the eleven scenarios in replay, inside `pnpm check`. Unit tests of the metric functions and the gating list. One live recording run by the owner, by hand.
 
 **Completion evidence.** The commit, the passing `pnpm check` output with the report, the four baseline numbers, the model the recordings were made with, and the output of the run with a recording removed.
+
+**Recorded evidence.** Done on 2026-11-20 on Linux x64 with Node.js v22.23.4, ahead of the owner's review of FL-069, with the owner's approval: the extraction recordings FL-069 supplies exist and pass, and a change the owner asks for there costs one re-recording here. The item is `Under Review` until the owner confirms the recording step and reads its diff, the two criteria that are the owner's. The commits were made while the new repository refused pushes from this session, so they wait locally until it accepts them.
+
+Commits, in order:
+
+1. `feat(mcp-server): add the scenario runner and the four self-correction metrics`;
+2. `feat(mcp-server): add the record command for the timeline scenarios`;
+3. `test(mcp-server): run the timeline scenarios in replay, recorded with the owner's key`.
+
+Built:
+
+- **The loader.** `loadScenarios` in `evals/scenario.ts` reads every file in name order and fails before any step runs when a file names a predicate or an entity type outside the domain, with the file and the name.
+- **The runner.** `runScenario` in `evals/run-scenario.ts` opens a new SQLite database at `:memory:` for each scenario, with the fake embedder's model and dimensions, a counting identifier generator, and the clock fixed at each step's `at`. A `remember` step calls `remember` with the trigger `agent` and an `agent_note` source. A `change_fact` step finds the fact with `listFacts` at the step's time and calls `changeFact`. A failed use case ends the steps, with its code in the report. The expectations are checked at the moment just after the last step, by `listFacts` with both dates and `getFactHistory`, never `recall`, on values normalised with `normaliseEntityName`.
+- **The metrics.** `evals/scenario-metrics.ts` holds the four pure functions, the list `SCENARIOS_FAILING_UNTIL_FL_042` (correction and succession), `judgeScenarioOutcome`, which refuses a listed scenario that passes, and the report.
+- **The record command.** `pnpm run record:scenarios` in `src/record-scenarios.ts`, one recordings directory per scenario under `evals/recordings/scenarios/`.
+- **The replay test.** `src/scenarios-replay.test.ts` runs each scenario as one test in `pnpm check`, and a last test prints the report and asserts that the scenarios that pass have no false invalidation.
+
+The recording run. `pnpm run record:scenarios` ran once from `apps/mcp-server` with `ANTHROPIC_API_KEY` set for that command only, from `OWNER_ANTHROPIC_API_KEY`, and exited 0. Model `claude-haiku-5-5`, 20 calls, every stop reason `end_turn`. Tokens over the 20 calls: 1,078 input, 3,376 output, 2,257 written to the cache and 42,883 read from it; the second call read 2,257 cached tokens. The 20 recordings were read for secrets: each holds only `task`, `model`, `instructions`, `input` and `response`, and none matches a key, token, password or machine path pattern. `git grep -n "API_KEY" -- apps/mcp-server/evals` shows nothing.
+
+The report, the same in the record run and in replay. These are the baseline numbers before self-correction:
+
+```text
+Timeline scenarios in replay, model claude-haiku-5-5:
+FAIL  Correction: the database port was recorded wrongly  (listed until FL-042)
+PASS  A date in the text: the move to pnpm is dated
+PASS  A known name mentioned under a different entity type: a convention that is also a decision
+PASS  Multi-valued predicate: two conventions at once
+PASS  No date in the text: a test framework with an unknown start
+PASS  Older fact arriving late: earlier deployment targets
+PASS  A plan: an intended move to another deployment target
+PASS  Restatement: the package manager is stated twice
+PASS  Retraction: a convention that was never followed
+FAIL  Succession: the test framework was switched  (listed until FL-042)
+PASS  Unrelated fact about the same subject: a package manager does not replace a test framework
+
+Staleness rate: 2 of 13 (0.154).
+False invalidation rate: 0 of 13 (0.000).
+Missed invalidation rate: 2 of 2 (1.000).
+Historical accuracy: 9 of 10 (0.900).
+Failed: Correction: the database port was recorded wrongly
+  ask PostgreSQL listens_on_port: expected [5432], found [5433], 1 sources; stale: 5433
+  ask PostgreSQL listens_on_port (as_of 2026-01-20): expected [5432], found [5433], 1 sources
+  history PostgreSQL listens_on_port: expected [5433 correction], found [], 1 rows
+
+Failed: Succession: the test framework was switched
+  ask shop-api uses_test_framework: expected [Vitest], found [jest], 2 sources; stale: jest
+  history shop-api uses_test_framework: expected [Jest succession], found [], 1 rows
+```
+
+In the succession scenario the second text restates Jest, which gains a second source, and the Vitest fact is skipped as a conflict with it; in the correction scenario the right port is skipped the same way. That is the staleness FL-042 removes.
+
+`pnpm check`, under `unshare -rn` with no network and no API key, exited 0 with the report in its output and:
+
+```text
+ Test Files  117 passed (117)
+      Tests  1148 passed (1148)
+```
+
+Vitest 5.1.0 hides the output of passing tests when it detects an AI agent, so `CLAUDECODE` and `AI_AGENT` were unset, as for FL-069.
+
+With the recording `evals/recordings/scenarios/plan/03b2c97601217cdd38b5f25be95aa672af1dabee5b9814b4673758f7ae98404f.json` moved aside, `pnpm test` exited 1 with:
+
+```text
+Error: No recording for the key 03b2c97601217cdd38b5f25be95aa672af1dabee5b9814b4673758f7ae98404f. Expected the file /home/user/factloom/apps/mcp-server/evals/recordings/scenarios/plan/03b2c97601217cdd38b5f25be95aa672af1dabee5b9814b4673758f7ae98404f.json. Record it with: pnpm --filter @factloom/mcp-server run record:scenarios
+```
+
+The file was restored, byte for byte. Two runs of `pnpm test` in a row printed the same report, byte for byte (`cmp` of the two, 26 lines).
+
+Rules broken by hand, each then restored:
+
+| Break | Test that failed |
+|---|---|
+| Succession taken off the list of FL-042 | the replay test of the succession scenario |
+| `as_of` no longer takes the `known_at` date | "gives the as-of date the known-at date when only known_at is given" |
+| A listed scenario that passes is accepted | "a listed scenario that passes fails the check" |
+| Staleness never counted | the staleness metric test |
+
+Differences from the item:
+
+- **A history reads every fact of the subject and predicate.** Functional requirement 8 takes one fact. For a multi-valued predicate `getFactHistory` reaches only the facts linked by supersession, so the multi-valued scenario, whose `fact_rows` is "the number of facts ever recorded for the subject and predicate", saw one row of two. The runner reads the history of each fact and joins the entries by fact.
+- **The missed invalidation rate** counts an expected supersession as missed when the first fact recorded with its `from` value is still live. A succession revises the old fact into an ended copy, which is live, so "the `from` fact" is the original.
+- **A failed step ends the steps, and the expectations are still checked**, so that the report shows memory as the failure left it.
+- **The recordings were made by the agent**, with the owner's key set for the one command, as for FL-069, FL-041 and FL-064.
+
+For the owner's review: confirm the recording step (the model, the token counts, and the diff of the 20 recordings), and record that the diff was read before the push.
+
 
 ### FL-066: Performance benchmark and budgets
 
