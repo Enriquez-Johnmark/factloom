@@ -1,9 +1,13 @@
 import {
+  type ConflictJudge,
   createTestDeps,
+  type Domain,
+  err,
   type FactWithSources,
   type LlmClient,
   type MemoryStore,
   parseDateInput,
+  TEST_DOMAIN,
   type Timestamp,
 } from '@factloom/core';
 import { describe, expect, it } from 'vitest';
@@ -442,3 +446,244 @@ const UNREACHABLE_LLM: LlmClient = {
     throw new Error('The LLM was called.');
   },
 };
+
+describe('remember with a conflict judge', () => {
+  type Verdicts = Awaited<ReturnType<ConflictJudge>>;
+
+  /** A judge that answers the same for every call, and counts its calls. */
+  function scriptedJudge(answer: Verdicts) {
+    const calls: unknown[] = [];
+    const judge: ConflictJudge = (input) => {
+      calls.push(input);
+      return Promise.resolve(answer);
+    };
+    return { judge, calls };
+  }
+
+  /** Postgres 15 recorded on 10 January; then a second text is remembered with the judge given. */
+  async function rememberAfterPostgres15(options: {
+    readonly judge: ConflictJudge;
+    readonly facts: readonly unknown[];
+    readonly domain?: Domain;
+    readonly wrapStore?: (store: MemoryStore) => MemoryStore;
+  }) {
+    const first = createTestDeps({ now: '2026-01-10', llmResponses: [{ facts: [postgres('15')] }] });
+    const stored = await remember(first, {
+      namespace: NAMESPACE,
+      text: 'We run Postgres 15.',
+      source: SOURCE,
+      trigger: 'agent',
+    });
+    if (!stored.ok) throw new Error(stored.error.message);
+    const storedFact = onlyFact(stored.value);
+    const second = createTestDeps({
+      now: '2026-04-02',
+      store: options.wrapStore === undefined ? first.store : options.wrapStore(first.store),
+      newId: first.newId,
+      llmResponses: [{ facts: options.facts }],
+      ...(options.domain === undefined ? {} : { domain: options.domain }),
+    });
+    const result = await remember(
+      { ...second, judge: options.judge },
+      {
+        namespace: NAMESPACE,
+        text: 'We moved to Postgres 16 on 20 March.',
+        source: SOURCE,
+        trigger: 'agent',
+      },
+    );
+    return { result, storedFact, store: first.store };
+  }
+
+  async function readFact(store: MemoryStore, factId: string) {
+    const read = await store.getFact({ namespace: NAMESPACE, factId });
+    if (!read.ok || read.value === null) throw new Error(`No fact ${factId}.`);
+    return read.value;
+  }
+
+  async function reasonCodesOf(store: MemoryStore, factId: string) {
+    const entries = await store.listAuditEntries({
+      namespace: NAMESPACE,
+      targetKind: 'fact',
+      targetId: factId,
+    });
+    if (!entries.ok) throw new Error(entries.error.message);
+    return entries.value.map((entry) => [entry.operation, entry.action, entry.reasonCode]);
+  }
+
+  it('ends the stored fact at the moment of change and records the new one as its successor', async () => {
+    const { judge } = scriptedJudge({
+      ok: true,
+      value: [{ kind: 'succession', changedAt: at('2026-03-20') }],
+    });
+
+    const { result, storedFact, store } = await rememberAfterPostgres15({
+      judge,
+      facts: [postgres('16', '2026-03-20')],
+    });
+
+    if (!result.ok) throw new Error(result.error.message);
+    const successor = onlyFact(result.value);
+    expect(successor.fact.object).toEqual({ kind: 'value', value: 'postgres 16' });
+    expect(successor.supersedes).toEqual({ factId: storedFact.fact.id, kind: 'succession' });
+    expect((await readFact(store, storedFact.fact.id)).fact.invalidatedAt).toBe(at('2026-04-02'));
+    const live = (await listAll(store)).filter((fact) => fact.fact.invalidatedAt === null);
+    expect(live.map((fact) => [fact.fact.object, fact.fact.validFrom, fact.fact.validTo])).toEqual(
+      expect.arrayContaining([
+        [{ kind: 'value', value: 'postgres 15' }, null, at('2026-03-20')],
+        [{ kind: 'value', value: 'postgres 16' }, at('2026-03-20'), null],
+      ]),
+    );
+    expect(result.value.skipped).toEqual([]);
+  });
+
+  it('marks the changes of a succession it made with judged_ended', async () => {
+    const { judge } = scriptedJudge({
+      ok: true,
+      value: [{ kind: 'succession', changedAt: at('2026-03-20') }],
+    });
+
+    const { result, storedFact, store } = await rememberAfterPostgres15({
+      judge,
+      facts: [postgres('16', '2026-03-20')],
+    });
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(await reasonCodesOf(store, storedFact.fact.id)).toContainEqual([
+      'succession',
+      'fact.invalidated',
+      'judged_ended',
+    ]);
+    expect(await reasonCodesOf(store, onlyFact(result.value).fact.id)).toEqual([
+      ['succession', 'fact.recorded', 'judged_ended'],
+    ]);
+  });
+
+  it('invalidates a stored fact judged wrong, marked judged_wrong, with the new fact as its replacement', async () => {
+    const { judge } = scriptedJudge({ ok: true, value: [{ kind: 'correction' }] });
+
+    const { result, storedFact, store } = await rememberAfterPostgres15({ judge, facts: [postgres('16')] });
+
+    if (!result.ok) throw new Error(result.error.message);
+    const replacement = onlyFact(result.value);
+    expect(replacement.supersedes).toEqual({ factId: storedFact.fact.id, kind: 'correction' });
+    const wrong = await readFact(store, storedFact.fact.id);
+    expect(wrong.fact.supersededByFactId).toBe(replacement.fact.id);
+    expect(await reasonCodesOf(store, storedFact.fact.id)).toContainEqual([
+      'correction',
+      'fact.invalidated',
+      'judged_wrong',
+    ]);
+  });
+
+  it('leaves the stored fact live and skips the new fact when the judge fails', async () => {
+    const { judge } = scriptedJudge(err('llm_failed', 'The judge could not decide.'));
+
+    const { result, storedFact, store } = await rememberAfterPostgres15({ judge, facts: [postgres('16')] });
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.value.facts).toEqual([]);
+    expect(result.value.skipped).toMatchObject([
+      { reason: 'conflicts_with_stored_fact', conflictingFactIds: [storedFact.fact.id] },
+    ]);
+    expect((await readFact(store, storedFact.fact.id)).fact.invalidatedAt).toBeNull();
+  });
+
+  it('changes no stored fact under the correction policy human_approval, and does not ask the judge', async () => {
+    const { judge, calls } = scriptedJudge({ ok: true, value: [{ kind: 'correction' }] });
+
+    const { result, storedFact, store } = await rememberAfterPostgres15({
+      judge,
+      facts: [postgres('16')],
+      domain: { ...TEST_DOMAIN, correctionPolicy: 'human_approval' },
+    });
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.value.skipped).toHaveLength(1);
+    expect((await readFact(store, storedFact.fact.id)).fact.invalidatedAt).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
+  it('skips the new fact when the judge finds the stored fact unrelated but the two still overlap', async () => {
+    const { judge } = scriptedJudge({ ok: true, value: [{ kind: 'unrelated' }] });
+
+    const { result, storedFact, store } = await rememberAfterPostgres15({ judge, facts: [postgres('16')] });
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.value.skipped).toHaveLength(1);
+    expect((await readFact(store, storedFact.fact.id)).fact.invalidatedAt).toBeNull();
+  });
+
+  it('attaches the source to a stored fact the judge finds the same, and records nothing new', async () => {
+    const { judge } = scriptedJudge({ ok: true, value: [{ kind: 'duplicate' }] });
+
+    const { result, storedFact, store } = await rememberAfterPostgres15({ judge, facts: [postgres('15.0')] });
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(onlyFact(result.value)).toMatchObject({ outcome: 'restated', supersedes: null });
+    expect((await readFact(store, storedFact.fact.id)).sources).toHaveLength(2);
+    expect(await listAll(store)).toHaveLength(1);
+  });
+
+  it('skips a succession whose moment of change is not after the stored fact began', async () => {
+    const first = createTestDeps({
+      now: '2026-01-10',
+      llmResponses: [{ facts: [postgres('15', '2026-02-01')] }],
+    });
+    const stored = await remember(first, {
+      namespace: NAMESPACE,
+      text: 'Postgres 15 since February.',
+      source: SOURCE,
+      trigger: 'agent',
+    });
+    if (!stored.ok) throw new Error(stored.error.message);
+    const { judge } = scriptedJudge({
+      ok: true,
+      value: [{ kind: 'succession', changedAt: at('2026-01-15') }],
+    });
+    const second = createTestDeps({
+      now: '2026-04-02',
+      store: first.store,
+      newId: first.newId,
+      llmResponses: [{ facts: [postgres('16', '2026-01-15')] }],
+    });
+
+    const result = await remember(
+      { ...second, judge },
+      { namespace: NAMESPACE, text: 'Postgres 16 from 15 January.', source: SOURCE, trigger: 'agent' },
+    );
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.value.skipped).toHaveLength(1);
+    expect((await listAll(first.store)).every((fact) => fact.fact.invalidatedAt === null)).toBe(true);
+  });
+
+  it('keeps the facts of the first commit and skips the new fact when the commit of a succession fails with conflict', async () => {
+    const { judge } = scriptedJudge({
+      ok: true,
+      value: [{ kind: 'succession', changedAt: at('2026-03-20') }],
+    });
+    // Every commit after the first of this call fails, as when another process changed memory in between.
+    let commits = 0;
+    const failingAfterFirst = (store: MemoryStore): MemoryStore => ({
+      ...store,
+      commit: (changeSet) => {
+        commits += 1;
+        return commits === 1
+          ? store.commit(changeSet)
+          : Promise.resolve(err('conflict', 'Another process got there first.'));
+      },
+    });
+
+    const { result, storedFact, store } = await rememberAfterPostgres15({
+      judge,
+      facts: [postgres('16', '2026-03-20'), dependsOn('express')],
+      wrapStore: failingAfterFirst,
+    });
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.value.facts.map((fact) => fact.fact.predicate)).toEqual(['depends_on']);
+    expect(result.value.skipped).toMatchObject([{ conflictingFactIds: [storedFact.fact.id] }]);
+    expect((await readFact(store, storedFact.fact.id)).fact.invalidatedAt).toBeNull();
+  });
+});

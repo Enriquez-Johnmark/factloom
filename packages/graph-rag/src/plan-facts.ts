@@ -18,6 +18,8 @@ export type PlannedFact = {
   readonly singleValued: boolean;
   /** True when the subject is an entity this call creates, so no stored fact can be about it. */
   readonly hasNewSubject: boolean;
+  /** The object entity's name as given, for the conflict judge's prompt. Null for a value. */
+  readonly objectEntityName: string | null;
 };
 
 /**
@@ -65,6 +67,7 @@ export async function planFacts(
       },
       singleValued: predicate?.cardinality === 'single',
       hasNewSubject: newEntities.has(subjectEntityId),
+      objectEntityName: fact.object.kind === 'entity' ? fact.object.name : null,
     });
   }
   return ok(planned);
