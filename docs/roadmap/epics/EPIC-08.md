@@ -482,6 +482,8 @@ The live runs. The scenario set was run three times against the real API: the re
       Tests  1158 passed (1158)
 ```
 
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the fifth commit: https://github.com/Enriquez-Johnmark/factloom/actions/runs/44761476219.
+
 With the judge's recording `succession/50400f97c004d1d9b3cca5cfe788ac89e7d912f6d8837c4ec05eb8ee41a8c6dc.json` moved aside, the replay test exited 1 and named the file and the record command; the file was restored, byte for byte. Two replayed runs printed the same report, byte for byte.
 
 Unit tests of `remember` with a scripted judge and the in-memory store: a succession ends the stored fact at the moment of change with the new one as successor; its changes carry `judged_ended`; a correction invalidates with the new fact as replacement and carries `judged_wrong`; a failed judge leaves the stored fact live and skips the new one; under `human_approval` nothing changes and the judge is not asked; `unrelated` with an overlap skips; `duplicate` restates; a succession whose moment is not after the stored start skips; and a succession commit that fails with `conflict` leaves the first commit's facts recorded and the new fact skipped. The `remember` tool returns `supersedes`, valid against its output schema, and the stdio smoke test passes.
