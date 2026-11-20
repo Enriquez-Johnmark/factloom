@@ -12,7 +12,7 @@
           "type": "convention"
         },
         "predicate": "follows_convention",
-        "statement": "The shop-api repository follows conventional commits.",
+        "statement": "The shop-api repository follows the conventional commits convention.",
         "subject": {
           "name": "shop-api",
           "type": "repository"

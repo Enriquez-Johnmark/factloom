@@ -4,11 +4,11 @@ import type { Rate } from './run-judge-eval.ts';
 import type { AskResult, ExpectationResult, HistoryResult, ScenarioResult } from './run-scenario.ts';
 
 /**
- * The scenarios that need self-correction, by file name. Until FL-042 makes `remember` resolve
- * a conflict, they are run and reported, and their failure does not fail the check. A listed
- * scenario that passes does, so that the list cannot outlive its reason.
+ * The scenarios that needed self-correction, by file name. Until FL-042 made `remember` resolve
+ * a conflict, they were run and reported, and their failure did not fail the check. A listed
+ * scenario that passes does, so that the list cannot outlive its reason. FL-042 emptied it.
  */
-export const SCENARIOS_FAILING_UNTIL_FL_042: readonly string[] = ['correction.yaml', 'succession.yaml'];
+export const SCENARIOS_FAILING_UNTIL_FL_042: readonly string[] = [];
 
 function toRate(count: number, of: number): Rate {
   return { count, of, ratio: of === 0 ? null : count / of };

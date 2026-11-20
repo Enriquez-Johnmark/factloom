@@ -5,6 +5,7 @@
 
 import { join } from 'node:path';
 import {
+  type ConflictJudge,
   createFakeEmbedder,
   type Domain,
   type Entity,
@@ -86,6 +87,8 @@ export type ScenarioResult = {
 export type ScenarioRunOptions = {
   readonly llm: LlmClient;
   readonly domain: Domain;
+  /** The conflict judge `remember` is given (FL-042). Without one, a conflict is skipped. */
+  readonly judge?: ConflictJudge;
   /** Wraps the store before use, so that a test can make some of its methods fail. */
   readonly wrapStore?: (store: MemoryStore) => MemoryStore;
 };
@@ -95,6 +98,7 @@ type Deps = {
   readonly domain: Domain;
   readonly embedder: ReturnType<typeof createFakeEmbedder>;
   readonly llm: LlmClient;
+  readonly judge?: ConflictJudge;
   readonly newId: () => string;
 };
 
@@ -300,6 +304,7 @@ export async function runScenario(scenario: Scenario, options: ScenarioRunOption
     domain: options.domain,
     embedder,
     llm: options.llm,
+    ...(options.judge === undefined ? {} : { judge: options.judge }),
     newId: () => {
       count += 1;
       return `id-${count}`;

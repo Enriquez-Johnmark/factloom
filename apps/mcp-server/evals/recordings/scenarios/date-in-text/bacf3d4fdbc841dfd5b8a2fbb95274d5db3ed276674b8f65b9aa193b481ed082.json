@@ -12,7 +12,7 @@
           "type": "dependency"
         },
         "predicate": "uses_package_manager",
-        "statement": "shop-api uses pnpm as its package manager since 2026-03-15.",
+        "statement": "The shop-api repository has used pnpm as its package manager since 2026-03-15.",
         "subject": {
           "name": "shop-api",
           "type": "repository"

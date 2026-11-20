@@ -11,7 +11,7 @@
           "value": "Fly.io"
         },
         "predicate": "deploys_to",
-        "statement": "The shop-api repository has been deployed to Fly.io since 2025-02-01.",
+        "statement": "shop-api has been deployed to Fly.io since 2025-02-01.",
         "subject": {
           "name": "shop-api",
           "type": "repository"

@@ -12,7 +12,7 @@
           "type": "dependency"
         },
         "predicate": "uses_package_manager",
-        "statement": "The shop-api repository installs its dependencies with pnpm.",
+        "statement": "The shop-api repository uses pnpm as its package manager.",
         "subject": {
           "name": "shop-api",
           "type": "repository"
