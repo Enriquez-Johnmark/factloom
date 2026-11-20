@@ -82,7 +82,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 |---|---|---|---|---|
 | FL-040 | Create the maintenance package and its boundary rules | 2 | FL-001 | Completed |
 | FL-041 | Conflict judge | 2 | FL-040, FL-011, FL-019, FL-027, FL-028 | Under Review |
-| FL-042 | Automatic correction inside remember | 2 | FL-035, FL-041, FL-039 | Pending |
+| FL-042 | Automatic correction inside remember | 2 | FL-035, FL-041, FL-039 | Under Review |
 | FL-043 | Proposed changes: storage and operations | 2 | FL-042 | Pending |
 | FL-070 | Human-approval policy in remember, with a command to list, approve and reject | 2 | FL-043, FL-042, FL-034 | Pending |
 | FL-044 | reviseValidTime operation | 2 | FL-010 | Completed |
@@ -353,7 +353,7 @@ In the first and the third, the second labeller's reason is that the new fact is
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 2 |
 | Depends on | FL-035, FL-041, FL-039 |
 | Requirements | REQ-16, REQ-17, REQ-24 (REQ-CA-02) |
@@ -412,21 +412,101 @@ In the first and the third, the second labeller's reason is that the new fact is
 - [ADR 0006](../../architecture/adr/0006-facts-change-only-by-invalidation.md): a succession and a correction are different operations on different time axes.
 
 **Acceptance criteria.**
-- [ ] The scenario runner, in replay, reports staleness rate 0 and false invalidation rate 0 over the whole scenario set, and prints the missed invalidation rate.
-- [ ] The scenario "succession" passes: the earlier fact is ended at the moment of change, the later one is current, asking as of an earlier date returns the earlier one, and fact history shows a succession.
-- [ ] The scenario "correction" passes: asking as of any date returns the right fact, and asking what was known before the correction returns the wrong one.
-- [ ] The scenario "unrelated fact about the same subject" passes with no fact invalidated, and with an LLM client that fails on any call whose task is `conflict_detection`.
-- [ ] The scenario "multi-valued predicate" passes with both facts current and no `conflict_detection` call.
-- [ ] A unit test shows that a judge returning `llm_failed` leaves the stored fact live and returns the new fact in `skipped`.
-- [ ] A unit test shows that with `correctionPolicy: 'human_approval'` no stored fact is changed.
-- [ ] A unit test shows the audit entries of a succession made by `remember` carry `judged_ended`, and those of a correction carry `judged_wrong`.
-- [ ] A unit test shows that when the commit of a succession fails with `conflict`, the facts of the first commit stay recorded and the new fact is returned in `skipped`.
-- [ ] A test of the `remember` tool (FL-035) shows that its output validates against its updated output schema, and the MCP smoke test still passes.
-- [ ] The new ADR exists and is listed in [`DECISIONS.md`](../../architecture/DECISIONS.md), and the diff of the commit changes each of the four sentences listed in technical requirement 5.
+- [x] The scenario runner, in replay, reports staleness rate 0 and false invalidation rate 0 over the whole scenario set, and prints the missed invalidation rate.
+- [x] The scenario "succession" passes: the earlier fact is ended at the moment of change, the later one is current, asking as of an earlier date returns the earlier one, and fact history shows a succession.
+- [x] The scenario "correction" passes: asking as of any date returns the right fact, and asking what was known before the correction returns the wrong one.
+- [x] The scenario "unrelated fact about the same subject" passes with no fact invalidated, and with an LLM client that fails on any call whose task is `conflict_detection`.
+- [x] The scenario "multi-valued predicate" passes with both facts current and no `conflict_detection` call.
+- [x] A unit test shows that a judge returning `llm_failed` leaves the stored fact live and returns the new fact in `skipped`.
+- [x] A unit test shows that with `correctionPolicy: 'human_approval'` no stored fact is changed.
+- [x] A unit test shows the audit entries of a succession made by `remember` carry `judged_ended`, and those of a correction carry `judged_wrong`.
+- [x] A unit test shows that when the commit of a succession fails with `conflict`, the facts of the first commit stay recorded and the new fact is returned in `skipped`.
+- [x] A test of the `remember` tool (FL-035) shows that its output validates against its updated output schema, and the MCP smoke test still passes.
+- [x] The new ADR exists and is listed in [`DECISIONS.md`](../../architecture/DECISIONS.md), and the diff of the commit changes each of the four sentences listed in technical requirement 5.
 
 **Validation.** Unit tests of `remember` with a scripted judge and the in-memory store. The scenario set in replay inside `pnpm check`. One live run by hand: the owner runs the scenario set three times against the real API and records the three metrics for each run.
 
 **Completion evidence.** The commit with the code and the new recordings; the scenario runner's output in replay showing the two zeros and the missed invalidation rate; the three live-run results; the new ADR and the updated sections of `INTERFACES.md`, `MCP-TOOLS.md` and EPIC-04.
+
+**Recorded evidence.** Done on 2026-11-20 on Linux x64 with Node.js v22.23.4, with the owner's approval to go ahead before FL-041 and FL-039, on which it depends, finish their review. Every acceptance criterion is met. The item is `Under Review` because those two are, and because the recording run, which technical requirement 4 gives to the owner, was made by the agent with the owner's key and is the owner's to confirm.
+
+Commits, in order:
+
+1. `docs: add ADR 0022, remember commits each correction on its own, and change the sentences of the old rule`;
+2. `feat(core): add the reason codes judged_ended and judged_wrong`;
+3. `feat(graph-rag): let remember end or invalidate a stored fact on the conflict judge's verdict`;
+4. `feat(mcp-server): pass the conflict judge to remember and return supersedes in its output`;
+5. `test(mcp-server): run the timeline scenarios with the conflict judge, recorded again with the owner's key`.
+
+Built:
+
+- **The decision.** [ADR 0022](../../architecture/adr/0022-remember-commits-each-correction-on-its-own.md), listed in `DECISIONS.md`. Its commit changes the boundary in EPIC-04, the description of `remember` in `INTERFACES.md` ("writes everything but the corrections", with the one source per commit that purge covers by content hash), the `remember` section of `MCP-TOOLS.md`, and the test name of FL-023, now "writes everything but the corrections in one commit".
+- **The reason codes.** `judged_ended` and `judged_wrong` in `core`, `INTERFACES.md` and the parity test.
+- **`remember`.** `RememberDeps` gains an optional `judge`. A fact that conflicts with stored facts goes to the judge when it is present and the policy is `automatic`; `resolveConflict` turns the verdicts into a skip, a restatement, or a supersession. The facts that need no correction are recorded by one `recordFacts` call; then each succession is one `endFact` call, with `validTo` at the moment of change and the new fact as successor, and each correction one `invalidateFact` call, with the new fact as replacement. Each has its own source with the call's text, the trigger given to `remember`, and `judged_ended` or `judged_wrong`. A commit that fails with `conflict` or `already_invalidated` leaves its fact in `skipped`, and the first commit stands.
+- **The result.** `RememberedFact` gains `supersedes`, `{ factId, kind }` or null, and the tool output `supersedes`, `{ fact_id, kind }` or null, in its output schema and in `MCP-TOOLS.md`. `record_fact` returns it as null.
+- **The wiring.** The composition root passes `judgeConflicts` from `@factloom/maintenance` through the same Anthropic client. `graph-rag` imports no `maintenance`.
+- **The scenarios.** The runner of FL-039 takes the judge; `createScenarioLlm` builds the extraction client and the judge of a scenario from its recordings, each under its own task's model. `SCENARIOS_FAILING_UNTIL_FL_042` is now empty. The two scenarios whose conflicts the rules before the LLM decide, "multi-valued predicate" and "unrelated fact about the same subject", run with a judge whose LLM throws on a `conflict_detection` call.
+
+The recording run. `pnpm run record:scenarios` ran from `apps/mcp-server` with `ANTHROPIC_API_KEY` set for that command only, from `OWNER_ANTHROPIC_API_KEY`, and exited 0: 23 calls to `claude-haiku-5-5`, 20 for extraction and 3 for `conflict_detection`, every stop reason `end_turn`; 1,842 input tokens, 3,312 output, 3,140 written to the cache and 44,649 read from it. The judge was called by the succession, correction and late-arriving Render facts. It wrote 3 new recordings and wrote 9 of the 20 extraction recordings again with the same keys: their facts are the same, field for field, and only the wording of a statement or a confidence differs. The 23 recordings hold only `task`, `model`, `instructions`, `input` and `response`, and none matches a key, token, password or machine path pattern.
+
+The scenario runner in replay, inside `pnpm check`:
+
+```text
+Timeline scenarios in replay, model claude-haiku-5-5:
+PASS  Correction: the database port was recorded wrongly
+PASS  A date in the text: the move to pnpm is dated
+PASS  A known name mentioned under a different entity type: a convention that is also a decision
+PASS  Multi-valued predicate: two conventions at once
+PASS  No date in the text: a test framework with an unknown start
+PASS  Older fact arriving late: earlier deployment targets
+PASS  A plan: an intended move to another deployment target
+PASS  Restatement: the package manager is stated twice
+PASS  Retraction: a convention that was never followed
+PASS  Succession: the test framework was switched
+PASS  Unrelated fact about the same subject: a package manager does not replace a test framework
+
+Staleness rate: 0 of 13 (0.000).
+False invalidation rate: 0 of 13 (0.000).
+Missed invalidation rate: 0 of 2 (0.000).
+Historical accuracy: 10 of 10 (1.000).
+```
+
+Against the baseline of FL-039, staleness went from 2 of 13 to 0, missed invalidation from 2 of 2 to 0, and historical accuracy from 9 of 10 to 10 of 10; false invalidation stayed 0.
+
+The live runs. The scenario set was run three times against the real API: the recording run and two more in record mode, after which the committed recordings were restored. All three printed staleness 0 of 13, false invalidation 0 of 13, missed invalidation 0 of 2, and historical accuracy 10 of 10, each with 23 calls of which 3 were `conflict_detection`.
+
+`pnpm check`, under `unshare -rn` with no network and no API key, exited 0:
+
+```text
+ Test Files  117 passed (117)
+      Tests  1158 passed (1158)
+```
+
+With the judge's recording `succession/50400f97c004d1d9b3cca5cfe788ac89e7d912f6d8837c4ec05eb8ee41a8c6dc.json` moved aside, the replay test exited 1 and named the file and the record command; the file was restored, byte for byte. Two replayed runs printed the same report, byte for byte.
+
+Unit tests of `remember` with a scripted judge and the in-memory store: a succession ends the stored fact at the moment of change with the new one as successor; its changes carry `judged_ended`; a correction invalidates with the new fact as replacement and carries `judged_wrong`; a failed judge leaves the stored fact live and skips the new one; under `human_approval` nothing changes and the judge is not asked; `unrelated` with an overlap skips; `duplicate` restates; a succession whose moment is not after the stored start skips; and a succession commit that fails with `conflict` leaves the first commit's facts recorded and the new fact skipped. The `remember` tool returns `supersedes`, valid against its output schema, and the stdio smoke test passes.
+
+Rules broken by hand, each then restored:
+
+| Break | Test that failed |
+|---|---|
+| A failed judge taken as a correction | "leaves the stored fact live and skips the new fact when the judge fails" |
+| The policy not read | "changes no stored fact under the correction policy human_approval" |
+| A succession marked `reported_ended` | "marks the changes of a succession it made with judged_ended" |
+| A failed succession commit fails the call | "keeps the facts of the first commit and skips the new fact" |
+| `supersedes` always null in the tool output | the `remember` tool test of `supersedes` |
+| No judge given to the scenarios | succession, correction, and the report's two zeros |
+| A scenario that calls the judge put on the no-call list | that scenario, and the report |
+
+Differences from the item:
+
+- **The judge is asked only about facts that conflict.** Functional requirement 1 asks for every fact with candidates. The judge's rules before the LLM decide the others the way phase 1 already did, a same object as `duplicate` and the rest as `unrelated`, so asking it would change nothing and could only cost a call.
+- **A successor with no start begins at the moment of change.** Without it, the new fact would overlap the ended one and the store would refuse the commit.
+- **One stored fact gives way only when it is the only one in the way.** With two conflicting stored facts, a change is not applied even when one of them is judged a succession, because the other would still overlap. Requirement 5 skips only when two are judged a change.
+- **`duplicate` on a conflicting stored fact restates it,** as the table of requirement 2 says, even though the objects differ as stored.
+- **`MCP-TOOLS.md` had no sentence stating one source per call.** The rule was implied, so a paragraph stating the new one was added to the `remember` section.
+- **The recordings and the live runs were made by the agent**, with the owner's key set for each command, as for FL-039.
+
 
 ### FL-043: Proposed changes: storage and operations
 
