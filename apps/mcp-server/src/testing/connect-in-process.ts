@@ -1,4 +1,4 @@
-import { createTestDeps, type LlmClient, type MemoryStore } from '@factloom/core';
+import { type ConflictJudge, createTestDeps, type LlmClient, type MemoryStore } from '@factloom/core';
 import { softwareDevelopmentDomain } from '@factloom/graph-rag';
 import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
@@ -23,6 +23,7 @@ export async function connectInProcess(options: {
   readonly newId: () => string;
   readonly now: string;
   readonly llm: LlmClient;
+  readonly judge?: ConflictJudge;
 }): Promise<Client> {
   const deps = createTestDeps({ now: options.now, store: options.store, newId: options.newId });
   const server = createFactloomServer(
@@ -31,6 +32,7 @@ export async function connectInProcess(options: {
       embedder: deps.embedder,
       domain: softwareDevelopmentDomain,
       llm: options.llm,
+      ...(options.judge === undefined ? {} : { judge: options.judge }),
       namespace: TEST_NAMESPACE,
       now: deps.now,
       newId: options.newId,

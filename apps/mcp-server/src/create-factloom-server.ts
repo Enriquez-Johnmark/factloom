@@ -1,4 +1,12 @@
-import type { Domain, Embedder, LlmClient, MemoryStore, Namespace, Timestamp } from '@factloom/core';
+import type {
+  ConflictJudge,
+  Domain,
+  Embedder,
+  LlmClient,
+  MemoryStore,
+  Namespace,
+  Timestamp,
+} from '@factloom/core';
 import { McpServer } from '@modelcontextprotocol/server';
 import { SERVER_INSTRUCTIONS } from './server-instructions.ts';
 
@@ -13,6 +21,8 @@ export type ServerDeps = {
   readonly domain: Domain;
   /** Used only by `remember`, to extract facts from text. */
   readonly llm: LlmClient;
+  /** Used only by `remember`, to decide whether a stored fact gives way to a new one (FL-042). */
+  readonly judge?: ConflictJudge;
   readonly namespace: Namespace;
   readonly now: () => Timestamp;
   readonly newId: () => string;

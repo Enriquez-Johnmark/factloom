@@ -39,7 +39,7 @@ export const registerRememberTool: RegisterTool = (server, deps) => {
     {
       title: 'Remember',
       description:
-        'Extracts facts from a text and records them, each with when it was true and the text as its source. A fact already in memory gains the source; a fact that contradicts a stored one is returned in skipped, with the facts in the way. Needs an Anthropic API key; without one, use record_fact.',
+        'Extracts facts from a text and records them, each with when it was true and the text as its source. A fact already in memory gains the source. When the text says a stored fact ended or was wrong, the stored fact is ended or invalidated and the new fact, returned with supersedes, takes its place; any other fact that contradicts a stored one is returned in skipped, with the facts in the way. Needs an Anthropic API key; without one, use record_fact.',
       inputSchema: RememberInputSchema,
       outputSchema: RememberOutputSchema,
       annotations: {

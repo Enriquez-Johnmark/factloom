@@ -8,7 +8,7 @@ import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import { toTimestamp } from '@factloom/core';
 import { softwareDevelopmentDomain } from '@factloom/graph-rag';
-import { runMaintenance } from '@factloom/maintenance';
+import { judgeConflicts, runMaintenance } from '@factloom/maintenance';
 import { openSqliteMemoryStore } from '@factloom/storage';
 import {
   createAnthropicLlmClient,
@@ -115,6 +115,9 @@ serveFactloom(
     embedder,
     domain: softwareDevelopmentDomain,
     llm,
+    // The conflict judge of FL-041, through the same client, so that remember can end or
+    // invalidate a stored fact under the domain's policy `automatic` (FL-042).
+    judge: (input) => judgeConflicts({ llm }, input),
     namespace,
     now: () => toTimestamp(new Date()),
     newId: () => randomUUID(),

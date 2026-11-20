@@ -1,9 +1,12 @@
 import {
+  type ConflictJudge,
   createInMemoryStore,
   createScriptedLlm,
   err,
   type LlmClient,
   type MemoryStore,
+  ok,
+  toTimestamp,
 } from '@factloom/core';
 import type { Client } from '@modelcontextprotocol/client';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -20,6 +23,7 @@ const RememberResultSchema = z.object({
       valid_from: z.string().nullable(),
       valid_to: z.string().nullable(),
       outcome: z.enum(['recorded', 'restated']),
+      supersedes: z.object({ fact_id: z.string(), kind: z.enum(['succession', 'correction']) }).nullable(),
     }),
   ),
   skipped: z.array(
@@ -53,8 +57,15 @@ function createMemory() {
     count += 1;
     return `id-${count}`;
   };
-  const connect = async (llm: LlmClient, now = '2026-03-10') => {
-    const client = await connectInProcess({ tools: [registerRememberTool], store, newId, now, llm });
+  const connect = async (llm: LlmClient, now = '2026-03-10', judge?: ConflictJudge) => {
+    const client = await connectInProcess({
+      tools: [registerRememberTool],
+      store,
+      newId,
+      now,
+      llm,
+      ...(judge === undefined ? {} : { judge }),
+    });
     clients.push(client);
     return client;
   };
@@ -194,5 +205,34 @@ describe('the remember tool', () => {
 
     expect(text).toMatch(/^llm_failed: No Anthropic API key is configured/);
     expect(text).toContain('record_fact records a fact with no LLM call.');
+  });
+
+  it('returns a fact that took the place of a stored one with supersedes, valid against its output schema', async () => {
+    const memory = createMemory();
+    const [stored] = (
+      await memory.rememberWith([deploysTo('Fly.io')], { text: 'shop-api runs on Fly.io.' }, '2026-01-10')
+    ).facts;
+    const judge: ConflictJudge = () =>
+      Promise.resolve(ok([{ kind: 'succession', changedAt: toTimestamp(new Date(Date.UTC(2026, 2, 1))) }]));
+    const client = await memory.connect(
+      createScriptedLlm([{ facts: [deploysTo('Kubernetes', '2026-03-01')] }]),
+      '2026-03-10',
+      judge,
+    );
+
+    const result = await client.callTool({
+      name: 'remember',
+      arguments: { text: 'We moved shop-api to Kubernetes on 1 March.' },
+    });
+
+    expect(result.isError).not.toBe(true);
+    const output = RememberResultSchema.parse(result.structuredContent);
+    expect(output.facts).toMatchObject([
+      {
+        valid_from: '2026-03-01T00:00:00.000Z',
+        supersedes: { fact_id: stored?.fact_id, kind: 'succession' },
+      },
+    ]);
+    expect(output.skipped).toEqual([]);
   });
 });
