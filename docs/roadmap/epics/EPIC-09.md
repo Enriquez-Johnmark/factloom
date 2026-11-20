@@ -1374,7 +1374,7 @@ Differences from the item:
 - [x] A unit test shows a failed LLM call leaves the pair unmerged and counts it as failed.
 - [x] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the entity pair eval in record mode from `apps/mcp-server` (`pnpm run record:entities`, which wraps the Anthropic client with the wrapper of FL-028 in record mode), reads the diff of the new recordings for secrets, and records the model identifier. A replayed run fails while a recording is missing, so the code and the recordings are committed together after this step, and the item is not `Completed` before it.
 - [x] The entity pair eval runs under `pnpm eval` in replay and fails on a missing recording. Its output shows an over-merge count of 0 for pairs decided by stages 1 and 2. The over-merge and under-merge counts of stage 4 are printed and recorded; this item sets no target for them.
-- [ ] The owner reads each pair of the set and its expected answer, and records "reviewed" and the date.
+- [ ] A second labeller who has not seen the expected answers labels every pair blind, and the result is recorded. The owner reviews the pairs where the two disagree or the second labeller is unsure, and records "reviewed" and the date.
 - [x] Every merge made by the two stages has an audit entry with trigger `maintenance`.
 - [x] `pnpm check` exits 0 with no network access and no embedding model in the cache.
 
@@ -1399,7 +1399,7 @@ and, after the set was grown to 50 pairs, four more:
 10. `docs(maintenance): record the 50-pair measurements beside the similarity threshold`;
 11. `docs: record the 50-pair measurements of entity matching in Q-56`;
 
-The item is `Under Review`: the owner reads each pair of the set and its expected answer, and records "reviewed" and the date. That criterion is the owner's and is not ticked.
+The item is `Under Review`: the owner reviews the pairs that the blind second labelling below leaves in doubt, and records "reviewed" and the date. That criterion is the owner's and is not ticked.
 
 Built:
 
@@ -1477,12 +1477,19 @@ Rules broken by hand, each then restored:
 
 The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the seventh commit: https://github.com/Johnmark-Tech/factloom/actions/runs/44029997298. The entity pair eval runs under `pnpm eval`, which the workflow runs only weekly or by hand. Started by hand on the 50-pair set at the eleventh commit, the eval job passed on Linux x64 with the same counts and similarities as here: https://github.com/Johnmark-Tech/factloom/actions/runs/44036447389.
 
+**The blind second labelling.** Added on 2026-11-20, with the owner's approval, in place of the owner reading all 50 pairs: two labellers who agree independently are stronger evidence than one person rereading the author's answers, and the owner's time goes to the pairs in doubt. A fresh agent was given only the names, types and facts of each pair, under neutral identifiers and in shuffled order, with neither the file names nor the expected answers, and answered same or different, confident or unsure, with a reason. It agreed with the expected answer on all 50 pairs, and was unsure of one:
+
+- **squash merges, as a convention and as a decision** (`squash-merges-two-types.yaml`, expected same): "the same practice recorded under two types, though a decision record and the convention could be modelled apart."
+
+That pair is what the owner reviews.
+
 Differences from the item:
 
 - **The recordings were made by the agent in this session**, with the owner's approval to use the key, the key set for that command only.
 - **Three stages, not four**, by ADR 0021.
 - **An `unsure` answer is reported** as a candidate, not passed silently, so that a person sees the uncertain pairs.
 - **The pair set has 50 pairs**, grown from the first 24 with the owner's approval to use the key again.
+- **The owner's review is narrowed to the pairs a blind second labelling leaves in doubt**, with the owner's approval on 2026-11-20. The criterion was reworded to say so.
 
 ### FL-054: Anchor repair for moved and renamed files
 
