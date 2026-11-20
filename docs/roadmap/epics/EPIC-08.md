@@ -339,6 +339,16 @@ For the owner's review:
 - Confirm the recording step, which the item gives to the owner: the model, the token counts, and the diff of the 12 recordings.
 - Review the expected verdicts of the 16 cases. Two are judgement calls: the Render period that overlaps Fly.io (`unrelated`, so FL-042 skips it, as the scenario expects), and Playwright for end-to-end tests beside Jest for unit tests under the one single-valued `uses_test_framework` (`unrelated`).
 
+The blind second labelling, 2026-11-20. With the owner's approval, a fresh agent that had not seen the expected verdicts was given each case's text, new fact and stored facts, under neutral identifiers, with the four verdicts defined as in the glossary. It gave the expected verdict for 15 of the 16 stored facts, and was unsure of three:
+
+| Case | Expected | Second labeller |
+|---|---|---|
+| A plan: a move to Kubernetes that has not happened | `unrelated` | `succession`, unsure: "the change has not happened and the new fact should not take effect yet" |
+| Older fact arriving late: a Render deployment overlaps the Fly.io period | `unrelated` | `unrelated`, unsure: "both may hold, but it may be a conflict to flag" |
+| Unrelated despite the wording: Yarn was tried and not adopted | `unrelated` | `unrelated`, unsure: "the Yarn fact is a misextraction; the new fact should be dropped" |
+
+In the first and the third, the second labeller's reason is that the new fact is wrong, which none of the four verdicts says: `unrelated` is the one that leaves the stored fact as it is, so the expected verdicts stand. Whether the judge should be able to reject the new fact is a question for FL-042, which acts on the verdicts. These three are what the owner reviews of the expected verdicts.
+
 ### FL-042: Automatic correction inside remember
 
 | | |
