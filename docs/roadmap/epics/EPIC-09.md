@@ -94,7 +94,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-052 | Entity merge with read resolution | 3 | FL-015, FL-016, FL-017 | Completed |
 | FL-063 | Undo a merge and refuse a conflicting merge | 3 | FL-052 | Completed |
 | FL-053 | Duplicate entity detection by name | 3 | FL-048, FL-052, FL-063 | Completed |
-| FL-064 | Duplicate entity detection by similarity | 3 | FL-053, FL-028 | Under Review |
+| FL-064 | Duplicate entity detection by similarity | 3 | FL-053, FL-028 | Completed |
 | FL-054 | Anchor repair for moved and renamed files | 3 | FL-050 | Completed |
 | FL-055 | Usage tracking | 3 | FL-015, FL-031, FL-058 | Under Review |
 | FL-065 | Archive and unarchive operations | 3 | FL-055, FL-058 | Completed |
@@ -1314,7 +1314,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-053, FL-028 |
 | Requirements | REQ-20, REQ-24 |
@@ -1374,7 +1374,7 @@ Differences from the item:
 - [x] A unit test shows a failed LLM call leaves the pair unmerged and counts it as failed.
 - [x] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the entity pair eval in record mode from `apps/mcp-server` (`pnpm run record:entities`, which wraps the Anthropic client with the wrapper of FL-028 in record mode), reads the diff of the new recordings for secrets, and records the model identifier. A replayed run fails while a recording is missing, so the code and the recordings are committed together after this step, and the item is not `Completed` before it.
 - [x] The entity pair eval runs under `pnpm eval` in replay and fails on a missing recording. Its output shows an over-merge count of 0 for pairs decided by stages 1 and 2. The over-merge and under-merge counts of stage 4 are printed and recorded; this item sets no target for them.
-- [ ] A second labeller who has not seen the expected answers labels every pair blind, and the result is recorded. The owner reviews the pairs where the two disagree or the second labeller is unsure, and records "reviewed" and the date.
+- [x] A second labeller who has not seen the expected answers labels every pair blind, and the result is recorded. The owner reviews the pairs where the two disagree or the second labeller is unsure, and records "reviewed" and the date.
 - [x] Every merge made by the two stages has an audit entry with trigger `maintenance`.
 - [x] `pnpm check` exits 0 with no network access and no embedding model in the cache.
 
@@ -1490,6 +1490,8 @@ Differences from the item:
 - **An `unsure` answer is reported** as a candidate, not passed silently, so that a person sees the uncertain pairs.
 - **The pair set has 50 pairs**, grown from the first 24 with the owner's approval to use the key again.
 - **The owner's review is narrowed to the pairs a blind second labelling leaves in doubt**, with the owner's approval on 2026-11-20. The criterion was reworded to say so.
+
+**Owner's review.** On 2026-11-25 the owner reviewed the one pair the blind second labelling left in doubt, squash merges as a convention and as a decision, and confirmed its expected answer `same` in the session ("yes to all confirmed"): reviewed, 2026-11-25. The item is `Completed`.
 
 ### FL-054: Anchor repair for moved and renamed files
 

@@ -81,10 +81,10 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-040 | Create the maintenance package and its boundary rules | 2 | FL-001 | Completed |
-| FL-041 | Conflict judge | 2 | FL-040, FL-011, FL-019, FL-027, FL-028 | Under Review |
-| FL-042 | Automatic correction inside remember | 2 | FL-035, FL-041, FL-039 | Under Review |
-| FL-043 | Proposed changes: storage and operations | 2 | FL-042 | Under Review |
-| FL-070 | Human-approval policy in remember, with a command to list, approve and reject | 2 | FL-043, FL-042, FL-034 | Under Review |
+| FL-041 | Conflict judge | 2 | FL-040, FL-011, FL-019, FL-027, FL-028 | Completed |
+| FL-042 | Automatic correction inside remember | 2 | FL-035, FL-041, FL-039 | Completed |
+| FL-043 | Proposed changes: storage and operations | 2 | FL-042 | Completed |
+| FL-070 | Human-approval policy in remember, with a command to list, approve and reject | 2 | FL-043, FL-042, FL-034 | Completed |
 | FL-044 | reviseValidTime operation | 2 | FL-010 | Completed |
 | FL-045 | Confidence history and adjustConfidence | 2 | FL-015, FL-016, FL-017 | Completed |
 | FL-046 | Feedback operation and migration | 2 | FL-015, FL-022 | Completed |
@@ -220,7 +220,7 @@ Not run: a forbidden import with its dependency declared in the package's `packa
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-040, FL-011, FL-019, FL-027, FL-028 |
 | Requirements | REQ-16 (REQ-CA-03) |
@@ -276,7 +276,7 @@ Not run: a forbidden import with its dependency declared in the package's `packa
 - [x] A unit test shows the moment of change is the new fact's `validFrom` when given, and the source's observed time when not, with a scripted LLM.
 - [x] A unit test shows one LLM call is made for a new fact with three remaining candidates.
 - [x] A unit test shows an out-of-range index and a missing candidate each give `llm_failed`.
-- [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the judge eval in record mode from `apps/mcp-server` (`pnpm run record:judge`, which wraps the Anthropic client of FL-019 with the wrapper of FL-028 in record mode), reads the diff of the new recordings for secrets, and records the model identifier. A replayed run fails while a recording is missing, so the code and the recordings are committed together after this step, and the item is not `Completed` before it.
+- [x] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the judge eval in record mode from `apps/mcp-server` (`pnpm run record:judge`, which wraps the Anthropic client of FL-019 with the wrapper of FL-028 in record mode), reads the diff of the new recordings for secrets, and records the model identifier. A replayed run fails while a recording is missing, so the code and the recordings are committed together after this step, and the item is not `Completed` before it.
 - [x] The judge eval runs inside `pnpm check` in replay and fails when a recording is missing.
 - [x] The eval output shows the verdict table and both rates. The rates are recorded as numbers; this item sets no target for them, because no published figure exists to set one against. FL-042 sets the bar on the scenario set.
 - [x] Every judge case whose expected verdict is reached by a deterministic rule gets that verdict.
@@ -349,11 +349,13 @@ The blind second labelling, 2026-11-20. With the owner's approval, a fresh agent
 
 In the first and the third, the second labeller's reason is that the new fact is wrong, which none of the four verdicts says: `unrelated` is the one that leaves the stored fact as it is, so the expected verdicts stand. Whether the judge should be able to reject the new fact is a question for FL-042, which acts on the verdicts. These three are what the owner reviews of the expected verdicts.
 
+**Owner's review.** On 2026-11-25 the owner confirmed in the session ("yes to all confirmed") the recording run made with the owner's key, and the expected verdicts of the 16 cases, including the three the blind second labelling left in doubt. The item is `Completed`.
+
 ### FL-042: Automatic correction inside remember
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-035, FL-041, FL-039 |
 | Requirements | REQ-16, REQ-17, REQ-24 (REQ-CA-02) |
@@ -509,12 +511,13 @@ Differences from the item:
 - **`MCP-TOOLS.md` had no sentence stating one source per call.** The rule was implied, so a paragraph stating the new one was added to the `remember` section.
 - **The recordings and the live runs were made by the agent**, with the owner's key set for each command, as for FL-039.
 
+**Owner's review.** On 2026-11-25 the owner confirmed in the session ("yes to all confirmed") the recording and live runs made with the owner's key, and the work done ahead of FL-041 and FL-039, which are now `Completed`. The item is `Completed`.
 
 ### FL-043: Proposed changes: storage and operations
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-042 |
 | Requirements | REQ-17 (REQ-CA-16) |
@@ -648,12 +651,13 @@ Differences from the item:
 - **A decided proposal is told from an unknown one by its audit entries**, because the one read the item adds returns only pending proposals.
 - **Purge does not yet clear `new_fact`.** The column is classified as content, as technical requirement 3 asks, but `purgeContent` reaches only the proposal's source. Nothing records a proposal at run time before FL-070, so Q-85 in `OPEN-QUESTIONS.md` holds the question for FL-070, and FL-070's constraints name it.
 
+**Owner's review.** On 2026-11-25 the owner confirmed in the session ("yes to all confirmed") the work done ahead of FL-042, which is now `Completed`. The item is `Completed`.
 
 ### FL-070: Human-approval policy in remember, with a command to list, approve and reject
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-043, FL-042, FL-034 |
 | Requirements | REQ-17 (REQ-CA-16) |
@@ -740,6 +744,7 @@ Differences from the item:
 - **The judge is asked under `human_approval` too.** FL-042 asked it only under `automatic`; a proposal needs the verdict.
 - **Q-85 was settled in this item by building purge for proposals**, not only deciding it, so that `remember` never stores text purge cannot reach.
 
+**Owner's review.** On 2026-11-25 the owner confirmed in the session ("yes to all confirmed") the work done ahead of FL-043 and FL-042, which are now `Completed`. The item is `Completed`.
 
 ### FL-044: reviseValidTime operation
 

@@ -73,7 +73,7 @@ Factloom can take new information and record it as entities and facts with a **s
 | FL-021 | Extraction of facts from text | 1 | FL-018, FL-029, FL-056 | Completed |
 | FL-022 | Secret check that refuses a write | 1 | FL-004 | Completed |
 | FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Completed |
-| FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Under Review |
+| FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Completed |
 | FL-024 | recordStructuredFacts use case | 1 | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 | Completed |
 | FL-025 | changeFact use case | 1 | FL-009, FL-010, FL-020, FL-022, FL-056 | Completed |
 
@@ -635,7 +635,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-023, FL-029, FL-028, FL-019 |
 | Requirements | REQ-26, REQ-30 |
@@ -685,7 +685,7 @@ A recording can only be made with a real API key, and only the owner holds one. 
 **Acceptance criteria.**
 - [x] Unit tests of the pass rule pass with these names: "passes a case when every required fact is matched", "fails a case when a required fact is missing", "fails a case when a forbidden fact is extracted", "fails a case when remember fails".
 - [x] Unit test "the record command refuses to run without an API key" passes.
-- [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the record command from `apps/mcp-server` (`pnpm run record:extraction`). It ends with exit code 0. The owner reads the diff of the new recordings for secrets, records the model identifier and the token counts from the usage reports, and confirms that a call after the first shows a cache read count above zero.
+- [x] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs the record command from `apps/mcp-server` (`pnpm run record:extraction`). It ends with exit code 0. The owner reads the diff of the new recordings for secrets, records the model identifier and the token counts from the usage reports, and confirms that a call after the first shows a cache read count above zero.
 - [x] With the recordings in place and no API key set, `pnpm check` exits 0. Its output holds the report, with every case passing and with precision and recall printed.
 - [x] With one recording removed in a local run, `pnpm check` exits non-zero and names the missing recording. The output is recorded and the file restored.
 - [x] Two runs of `pnpm test` in a row print the same report, byte for byte.
@@ -739,6 +739,8 @@ For the owner's review:
 
 - Confirm the recording step, which the item gives to the owner: the model, the token counts and the cache reads above, and the diff of the recordings.
 - In `commit-message.yaml` the expected facts conflict with each other under the single-value rule: Vitest with no start and no end, and Jest with no start and an end at the commit's time, overlap. If both were extracted, `remember` would skip both. The case passes now because Jest is not required and the model, under the new rule, returns only Vitest. A change to the case is FL-029's, in its own commit, with a new review; none was made.
+
+**Owner's review.** On 2026-11-25 the owner confirmed in the session ("yes to all confirmed") the recording step this item gives to the owner: the recording runs made with the owner's key, the model, the token counts and the recordings' diff, including the re-recording of FL-062. The item is `Completed`.
 
 ### FL-024: recordStructuredFacts use case
 

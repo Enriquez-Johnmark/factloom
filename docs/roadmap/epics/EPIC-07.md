@@ -75,7 +75,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-027 | Timeline scenarios as reviewed data | 0 | FL-006, FL-018 | Completed |
 | FL-028 | Record-and-replay wrapper for the LLM client | 1 | FL-006, FL-027 | Completed |
 | FL-029 | Extraction cases | 1 | FL-018, FL-027 | Completed |
-| FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Under Review |
+| FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Completed |
 | FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Completed |
 | FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Pending |
 | FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Completed |
@@ -448,7 +448,7 @@ Choices made where the item left one, for the owner to confirm in the review:
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 |
 | Requirements | REQ-30 |
@@ -516,7 +516,7 @@ The `remember` steps need LLM recordings, and a recording can only be made with 
 
 **Acceptance criteria.**
 - [x] `pnpm check` exits 0 with no API key set, and its output contains the report with the four metrics and one line per scenario.
-- [ ] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs `pnpm run record:scenarios` from `apps/mcp-server`. It ends with exit code 0. The owner reads the diff of the new recordings for secrets and records the model identifier. Until this step is done nothing of this item is committed, and the item is not `Completed`.
+- [x] By hand, once, by the owner in the session: with `ANTHROPIC_API_KEY` set in the environment and nowhere else, the owner runs `pnpm run record:scenarios` from `apps/mcp-server`. It ends with exit code 0. The owner reads the diff of the new recordings for secrets and records the model identifier. Until this step is done nothing of this item is committed, and the item is not `Completed`.
 - [x] Nine scenarios pass: restatement, multi-valued predicate, unrelated fact about the same subject, older fact arriving late, a known name mentioned under a different entity type, a date in the text, no date in the text, a plan, and retraction.
 - [x] Unit test "an entities expectation counts the entities with a name of any type" passes, on an inline scenario.
 - [x] The succession and correction scenarios are run and reported as failing, with the stale value named. Staleness rate, false invalidation rate, missed invalidation rate and historical accuracy are recorded as the baseline before self-correction.
@@ -527,7 +527,7 @@ The `remember` steps need LLM recordings, and a recording can only be made with 
 - [x] Unit test "fails with the file and the predicate when a scenario names a predicate the domain does not have" passes.
 - [x] With one recording removed in a local run, `pnpm check` exits non-zero and names the missing recording. The output is recorded and the file restored.
 - [x] Two runs of `pnpm test` in a row print the same report, byte for byte.
-- [ ] `git grep -n "API_KEY" -- apps/mcp-server/evals` shows no line that holds a key's value. The owner reads the diff of the recordings before the push and records that it was done.
+- [x] `git grep -n "API_KEY" -- apps/mcp-server/evals` shows no line that holds a key's value. The owner reads the diff of the recordings before the push and records that it was done.
 
 **Validation.** Eval: the eleven scenarios in replay, inside `pnpm check`. Unit tests of the metric functions and the gating list. One live recording run by the owner, by hand.
 
@@ -618,6 +618,7 @@ Differences from the item:
 
 For the owner's review: confirm the recording step (the model, the token counts, and the diff of the 20 recordings), and record that the diff was read before the push.
 
+**Owner's review.** On 2026-11-25 the owner confirmed in the session ("yes to all confirmed") the recording run made with the owner's key, its model and token counts, and that the diff of the recordings was read for secrets before the push, as recorded above. The item is `Completed`.
 
 ### FL-066: Performance benchmark and budgets
 
