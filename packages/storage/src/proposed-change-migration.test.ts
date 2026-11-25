@@ -103,4 +103,28 @@ describe('the proposed_change migration', () => {
       statement: 'The example repository runs PostgreSQL 14',
     });
   });
+
+  it('allows the new fact of a proposal to change only to the marker, and only once its source is purged', async () => {
+    const { store, path } = openOnFile();
+    await writeTimeline(store);
+    const db = openConnection(path);
+    closeLater(() => db.close());
+    db.prepare(
+      `INSERT INTO proposed_change (id, namespace, stored_fact_id, kind, changed_at, new_fact, source_id,
+                                    reason_code, proposed_at, state)
+       VALUES ('p-1', 'repo:example', 'pg16', 'correction', NULL, ?, 's-1', 'judged_wrong',
+               '2026-06-01T00:00:00.000Z', 'pending')`,
+    ).run(NEW_FACT);
+    const purgeText =
+      "UPDATE proposed_change SET new_fact = json_set(new_fact, '$.fact.statement', '[purged]')";
+
+    expect(() => db.exec(purgeText)).toThrow('or purged with its source');
+    db.exec(
+      "UPDATE source SET content = '[purged]', content_hash = NULL, locator = NULL, purged_at = '2026-06-02T00:00:00.000Z' WHERE id = 's-1'",
+    );
+    expect(() =>
+      db.exec("UPDATE proposed_change SET new_fact = json_set(new_fact, '$.fact.statement', 'edited')"),
+    ).toThrow('or purged with its source');
+    db.exec(purgeText);
+  });
 });

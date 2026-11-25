@@ -169,7 +169,10 @@ function findMarker(db: Database.Database): string[] {
   return found;
 }
 
-/** k-1 from s-key; ended as k-1e with the note s-rotated; corrected by k-2 from s-fix, which quotes the marker. */
+/**
+ * k-1 from s-key; ended as k-1e with the note s-rotated; corrected by k-2 from s-fix, which
+ * quotes the marker; and a pending proposal from s-prop, with s-key's text, whose new fact quotes it.
+ */
 async function buildSecret(store: MemoryStore): Promise<void> {
   await writeTimeline(store);
   const keyFact = (id: string, value: string, day: string, validTo: string | null) =>
@@ -215,6 +218,48 @@ async function buildSecret(store: MemoryStore): Promise<void> {
         { kind: 'invalidate_fact', factId: 'k-1e', supersededByFactId: 'k-2' },
       ],
       { operation: 'correction', reasonCode: 'reported_wrong', explainedBySourceId: 's-fix' },
+    ),
+    // The same text remembered again under human_approval: a proposal whose source has the
+    // same content hash as s-key, and whose new fact quotes the marker (FL-070, Q-85).
+    changeSet(
+      'op-key-4',
+      '2026-05-25',
+      [
+        {
+          kind: 'record_source',
+          source: {
+            ...source('s-prop', '2026-05-25', `The deploy key is ${MARKER}.`),
+            contentHash: 'h-s-key',
+          },
+        },
+        {
+          kind: 'record_proposal',
+          proposal: {
+            id: 'p-key',
+            namespace: NAMESPACE,
+            storedFactId: 'k-2',
+            supersession: { kind: 'correction' },
+            newFact: {
+              fact: {
+                subjectEntityId: 'e-repo',
+                predicate: 'has_deploy_key',
+                object: { kind: 'value', value: MARKER },
+                statement: `The deploy key is ${MARKER}`,
+                confidence: 1,
+                validFrom: null,
+                validTo: null,
+              },
+              newEntities: [],
+            },
+            sourceId: 's-prop',
+            reasonCode: 'judged_wrong',
+            proposedAt: at('2026-05-25'),
+            state: 'pending',
+            decidedAt: null,
+          },
+        },
+      ],
+      { operation: 'proposal', reasonCode: 'judged_wrong', explainedBySourceId: 's-prop' },
     ),
   ];
   for (const commit of commits) {

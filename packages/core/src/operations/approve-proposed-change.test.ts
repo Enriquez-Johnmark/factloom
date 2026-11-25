@@ -4,6 +4,7 @@ import { err } from '../result.ts';
 import { approveProposedChange } from './approve-proposed-change.ts';
 import { invalidateFact } from './invalidate-fact.ts';
 import { proposeChange } from './propose-change.ts';
+import { purgeContent } from './purge-content.ts';
 import { createProposalMemory, day, NAMESPACE, note, postgres } from './proposal-test-memory.ts';
 
 /** shop-api's upgrade to PostgreSQL 16 on 15 March, proposed on 2 April. */
@@ -158,5 +159,30 @@ describe('approveProposedChange', () => {
       trigger: 'person',
       reasonCode: 'judged_wrong',
     });
+  });
+
+  it('refuses to approve a proposal whose source was purged, and leaves it pending', async () => {
+    const memory = await createProposalMemory();
+    const proposalId = await proposeUpgrade(memory);
+    const pending = await memory.store.listPendingProposals({ namespace: NAMESPACE });
+    const sourceId = pending.ok ? pending.value[0]?.proposal.sourceId : undefined;
+    if (sourceId === undefined) throw new Error('No pending proposal.');
+    const purged = await purgeContent(memory.on('2026-04-05'), {
+      namespace: NAMESPACE,
+      trigger: 'person',
+      reasonCode: 'erasure_requested',
+      sourceId,
+    });
+    if (!purged.ok) throw new Error(purged.error.message);
+
+    const approved = await approveProposedChange(memory.on('2026-04-10'), {
+      namespace: NAMESPACE,
+      proposalId,
+      trigger: 'person',
+    });
+
+    expect(approved.ok ? null : approved.error.code).toBe('invalid_input');
+    const after = await memory.store.listPendingProposals({ namespace: NAMESPACE });
+    expect(after.ok && after.value.map((entry) => entry.proposal.id)).toEqual([proposalId]);
   });
 });

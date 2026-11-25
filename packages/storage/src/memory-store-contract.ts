@@ -1409,6 +1409,23 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
   refuses('P5: a proposal for a fact that does not exist returns not_found', 'not_found', () =>
     proposing(proposal('p-5', '2026-06-01', { storedFactId: 'pg-missing' })),
   );
+  test('P7: purging the source of a proposal replaces the statement and value of its new fact with the marker', async () => {
+    await store.commit(proposing(proposal('p-1', '2026-06-01')));
+
+    const purged = await store.commit(
+      changeSet('op-p7', '2026-06-02', [{ kind: 'purge_content', targetKind: 'source', targetId: 's-p-1' }], {
+        operation: 'purge',
+        trigger: 'person',
+        reasonCode: 'erasure_requested',
+      }),
+    );
+
+    expect(purged.ok).toBe(true);
+    const listed = await store.listPendingProposals({ namespace: NAMESPACE });
+    expect(listed.ok && listed.value.map((pending) => pending.proposal.newFact.fact)).toMatchObject([
+      { statement: '[purged]', object: { kind: 'value', value: '[purged]' } },
+    ]);
+  });
   test('P6: deciding a proposal before the time it was proposed returns invalid_input and leaves it pending', async () => {
     await store.commit(proposing(proposal('p-1', '2026-06-05')));
 

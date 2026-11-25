@@ -27,6 +27,13 @@ export async function approveProposedChange(
   const recorded = read.value;
   if (recorded === null)
     return err('not_found', `The source ${sourceId} of proposal ${input.proposalId} is missing.`);
+  // A purged source took the new fact's words with it (Q-85): what is left cannot be recorded.
+  if (recorded.purgedAt !== null) {
+    return err(
+      'invalid_input',
+      `The source of proposal ${input.proposalId} was purged. Reject the proposal.`,
+    );
+  }
   const source = { make: () => Promise.resolve(recorded), isRecorded: true };
   const context = { namespace, trigger: input.trigger, reasonCode };
 

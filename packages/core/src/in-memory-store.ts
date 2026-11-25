@@ -448,6 +448,22 @@ function purgeSource(draft: State, changeSet: ChangeSet, sourceId: string): Fail
     locator: null,
     purgedAt: changeSet.occurredAt,
   });
+  // A proposal's new fact quotes its source, so its text goes with it (Q-85).
+  draft.proposals.forEach((proposal, index) => {
+    if (proposal.sourceId !== sourceId || proposal.namespace !== changeSet.namespace) return;
+    const { fact } = proposal.newFact;
+    draft.proposals[index] = {
+      ...proposal,
+      newFact: {
+        ...proposal.newFact,
+        fact: {
+          ...fact,
+          statement: PURGED_MARKER,
+          object: fact.object.kind === 'value' ? { kind: 'value', value: PURGED_MARKER } : fact.object,
+        },
+      },
+    };
+  });
   return null;
 }
 

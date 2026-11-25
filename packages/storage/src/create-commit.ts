@@ -269,6 +269,15 @@ export function createCommit(
   const undoMerge = db.prepare(
     'UPDATE entity_merge SET undone_at = @undoneAt WHERE id = @id AND namespace = @namespace AND undone_at IS NULL',
   );
+  // A proposal's new fact quotes its source: its statement, and its value when the object is a
+  // value, become the marker when that source is purged (Q-85).
+  const purgeProposalsOfSource = db.prepare(
+    `UPDATE proposed_change SET new_fact = CASE
+       WHEN json_extract(new_fact, '$.fact.object.kind') = 'value'
+         THEN json_set(new_fact, '$.fact.statement', @marker, '$.fact.object.value', @marker)
+       ELSE json_set(new_fact, '$.fact.statement', @marker) END
+     WHERE source_id = @id AND namespace = @namespace`,
+  );
   const insertProposal = db.prepare(
     `INSERT INTO proposed_change (id, namespace, stored_fact_id, kind, changed_at, new_fact, source_id,
                                   reason_code, proposed_at, state, decided_at)
@@ -564,6 +573,7 @@ export function createCommit(
         const values = { id: targetId, namespace, marker: PURGED_MARKER, purgedAt: changeSet.occurredAt };
         if (targetKind === 'source') {
           purgeSource.run(values);
+          purgeProposalsOfSource.run({ id: targetId, namespace, marker: PURGED_MARKER });
           return null;
         }
         purgeFact.run(values);
