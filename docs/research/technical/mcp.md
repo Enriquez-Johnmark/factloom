@@ -239,7 +239,11 @@ in.
   `claude mcp add --env A=1 factloom -- ...` fails with "Invalid environment variable format:
   factloom", and `claude mcp add factloom --env A=1 -- ...` works. **confirmed** on 2026-11-17 by
   running both with Claude Code 2.1.326 on Linux; `claude mcp add --help` shows
-  `-e, --env <env...>`.
+  `-e, --env <env...>`. **confirmed** on the owner's Mac on 2026-11-25 (FL-038): with Claude Code
+  2.1.331 on macOS 26.5 (arm64) and Node.js v26.13.1, the `claude mcp add --transport stdio --scope
+  local factloom --env FACTLOOM_NAMESPACE=... -- node .../main.ts` of the app's guide ran as written,
+  `claude mcp list` and `/mcp` showed the server connected with six tools, and a fact recorded with
+  `record_fact` in one session was returned by `recall` in a new one. Codex was not run.
 - Scopes: `local` (default; this project only, private, stored in `~/.claude.json`), `project`
   (stored in `.mcp.json` at the project root, meant to be committed), `user` (all projects, stored
   in `~/.claude.json`).

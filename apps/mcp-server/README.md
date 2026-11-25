@@ -8,6 +8,8 @@ It is an application and exports nothing. Its entry point is `src/main.ts`. A to
 
 Claude Code and Codex each start the server as a local process over stdio. The steps below start it from a clone of this repository; nothing is published. The commands follow the "Claude Code" and "OpenAI Codex" sections of the [MCP research](../../docs/research/technical/mcp.md), which read them from each host's documentation. They have not yet been run on a Mac in either host: the owner runs them in FL-038, and this section then carries the date and the versions they were confirmed with. On 2026-11-17, on Linux with Claude Code 2.1.326 and a throwaway home directory, the `claude mcp add` command below registered the server and `claude mcp list` reported it connected, and the `.mcp.json` entry was listed as waiting for approval. No session was started and no tool was called. Codex was not available there.
 
+**Confirmed on 2026-11-25** on macOS 26.5 (arm64, MacBook Air with Apple M1), Node.js v26.13.1, Claude Code 2.1.331: the Claude Code command below, `/mcp` with six tools, and a fact recorded in one session and recalled in the next. Codex: not yet run.
+
 **Prerequisites.** Node.js `^22.18.0 || >=24`, the range in the root `package.json` ([ADR 0015](../../docs/architecture/adr/0015-toolchain.md)). A clone of the repository, and `pnpm install` at its root. Replace `/absolute/path/to/factloom` below with the path of the clone: the guide uses absolute paths because the working directory a host starts a server in is unverified (Q-16).
 
 **Configuration.** The server reads three variables ([`MCP-TOOLS.md`](../../docs/architecture/MCP-TOOLS.md)):
