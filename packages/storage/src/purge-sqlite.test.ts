@@ -29,6 +29,8 @@ const CONTENT_COLUMNS = [
   'fact_fts.statement',
   'fact_fts_data.block',
   'fact_fts_idx.term',
+  // A proposal's new fact holds a statement and a value from the source (FL-043).
+  'proposed_change.new_fact',
 ];
 const NOT_CONTENT_COLUMNS = [
   'audit_log.namespace',
@@ -55,6 +57,16 @@ const NOT_CONTENT_COLUMNS = [
   'entity_merge.into_entity_id',
   'entity_merge.merged_at',
   'entity_merge.undone_at',
+  'proposed_change.id',
+  'proposed_change.namespace',
+  'proposed_change.stored_fact_id',
+  'proposed_change.kind',
+  'proposed_change.changed_at',
+  'proposed_change.source_id',
+  'proposed_change.reason_code',
+  'proposed_change.proposed_at',
+  'proposed_change.state',
+  'proposed_change.decided_at',
   'fact_archive.id',
   'fact_archive.namespace',
   'fact_archive.fact_id',
