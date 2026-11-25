@@ -19,6 +19,7 @@ import {
   type FactRow,
   type FactVerificationRow,
   type FeedbackRow,
+  type ProposedChangeRow,
   type SourceRow,
   toAuditEntry,
   toEntity,
@@ -26,6 +27,7 @@ import {
   toFact,
   toFactVerification,
   toFeedback,
+  toProposedChange,
   toSource,
 } from './row-mappers.ts';
 import { TIME_PREDICATE } from './time-predicate.ts';
@@ -141,6 +143,9 @@ export type SqliteReads = {
   readonly listOrphanedFacts: (
     query: Parameters<MemoryStore['listOrphanedFacts']>[0],
   ) => Result<readonly FactWithSources[]>;
+  readonly listPendingProposals: (
+    query: Parameters<MemoryStore['listPendingProposals']>[0],
+  ) => { readonly proposal: ReturnType<typeof toProposedChange>; readonly storedFact: FactWithSources }[];
 };
 
 /**
@@ -237,6 +242,11 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
     { namespace: string; ids: string },
     { from_entity_id: string; into_entity_id: string }
   >(resolveEntityIdsOfArray('@ids'));
+  const selectPendingProposals = db.prepare<[string], ProposedChangeRow>(
+    `SELECT id, namespace, stored_fact_id, kind, changed_at, new_fact, source_id, reason_code,
+            proposed_at, state, decided_at
+     FROM proposed_change WHERE namespace = ? AND state = 'pending' ORDER BY proposed_at, rowid`,
+  );
   const selectMerges = db.prepare<[string], EntityMergeRow>(
     `SELECT id, namespace, from_entity_id, into_entity_id, merged_at, undone_at FROM entity_merge
      WHERE namespace = ? ORDER BY merged_at, rowid`,
@@ -417,6 +427,15 @@ export function createReads(db: Database, embeddingModel: EmbeddingModel): Sqlit
 
     findSourcesByContentHash(query) {
       return selectSourcesByHash.all(query.namespace, query.contentHash).map(toSource);
+    },
+
+    listPendingProposals(query) {
+      return selectPendingProposals.all(query.namespace).flatMap((row) => {
+        const proposal = toProposedChange(row);
+        const stored = selectFact.get(proposal.storedFactId, query.namespace);
+        const storedFact = stored === undefined ? undefined : withSources([stored], query.namespace)[0];
+        return storedFact === undefined ? [] : [{ proposal, storedFact }];
+      });
     },
 
     listEntityMerges(query) {

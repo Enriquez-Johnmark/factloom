@@ -11,6 +11,7 @@ import type { EntityMerge } from './entity-merge.ts';
 import type { FactUsage } from './fact-usage.ts';
 import type { FactVerification } from './fact-verification.ts';
 import type { Feedback } from './feedback.ts';
+import type { ProposedChange } from './proposed-change.ts';
 import type {
   Entity,
   EntityId,
@@ -94,7 +95,8 @@ type RefOperation =
   | 'purge'
   | 'merge'
   | 'verification'
-  | 'archive';
+  | 'archive'
+  | 'proposal';
 type RefReasonCode =
   | 'stated'
   | 'restated'
@@ -127,7 +129,10 @@ type RefAuditAction =
   | 'entity.merge_undone'
   | 'fact.verified'
   | 'fact.archived'
-  | 'fact.unarchived';
+  | 'fact.unarchived'
+  | 'proposal.recorded'
+  | 'proposal.approved'
+  | 'proposal.rejected';
 
 type RefAuditEntry = {
   readonly id: number;
@@ -135,7 +140,7 @@ type RefAuditEntry = {
   readonly operationId: string;
   readonly operation: RefOperation;
   readonly action: RefAuditAction;
-  readonly targetKind: 'entity' | 'source' | 'fact' | 'feedback';
+  readonly targetKind: 'entity' | 'source' | 'fact' | 'feedback' | 'proposal';
   readonly targetId: string;
   readonly trigger: RefTrigger;
   readonly reasonCode: RefReasonCode;
@@ -181,7 +186,43 @@ type RefChange =
   | { readonly kind: 'undo_entity_merge'; readonly mergeId: string; readonly fromEntityId: RefEntityId }
   | { readonly kind: 'record_verification'; readonly verification: RefFactVerification }
   | { readonly kind: 'archive_fact'; readonly archiveId: string; readonly factId: RefFactId }
-  | { readonly kind: 'unarchive_fact'; readonly factId: RefFactId };
+  | { readonly kind: 'unarchive_fact'; readonly factId: RefFactId }
+  | { readonly kind: 'record_proposal'; readonly proposal: RefProposedChange }
+  | {
+      readonly kind: 'decide_proposal';
+      readonly proposalId: string;
+      readonly decision: 'approved' | 'rejected';
+    };
+
+type RefProposedChange = {
+  readonly id: string;
+  readonly namespace: RefNamespace;
+  readonly storedFactId: RefFactId;
+  readonly supersession:
+    | { readonly kind: 'succession'; readonly changedAt: Timestamp }
+    | { readonly kind: 'correction' };
+  readonly newFact: {
+    readonly fact: {
+      readonly subjectEntityId: RefEntityId;
+      readonly predicate: string;
+      readonly object: RefFactObject;
+      readonly statement: string;
+      readonly confidence: number;
+      readonly validFrom: Timestamp | null;
+      readonly validTo: Timestamp | null;
+    };
+    readonly newEntities: readonly {
+      readonly id: RefEntityId;
+      readonly type: string;
+      readonly name: string;
+    }[];
+  };
+  readonly sourceId: RefSourceId;
+  readonly reasonCode: RefReasonCode;
+  readonly proposedAt: Timestamp;
+  readonly state: 'pending' | 'approved' | 'rejected';
+  readonly decidedAt: Timestamp | null;
+};
 
 type RefFactVerification = {
   readonly id: string;
@@ -357,6 +398,11 @@ interface RefMemoryStore {
     readonly namespace: RefNamespace;
     readonly limit: number;
   }): Promise<Result<readonly RefFactWithSources[]>>;
+  listPendingProposals(query: {
+    readonly namespace: RefNamespace;
+  }): Promise<
+    Result<readonly { readonly proposal: RefProposedChange; readonly storedFact: RefFactWithSources }[]>
+  >;
   close(): Promise<void>;
 }
 
@@ -391,6 +437,7 @@ const parity: {
   readonly EntityMerge: Same<EntityMerge, RefEntityMerge>;
   readonly FactUsage: Same<FactUsage, RefFactUsage>;
   readonly FactVerification: Same<FactVerification, RefFactVerification>;
+  readonly ProposedChange: Same<ProposedChange, RefProposedChange>;
   readonly Change: Same<Change, RefChange>;
   readonly ChangeSet: Same<ChangeSet, RefChangeSet>;
   readonly CommitReceipt: Same<CommitReceipt, RefCommitReceipt>;
@@ -420,6 +467,7 @@ const parity: {
   EntityMerge: true,
   FactUsage: true,
   FactVerification: true,
+  ProposedChange: true,
   Change: true,
   ChangeSet: true,
   CommitReceipt: true,
@@ -434,6 +482,6 @@ describe('the types derived from the schemas', () => {
   it('have the shapes that INTERFACES.md commits to', () => {
     // The real check is the type of `parity` above, made by the compiler.
     expect(Object.values(parity).every((same) => same === true)).toBe(true);
-    expect(Object.keys(parity)).toHaveLength(28);
+    expect(Object.keys(parity)).toHaveLength(29);
   });
 });

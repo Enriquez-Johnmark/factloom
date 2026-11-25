@@ -19,6 +19,7 @@ export const OperationSchema = z.enum([
   'merge',
   'verification',
   'archive',
+  'proposal',
 ]);
 export type Operation = z.infer<typeof OperationSchema>;
 
@@ -60,11 +61,14 @@ export const AuditActionSchema = z.enum([
   'fact.verified',
   'fact.archived',
   'fact.unarchived',
+  'proposal.recorded',
+  'proposal.approved',
+  'proposal.rejected',
 ]);
 export type AuditAction = z.infer<typeof AuditActionSchema>;
 
 /** The kind of row an audit entry is about. */
-export const AuditTargetKindSchema = z.enum(['entity', 'source', 'fact', 'feedback']);
+export const AuditTargetKindSchema = z.enum(['entity', 'source', 'fact', 'feedback', 'proposal']);
 
 /**
  * One record of one change to memory. It holds identifiers and codes, never free text:

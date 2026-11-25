@@ -11,6 +11,8 @@ import {
   FactVerificationSchema,
   type Feedback,
   FeedbackSchema,
+  type ProposedChange,
+  ProposedChangeSchema,
   type Source,
   SourceSchema,
 } from '@factloom/core';
@@ -225,5 +227,42 @@ export function toEntityMerge(row: EntityMergeRow): EntityMerge {
     intoEntityId: row.into_entity_id,
     mergedAt: row.merged_at,
     undoneAt: row.undone_at,
+  });
+}
+
+export type ProposedChangeRow = {
+  readonly id: string;
+  readonly namespace: string;
+  readonly stored_fact_id: string;
+  readonly kind: string;
+  readonly changed_at: string | null;
+  readonly new_fact: string;
+  readonly source_id: string;
+  readonly reason_code: string;
+  readonly proposed_at: string;
+  readonly state: string;
+  readonly decided_at: string | null;
+};
+
+/** A proposal row, with its new fact read from JSON and its kind and moment as one value. */
+export function toProposedChange(row: ProposedChangeRow): ProposedChange {
+  let newFact: unknown;
+  try {
+    newFact = JSON.parse(row.new_fact);
+  } catch {
+    throw new UnreadableRow(`A stored proposed change could not be read. new_fact: not valid JSON`);
+  }
+  return parseRow(ProposedChangeSchema, 'proposed change', {
+    id: row.id,
+    namespace: row.namespace,
+    storedFactId: row.stored_fact_id,
+    supersession:
+      row.kind === 'succession' ? { kind: 'succession', changedAt: row.changed_at } : { kind: row.kind },
+    newFact,
+    sourceId: row.source_id,
+    reasonCode: row.reason_code,
+    proposedAt: row.proposed_at,
+    state: row.state,
+    decidedAt: row.decided_at,
   });
 }

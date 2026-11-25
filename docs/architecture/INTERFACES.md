@@ -117,6 +117,30 @@ export type EntityMerge = {
   readonly undoneAt: Timestamp | null;
 };
 
+/**
+ * Phase 2 (FL-043). A succession or a correction held for a person to decide. It holds the
+ * input of the operation it would run, not a built change set (ADR 0009), and changes no fact
+ * until it is approved.
+ */
+export type ProposedChange = {
+  readonly id: string;
+  readonly namespace: Namespace;
+  /** The fact it would end or invalidate, in the same namespace. */
+  readonly storedFactId: FactId;
+  readonly supersession:
+    | { readonly kind: 'succession'; readonly changedAt: Timestamp }
+    | { readonly kind: 'correction' };
+  /** The fact to put in its place, with the entities it introduces. */
+  readonly newFact: FactDraft;
+  /** The source that explains it, recorded when the proposal is stored. */
+  readonly sourceId: SourceId;
+  /** The reason code the change is recorded with when it is approved. */
+  readonly reasonCode: ReasonCode;
+  readonly proposedAt: Timestamp;
+  readonly state: 'pending' | 'approved' | 'rejected';
+  readonly decidedAt: Timestamp | null;
+};
+
 /** Phase 2. That someone found a recalled fact right, wrong or out of date. Changes no fact. */
 export type Feedback = {
   readonly id: string;
@@ -151,7 +175,8 @@ export type Operation =
   | 'purge'
   | 'merge'
   | 'verification'
-  | 'archive';
+  | 'archive'
+  | 'proposal';
 
 /** Why, from a fixed list, so that the audit log holds no free text. Later phases add codes. */
 export type ReasonCode =
@@ -187,7 +212,10 @@ export type AuditAction =
   | 'entity.merge_undone'
   | 'fact.verified'
   | 'fact.archived'
-  | 'fact.unarchived';
+  | 'fact.unarchived'
+  | 'proposal.recorded'
+  | 'proposal.approved'
+  | 'proposal.rejected';
 
 export type AuditEntry = {
   readonly id: number;
@@ -195,7 +223,7 @@ export type AuditEntry = {
   readonly operationId: string;
   readonly operation: Operation;
   readonly action: AuditAction;
-  readonly targetKind: 'entity' | 'source' | 'fact' | 'feedback';
+  readonly targetKind: 'entity' | 'source' | 'fact' | 'feedback' | 'proposal';
   readonly targetId: string;
   readonly trigger: Trigger;
   readonly reasonCode: ReasonCode;
@@ -355,6 +383,11 @@ export interface MemoryStore {
   /** Phase 3. Live facts whose every source is purged, or whose latest verification is `source_missing`, oldest first. */
   listOrphanedFacts(query: { readonly namespace: Namespace; readonly limit: number }): Promise<Result<readonly FactWithSources[]>>;
 
+  /** Phase 2 (FL-043). The pending proposals of a namespace, oldest first, each with the stored fact it would change. */
+  listPendingProposals(query: {
+    readonly namespace: Namespace;
+  }): Promise<Result<readonly { readonly proposal: ProposedChange; readonly storedFact: FactWithSources }[]>>;
+
   close(): Promise<void>;
 }
 
@@ -415,7 +448,11 @@ export type Change =
   /** Phase 3. Marks a live fact as archived, from the change set's `occurredAt`. The fact row is not changed. */
   | { readonly kind: 'archive_fact'; readonly archiveId: string; readonly factId: FactId }
   /** Phase 3. Ends the archiving of a fact. */
-  | { readonly kind: 'unarchive_fact'; readonly factId: FactId };
+  | { readonly kind: 'unarchive_fact'; readonly factId: FactId }
+  /** Phase 2 (FL-043). Stores a pending proposal. Changes no fact. */
+  | { readonly kind: 'record_proposal'; readonly proposal: ProposedChange }
+  /** Phase 2 (FL-043). Decides a pending proposal, once, at the change set's `occurredAt`. */
+  | { readonly kind: 'decide_proposal'; readonly proposalId: string; readonly decision: 'approved' | 'rejected' };
 
 export type CommitReceipt = {
   readonly operationId: string;
@@ -784,6 +821,7 @@ export declare function undoEntityMerge(
 - **A moved anchor is repaired by restatement (FL-054).** When git shows that an anchored file was renamed, the maintenance job attaches a source at the new path with `recordFacts`, with no drafts and the fact in `restatedFactIds`. That commits one `record_source` and one `attach_source` change under the operation `remember`, as any restatement does, with trigger `maintenance` and the reason code `anchor_moved`. No fact row is written and the fact keeps its identifier. The job then records a verification with the same reason code. What follows from a `contradicted` outcome, an invalidation or a lower confidence, is a separate call, so the audit log shows both the finding and the action. Errors: `invalid_input`, `not_found`, `already_invalidated`, `storage_failed`.
 - **`listStaleFacts` and `listOrphanedFacts` are reads.** They add two methods to `MemoryStore` in phase 3, backed by the `fact_verification` table. `listStaleFacts` passes its clock's now as `currentAt`. They return an empty list when nothing is due. The latest verification of a fact is the one with the latest time; of two with the same time, the one recorded later. A fact revised into a copy gets a new identifier, and the copy, having no verification, counts as verified at its own recording. `confidenceBelow` outside 0 to 1 is `invalid_input`. Errors: `invalid_input`, `storage_failed`.
 - **Archiving is a row, not an edit (FL-065).** `archiveFacts` commits one `archive_fact` change per fact under the operation `archive`, which adds a row to the `fact_archive` table: the fact and since when. `unarchiveFact` commits one `unarchive_fact` change, which sets the row's `unarchived_at` once. Their audit entries, actions `fact.archived` and `fact.unarchived`, target the fact, with `detail` `{ archiveId }`. The caller gives the reason code: `unused` for the archiving job of FL-073, `requested` otherwise. The fact row, its identifier, its `invalidated_at` and its valid time do not change, and an archived fact is still a live fact: it counts for the single-value rule. Every read returns `archivedAt`, the start of the archiving in force, or null. Errors: `invalid_input`, `not_found`, `already_invalidated` for archiving a fact that is not live, `already_exists` for archiving an archived fact or unarchiving one that is not, `storage_failed`.
+- **A proposal is a row, decided once (FL-043).** `record_proposal` adds a row to the `proposed_change` table, in state `pending`, and changes no fact; its stored fact must exist in the change set's namespace and its source must be recorded, earlier in the same change set or before. `decide_proposal` sets the state to `approved` or `rejected` and `decidedAt` to the change set's `occurredAt`, once. Their audit entries target the proposal (target kind `proposal`): `proposal.recorded`, with `detail` `{ storedFactId }`, and `proposal.approved` or `proposal.rejected`, with no detail. `listPendingProposals` returns the pending ones, oldest first, each with its stored fact as `getFact` reads it. Errors: `not_found` for a stored fact, a source or a proposal not in the namespace, `already_exists` for a used identifier or a proposal already decided, `invalid_input` for a proposal recorded other than pending or decided before its `proposedAt`, `storage_failed`.
 - **A value found changed in its source ends the fact (FL-062).** When a domain's structured check reads a different value at `HEAD` than at the fact's anchor, the verification job records `contradicted` first. Then, under policy `automatic`, it calls `endFact`, with the trigger `maintenance` and the reason code `source_changed`: `validTo` is the committer time of the first commit after the anchor in which the value differs, the successor holds the new value, and the source is the file at `HEAD`. Under `human_approval`, or when the value is gone at `HEAD`, nothing changes and the fact is flagged.
 - **An LLM verdict only lowers confidence (FL-051).** For a fact whose file changed and that no deterministic rung decided, the verification job may ask an LLM, with the task `verification`, whether the file at `HEAD` still supports the fact. The answer is recorded with method `llm`. On `contradicted` the job calls `adjustConfidence` to lower the confidence by a fixed step, with trigger `maintenance` and the reason code `verification_failed`, and flags the fact. No fact is ended or invalidated on an LLM verdict. No file is sent that is over a size limit or that the secret check matches.
 - **Recall leaves archived facts out of a question about now (FL-073).** `recall` passes `excludeArchived` to its three lanes when no as-of or known-at date is given and `includeArchived` is not set; the stores apply it with the time predicate, before the limit. Every other read returns archived facts. Recalling an archived fact does not unarchive it.

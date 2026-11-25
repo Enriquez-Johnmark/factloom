@@ -15,6 +15,7 @@ import type { FactUsage } from './fact-usage.ts';
 import type { FactVerification } from './fact-verification.ts';
 import type { Feedback } from './feedback.ts';
 import type { MemoryStore } from './memory-store.ts';
+import type { ProposedChange } from './proposed-change.ts';
 import { err, type Failure, ok } from './result.ts';
 import type { Timestamp } from './timestamp.ts';
 import { matchesTimeFilter, periodsOverlap } from './valid-period.ts';
@@ -50,6 +51,8 @@ type State = {
   readonly verifications: FactVerification[];
   /** Archivings in the order they were made, ended ones included. */
   readonly archives: ArchiveRow[];
+  /** Proposed changes in the order they were proposed, decided ones included. */
+  readonly proposals: ProposedChange[];
   /** The size of the vectors held, once the first one is recorded. */
   dimensions: number | null;
 };
@@ -68,6 +71,7 @@ function createEmptyState(): State {
     merges: [],
     verifications: [],
     archives: [],
+    proposals: [],
     dimensions: null,
   };
 }
@@ -87,6 +91,7 @@ function copyState(state: State): State {
     merges: [...state.merges],
     verifications: [...state.verifications],
     archives: [...state.archives],
+    proposals: [...state.proposals],
     dimensions: state.dimensions,
   };
 }
@@ -95,7 +100,9 @@ function entityKey(namespace: Namespace, type: string, name: string): string {
   return JSON.stringify([namespace, type, normaliseEntityName(name)]);
 }
 
-const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_content'>]: AuditAction } = {
+const ACTION_OF_CHANGE: {
+  readonly [Kind in Exclude<Change['kind'], 'purge_content' | 'decide_proposal'>]: AuditAction;
+} = {
   create_entity: 'entity.created',
   record_source: 'source.recorded',
   record_fact: 'fact.recorded',
@@ -108,12 +115,15 @@ const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_conte
   record_verification: 'fact.verified',
   archive_fact: 'fact.archived',
   unarchive_fact: 'fact.unarchived',
+  record_proposal: 'proposal.recorded',
 };
 
 /** What happened to the target of a change. A purge's action depends on what it purged. */
 function actionOf(change: Change): AuditAction {
   if (change.kind === 'purge_content')
     return change.targetKind === 'source' ? 'source.purged' : 'fact.purged';
+  if (change.kind === 'decide_proposal')
+    return change.decision === 'approved' ? 'proposal.approved' : 'proposal.rejected';
   return ACTION_OF_CHANGE[change.kind];
 }
 
@@ -145,6 +155,10 @@ function targetOf(change: Change): {
     case 'archive_fact':
     case 'unarchive_fact':
       return { targetKind: 'fact', targetId: change.factId };
+    case 'record_proposal':
+      return { targetKind: 'proposal', targetId: change.proposal.id };
+    case 'decide_proposal':
+      return { targetKind: 'proposal', targetId: change.proposalId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -248,6 +262,10 @@ function detailOf(change: Change, changes: readonly Change[], before: State): Au
     case 'unarchive_fact':
       // The archiving it ends: the one in force before the commit.
       return { archiveId: findOpenArchive(before, change.factId)?.id ?? null };
+    case 'record_proposal':
+      return { storedFactId: change.proposal.storedFactId };
+    case 'decide_proposal':
+      return null;
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -624,6 +642,41 @@ function applyChange(draft: State, changeSet: ChangeSet, change: Change): Failur
       return change.targetKind === 'fact'
         ? purgeFact(draft, changeSet, change.targetId)
         : purgeSource(draft, changeSet, change.targetId);
+    case 'record_proposal': {
+      const { proposal } = change;
+      if (draft.proposals.some((known) => known.id === proposal.id)) {
+        return err('already_exists', `The identifier ${proposal.id} is already used by a proposal.`);
+      }
+      if (findFact(proposal.storedFactId) === undefined) {
+        return err('not_found', `The fact ${proposal.storedFactId} does not exist.`);
+      }
+      if (!hasSource(proposal.sourceId)) {
+        return err('not_found', `The source ${proposal.sourceId} of proposal ${proposal.id} does not exist.`);
+      }
+      if (proposal.state !== 'pending' || proposal.decidedAt !== null) {
+        return err('invalid_input', `The proposal ${proposal.id} is recorded pending, with no decision.`);
+      }
+      draft.proposals.push(proposal);
+      return null;
+    }
+    case 'decide_proposal': {
+      const index = draft.proposals.findIndex(
+        (known) => known.id === change.proposalId && known.namespace === namespace,
+      );
+      const known = draft.proposals[index];
+      if (known === undefined) return err('not_found', `No proposal ${change.proposalId} in this namespace.`);
+      if (known.state !== 'pending') {
+        return err('already_exists', `The proposal ${change.proposalId} was already ${known.state}.`);
+      }
+      if (changeSet.occurredAt < known.proposedAt) {
+        return err(
+          'invalid_input',
+          `The proposal ${change.proposalId} cannot be decided before it was proposed.`,
+        );
+      }
+      draft.proposals[index] = { ...known, state: change.decision, decidedAt: changeSet.occurredAt };
+      return null;
+    }
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -942,6 +995,18 @@ export function createInMemoryStore(): MemoryStore {
 
     getUsageTrackingStart(query) {
       return Promise.resolve(ok(usageTrackingStart.get(query.namespace) ?? null));
+    },
+
+    listPendingProposals(query) {
+      const pending = state.proposals
+        .filter((proposal) => proposal.namespace === query.namespace && proposal.state === 'pending')
+        .sort((a, b) => a.proposedAt.localeCompare(b.proposedAt))
+        .flatMap((proposal) => {
+          const stored = state.facts.get(proposal.storedFactId);
+          const storedFact = stored === undefined ? null : withSources(stored, null);
+          return storedFact === null ? [] : [{ proposal, storedFact }];
+        });
+      return Promise.resolve(ok(structuredClone(pending)));
     },
 
     listEntityMerges(query) {

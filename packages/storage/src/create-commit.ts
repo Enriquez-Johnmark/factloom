@@ -18,7 +18,9 @@ import { LATEST_CONFIDENCE } from './confidence-columns.ts';
 import { resolvedEntityId, sameEntityIds } from './entity-resolution-sql.ts';
 import { type EmbeddingModel, toBlob } from './embedding-model.ts';
 
-const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_content'>]: AuditAction } = {
+const ACTION_OF_CHANGE: {
+  readonly [Kind in Exclude<Change['kind'], 'purge_content' | 'decide_proposal'>]: AuditAction;
+} = {
   create_entity: 'entity.created',
   record_source: 'source.recorded',
   record_fact: 'fact.recorded',
@@ -31,12 +33,15 @@ const ACTION_OF_CHANGE: { readonly [Kind in Exclude<Change['kind'], 'purge_conte
   record_verification: 'fact.verified',
   archive_fact: 'fact.archived',
   unarchive_fact: 'fact.unarchived',
+  record_proposal: 'proposal.recorded',
 };
 
 /** What happened to the target of a change. A purge's action depends on what it purged. */
 function actionOf(change: Change): AuditAction {
   if (change.kind === 'purge_content')
     return change.targetKind === 'source' ? 'source.purged' : 'fact.purged';
+  if (change.kind === 'decide_proposal')
+    return change.decision === 'approved' ? 'proposal.approved' : 'proposal.rejected';
   return ACTION_OF_CHANGE[change.kind];
 }
 
@@ -68,6 +73,10 @@ function targetOf(change: Change): {
     case 'archive_fact':
     case 'unarchive_fact':
       return { targetKind: 'fact', targetId: change.factId };
+    case 'record_proposal':
+      return { targetKind: 'proposal', targetId: change.proposal.id };
+    case 'decide_proposal':
+      return { targetKind: 'proposal', targetId: change.proposalId };
     default: {
       const unhandled: never = change;
       return unhandled;
@@ -259,6 +268,20 @@ export function createCommit(
   );
   const undoMerge = db.prepare(
     'UPDATE entity_merge SET undone_at = @undoneAt WHERE id = @id AND namespace = @namespace AND undone_at IS NULL',
+  );
+  const insertProposal = db.prepare(
+    `INSERT INTO proposed_change (id, namespace, stored_fact_id, kind, changed_at, new_fact, source_id,
+                                  reason_code, proposed_at, state, decided_at)
+     VALUES (@id, @namespace, @storedFactId, @kind, @changedAt, @newFact, @sourceId,
+             @reasonCode, @proposedAt, 'pending', NULL)`,
+  );
+  const isProposalIdUsed = db.prepare<[string], unknown>('SELECT 1 FROM proposed_change WHERE id = ?');
+  const selectProposalState = db.prepare<[string, string], { state: string; proposed_at: string }>(
+    'SELECT state, proposed_at FROM proposed_change WHERE id = ? AND namespace = ?',
+  );
+  const decideProposal = db.prepare(
+    `UPDATE proposed_change SET state = @state, decided_at = @decidedAt
+     WHERE id = @id AND namespace = @namespace AND state = 'pending'`,
   );
   const insertAuditEntry = db.prepare(
     `INSERT INTO audit_log (namespace, operation_id, operation, action, target_kind, target_id,
@@ -545,6 +568,53 @@ export function createCommit(
         }
         purgeFact.run(values);
         removeVector.run(targetId);
+        return null;
+      }
+      case 'record_proposal': {
+        const { proposal } = change;
+        if (isProposalIdUsed.get(proposal.id) !== undefined) {
+          refuse('already_exists', `The identifier ${proposal.id} is already used by a proposal.`);
+        }
+        if (selectFactState.get(proposal.storedFactId, namespace) === undefined) {
+          refuse('not_found', `The fact ${proposal.storedFactId} does not exist.`);
+        }
+        if (hasSource.get(proposal.sourceId, namespace) === undefined) {
+          refuse('not_found', `The source ${proposal.sourceId} of proposal ${proposal.id} does not exist.`);
+        }
+        if (proposal.state !== 'pending' || proposal.decidedAt !== null) {
+          refuse('invalid_input', `The proposal ${proposal.id} is recorded pending, with no decision.`);
+        }
+        insertProposal.run({
+          id: proposal.id,
+          namespace,
+          storedFactId: proposal.storedFactId,
+          kind: proposal.supersession.kind,
+          changedAt: proposal.supersession.kind === 'succession' ? proposal.supersession.changedAt : null,
+          newFact: JSON.stringify(proposal.newFact),
+          sourceId: proposal.sourceId,
+          reasonCode: proposal.reasonCode,
+          proposedAt: proposal.proposedAt,
+        });
+        return { storedFactId: proposal.storedFactId };
+      }
+      case 'decide_proposal': {
+        const known = selectProposalState.get(change.proposalId, namespace);
+        if (known === undefined) refuse('not_found', `No proposal ${change.proposalId} in this namespace.`);
+        if (known.state !== 'pending') {
+          refuse('already_exists', `The proposal ${change.proposalId} was already ${known.state}.`);
+        }
+        if (changeSet.occurredAt < known.proposed_at) {
+          refuse(
+            'invalid_input',
+            `The proposal ${change.proposalId} cannot be decided before it was proposed.`,
+          );
+        }
+        decideProposal.run({
+          id: change.proposalId,
+          namespace,
+          state: change.decision,
+          decidedAt: changeSet.occurredAt,
+        });
         return null;
       }
       default: {

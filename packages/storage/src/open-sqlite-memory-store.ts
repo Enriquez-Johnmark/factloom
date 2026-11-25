@@ -77,6 +77,7 @@ export function openSqliteMemoryStore(options: SqliteMemoryStoreOptions): Result
       listStaleFacts: (query) => read(() => reads.listStaleFacts(query)),
       listOrphanedFacts: (query) => read(() => reads.listOrphanedFacts(query)),
       listEntityMerges: (query) => read(() => ok(reads.listEntityMerges(query))),
+      listPendingProposals: (query) => read(() => ok(reads.listPendingProposals(query))),
       recordFactUsage: (usage) => {
         try {
           usageMethods.recordFactUsage(usage);

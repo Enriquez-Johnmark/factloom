@@ -25,6 +25,8 @@ export { DomainSchema, PredicateDefinitionSchema } from './domain.ts';
 export type { Embedder } from './embedder.ts';
 export type { EntityMerge } from './entity-merge.ts';
 export { EntityMergeSchema } from './entity-merge.ts';
+export type { ProposedChange } from './proposed-change.ts';
+export { FactDraftSchema, ProposedChangeSchema } from './proposed-change.ts';
 export type { FactUsage } from './fact-usage.ts';
 export { FactUsageSchema } from './fact-usage.ts';
 export type { FactVerification, VerificationMethod, VerificationOutcome } from './fact-verification.ts';

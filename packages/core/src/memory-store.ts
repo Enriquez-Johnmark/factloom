@@ -14,6 +14,7 @@ import type { EntityMerge } from './entity-merge.ts';
 import type { FactUsage } from './fact-usage.ts';
 import type { FactVerification } from './fact-verification.ts';
 import type { Feedback } from './feedback.ts';
+import type { ProposedChange } from './proposed-change.ts';
 import type { Result } from './result.ts';
 import type { Timestamp } from './timestamp.ts';
 
@@ -176,6 +177,11 @@ export interface MemoryStore {
     readonly namespace: Namespace;
     readonly limit: number;
   }): Promise<Result<readonly FactWithSources[]>>;
+
+  /** Phase 2 (FL-043). The pending proposals of a namespace, oldest first, each with the stored fact it would change. */
+  listPendingProposals(query: {
+    readonly namespace: Namespace;
+  }): Promise<Result<readonly { readonly proposal: ProposedChange; readonly storedFact: FactWithSources }[]>>;
 
   close(): Promise<void>;
 }

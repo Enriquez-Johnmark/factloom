@@ -11,6 +11,7 @@ import {
 import { EntityMergeSchema } from './entity-merge.ts';
 import { FactVerificationSchema } from './fact-verification.ts';
 import { FeedbackSchema } from './feedback.ts';
+import { ProposedChangeSchema } from './proposed-change.ts';
 import { TimestampSchema } from './timestamp.ts';
 
 /** A vector with at least one number. Its size is checked against the model by the store. */
@@ -86,6 +87,16 @@ export const ChangeSchema = z.discriminatedUnion('kind', [
     .readonly(),
   /** Phase 3. Ends the archiving of a fact. */
   z.strictObject({ kind: z.literal('unarchive_fact'), factId: FactIdSchema }).readonly(),
+  /** Phase 2 (FL-043). Stores a pending proposal. Changes no fact. Its stored fact must exist. */
+  z.strictObject({ kind: z.literal('record_proposal'), proposal: ProposedChangeSchema }).readonly(),
+  /** Phase 2 (FL-043). Decides a pending proposal, once, at the change set's `occurredAt`. */
+  z
+    .strictObject({
+      kind: z.literal('decide_proposal'),
+      proposalId: z.string().min(1),
+      decision: z.enum(['approved', 'rejected']),
+    })
+    .readonly(),
 ]);
 export type Change = z.infer<typeof ChangeSchema>;
 
@@ -108,7 +119,10 @@ function findForeignRow(namespace: string, change: Change): string | null {
     case 'merge_entities':
       return change.merge.namespace === namespace ? null : `merge ${change.merge.id}`;
     case 'undo_entity_merge':
+    case 'decide_proposal':
       return null;
+    case 'record_proposal':
+      return change.proposal.namespace === namespace ? null : `proposal ${change.proposal.id}`;
     case 'record_feedback':
       return change.feedback.namespace === namespace ? null : `feedback ${change.feedback.id}`;
     case 'record_verification':

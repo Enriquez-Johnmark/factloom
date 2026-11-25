@@ -11,6 +11,7 @@ import type {
   FactVerification,
   Feedback,
   MemoryStore,
+  ProposedChange,
   Source,
   TimeFilter,
   Timestamp,
@@ -1287,6 +1288,136 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
     (related) => expect(related).toEqual(['pg14-ended']),
   );
 
+  // --- Proposed changes (FL-043) ---
+  const proposal = (
+    id: string,
+    proposedAt: string,
+    fields: Partial<ProposedChange> = {},
+  ): ProposedChange => ({
+    id,
+    namespace: NAMESPACE,
+    storedFactId: 'pg16',
+    supersession: { kind: 'correction' },
+    newFact: {
+      fact: {
+        subjectEntityId: 'e-repo',
+        predicate: DATABASE,
+        object: { kind: 'value', value: 'PostgreSQL 17' },
+        statement: 'The example repository runs PostgreSQL 17',
+        confidence: 0.9,
+        validFrom: null,
+        validTo: null,
+      },
+      newEntities: [],
+    },
+    sourceId: `s-${id}`,
+    reasonCode: 'judged_wrong',
+    proposedAt: at(proposedAt),
+    state: 'pending',
+    decidedAt: null,
+    ...fields,
+  });
+  const proposing = (proposed: ProposedChange): ChangeSet =>
+    changeSet(
+      `op-${proposed.id}`,
+      proposed.proposedAt.slice(0, 10),
+      [
+        {
+          kind: 'record_source',
+          source: source(proposed.sourceId, proposed.proposedAt.slice(0, 10), 'We run PostgreSQL 17.'),
+        },
+        { kind: 'record_proposal', proposal: proposed },
+      ],
+      { operation: 'proposal', reasonCode: proposed.reasonCode, explainedBySourceId: proposed.sourceId },
+    );
+  const deciding = (
+    operationId: string,
+    day: string,
+    proposalId: string,
+    decision: 'approved' | 'rejected',
+  ) =>
+    changeSet(operationId, day, [{ kind: 'decide_proposal', proposalId, decision }], {
+      operation: 'proposal',
+      trigger: 'person',
+      reasonCode: 'requested',
+    });
+  const pendingIds = async () => {
+    const listed = await store.listPendingProposals({ namespace: NAMESPACE });
+    if (!listed.ok) throw new Error(listed.error.message);
+    return listed.value.map((pending) => pending.proposal.id);
+  };
+
+  test('P1: a recorded proposal is returned pending, oldest first, with its stored fact, and changes no fact', async () => {
+    const before = await snapshot(store);
+    const second = proposal('p-2', '2026-06-02');
+    const first = proposal('p-1', '2026-06-01', {
+      supersession: { kind: 'succession', changedAt: at('2026-05-20') },
+    });
+
+    const results = [await store.commit(proposing(second)), await store.commit(proposing(first))];
+    const listed = await store.listPendingProposals({ namespace: NAMESPACE });
+
+    expect(results.map((result) => result.ok)).toEqual([true, true]);
+    expect(listed.ok && listed.value.map((pending) => pending.proposal)).toEqual([first, second]);
+    expect(listed.ok && listed.value.map((pending) => pending.storedFact.fact.id)).toEqual(['pg16', 'pg16']);
+    expect(
+      (await auditEntries(store, 'proposal', 'p-1')).map((entry) => [
+        entry.operation,
+        entry.action,
+        entry.detail,
+      ]),
+    ).toEqual([['proposal', 'proposal.recorded', { storedFactId: 'pg16' }]]);
+    // The proposal adds a source and its own entries; every fact row and the fixture's entries are unchanged.
+    expect(await snapshot(store)).toBe(before);
+  });
+  test('P2: an approved proposal and a rejected one are no longer returned, and each has its decision in the audit log', async () => {
+    await store.commit(proposing(proposal('p-1', '2026-06-01')));
+    await store.commit(proposing(proposal('p-2', '2026-06-01')));
+    await store.commit(proposing(proposal('p-3', '2026-06-01')));
+
+    const approved = await store.commit(deciding('op-d1', '2026-06-03', 'p-1', 'approved'));
+    const rejected = await store.commit(deciding('op-d2', '2026-06-03', 'p-2', 'rejected'));
+
+    expect([approved.ok, rejected.ok]).toEqual([true, true]);
+    expect(await pendingIds()).toEqual(['p-3']);
+    expect((await auditEntries(store, 'proposal', 'p-1')).map((entry) => entry.action)).toEqual([
+      'proposal.recorded',
+      'proposal.approved',
+    ]);
+    expect(
+      (await auditEntries(store, 'proposal', 'p-2')).map((entry) => [entry.action, entry.trigger]),
+    ).toEqual([
+      ['proposal.recorded', 'agent'],
+      ['proposal.rejected', 'person'],
+    ]);
+  });
+  test('P3: deciding a proposal that is already decided returns already_exists and changes nothing', async () => {
+    await store.commit(proposing(proposal('p-1', '2026-06-01')));
+    await store.commit(deciding('op-d1', '2026-06-02', 'p-1', 'rejected'));
+
+    const again = await store.commit(deciding('op-d2', '2026-06-03', 'p-1', 'approved'));
+
+    expect(again.ok ? null : again.error.code).toBe('already_exists');
+    expect((await auditEntries(store, 'proposal', 'p-1')).map((entry) => entry.action)).toEqual([
+      'proposal.recorded',
+      'proposal.rejected',
+    ]);
+  });
+  refuses('P4: deciding a proposal that does not exist returns not_found', 'not_found', () =>
+    deciding('op-p4', '2026-06-01', 'p-missing', 'approved'),
+  );
+  refuses('P5: a proposal for a fact that does not exist returns not_found', 'not_found', () =>
+    proposing(proposal('p-5', '2026-06-01', { storedFactId: 'pg-missing' })),
+  );
+  test('P6: deciding a proposal before the time it was proposed returns invalid_input and leaves it pending', async () => {
+    await store.commit(proposing(proposal('p-1', '2026-06-05')));
+
+    const early = await store.commit(deciding('op-d1', '2026-06-01', 'p-1', 'approved'));
+
+    expect(early.ok ? null : early.error.code).toBe('invalid_input');
+    expect(await pendingIds()).toEqual(['p-1']);
+  });
+
   // --- Archived facts in the lanes, and unused facts (FL-073) ---
   const archivePg16 = async () => {
     const archived = await store.commit(changeSet('op-y', '2026-06-01', [archive('pg16')], archiving));
@@ -2417,6 +2548,54 @@ function registerSingleValueRuleAndNamespaces(
     });
     expect(otherAudit.ok && otherAudit.value).toHaveLength(2);
   });
+  cases.test(
+    'N2b: a proposal for a fact of the other namespace returns not_found, and no read returns it',
+    async () => {
+      const store = cases.store();
+      const result = await store.commit({
+        namespace: NAMESPACE,
+        operationId: 'op-n2b',
+        operation: 'proposal',
+        trigger: 'agent',
+        reasonCode: 'judged_wrong',
+        explainedBySourceId: 's-n2b',
+        occurredAt: at('2026-06-01'),
+        changes: [
+          { kind: 'record_source', source: source('s-n2b', '2026-06-01', 'We run PostgreSQL 17.') },
+          {
+            kind: 'record_proposal',
+            proposal: {
+              id: 'p-n2b',
+              namespace: NAMESPACE,
+              storedFactId: 'other-pg16',
+              supersession: { kind: 'correction' },
+              newFact: {
+                fact: {
+                  subjectEntityId: 'e-repo',
+                  predicate: DATABASE,
+                  object: { kind: 'value', value: 'PostgreSQL 17' },
+                  statement: 'The example repository runs PostgreSQL 17',
+                  confidence: 0.9,
+                  validFrom: null,
+                  validTo: null,
+                },
+                newEntities: [],
+              },
+              sourceId: 's-n2b',
+              reasonCode: 'judged_wrong',
+              proposedAt: at('2026-06-01'),
+              state: 'pending',
+              decidedAt: null,
+            },
+          },
+        ],
+      });
+
+      expect(result.ok ? null : result.error.code).toBe('not_found');
+      expect(await store.listPendingProposals({ namespace: NAMESPACE })).toEqual({ ok: true, value: [] });
+      expect(await store.listPendingProposals({ namespace: OTHER })).toEqual({ ok: true, value: [] });
+    },
+  );
   cases.test('N2: invalidating a fact of the other namespace returns not_found', async () => {
     const result = await commit([
       { kind: 'invalidate_fact', factId: 'other-pg16', supersededByFactId: null },
