@@ -74,7 +74,7 @@ Factloom can take new information and record it as entities and facts with a **s
 | FL-022 | Secret check that refuses a write | 1 | FL-004 | Completed |
 | FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Completed |
 | FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Completed |
-| FL-078 | remember reads "we" as the configured repository | 1 | FL-069, FL-034 | Pending |
+| FL-078 | remember reads "we" as the configured repository | 1 | FL-069, FL-034 | Under Review |
 | FL-024 | recordStructuredFacts use case | 1 | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 | Completed |
 | FL-025 | changeFact use case | 1 | FL-009, FL-010, FL-020, FL-022, FL-056 | Completed |
 
@@ -747,7 +747,7 @@ For the owner's review:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 1 |
 | Depends on | FL-069, FL-034 |
 | Requirements | REQ-26, REQ-30 |
@@ -782,16 +782,33 @@ For the owner's review:
 - [`.claude/rules/testing.md`](../../../.claude/rules/testing.md), "Evals": replayed responses; a missing recording fails the run.
 
 **Acceptance criteria.**
-- [ ] A unit test shows that with a repository name the extraction instructions name it as the subject of "we", and without one they are unchanged.
-- [ ] A unit test shows `repo:shop-api` gives `shop-api` and `team:ops` gives no name.
-- [ ] At least two new extraction cases with an unnamed subject pass in replay, with the namespace's repository as subject.
-- [ ] Every extraction case and every timeline scenario still passes in replay after the recordings are made again.
+- [x] A unit test shows that with a repository name the extraction instructions name it as the subject of "we", and without one they are unchanged.
+- [x] A unit test shows `repo:shop-api` gives `shop-api` and `team:ops` gives no name.
+- [x] At least two new extraction cases with an unnamed subject pass in replay, with the namespace's repository as subject.
+- [x] Every extraction case and every timeline scenario still passes in replay after the recordings are made again.
 - [ ] On the owner's Mac, `remember` with "We use Vitest for unit tests." records a fact about the configured repository.
-- [ ] `pnpm check` exits 0.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests, the extraction cases and scenarios in replay, one call on the owner's Mac.
 
 **Completion evidence.** The commits, the replay reports, the model identifier, and the Mac call.
+
+**Recorded evidence.** Done on 2026-11-25 on Linux x64 with Node.js v22.23.4. The item is `Under Review` until the owner's call on the Mac (criterion 5).
+
+Commits: `docs(roadmap): add FL-078, remember reads "we" as the configured repository`; `feat(graph-rag): read "we" in remember as the repository of a repo: namespace`; `test(mcp-server): add extraction cases with an unnamed subject, recorded with the owner's key`; and the documentation of `repositoryName` in `INTERFACES.md` and `MCP-TOOLS.md`.
+
+Built: `buildExtractionInstructions` takes an optional repository name and, with one, adds a line to the stable instructions: "This memory is about the repository <name>. When a text says "we", "our", "us" or "this repository" and names no other repository, that repository is <name>." `RememberDeps` and `ServerDeps` gain an optional `repositoryName`; `buildServerDeps` derives it with `findRepositoryName`, which gives `shop-api` for `repo:shop-api` and none for any other form. The extraction case schema gains an optional `repository` and the kind `unnamed-subject`, with two cases: "We use Vitest for unit tests." and "this repo" beside a second, named repository.
+
+The recording run: `pnpm run record:extraction` with the owner's key set for the one command, 22 calls to `claude-haiku-5-5`, every stop reason `end_turn`; 1,388 input tokens, 5,524 output, 47,446 read from the cache. It wrote the two new recordings and wrote 10 of the 20 earlier ones again with the same keys; no recording matches a key, token, password or machine path pattern. All 22 cases pass: 28 facts expected, 27 extracted, 27 matched, none forbidden, precision 1.000, recall 0.964.
+
+`pnpm check`:
+
+```text
+      Tests  1281 passed (1281)
+```
+
+Differences from the item: the earlier extraction recordings and the scenario recordings did not need new keys, because the evals run under namespaces that give no repository name, so their instructions are unchanged; only the two new cases carry one.
+
 
 ### FL-024: recordStructuredFacts use case
 
