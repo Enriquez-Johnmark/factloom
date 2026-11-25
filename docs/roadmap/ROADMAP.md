@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-25:** the first feature code exists. 72 of 77 work items are `Completed`: FL-001, FL-002, FL-003, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-024, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-035, FL-036, FL-037, FL-039, FL-040, FL-041, FL-042, FL-043, FL-044, FL-045, FL-046, FL-047, FL-049, FL-050, FL-051, FL-052, FL-053, FL-054, FL-056, FL-057, FL-058, FL-059, FL-061, FL-062, FL-063, FL-064, FL-065, FL-066, FL-067, FL-068, FL-069, FL-070, FL-071, FL-072, FL-073, FL-075, FL-076, FL-077. 3 are `Under Review`, waiting for the owner: FL-038, FL-048, FL-055. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-25:** the first feature code exists. 73 of 77 work items are `Completed`: FL-001, FL-002, FL-003, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-024, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-035, FL-036, FL-037, FL-039, FL-040, FL-041, FL-042, FL-043, FL-044, FL-045, FL-046, FL-047, FL-049, FL-050, FL-051, FL-052, FL-053, FL-054, FL-056, FL-057, FL-058, FL-059, FL-060, FL-061, FL-062, FL-063, FL-064, FL-065, FL-066, FL-067, FL-068, FL-069, FL-070, FL-071, FL-072, FL-073, FL-075, FL-076, FL-077. 3 are `Under Review`, waiting for the owner: FL-038, FL-048, FL-055. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -110,7 +110,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-046](epics/EPIC-08.md#fl-046-feedback-operation-and-migration) | Feedback operation and migration | EPIC-08 | FL-015, FL-022 | Completed |
 | [FL-047](epics/EPIC-08.md#fl-047-purge-design-proven-by-a-spike) | Purge design, proven by a spike | EPIC-08 | FL-015 | Completed |
 | [FL-059](epics/EPIC-08.md#fl-059-givefeedback-tool) | give_feedback tool | EPIC-08 | FL-046, FL-036, FL-058 | Completed |
-| [FL-060](epics/EPIC-08.md#fl-060-acting-on-feedback) | Acting on feedback | EPIC-08 | FL-046, FL-045, FL-042 | Pending |
+| [FL-060](epics/EPIC-08.md#fl-060-acting-on-feedback) | Acting on feedback | EPIC-08 | FL-046, FL-045, FL-042 | Completed |
 | [FL-061](epics/EPIC-08.md#fl-061-purge-operation) | Purge operation | EPIC-08 | FL-047, FL-016, FL-017 | Completed |
 | [FL-070](epics/EPIC-08.md#fl-070-human-approval-policy-in-remember-with-a-command-to-list-approve-and-reject) | Human-approval policy in remember, with a command to list, approve and reject | EPIC-08 | FL-043, FL-042, FL-034 | Completed |
 | [FL-072](epics/EPIC-08.md#fl-072-purge-command) | Purge command | EPIC-08 | FL-061, FL-034 | Completed |
