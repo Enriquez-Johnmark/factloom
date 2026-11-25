@@ -89,7 +89,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | FL-045 | Confidence history and adjustConfidence | 2 | FL-015, FL-016, FL-017 | Completed |
 | FL-046 | Feedback operation and migration | 2 | FL-015, FL-022 | Completed |
 | FL-059 | give_feedback tool | 2 | FL-046, FL-036, FL-058 | Completed |
-| FL-060 | Acting on feedback | 2 | FL-046, FL-045, FL-042 | Pending |
+| FL-060 | Acting on feedback | 2 | FL-046, FL-045, FL-042 | Completed |
 | FL-047 | Purge design, proven by a spike | 2 | FL-015 | Completed |
 | FL-061 | Purge operation | 2 | FL-047, FL-016, FL-017 | Completed |
 | FL-072 | Purge command | 2 | FL-061, FL-034 | Completed |
@@ -1210,7 +1210,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 2 |
 | Depends on | FL-046, FL-045, FL-042 |
 | Requirements | REQ-18, REQ-24 |
@@ -1262,18 +1262,48 @@ $ vitest run
 - [`SCHEMA.md`](../../architecture/SCHEMA.md), rule 6: no free text in the audit log.
 
 **Acceptance criteria.**
-- [ ] Unit tests of `giveFeedback` with the follow-up from `maintenance` and the in-memory store cover all six cells of the table, asserting the result's `followUp`, the fact's state afterwards, and the trigger and reason code of the follow-up's audit entries.
-- [ ] A unit test shows `right` at confidence 1 leaves confidence at 1, and `wrong` under `human_approval` at confidence 0 leaves it at 0.
-- [ ] A unit test shows feedback on a fact that is not live gives `followUp: none`.
-- [ ] A unit test shows that when the follow-up's commit fails, the result is the error and the feedback is still on record.
-- [ ] A unit test, with a fixed clock, shows that after `wrong` under policy `automatic` the fact is absent from `listFacts` for now and present for a known-at date before the feedback.
-- [ ] A test in `apps/mcp-server` calls the function that builds the use case dependencies, calls `giveFeedback` with them and `wrong` on a recorded fact, and finds the fact retracted with an audit entry whose trigger is `feedback`. This shows the follow-up is wired in.
-- [ ] A search of `packages/maintenance` for `commit(` finds nothing outside tests.
-- [ ] `pnpm check` exits 0.
+- [x] Unit tests of `giveFeedback` with the follow-up from `maintenance` and the in-memory store cover all six cells of the table, asserting the result's `followUp`, the fact's state afterwards, and the trigger and reason code of the follow-up's audit entries.
+- [x] A unit test shows `right` at confidence 1 leaves confidence at 1, and `wrong` under `human_approval` at confidence 0 leaves it at 0.
+- [x] A unit test shows feedback on a fact that is not live gives `followUp: none`.
+- [x] A unit test shows that when the follow-up's commit fails, the result is the error and the feedback is still on record.
+- [x] A unit test, with a fixed clock, shows that after `wrong` under policy `automatic` the fact is absent from `listFacts` for now and present for a known-at date before the feedback.
+- [x] A test in `apps/mcp-server` calls the function that builds the use case dependencies, calls `giveFeedback` with them and `wrong` on a recorded fact, and finds the fact retracted with an audit entry whose trigger is `feedback`. This shows the follow-up is wired in.
+- [x] A search of `packages/maintenance` for `commit(` finds nothing outside tests.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests of the follow-up and of `giveFeedback` with it. The wiring test in the app. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the two step values and the reason codes recorded in `INTERFACES.md`.
+
+**Recorded evidence.** Done on 2026-11-25 on Linux x64 with Node.js v22.23.4, in a separate git worktree in parallel with FL-070, and cherry-picked onto `main` without conflict. Every acceptance criterion is met; FL-042, on which it depends, is `Completed`.
+
+Commits, in order: `feat(core): add the FeedbackResponder type and the reason codes of feedback follow-ups`; `feat(maintenance): add actOnFeedback, which acts on recorded feedback by a fixed table`; `feat(graph-rag): let giveFeedback act on feedback through an optional feedback responder`; `feat(mcp-server): build the use case dependencies with the conflict judge and the feedback responder`; `docs: say in MCP-TOOLS what follows from give_feedback`; and, on `main`, `feat(mcp-server): serve the conflict judge and the feedback responder from buildServerDeps`.
+
+Built:
+
+- **`core`:** the type `FeedbackResponder`, with `FeedbackFollowUp` moved into `core` from `graph-rag`, and the reason codes `feedback_right`, `feedback_wrong` and `feedback_outdated`, in the code, `INTERFACES.md` and the parity test. Reason codes have no CHECK constraint, so no migration.
+- **`maintenance`:** `actOnFeedback` applies the table with `adjustConfidence`, `invalidateFact` and `endFact`, with the trigger `feedback` and the signal's reason code. It reads the policy from the domain. A retraction or an end is explained by a source of kind `feedback` with no content, observed at the feedback's time. The steps are `FEEDBACK_CONFIDENCE_RAISE` = 0.1 and `FEEDBACK_CONFIDENCE_DROP` = 0.2, the drop matching the verification step of FL-051. `packages/maintenance` holds no `commit(` outside tests.
+- **`graph-rag`:** `giveFeedback` takes an optional `feedbackResponder`; after `recordFeedback` it calls it and returns its follow-up or its error.
+- **`apps/mcp-server`:** `buildServerDeps` adds the conflict judge and `actOnFeedback` to the use case dependencies and opens nothing, so a test calls it; `main.ts` and the stdio test entry serve with it. `MCP-TOOLS.md` says what follows from `give_feedback`.
+
+Tests: 13 of `actOnFeedback` with the in-memory store, covering the six cells of the table with the result, the fact's state, the trigger and the reason code; confidence held at 1 and at 0 and stopped at 0; feedback on a fact that is not live; an `outdated` fact already ended; feedback not on the fact; and, with a fixed clock, a retracted fact absent now and present at a known-at date before the feedback. Three new tests of `giveFeedback`, among them a follow-up whose commit fails, leaving the feedback on record. One test of `buildServerDeps`: `wrong` on a recorded fact retracts it, with the trigger `feedback`. Thirteen rules broken by hand, each failing its test, among them the policy ignored, either clamp removed, the trigger `agent`, the not-live check removed, and the responder's result ignored.
+
+Wiring the responder into the server changed one stdio test of FL-037, which gave `wrong` feedback and then called `invalidate_fact` on the same fact: the feedback now retracts it. The test now records the fact at confidence 0.8 and gives `right`, and asserts `confidence_raised`, so the session still reaches both tools.
+
+`pnpm check`:
+
+```text
+      Tests  1211 passed (1211)
+```
+
+Differences from the item:
+
+- **The six-cell tests call `actOnFeedback` after `recordFeedback`, in `maintenance`,** not `giveFeedback` with the follow-up: the boundary lint keeps `graph-rag` from importing `maintenance`, even in tests. `giveFeedback` is tested with plain responders, and the whole path by the app's test of `buildServerDeps`.
+- **At a bound the follow-up is `none`.** `right` at 1 and a drop at 0 write nothing, so no audit entry records a change that was not made.
+- **`outdated` on a fact already ended by then is `none`,** because `endFact` would otherwise move its end later.
+- **The responder takes the feedback's identifier** and reads the signal and time from the stored row, because `recordFeedback` does not return its time; it takes `OperationDeps`, so `giveFeedback`'s dependencies widened to `OperationDeps`.
+- **`buildServerDeps` is new.** The item names a function that builds the use case dependencies; none existed, as `main.ts` built them inline.
+
 
 ### FL-047: Purge design, proven by a spike
 
