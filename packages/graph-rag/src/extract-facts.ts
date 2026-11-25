@@ -14,7 +14,11 @@ import {
 import { z } from 'zod';
 import type { StructuredFactInput } from './structured-fact-input.ts';
 
-export type ExtractFactsDeps = Pick<OperationDeps, 'domain' | 'now'> & { readonly llm: LlmClient };
+export type ExtractFactsDeps = Pick<OperationDeps, 'domain' | 'now'> & {
+  readonly llm: LlmClient;
+  /** The repository the memory is about, the subject of "we" in a text (FL-078). */
+  readonly repositoryName?: string;
+};
 
 /** One of a closed set of names. The domain's lists are never empty for predicates in use. */
 function oneOf(names: readonly string[]) {
@@ -76,14 +80,22 @@ Rules:
  * entity types and predicates in the order the domain lists them. It is the same bytes on
  * every call, so the provider can cache it.
  */
-export function buildExtractionInstructions(domain: Domain): string {
+export function buildExtractionInstructions(domain: Domain, repositoryName?: string): string {
   const predicates = domain.predicates.map(
     (predicate) =>
       `- ${predicate.name} (${predicate.cardinality === 'single' ? 'one value at a time' : 'several values at once'}): ${predicate.description}`,
   );
+  // Part of the stable instructions, not of the input, so that one server's calls share a cache.
+  const repository =
+    repositoryName === undefined
+      ? []
+      : [
+          `This memory is about the repository ${repositoryName}. When a text says "we", "our", "us" or "this repository" and names no other repository, that repository is ${repositoryName}.`,
+        ];
   return [
     EXTRACTION_RULES,
     domain.extractionInstructions,
+    ...repository,
     `Entity types:\n${domain.entityTypes.map((type) => `- ${type}`).join('\n')}`,
     `Predicates:\n${predicates.join('\n')}`,
   ].join('\n\n');
@@ -123,7 +135,7 @@ export async function extractFacts(
 ): Promise<Result<readonly StructuredFactInput[]>> {
   const extracted = await deps.llm.generateObject({
     task: 'extraction',
-    instructions: buildExtractionInstructions(deps.domain),
+    instructions: buildExtractionInstructions(deps.domain, deps.repositoryName),
     input: `Reference time: ${deps.now()}\n\nText:\n${text}`,
     schema: buildExtractionSchema(deps.domain),
   });

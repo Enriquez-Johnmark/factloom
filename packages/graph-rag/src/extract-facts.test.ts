@@ -1,7 +1,7 @@
 import { createScriptedLlm, err, type LlmClient, parseDateInput, type Timestamp } from '@factloom/core';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { buildExtractionSchema, extractFacts } from './extract-facts.ts';
+import { buildExtractionInstructions, buildExtractionSchema, extractFacts } from './extract-facts.ts';
 import { softwareDevelopmentDomain } from './software-development-domain.ts';
 
 /** The reference time of every call: the moment the text is taken to be written. */
@@ -313,5 +313,23 @@ describe('extractFacts on the shapes of the extraction cases', () => {
       [{ kind: 'entity', type: 'dependency', name: 'pnpm' }, at('2026-03-15'), null],
       [{ kind: 'entity', type: 'dependency', name: 'npm' }, null, at('2026-03-15')],
     ]);
+  });
+});
+
+describe('the extraction instructions', () => {
+  it('name the configured repository as the subject of "we" when one is given', () => {
+    const instructions = buildExtractionInstructions(softwareDevelopmentDomain, 'shop-api');
+
+    expect(instructions).toContain('This memory is about the repository shop-api.');
+    expect(instructions).toContain('"we", "our", "us" or "this repository"');
+  });
+
+  it('are unchanged when no repository is given', () => {
+    const without = buildExtractionInstructions(softwareDevelopmentDomain);
+
+    expect(without).not.toContain('This memory is about the repository');
+    expect(buildExtractionInstructions(softwareDevelopmentDomain, 'shop-api').replace(without, '')).not.toBe(
+      '',
+    );
   });
 });

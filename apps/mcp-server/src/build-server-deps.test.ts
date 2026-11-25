@@ -1,7 +1,7 @@
 import { createTestDeps, recordFacts } from '@factloom/core';
 import { giveFeedback, softwareDevelopmentDomain } from '@factloom/graph-rag';
 import { describe, expect, it } from 'vitest';
-import { buildServerDeps } from './build-server-deps.ts';
+import { buildServerDeps, findRepositoryName } from './build-server-deps.ts';
 import { TEST_NAMESPACE, UNREACHABLE_LLM } from './testing/connect-in-process.ts';
 
 /** The use case dependencies of the server on an in-memory store, with the clock at a date. */
@@ -74,5 +74,11 @@ describe('the dependencies the server builds for its use cases', () => {
     expect(entries.ok && entries.value.filter((entry) => entry.action === 'fact.invalidated')).toMatchObject([
       { operation: 'retraction', trigger: 'feedback', reasonCode: 'feedback_wrong' },
     ]);
+  });
+
+  it('reads the repository a repo: namespace is about, and none from a namespace of another form', () => {
+    expect(findRepositoryName('repo:shop-api')).toBe('shop-api');
+    expect(findRepositoryName('team:ops')).toBeNull();
+    expect(findRepositoryName('repo:')).toBeNull();
   });
 });

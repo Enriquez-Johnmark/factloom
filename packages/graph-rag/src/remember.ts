@@ -26,8 +26,10 @@ import type { SourceInput } from './source-input.ts';
 
 export type RememberDeps = OperationDeps & {
   readonly llm: LlmClient;
-  /** Phase 2 (FL-042). Without it, or under the policy `human_approval`, a conflict is skipped as in phase 1. */
+  /** Phase 2 (FL-042). Without it, a conflict is skipped as in phase 1. */
   readonly judge?: ConflictJudge;
+  /** The repository the memory is about, the subject of "we" in a text (FL-078). */
+  readonly repositoryName?: string;
 };
 
 export type RememberInput = {

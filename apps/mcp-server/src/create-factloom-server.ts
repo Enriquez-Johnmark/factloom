@@ -22,6 +22,8 @@ export type ServerDeps = {
   readonly domain: Domain;
   /** Used only by `remember`, to extract facts from text. */
   readonly llm: LlmClient;
+  /** Used only by `remember`: the repository the memory is about, the subject of "we" (FL-078). */
+  readonly repositoryName?: string;
   /** Used only by `remember`, to decide whether a stored fact gives way to a new one (FL-042). */
   readonly judge?: ConflictJudge;
   /** Used only by `giveFeedback`, to act on feedback once it is recorded (FL-060). */
