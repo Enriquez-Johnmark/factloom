@@ -11,7 +11,7 @@
           "value": "Heroku"
         },
         "predicate": "deploys_to",
-        "statement": "shop-api stopped being deployed to Heroku on 2026-02-01.",
+        "statement": "shop-api was deployed to Heroku until 1 February 2026.",
         "subject": {
           "name": "shop-api",
           "type": "repository"

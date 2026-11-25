@@ -6,7 +6,7 @@
   "response": {
     "facts": [
       {
-        "confidence": 0.85,
+        "confidence": 0.9,
         "object": {
           "value": "5432"
         },

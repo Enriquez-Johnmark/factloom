@@ -29,7 +29,11 @@ export type ExtractionReport = {
 };
 
 /** The extraction step under test: a text and when it was written, to facts or a failure. */
-export type ExtractFacts = (text: string, observedAt: string) => Promise<Result<readonly ExtractedFact[]>>;
+export type ExtractFacts = (
+  text: string,
+  observedAt: string,
+  repositoryName: string | null,
+) => Promise<Result<readonly ExtractedFact[]>>;
 
 /** A date as a comparable timestamp, so that a calendar date and its full form are equal. */
 function comparableDate(text: string | null): string | null {
@@ -102,7 +106,11 @@ export async function runExtractionCases(
 ): Promise<ExtractionReport> {
   const scores: CaseScore[] = [];
   for (const extractionCase of cases) {
-    const result = await extract(extractionCase.text, extractionCase.observed_at);
+    const result = await extract(
+      extractionCase.text,
+      extractionCase.observed_at,
+      extractionCase.repository ?? null,
+    );
     scores.push(
       result.ok
         ? scoreCase(extractionCase, result.value)

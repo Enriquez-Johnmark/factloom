@@ -1,0 +1,19 @@
+# FL-078: "this repo" with a date, and a second repository named, which keeps its own name.
+name: "An unnamed subject: this repo deploys to Fly.io, and billing-worker to Render"
+kinds: [unnamed-subject, several-facts, date-in-text, value-object]
+observed_at: 2026-11-25
+repository: shop-api
+text: Since 1 March 2026 this repo has been deployed to Fly.io. billing-worker is deployed to Render.
+expected:
+  - subject: { type: repository, name: shop-api }
+    predicate: deploys_to
+    object: { value: Fly.io }
+    valid_from: 2026-03-01
+    valid_to: null
+    required: true
+  - subject: { type: repository, name: billing-worker }
+    predicate: deploys_to
+    object: { value: Render }
+    valid_from: null
+    valid_to: null
+    required: true

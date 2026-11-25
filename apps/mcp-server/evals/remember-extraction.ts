@@ -32,8 +32,13 @@ function toExtractedFact(found: FactWithSources): ExtractedFact {
  * software development domain, as a note from the agent. A failure of `remember` is returned.
  */
 export function createRememberExtraction(llm: LlmClient): ExtractFacts {
-  return async (text, observedAt) => {
-    const deps = { ...createTestDeps({ now: observedAt }), domain: softwareDevelopmentDomain, llm };
+  return async (text, observedAt, repositoryName) => {
+    const deps = {
+      ...createTestDeps({ now: observedAt }),
+      domain: softwareDevelopmentDomain,
+      llm,
+      ...(repositoryName === null ? {} : { repositoryName }),
+    };
     const remembered = await remember(deps, {
       namespace: 'eval:extraction',
       text,

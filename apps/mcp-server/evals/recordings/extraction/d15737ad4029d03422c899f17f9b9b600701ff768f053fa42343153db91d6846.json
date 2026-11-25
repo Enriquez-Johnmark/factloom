@@ -12,7 +12,7 @@
           "type": "convention"
         },
         "predicate": "follows_convention",
-        "statement": "The billing-worker repository follows the squash merges convention.",
+        "statement": "The repository billing-worker follows the convention of squash merges.",
         "subject": {
           "name": "billing-worker",
           "type": "repository"

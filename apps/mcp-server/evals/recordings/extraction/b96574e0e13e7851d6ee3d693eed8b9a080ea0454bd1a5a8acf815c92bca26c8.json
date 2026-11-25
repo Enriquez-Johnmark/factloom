@@ -25,7 +25,7 @@
           "value": "5672"
         },
         "predicate": "listens_on_port",
-        "statement": "RabbitMQ listened on port 5672 before it switched to port 5673.",
+        "statement": "RabbitMQ listened on port 5672 before 2026-04-17.",
         "subject": {
           "name": "RabbitMQ",
           "type": "dependency"

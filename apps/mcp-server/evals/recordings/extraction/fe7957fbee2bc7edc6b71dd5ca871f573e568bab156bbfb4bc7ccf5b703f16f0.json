@@ -6,12 +6,12 @@
   "response": {
     "facts": [
       {
-        "confidence": 0.95,
+        "confidence": 0.9,
         "object": {
           "value": "Netlify"
         },
         "predicate": "deploys_to",
-        "statement": "The docs-site repository is deployed to Netlify.",
+        "statement": "docs-site is deployed to Netlify.",
         "subject": {
           "name": "docs-site",
           "type": "repository"

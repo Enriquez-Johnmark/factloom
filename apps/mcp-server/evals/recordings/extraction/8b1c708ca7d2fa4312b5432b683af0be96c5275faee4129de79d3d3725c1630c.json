@@ -6,13 +6,13 @@
   "response": {
     "facts": [
       {
-        "confidence": 0.9,
+        "confidence": 0.95,
         "object": {
           "name": "Mocha",
           "type": "dependency"
         },
         "predicate": "uses_test_framework",
-        "statement": "billing-worker ran its tests with Mocha from 2025-03-01 until 2026-01-01.",
+        "statement": "The billing-worker repository ran its tests with Mocha from 2025-03-01 until 2026-01-01.",
         "subject": {
           "name": "billing-worker",
           "type": "repository"

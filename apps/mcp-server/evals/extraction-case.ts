@@ -40,6 +40,7 @@ export const EXTRACTION_CASE_KINDS = [
   'commit-message',
   'agent-note',
   'surrounded-by-talk',
+  'unnamed-subject',
 ] as const;
 
 /** One extraction case: a text, when it was written, and the facts expected and forbidden. */
@@ -50,6 +51,8 @@ export const ExtractionCaseSchema = z
     /** When the text is taken to be written. A relative date is resolved against it. */
     observed_at: DateTextSchema,
     text: TextSchema,
+    /** The repository the memory is about, as a `repo:` namespace gives it (FL-078). Absent for most cases. */
+    repository: TextSchema.optional(),
     /** `required` marks the facts the case exists to test: each must be extracted for it to pass. */
     expected: z.array(CaseFactSchema.extend({ required: z.boolean() })),
     /** Facts that must not be extracted, such as a plan written as if it were true. */

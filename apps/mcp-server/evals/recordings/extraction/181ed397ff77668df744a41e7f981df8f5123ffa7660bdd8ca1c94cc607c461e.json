@@ -11,7 +11,7 @@
           "value": "accepted"
         },
         "predicate": "has_status",
-        "statement": "The decision 'use SQLite first' has the status accepted.",
+        "statement": "The decision 'use SQLite first' has status accepted.",
         "subject": {
           "name": "use SQLite first",
           "type": "decision"

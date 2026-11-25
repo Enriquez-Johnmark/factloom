@@ -11,7 +11,7 @@
           "value": "9201"
         },
         "predicate": "listens_on_port",
-        "statement": "The local Elasticsearch listens on port 9201.",
+        "statement": "The local Elasticsearch listens on port 9201, not the default port.",
         "subject": {
           "name": "Elasticsearch",
           "type": "dependency"
