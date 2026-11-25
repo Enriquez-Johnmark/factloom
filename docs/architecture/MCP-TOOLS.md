@@ -223,9 +223,9 @@ Use case: `giveFeedback`. Phase 2 (FL-059).
 | `signal` | `"right"`, `"wrong"` or `"outdated"` | Yes | What the reporter found |
 | `comment` | string, 1 to 1,000 characters | No | What was said. Stored as the content of a source of kind `agent_note`, not in the audit log |
 
-Output: `{ feedback_id, follow_up }`, where `follow_up` is one of `confidence_raised`, `confidence_lowered`, `retracted`, `ended`, `none`, and says what Factloom did about the feedback. Until feedback is acted on (FL-060) it is always `none`.
+Output: `{ feedback_id, follow_up }`, where `follow_up` is one of `confidence_raised`, `confidence_lowered`, `retracted`, `ended`, `none`, and says what Factloom did about the feedback. Since FL-060 the server acts on it by the fixed table of `actOnFeedback` in [`INTERFACES.md`](INTERFACES.md), "Feedback responder": under the correction policy `automatic`, `wrong` retracts the fact and `outdated` ends it now; `right`, and under `human_approval` `wrong` and `outdated`, move its confidence by a fixed step. A fact that is no longer live is left as it is, with `none`.
 
-The handler calls `giveFeedback` with the configured namespace and the trigger `agent`. The feedback changes no fact, and it is accepted for a fact that is no longer live, because a fact recalled with a past `known_at` can be one. Its description tells the agent to use `invalidate_fact` instead when it knows what replaced the fact or when it stopped being true.
+The handler calls `giveFeedback` with the configured namespace and the trigger `agent`. The feedback row changes no fact; what follows from it is a second commit, with the trigger `feedback`. Feedback is accepted for a fact that is no longer live, because a fact recalled with a past `known_at` can be one. Nothing is deleted: a retraction or an end keeps the fact on record, so the annotations say the tool is not destructive. Its description tells the agent to use `invalidate_fact` instead when it knows what replaced the fact or when it stopped being true.
 
 ## Secrets
 
