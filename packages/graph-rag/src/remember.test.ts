@@ -158,6 +158,7 @@ describe('remember', () => {
         statement: 'shop-api uses database version postgres 16.',
         reason: 'conflicts_with_stored_fact',
         conflictingFactIds: [onlyFact(first).fact.id],
+        proposalId: null,
       },
     ]);
     expect(await listAll(memory.store)).toHaveLength(1);
@@ -589,8 +590,8 @@ describe('remember with a conflict judge', () => {
     expect((await readFact(store, storedFact.fact.id)).fact.invalidatedAt).toBeNull();
   });
 
-  it('changes no stored fact under the correction policy human_approval, and does not ask the judge', async () => {
-    const { judge, calls } = scriptedJudge({ ok: true, value: [{ kind: 'correction' }] });
+  it('stores a pending proposal under human_approval, leaves the stored fact live and current, and skips the new fact with its proposal', async () => {
+    const { judge } = scriptedJudge({ ok: true, value: [{ kind: 'correction' }] });
 
     const { result, storedFact, store } = await rememberAfterPostgres15({
       judge,
@@ -599,9 +600,41 @@ describe('remember with a conflict judge', () => {
     });
 
     if (!result.ok) throw new Error(result.error.message);
-    expect(result.value.skipped).toHaveLength(1);
+    const pending = await store.listPendingProposals({ namespace: NAMESPACE });
+    if (!pending.ok) throw new Error(pending.error.message);
+    expect(
+      pending.value.map((entry) => [entry.proposal.storedFactId, entry.proposal.supersession.kind]),
+    ).toEqual([[storedFact.fact.id, 'correction']]);
+    expect(result.value.facts).toEqual([]);
+    expect(result.value.skipped).toEqual([
+      {
+        statement: 'shop-api uses database version postgres 16.',
+        reason: 'proposal_stored',
+        conflictingFactIds: [storedFact.fact.id],
+        proposalId: pending.value[0]?.proposal.id,
+      },
+    ]);
     expect((await readFact(store, storedFact.fact.id)).fact.invalidatedAt).toBeNull();
-    expect(calls).toHaveLength(0);
+    const current = await store.listFacts({
+      namespace: NAMESPACE,
+      subjectEntityId: storedFact.fact.subjectEntityId,
+      predicate: 'uses_database_version',
+      touchingEntityIds: null,
+      supersededByFactId: null,
+      time: { validAt: at('2026-04-03'), knownAt: at('2026-04-03') },
+      limit: 10,
+    });
+    expect(current.ok && current.value.map((fact) => fact.fact.id)).toEqual([storedFact.fact.id]);
+  });
+
+  it('stores no proposal under the policy automatic, and makes the change as before', async () => {
+    const { judge } = scriptedJudge({ ok: true, value: [{ kind: 'correction' }] });
+
+    const { result, storedFact, store } = await rememberAfterPostgres15({ judge, facts: [postgres('16')] });
+
+    if (!result.ok) throw new Error(result.error.message);
+    expect(onlyFact(result.value).supersedes).toEqual({ factId: storedFact.fact.id, kind: 'correction' });
+    expect(await store.listPendingProposals({ namespace: NAMESPACE })).toEqual({ ok: true, value: [] });
   });
 
   it('skips the new fact when the judge finds the stored fact unrelated but the two still overlap', async () => {

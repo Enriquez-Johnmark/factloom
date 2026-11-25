@@ -27,7 +27,12 @@ const RememberResultSchema = z.object({
     }),
   ),
   skipped: z.array(
-    z.object({ statement: z.string(), reason: z.string(), conflicting_fact_ids: z.array(z.string()) }),
+    z.object({
+      statement: z.string(),
+      reason: z.string(),
+      conflicting_fact_ids: z.array(z.string()),
+      proposal_id: z.string().nullable(),
+    }),
   ),
 });
 
@@ -135,6 +140,7 @@ describe('the remember tool', () => {
         statement: 'shop-api is deployed to Render.',
         reason: 'conflicts_with_stored_fact',
         conflicting_fact_ids: [first.facts[0]?.fact_id],
+        proposal_id: null,
       },
     ]);
   });

@@ -20,8 +20,10 @@ const RememberOutputSchema = z.object({
   skipped: z.array(
     z.object({
       statement: z.string(),
-      reason: z.enum(['conflicts_with_stored_fact', 'conflicts_within_text']),
+      reason: z.enum(['conflicts_with_stored_fact', 'conflicts_within_text', 'proposal_stored']),
       conflicting_fact_ids: z.array(z.string()),
+      /** The proposal stored in its place under human_approval (FL-070), or null. */
+      proposal_id: z.string().nullable(),
     }),
   ),
 });
@@ -68,6 +70,7 @@ export const registerRememberTool: RegisterTool = (server, deps) => {
           statement: skipped.statement,
           reason: skipped.reason,
           conflicting_fact_ids: [...skipped.conflictingFactIds],
+          proposal_id: skipped.proposalId,
         })),
       });
     },

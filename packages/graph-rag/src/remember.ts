@@ -7,6 +7,7 @@ import {
   type FactWithSources,
   invalidateFact,
   type LlmClient,
+  proposeChange,
   type Namespace,
   type OperationDeps,
   ok,
@@ -39,8 +40,11 @@ export type RememberInput = {
 /** An extracted fact that was not recorded. */
 export type SkippedFact = {
   readonly statement: string;
-  readonly reason: 'conflicts_with_stored_fact' | 'conflicts_within_text';
+  /** `proposal_stored` (FL-070): under `human_approval`, a proposal waits for a person to decide. */
+  readonly reason: 'conflicts_with_stored_fact' | 'conflicts_within_text' | 'proposal_stored';
   readonly conflictingFactIds: readonly FactId[];
+  /** The proposal stored in its place, for `proposal_stored`; otherwise null. */
+  readonly proposalId: string | null;
 };
 
 export type RememberResult = {
@@ -83,6 +87,7 @@ function skipAsConflicting(planned: PlannedFact, conflictingFactIds: readonly Fa
       statement: planned.draft.fact.statement,
       reason: 'conflicts_with_stored_fact',
       conflictingFactIds,
+      proposalId: null,
     },
   };
 }
@@ -104,8 +109,9 @@ async function readConflictingFacts(
 
 /**
  * Sorts one fact against the live facts with its subject and predicate. A conflict goes to the
- * judge when there is one and the domain's correction policy is `automatic`; otherwise, and
- * whenever the judge leaves it uncertain, the fact is skipped as in phase 1.
+ * judge when there is one; otherwise, and whenever the judge leaves it uncertain, the fact is
+ * skipped as in phase 1. The domain's correction policy decides later whether a supersession is
+ * made or proposed (FL-070).
  */
 async function sortAgainstMemory(
   deps: RememberDeps,
@@ -121,7 +127,7 @@ async function sortAgainstMemory(
       return ok({ kind: 'restates', planned, factId: comparison.value.factId });
     case 'conflicts': {
       const { conflictingFactIds } = comparison.value;
-      if (deps.judge === undefined || deps.domain.correctionPolicy !== 'automatic') {
+      if (deps.judge === undefined) {
         return ok(skipAsConflicting(planned, conflictingFactIds));
       }
       const conflicting = await readConflictingFacts(deps, input.namespace, conflictingFactIds);
@@ -170,6 +176,7 @@ function skipConflictsWithinText(sorted: readonly Sorted[]): Sorted[] {
         statement: entry.planned.draft.fact.statement,
         reason: 'conflicts_within_text',
         conflictingFactIds: [],
+        proposalId: null,
       },
     };
   });
@@ -217,6 +224,32 @@ async function applySupersession(
   if (applied.ok) return applied;
   if (applied.error.code === 'conflict' || applied.error.code === 'already_invalidated') return ok(null);
   return applied;
+}
+
+/**
+ * Stores the supersession of one entry as a proposal for a person to decide (FL-070), with
+ * the text as its source and the reason code it will be approved with. Returns the proposal's
+ * identifier, or null when the stored fact changed in between and the fact is to be skipped.
+ */
+async function proposeSupersession(
+  deps: RememberDeps,
+  input: RememberInput,
+  entry: Supersession,
+  draft: FactDraft,
+): Promise<Result<string | null>> {
+  const { supersession, storedFactId } = entry.resolution;
+  const proposed = await proposeChange(deps, {
+    namespace: input.namespace,
+    trigger: input.trigger,
+    reasonCode: supersession.kind === 'succession' ? 'judged_ended' : 'judged_wrong',
+    storedFactId,
+    supersession,
+    newFact: draft,
+    source: { ...input.source, content: input.text, observedAt: deps.now() },
+  });
+  if (proposed.ok) return ok(proposed.value.proposalId);
+  if (proposed.error.code === 'already_invalidated' || proposed.error.code === 'not_found') return ok(null);
+  return proposed;
 }
 
 /**
@@ -276,13 +309,28 @@ export async function remember(deps: RememberDeps, input: RememberInput): Promis
   const supersedingIds = new Map<Supersession, FactId>();
   for (const entry of supersessions) {
     const draft = withoutCreatedEntities(entry.resolution.draft, created);
+    const storedFactIds = [entry.resolution.storedFactId];
+    if (deps.domain.correctionPolicy === 'human_approval') {
+      // FL-070: the change waits for a person; the stored fact is not touched.
+      const proposed = await proposeSupersession(deps, input, entry, draft);
+      if (!proposed.ok) return proposed;
+      skipped.push({
+        statement: entry.planned.draft.fact.statement,
+        reason: proposed.value === null ? 'conflicts_with_stored_fact' : 'proposal_stored',
+        conflictingFactIds: storedFactIds,
+        proposalId: proposed.value,
+      });
+      if (proposed.value !== null) for (const entity of draft.newEntities) created.add(entity.id);
+      continue;
+    }
     const applied = await applySupersession(deps, input, entry, draft);
     if (!applied.ok) return applied;
     if (applied.value === null) {
       skipped.push({
         statement: entry.planned.draft.fact.statement,
         reason: 'conflicts_with_stored_fact',
-        conflictingFactIds: [entry.resolution.storedFactId],
+        conflictingFactIds: storedFactIds,
+        proposalId: null,
       });
       continue;
     }

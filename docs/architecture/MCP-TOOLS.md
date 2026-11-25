@@ -139,8 +139,10 @@ type RecordedFact = {
 
 type SkippedFact = {
   statement: string;
-  reason: 'conflicts_with_stored_fact' | 'conflicts_within_text';
+  reason: 'conflicts_with_stored_fact' | 'conflicts_within_text' | 'proposal_stored';
   conflicting_fact_ids: string[];
+  /** Phase 2 (FL-070). The proposal stored in its place under human_approval, or null. */
+  proposal_id: string | null;
 };
 ```
 
@@ -151,7 +153,7 @@ In phase 1 `remember` does not judge conflicts. It applies two deterministic rul
 
 The agent then decides, and calls `invalidate_fact` with a replacement if the stored fact should give way. Phase 2 replaces the second rule with conflict detection and the domain's correction policy.
 
-From phase 2 (FL-042), under the correction policy `automatic`, a fact that conflicts with a stored fact goes to the conflict judge. On `succession` the stored fact is ended at the moment of change and the new fact is recorded as its successor; on `correction` the stored fact is invalidated and the new fact replaces it. The new fact is returned with `supersedes` naming the stored fact and which of the two it was. Every other outcome leaves the fact in `skipped`, as above. The facts that need no correction are recorded with one source, as in phase 1, and each succession or correction is its own commit with its own source holding the same text ([ADR 0022](adr/0022-remember-commits-each-correction-on-its-own.md)). If one of those commits finds memory changed by another process, its fact is returned in `skipped` and the rest of the call stands.
+From phase 2 (FL-042), under the correction policy `automatic`, a fact that conflicts with a stored fact goes to the conflict judge. On `succession` the stored fact is ended at the moment of change and the new fact is recorded as its successor; on `correction` the stored fact is invalidated and the new fact replaces it. The new fact is returned with `supersedes` naming the stored fact and which of the two it was. Every other outcome leaves the fact in `skipped`, as above. The facts that need no correction are recorded with one source, as in phase 1, and each succession or correction is its own commit with its own source holding the same text ([ADR 0022](adr/0022-remember-commits-each-correction-on-its-own.md)). If one of those commits finds memory changed by another process, its fact is returned in `skipped` and the rest of the call stands. Under the policy `human_approval` (FL-070) the stored fact is not changed: a proposal is stored for a person to approve with the proposals command, and the new fact is returned in `skipped` with `reason: "proposal_stored"` and its `proposal_id`. No tool approves a proposal: an agent must not approve its own.
 
 ### `record_fact`
 
