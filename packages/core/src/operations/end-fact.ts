@@ -34,6 +34,8 @@ export function buildEndFactChangeSet(parts: {
   readonly isSingleValued: boolean;
   /** The prepared successor, holding one fact, or `null`. */
   readonly successor: PreparedDrafts | null;
+  /** True when the source is already recorded, as a proposal's is (FL-043): it is then not recorded again. */
+  readonly sourceIsRecorded?: boolean;
 }): ChangeSet {
   const successorChanges =
     parts.successor === null ? [] : buildRecordChanges(parts.successor, parts.source.id);
@@ -47,7 +49,7 @@ export function buildEndFactChangeSet(parts: {
     explainedBySourceId: parts.source.id,
     occurredAt: parts.occurredAt,
     changes: [
-      { kind: 'record_source', source: parts.source },
+      ...(parts.sourceIsRecorded === true ? [] : [{ kind: 'record_source', source: parts.source } as const]),
       ...successorChanges.filter((change) => change.kind === 'create_entity'),
       {
         kind: 'record_fact',
@@ -63,15 +65,23 @@ export function buildEndFactChangeSet(parts: {
   };
 }
 
+/** The change set of an end, built but not committed, and the identifiers it gives. */
+export type PlannedEndFact = {
+  readonly changeSet: ChangeSet;
+  readonly endedFactId: FactId;
+  readonly successorFactId: FactId | null;
+};
+
 /**
- * Says a fact stopped being true at a moment, in one commit. A fact row is never edited, so
- * the fact is invalidated and a copy with `validTo` set takes its place. With a successor it
- * is a succession: the successor starts at `validTo` unless it gives its own start.
+ * Reads the fact and builds the change set that ends it, without committing it. The source
+ * is made by `makeSource` at the point where `endFact` records one, so identifiers are drawn
+ * in the same order; with `sourceIsRecorded` it is an existing source, not recorded again.
  */
-export async function endFact(
+export async function planEndFact(
   deps: OperationDeps,
-  input: EndFactInput,
-): Promise<Result<{ readonly endedFactId: FactId; readonly successorFactId: FactId | null }>> {
+  input: Omit<EndFactInput, 'source'>,
+  source: { readonly make: (createdAt: Timestamp) => Promise<Source>; readonly isRecorded: boolean },
+): Promise<Result<PlannedEndFact>> {
   const { namespace, factId, validTo } = input;
   const found = await readLiveFact(deps, { namespace, factId });
   if (!found.ok) return found;
@@ -108,22 +118,38 @@ export async function endFact(
     if (!prepared.ok) return prepared;
     successor = prepared.value;
   }
-  const source = await buildSource(deps, { namespace, source: input.source, createdAt: now });
+  const made = await source.make(now);
   const predicate = deps.domain.predicates.find((known) => known.name === original.predicate);
+  const changeSet = buildEndFactChangeSet({
+    context: input,
+    operationId: deps.newId(),
+    occurredAt: now,
+    source: made,
+    originalFactId: factId,
+    endedCopy,
+    originalSourceIds: found.value.sources.map((known) => known.id),
+    isSingleValued: predicate?.cardinality === 'single',
+    successor,
+    sourceIsRecorded: source.isRecorded,
+  });
+  return ok({ changeSet, endedFactId: endedCopy.id, successorFactId: successor?.facts[0]?.fact.id ?? null });
+}
 
-  const committed = await deps.store.commit(
-    buildEndFactChangeSet({
-      context: input,
-      operationId: deps.newId(),
-      occurredAt: now,
-      source,
-      originalFactId: factId,
-      endedCopy,
-      originalSourceIds: found.value.sources.map((known) => known.id),
-      isSingleValued: predicate?.cardinality === 'single',
-      successor,
-    }),
-  );
+/**
+ * Says a fact stopped being true at a moment, in one commit. A fact row is never edited, so
+ * the fact is invalidated and a copy with `validTo` set takes its place. With a successor it
+ * is a succession: the successor starts at `validTo` unless it gives its own start.
+ */
+export async function endFact(
+  deps: OperationDeps,
+  input: EndFactInput,
+): Promise<Result<{ readonly endedFactId: FactId; readonly successorFactId: FactId | null }>> {
+  const planned = await planEndFact(deps, input, {
+    make: (createdAt) => buildSource(deps, { namespace: input.namespace, source: input.source, createdAt }),
+    isRecorded: false,
+  });
+  if (!planned.ok) return planned;
+  const committed = await deps.store.commit(planned.value.changeSet);
   if (!committed.ok) return committed;
-  return ok({ endedFactId: endedCopy.id, successorFactId: successor?.facts[0]?.fact.id ?? null });
+  return ok({ endedFactId: planned.value.endedFactId, successorFactId: planned.value.successorFactId });
 }

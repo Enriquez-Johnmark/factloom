@@ -815,7 +815,35 @@ export declare function undoEntityMerge(
   deps: Pick<OperationDeps, 'store' | 'now' | 'newId'>,
   input: ChangeContext & { readonly mergeId: string },
 ): Promise<Result<{ readonly mergeId: string }>>;
+
+/** Phase 2 (FL-043). Which proposal to decide, and who decides. Only a person may. */
+export type DecideProposalInput = { readonly namespace: Namespace; readonly proposalId: string; readonly trigger: Trigger };
+
+/** Phase 2 (FL-043). Stores a succession or a correction for a person to approve. Changes no fact. */
+export declare function proposeChange(
+  deps: OperationDeps,
+  input: ChangeContext & {
+    readonly storedFactId: FactId;
+    readonly supersession: ProposedChange['supersession'];
+    readonly newFact: FactDraft;
+    readonly source: NewSource;
+  },
+): Promise<Result<{ readonly proposalId: string }>>;
+
+/** Phase 2 (FL-043). Applies a pending proposal and marks it approved, in one commit. */
+export declare function approveProposedChange(
+  deps: OperationDeps,
+  input: DecideProposalInput,
+): Promise<Result<{ readonly changedFactId: FactId; readonly newFactId: FactId | null }>>;
+
+/** Phase 2 (FL-043). Marks a pending proposal rejected. Changes no fact. */
+export declare function rejectProposedChange(
+  deps: Pick<OperationDeps, 'store' | 'now' | 'newId'>,
+  input: DecideProposalInput,
+): Promise<Result<{ readonly proposalId: string }>>;
 ```
+
+- **A proposal holds the operation's input, not its change set (FL-043).** `proposeChange` reads the stored fact, which must be live, refuses a succession that would end it before it began, and commits the source and one `record_proposal` change under the operation `proposal`, with the caller's trigger and reason code. `approveProposedChange` requires the trigger `person`, reads the pending proposal, and builds the change set of `endFact` or `invalidateFact` from its stored input at that moment, with the source recorded with the proposal, which is not recorded again; it adds one `decide_proposal` change and commits both together, under the operation `succession` or `correction` and the proposal's reason code. The facts it writes are therefore recorded at the time of approval, and a known-at question between proposal and approval returns the stored fact unchanged. `rejectProposedChange` requires the trigger `person` and commits one `decide_proposal` change under the operation `proposal`, reason code `requested`. Errors: `invalid_input` for another trigger, `not_found` for a proposal never made in the namespace, `already_exists` for one already decided (told apart by the proposal's audit entries), `already_invalidated` and `conflict` at approval, which leave the proposal pending, `storage_failed`. Who may decide is not checked before the regulated domains ([ADR 0011](adr/0011-namespace-on-every-row.md)).
 
 - **Verification is recorded, not applied.** `recordVerification` (FL-049) commits one `record_verification` change under the operation `verification`, which appends a row to the `fact_verification` table: fact, outcome, method, time. Its audit entry, action `fact.verified`, targets the fact, with `detail` `{ verificationId }`; the outcome and the method are in the row, not in the entry. The reason code for a scheduled check is `verification_due`.
 - **A moved anchor is repaired by restatement (FL-054).** When git shows that an anchored file was renamed, the maintenance job attaches a source at the new path with `recordFacts`, with no drafts and the fact in `restatedFactIds`. That commits one `record_source` and one `attach_source` change under the operation `remember`, as any restatement does, with trigger `maintenance` and the reason code `anchor_moved`. No fact row is written and the fact keeps its identifier. The job then records a verification with the same reason code. What follows from a `contradicted` outcome, an invalidation or a lower confidence, is a separate call, so the audit log shows both the finding and the action. Errors: `invalid_input`, `not_found`, `already_invalidated`, `storage_failed`.
