@@ -57,11 +57,11 @@ The consolidated list of what Factloom must do, with the epics and work items th
 | ID | Requirement | Source | Mandatory | Epics | Work items |
 |---|---|---|---|---|---|
 | REQ-25 | Memory is partitioned by namespace; nothing is read or linked across namespaces | ADR 0011 | Yes | EPIC-02, EPIC-03, EPIC-06 | FL-006, FL-007, FL-067, FL-013, FL-014, FL-068, FL-015, FL-034 |
-| REQ-26 | The LLM sits behind an interface in core, with Claude as the default | prompt s.3 | Yes | EPIC-02, EPIC-04 | FL-006, FL-019, FL-021, FL-023, FL-069 |
+| REQ-26 | The LLM sits behind an interface in core, with Claude as the default | prompt s.3 | Yes | EPIC-02, EPIC-04 | FL-006, FL-019, FL-021, FL-023, FL-069, FL-078 |
 | REQ-27 | Embeddings sit behind an interface in core, with a local model as the default | prompt s.3, ADR 0014 | Yes | EPIC-02, EPIC-05 | FL-006, FL-017, FL-026 |
 | REQ-28 | Package boundaries are enforced automatically, and one command runs format check, lint, type check and tests | prompt s.4.2, s.4.3 | Yes | EPIC-01 | FL-001, FL-002, FL-040 |
 | REQ-29 | Native modules and the SQLite extension work on macOS with Apple Silicon | prompt s.3 | Yes | EPIC-01, EPIC-06 | FL-002, FL-003, FL-038 |
-| REQ-30 | An eval set covers extraction and "fact changed over time" cases, and runs deterministically | prompt s.6 | Yes | EPIC-04, EPIC-07 | FL-012, FL-067, FL-023, FL-069, FL-027, FL-028, FL-029, FL-039 |
+| REQ-30 | An eval set covers extraction and "fact changed over time" cases, and runs deterministically | prompt s.6 | Yes | EPIC-04, EPIC-07 | FL-012, FL-067, FL-023, FL-069, FL-027, FL-028, FL-029, FL-039, FL-078 |
 
 ### Later phases (4 to 6)
 

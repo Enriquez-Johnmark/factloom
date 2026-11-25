@@ -74,6 +74,7 @@ Factloom can take new information and record it as entities and facts with a **s
 | FL-022 | Secret check that refuses a write | 1 | FL-004 | Completed |
 | FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Completed |
 | FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Completed |
+| FL-078 | remember reads "we" as the configured repository | 1 | FL-069, FL-034 | Pending |
 | FL-024 | recordStructuredFacts use case | 1 | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 | Completed |
 | FL-025 | changeFact use case | 1 | FL-009, FL-010, FL-020, FL-022, FL-056 | Completed |
 
@@ -741,6 +742,56 @@ For the owner's review:
 - In `commit-message.yaml` the expected facts conflict with each other under the single-value rule: Vitest with no start and no end, and Jest with no start and an end at the commit's time, overlap. If both were extracted, `remember` would skip both. The case passes now because Jest is not required and the model, under the new rule, returns only Vitest. A change to the case is FL-029's, in its own commit, with a new review; none was made.
 
 **Owner's review.** On 2026-11-25 the owner confirmed in the session ("yes to all confirmed") the recording step this item gives to the owner: the recording runs made with the owner's key, the model, the token counts and the recordings' diff, including the re-recording of FL-062. The item is `Completed`.
+
+### FL-078: remember reads "we" as the configured repository
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 1 |
+| Depends on | FL-069, FL-034 |
+| Requirements | REQ-26, REQ-30 |
+| Components | `@factloom/graph-rag` (extraction instructions), `apps/mcp-server` (wiring, evals) |
+
+**Objective.** Let `remember` record a fact from a text that speaks of "we", "our" or "this repository" without naming it, by telling the extraction step which repository the configured namespace is about.
+
+**Background.** Found by the owner on the Mac in FL-038, on 2026-11-25: `remember` with the text "We use Vitest for unit tests." reached the model and returned no fact and nothing skipped, because the extraction instructions name a repository only "as its folder or package is named" and the text names none. Agents and people write "we" and "this repo" all the time, so the tool fails silently on the most common form of note. The namespace of the server, such as `repo:shop-api`, already says which repository its memory is about ([ADR 0011](../../architecture/adr/0011-namespace-on-every-row.md)).
+
+**Outcome.** "We use Vitest for unit tests." remembered in the namespace `repo:shop-api` records that shop-api uses Vitest.
+
+**Scope.**
+- An optional repository name given to `remember`, added to the extraction instructions as the subject of "we", "our", "us" and "this repository" when the text names no other repository.
+- The composition root deriving it from a namespace of the form `repo:<name>`; any other namespace gives none, and nothing changes.
+- New extraction cases with an unnamed subject, and the extraction and scenario recordings made again, because the instructions are part of each recording's key.
+
+**Non-goals.**
+- Guessing a repository from the working directory or git remote.
+- Any change for a text that names its repository: that name still wins.
+- A tool input for the repository name. The namespace is the one place it is configured.
+
+**Functional requirements.**
+1. `remember` takes the repository name through its dependencies, not its input, so that the tool's input schema does not change.
+2. With a name, the extraction instructions say that "we", "our", "us" and "this repository" mean the repository of that name when the text names no other. Without one, they are as before.
+3. `FACTLOOM_NAMESPACE=repo:shop-api` gives the name `shop-api`; a namespace not starting with `repo:` gives none.
+
+**Technical requirements.**
+1. The name is part of the stable instructions, not of the per-call input, so that prompt caching keeps working for one server.
+2. The recordings are made again with the record commands of FL-069 and FL-039; the diff is read for secrets.
+
+**Constraints.**
+- [`.claude/rules/testing.md`](../../../.claude/rules/testing.md), "Evals": replayed responses; a missing recording fails the run.
+
+**Acceptance criteria.**
+- [ ] A unit test shows that with a repository name the extraction instructions name it as the subject of "we", and without one they are unchanged.
+- [ ] A unit test shows `repo:shop-api` gives `shop-api` and `team:ops` gives no name.
+- [ ] At least two new extraction cases with an unnamed subject pass in replay, with the namespace's repository as subject.
+- [ ] Every extraction case and every timeline scenario still passes in replay after the recordings are made again.
+- [ ] On the owner's Mac, `remember` with "We use Vitest for unit tests." records a fact about the configured repository.
+- [ ] `pnpm check` exits 0.
+
+**Validation.** Unit tests, the extraction cases and scenarios in replay, one call on the owner's Mac.
+
+**Completion evidence.** The commits, the replay reports, the model identifier, and the Mac call.
 
 ### FL-024: recordStructuredFacts use case
 
