@@ -638,6 +638,8 @@ Rules broken by hand, each then restored:
       Tests  1184 passed (1184)
 ```
 
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the third commit, so the migration and its triggers ran on Apple Silicon: https://github.com/Enriquez-Johnmark/factloom/actions/runs/45607435136. It passed again at the fourth: https://github.com/Enriquez-Johnmark/factloom/actions/runs/45608030058.
+
 Differences from the item:
 
 - **A rejection carries the reason code `requested`**, the code for a change a person asked for; the item names none.
