@@ -33,6 +33,7 @@ export type { FactVerification, VerificationMethod, VerificationOutcome } from '
 export { FactVerificationSchema } from './fact-verification.ts';
 export type { Feedback, FeedbackSignal } from './feedback.ts';
 export { FeedbackSchema, FeedbackSignalSchema } from './feedback.ts';
+export type { FeedbackFollowUp, FeedbackResponder } from './feedback-responder.ts';
 export type {
   Entity,
   EntityId,

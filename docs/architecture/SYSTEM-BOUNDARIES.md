@@ -53,6 +53,7 @@ Each package exports only what another package needs. Everything else stays priv
 | Fact operations, phase 2 | `reviseValidTime`, with `ReviseValidTimeInput` and `ValidTimeRevision`; `adjustConfidence`, with `AdjustConfidenceInput`; `recordFeedback`, with `RecordFeedbackInput`; `purgeContent`, with `PurgeContentInput`, and `PURGED_MARKER` |
 | Fact operations, phase 3 | `mergeEntities`, with `MergeEntitiesInput`, `undoEntityMerge`, with `UndoEntityMergeInput`, and `EntityMerge`; `FactUsage`, the usage that `MemoryStore.recordFactUsage` writes |
 | Conflict judge, phase 2 | `ConflictJudge`, `ConflictJudgeInput`, `ConflictVerdict`, `JUDGE_CANDIDATE_LIMIT` |
+| Feedback responder, phase 2 | `FeedbackResponder`, and `FeedbackFollowUp`, what it did (FL-060) |
 | Test helpers | `createInMemoryStore`, `createFakeEmbedder`, `createScriptedLlm`, `createTestDeps` |
 
 The test helpers are ordinary exports of the one `index.ts`. They import no test framework, so nothing in `core`'s source does. The operations of phases 2 and 3 in [`INTERFACES.md`](INTERFACES.md) are added to this list in their phase.

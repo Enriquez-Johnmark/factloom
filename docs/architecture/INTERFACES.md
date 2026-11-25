@@ -196,7 +196,10 @@ export type ReasonCode =
   | 'source_changed'
   | 'verification_failed'
   | 'judged_ended'
-  | 'judged_wrong';
+  | 'judged_wrong'
+  | 'feedback_right'
+  | 'feedback_wrong'
+  | 'feedback_outdated';
 
 export type AuditAction =
   | 'entity.created'
@@ -758,6 +761,21 @@ export type ConflictJudge = (input: ConflictJudgeInput) => Promise<Result<readon
 - **No guessing.** A failed call, an answer outside the schema, an index out of range, a repeated index or a candidate left out give `llm_failed`, never a verdict.
 - **`JUDGE_CANDIDATE_LIMIT` is 10**, the number of similar memories retrieved in the experiments of the Mem0 paper ([contradiction detection research](../research/technical/contradiction-detection.md), finding 10). It bounds one LLM call. Phase 1's `remember` reads up to 50 candidates for its own two rules; FL-042 decides how the two limits meet when it wires the judge in.
 
+### Feedback responder
+
+Phase 2 (FL-060). `recordFeedback` decides nothing; a responder acts on recorded feedback with the operations above. The type is in `core`, so that `graph-rag` can receive one as a dependency of `giveFeedback` without importing `maintenance`, which implements it as `actOnFeedback`.
+
+```ts
+/** What followed from feedback: the change made to the fact, or 'none'. */
+export type FeedbackFollowUp = 'confidence_raised' | 'confidence_lowered' | 'retracted' | 'ended' | 'none';
+
+/** Acts on one recorded feedback under the domain's correction policy, and says what it did. */
+export type FeedbackResponder = (
+  deps: OperationDeps,
+  input: { readonly namespace: Namespace; readonly factId: FactId; readonly feedbackId: string },
+) => Promise<Result<FeedbackFollowUp>>;
+```
+
 ### Phase 3
 
 ```ts
@@ -938,9 +956,6 @@ export declare function changeFact(
     readonly trigger: Trigger;
   },
 ): Promise<Result<{ readonly invalidatedFactId: FactId; readonly replacement: FactWithSources | null }>>;
-
-/** Phase 2. What followed from feedback; always 'none' until feedback is acted on (FL-060). */
-export type FeedbackFollowUp = 'confidence_raised' | 'confidence_lowered' | 'retracted' | 'ended' | 'none';
 
 /** Phase 2. Records that a recalled fact was found right, wrong or out of date. Changes no fact. */
 export declare function giveFeedback(

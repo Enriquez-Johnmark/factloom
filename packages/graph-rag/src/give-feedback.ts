@@ -1,5 +1,6 @@
 import {
   type FactId,
+  type FeedbackFollowUp,
   type FeedbackSignal,
   type Namespace,
   type OperationDeps,
@@ -18,9 +19,6 @@ export type GiveFeedbackInput = {
   readonly comment: string | null;
   readonly trigger: Trigger;
 };
-
-/** What followed from feedback. Acting on feedback is FL-060; until then it is always `none`. */
-export type FeedbackFollowUp = 'confidence_raised' | 'confidence_lowered' | 'retracted' | 'ended' | 'none';
 
 /**
  * Puts on record that a recalled fact was found right, wrong or out of date. The comment is

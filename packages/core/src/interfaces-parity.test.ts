@@ -114,7 +114,10 @@ type RefReasonCode =
   | 'source_changed'
   | 'verification_failed'
   | 'judged_ended'
-  | 'judged_wrong';
+  | 'judged_wrong'
+  | 'feedback_right'
+  | 'feedback_wrong'
+  | 'feedback_outdated';
 type RefAuditAction =
   | 'entity.created'
   | 'source.recorded'
