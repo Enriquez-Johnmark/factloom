@@ -84,7 +84,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | FL-041 | Conflict judge | 2 | FL-040, FL-011, FL-019, FL-027, FL-028 | Under Review |
 | FL-042 | Automatic correction inside remember | 2 | FL-035, FL-041, FL-039 | Under Review |
 | FL-043 | Proposed changes: storage and operations | 2 | FL-042 | Under Review |
-| FL-070 | Human-approval policy in remember, with a command to list, approve and reject | 2 | FL-043, FL-042, FL-034 | Pending |
+| FL-070 | Human-approval policy in remember, with a command to list, approve and reject | 2 | FL-043, FL-042, FL-034 | Under Review |
 | FL-044 | reviseValidTime operation | 2 | FL-010 | Completed |
 | FL-045 | Confidence history and adjustConfidence | 2 | FL-015, FL-016, FL-017 | Completed |
 | FL-046 | Feedback operation and migration | 2 | FL-015, FL-022 | Completed |
@@ -653,7 +653,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 2 |
 | Depends on | FL-043, FL-042, FL-034 |
 | Requirements | REQ-17 (REQ-CA-16) |
@@ -698,18 +698,48 @@ Differences from the item:
 - [Architecture rules](../../../.claude/rules/architecture.md): an entry point translates and calls one use case or operation.
 
 **Acceptance criteria.**
-- [ ] A unit test shows that with a `human_approval` test domain, `remember` on a conflicting text leaves the stored fact live and current, stores one pending proposal, and returns the new fact in `skipped` with the reason `proposal_stored` and the proposal's identifier.
-- [ ] A unit test shows that with an `automatic` domain, `remember` behaves as in FL-042 and stores no proposal.
-- [ ] A test starts the command as a child process on a temporary database that holds one pending succession proposal, made with `proposeChange` in the test. The list form prints its identifier and exits 0. The approve form exits 0, and afterwards the stored fact is ended, the successor is current, and the audit entries of the approval carry the trigger `person`.
-- [ ] A test approves the same proposal a second time with the command and shows a non-zero exit code and `already_exists`.
-- [ ] A test rejects a pending proposal with the command and shows that no fact changed and the list form no longer prints it.
-- [ ] A test starts the command with no namespace and shows a non-zero exit code.
-- [ ] A test that lists the tools of the server built by the composition root finds no tool for approval.
-- [ ] `pnpm check` exits 0.
+- [x] A unit test shows that with a `human_approval` test domain, `remember` on a conflicting text leaves the stored fact live and current, stores one pending proposal, and returns the new fact in `skipped` with the reason `proposal_stored` and the proposal's identifier.
+- [x] A unit test shows that with an `automatic` domain, `remember` behaves as in FL-042 and stores no proposal.
+- [x] A test starts the command as a child process on a temporary database that holds one pending succession proposal, made with `proposeChange` in the test. The list form prints its identifier and exits 0. The approve form exits 0, and afterwards the stored fact is ended, the successor is current, and the audit entries of the approval carry the trigger `person`.
+- [x] A test approves the same proposal a second time with the command and shows a non-zero exit code and `already_exists`.
+- [x] A test rejects a pending proposal with the command and shows that no fact changed and the list form no longer prints it.
+- [x] A test starts the command with no namespace and shows a non-zero exit code.
+- [x] A test that lists the tools of the server built by the composition root finds no tool for approval.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests of `remember` with a test domain whose policy is `human_approval`. Child-process tests of the command. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the README section; the updated `INTERFACES.md` and `MCP-TOOLS.md`.
+
+**Recorded evidence.** Done on 2026-11-25 on Linux x64 with Node.js v22.23.4. Every acceptance criterion is met. The item is `Under Review` because FL-043 and FL-042, on which it depends, are.
+
+Commits: `feat(storage): clear a proposal's new fact when its source is purged`; `docs: describe purge of a proposal's new fact and close Q-85`; `feat(graph-rag): store a proposal in remember under the policy human_approval`; `feat(mcp-server): add the proposals command to list, approve and reject proposed changes`.
+
+Built:
+
+- **Q-85, settled first, as the constraints ask.** Migration `0010_purge_proposed_change.sql` replaces the trigger of migration 9 so that a proposal's `new_fact` may change once more, to a statement of `[purged]`, once its source is purged. Purging a source now replaces the statement, and the value when the object is a value, of every proposal it explains, in both stores and the same commit, and `approveProposedChange` refuses a proposal whose source was purged. The purge test of FL-061 holds a proposal quoting the marker and finds the marker in no column; contract case P7 shows it for both stores. Q-85 is closed.
+- **`remember`.** With a judge, a conflict now goes to the judge under either policy. Under `human_approval`, where FL-042 ends or invalidates, `remember` calls `proposeChange` with the verdict, the stored fact, the moment of change, the new fact and the text as source, with the reason code `judged_ended` or `judged_wrong`. The stored fact is not changed, and the new fact is returned in `skipped` with the reason `proposal_stored`. `SkippedFact` gains `proposalId`, null for the other reasons, and the tool output `proposal_id`, in `INTERFACES.md`, `MCP-TOOLS.md` and the output schema.
+- **The command.** `factloom proposals list | approve <id> | reject <id>`, parsed in `read-command.ts` and run by `run-proposals-command.ts`, each form one read or one operation with the trigger `person`. `runPersonCommand` is the one function that routes a command argument, to purge or to proposals. The list prints the identifier, kind, proposal time, stored fact and both statements; no form prints a source's content. The app's README has a section and three rows in its table of modes.
+
+Tests:
+
+- `remember` under a `human_approval` test domain stores one pending proposal, leaves the stored fact live and current, and returns the new fact in `skipped` with `proposal_stored` and the proposal's identifier; under `automatic` it changes the fact as in FL-042 and stores no proposal.
+- As a child process on a temporary database holding one pending succession proposal made with `proposeChange`: the list prints its identifier and exits 0; approving exits 0, the stored fact is ended, the successor is current, and the approval's audit entry carries `person`; approving again exits non-zero with `already_exists`; rejecting changes no fact and the list no longer prints it; with no namespace the command exits non-zero.
+- The tools of the composition root's server include none whose name speaks of approving, rejecting or proposals.
+- The trigger `agent` in the command, broken by hand and restored, failed the three child-process tests that decide.
+
+`pnpm check`:
+
+```text
+      Tests  1194 passed (1194)
+```
+
+Differences from the item:
+
+- **The child-process tests run the test entry `serve-with-fake-embedder.ts`, not `main.ts`.** Approving records a fact, which needs its vector, and the local model is not in the cache during `pnpm check`. The test entry now routes a command argument through the same `runPersonCommand` as `main.ts`.
+- **The judge is asked under `human_approval` too.** FL-042 asked it only under `automatic`; a proposal needs the verdict.
+- **Q-85 was settled in this item by building purge for proposals**, not only deciding it, so that `remember` never stores text purge cannot reach.
+
 
 ### FL-044: reviseValidTime operation
 
