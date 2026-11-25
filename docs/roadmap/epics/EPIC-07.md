@@ -77,7 +77,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-029 | Extraction cases | 1 | FL-018, FL-027 | Completed |
 | FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Completed |
 | FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Completed |
-| FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Pending |
+| FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Under Review |
 | FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Completed |
 | FL-076 | Differential tests between the in-memory store and SQLite | 1 | FL-075, FL-068, FL-016, FL-017 | Completed |
 | FL-077 | Mutation-testing trial on core | 1 | FL-008, FL-009, FL-010, FL-011 | Completed |
@@ -745,7 +745,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 1 |
 | Depends on | FL-038 |
 | Requirements | REQ-37 |
@@ -786,16 +786,37 @@ Differences from the item:
 - Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
 
 **Acceptance criteria.**
-- [ ] The task set and its checks are committed in a commit that precedes the commit of the first results.
-- [ ] Unit tests of the report's arithmetic (totals, differences, medians) pass under `pnpm check`.
+- [x] The task set and its checks are committed in a commit that precedes the commit of the first results.
+- [x] Unit tests of the report's arithmetic (totals, differences, medians) pass under `pnpm check`.
 - [ ] The owner runs the runner once per configuration and commits the raw usage output and the generated report. The report names the agent, the model, the date and the number of tasks.
 - [ ] The report has, for each task and in total, input tokens, output tokens, tool calls and pass or fail, with and without Factloom.
 - [ ] The root `README.md` states the measured result in one or two sentences that match the report, including when the result is no saving or a cost.
-- [ ] `pnpm check` still exits 0 and does not start the runner.
+- [x] `pnpm check` still exits 0 and does not start the runner.
 
 **Validation.** Unit tests for the report arithmetic on every check. The comparison itself is a manual run by the owner, because it needs a signed-in agent and spends tokens.
 
 **Completion evidence.** The commit of the task set, the commit of the raw output and report, and the sentence added to `README.md`.
+
+**Recorded evidence.** Prepared on 2026-11-25 on Linux x64 with Node.js v22.23.4, in a separate git worktree, and cherry-picked onto `main`. No agent session was started and no token was spent. The item is `Under Review`: the run, its raw output, the report and the `README.md` sentence (criteria 3 to 5) are the owner's, because they need a signed-in agent.
+
+Commits, in order: `test(mcp-server): add the task set and checks of the agent comparison`, which comes before everything that depends on it; `feat(mcp-server): read token use and tool calls from a Claude Code session`; `feat(mcp-server): compare the agent runs and write the comparison report`; `feat(mcp-server): add the runner of the agent comparison`.
+
+Built, in `apps/mcp-server/evals/agent-comparison/`: a fixture repository, `invoice-service`, with its own `node --test` tests; ten tasks of two sessions each, the first stating a decision, a convention or a cause and the second depending on it; a check per task, copied in only after the second session, with a reference answer that shows it can pass; a reader of Claude Code's stream-json output; the arithmetic of totals, per-task differences and medians; the report with a plain statement for a saving, no clear difference and a cost; and the runner, `pnpm run compare:agent`, with `--dry-run`, one configuration per run, a clean copy and a new database and namespace per task, and every result file passed through `checkForSecrets` before it is written. The outcome rule is fixed in code before any run: fewer checks passed with Factloom is a cost; otherwise a median per-task change in tokens of -10% or less is a saving, +10% or more a cost, and anything between no clear difference.
+
+How Claude Code reports usage from a non-interactive run was read on 2026-11-25 from https://code.claude.com/docs/en/headless, https://code.claude.com/docs/en/cli-reference, https://code.claude.com/docs/en/agent-sdk/cost-tracking, https://code.claude.com/docs/en/agent-sdk/typescript, https://code.claude.com/docs/en/mcp, https://code.claude.com/docs/en/permissions and https://code.claude.com/docs/en/memory. Confirmed there: `-p` with `--output-format stream-json`, the result message's `usage` and per-model `modelUsage` (which includes subagents and which the page says to prefer), the `system/init` event with the model and the MCP servers' status, `--strict-mcp-config` and `--mcp-config`, and that auto memory is on by default. Unverified until the first run: whether stream-json needs `--verbose` (the runner passes it), whether `--strict-mcp-config` with no `--mcp-config` loads no server (the runner checks the servers of every session), whether the server's `env` overrides an inherited key, and whether `modelUsage` is cumulative across several results. Codex's `codex exec --json` usage was read at https://learn.chatgpt.com/docs/non-interactive-mode; Codex is not implemented, because the item asks for one agent.
+
+67 tests, none of which starts `claude`: every check fails on the untouched fixture and passes with its reference answer; the stream reader; the arithmetic against hand-worked values; the three statements; the agent's arguments; and a result file withheld because it holds a credential. Three breaks of the arithmetic by hand each failed a test. The whole `--run` path was run with a stand-in `claude` script that prints canned output.
+
+`pnpm check`:
+
+```text
+      Tests  1278 passed (1278)
+```
+
+Differences from the item: reference answers were added; the outcome rule is the agent's definition, as the item gives none; the owner's other MCP servers and claude.ai connectors are off in both configurations, so only Factloom differs; Factloom runs with no key for `remember`, so the agent records facts with `record_fact`; and the fixture's code is in `lib/`, because the boundary lint reads `**/src/**`.
+
+For the owner: in a plain terminal, from `apps/mcp-server`, `pnpm run compare:agent --dry-run`, then `pnpm run compare:agent --run --configuration without --model <model>` and `pnpm run compare:agent --run --configuration with --model <model> --results <the first run's directory>`. That is 40 sessions in all, each cut off after 30 minutes. Then commit the results directory and add the README sentence that matches the report.
+
 
 ### FL-075: Property-based tests of the time rules
 
