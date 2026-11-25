@@ -83,6 +83,7 @@ The SQL, the migration runner and the row mappers are internal. So is the storag
 | Group | Exports |
 |---|---|
 | Conflict judge | `judgeConflicts`, with `JudgeConflictsDeps`: it implements `ConflictJudge` from `core` (FL-041) |
+| Feedback responder | `actOnFeedback`, which implements `FeedbackResponder` from `core`, and its two steps `FEEDBACK_CONFIDENCE_RAISE` and `FEEDBACK_CONFIDENCE_DROP` (FL-060) |
 
 Its prompt and the schema of the model's answer are internal. It builds no `ChangeSet`, calls no `MemoryStore.commit` and contains no SQL: every change it makes is a call to a fact operation in `core`.
 

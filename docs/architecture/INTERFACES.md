@@ -776,6 +776,19 @@ export type FeedbackResponder = (
 ) => Promise<Result<FeedbackFollowUp>>;
 ```
 
+- **A fixed table, no LLM.** `actOnFeedback` reads the feedback with `listFeedback` and the fact with `getFact`, and then calls one fact operation, in a commit of its own after the one that recorded the feedback:
+
+  | Signal | Policy `automatic` | Policy `human_approval` | Reason code |
+  |---|---|---|---|
+  | `right` | `adjustConfidence` up by `FEEDBACK_CONFIDENCE_RAISE`, to at most 1: `confidence_raised` | The same | `feedback_right` |
+  | `wrong` | `invalidateFact` with no replacement, a retraction: `retracted` | `adjustConfidence` down by `FEEDBACK_CONFIDENCE_DROP`, to at least 0: `confidence_lowered` | `feedback_wrong` |
+  | `outdated` | `endFact` with `validTo` at the feedback's `recordedAt` and no successor: `ended` | `adjustConfidence` down by `FEEDBACK_CONFIDENCE_DROP`: `confidence_lowered` | `feedback_outdated` |
+
+- **The steps are 0.1 up and 0.2 down.** No source gives evidence for a particular value. The drop is the step a contradicted verification takes (FL-051), and the rise is half of it, so that one confirmation does not undo one report.
+- **Every follow-up change has the trigger `feedback`**; the feedback itself keeps the trigger of whoever gave it. A retraction or an end is explained by a new source of kind `feedback`, observed at the feedback's `recordedAt`, with no content: what was said is the content of the feedback's own source.
+- **Nothing is written, and the result is `none`,** when the fact is no longer live, when the confidence is already at the bound the step moves towards, and, under `automatic`, on `outdated` for a fact whose `validTo` is already at or before the feedback, since ending it then would extend it.
+- **It builds no change set and calls no store method that writes.** Errors: `not_found` for feedback that is not on the fact, and the errors of the operation it calls.
+
 ### Phase 3
 
 ```ts

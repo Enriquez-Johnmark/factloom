@@ -1,3 +1,4 @@
+export { actOnFeedback, FEEDBACK_CONFIDENCE_DROP, FEEDBACK_CONFIDENCE_RAISE } from './act-on-feedback.ts';
 export type { JudgeConflictsDeps } from './judge-conflicts.ts';
 export { judgeConflicts } from './judge-conflicts.ts';
 export type { JobCounts, MaintenanceJob, MaintenanceReport } from './run-maintenance.ts';
