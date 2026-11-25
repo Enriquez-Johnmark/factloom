@@ -70,7 +70,7 @@ function describeSource(source: Source): string {
  */
 export async function runPurgeCommand(
   deps: PurgeCommandDeps,
-  command: Exclude<Command, { readonly kind: 'serve' } | { readonly kind: 'maintenance' }>,
+  command: Extract<Command, { readonly kind: 'list_sources' | 'purge' | 'invalid' }>,
 ): Promise<number> {
   if (command.kind === 'invalid') {
     deps.write(`invalid_input: ${command.message}`);

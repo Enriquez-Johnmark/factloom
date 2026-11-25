@@ -1,7 +1,7 @@
 // The composition root of the MCP server: the one place that reads the environment and names
 // the concrete implementations. Standard output belongs to the protocol, so everything a
-// person should read goes to standard error. With the argument `purge`, it runs the purge
-// command instead, which a person runs and which is not an MCP server (FL-072).
+// person should read goes to standard error. With the argument `purge` or `proposals`, it runs
+// a command a person runs instead, which is not an MCP server (FL-072, FL-070).
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -22,7 +22,7 @@ import { createLocalEmbedder } from './create-local-embedder.ts';
 import { buildMaintenanceJobs } from './maintenance-jobs.ts';
 import { readCommand } from './read-command.ts';
 import { readConfiguration } from './read-configuration.ts';
-import { runPurgeCommand } from './run-purge-command.ts';
+import { runPersonCommand } from './run-person-command.ts';
 import { serveFactloom } from './serve-factloom.ts';
 
 const log: Logger = (message) => {
@@ -95,9 +95,11 @@ if (command.kind === 'maintenance') {
 }
 
 if (command.kind !== 'serve') {
-  const exitCode = await runPurgeCommand(
+  const exitCode = await runPersonCommand(
     {
       store: opened.value,
+      embedder,
+      domain: softwareDevelopmentDomain,
       namespace,
       now: () => toTimestamp(new Date()),
       newId: () => randomUUID(),

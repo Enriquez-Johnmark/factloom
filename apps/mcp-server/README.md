@@ -88,6 +88,13 @@ The agent's own plan and Factloom's key are separate ([`MCP-TOOLS.md`](../../doc
 | `node src/main.ts maintenance` | Runs the maintenance jobs once, prints one JSON report and exits (FL-048) |
 | `node src/main.ts purge sources <fact-id>` | Lists the sources behind a fact, without their content (FL-072) |
 | `node src/main.ts purge source <source-id> --reason secret_stored` | Purges one source ([ADR 0012](../../docs/architecture/adr/0012-purge-is-the-one-exception.md)) |
+| `node src/main.ts proposals list` | Lists the pending proposals, oldest first (FL-070) |
+| `node src/main.ts proposals approve <proposal-id>` | Makes the proposed change, as a person |
+| `node src/main.ts proposals reject <proposal-id>` | Rejects the proposal; no fact changes |
+
+## Approving proposed changes
+
+Under a domain whose correction policy is `human_approval`, `remember` does not end or correct a stored fact itself: it stores a proposal and returns the new fact in `skipped` with the reason `proposal_stored`. A person decides with the `proposals` command. `list` prints one line per pending proposal, tab-separated: its identifier, `succession` or `correction`, when it was proposed, the stored fact's identifier and statement, and the new fact's statement. `approve` makes the change in one commit, with the trigger `person`, and prints the identifiers of the changed and the new fact; `reject` changes no fact. Both exit with 1 and the error code when they cannot: `not_found`, `already_exists` for a proposal already decided, `already_invalidated` or `conflict` when memory changed since. No MCP tool approves a proposal, because an agent must not approve its own. The software development domain uses `automatic`, so its namespaces hold no proposals.
 
 ## Running maintenance
 

@@ -63,4 +63,10 @@ describe('the tools of the server', () => {
       expect(properties.predicate?.description).toContain(predicate.name);
     }
   });
+
+  it('offers no tool that approves or rejects a proposal, because an agent must not decide its own', async () => {
+    const tools = await listTools();
+
+    expect(tools.map((tool) => tool.name).filter((name) => /approv|reject|propos/u.test(name))).toEqual([]);
+  });
 });
