@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-25:** the first feature code exists. 65 of 77 work items are `Completed`: FL-001, FL-002, FL-003, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-024, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-035, FL-036, FL-037, FL-040, FL-044, FL-045, FL-046, FL-047, FL-049, FL-050, FL-051, FL-052, FL-053, FL-054, FL-056, FL-057, FL-058, FL-059, FL-061, FL-062, FL-063, FL-065, FL-066, FL-067, FL-068, FL-071, FL-072, FL-073, FL-075, FL-076, FL-077. 10 are `Under Review`, waiting for the owner: FL-038, FL-039, FL-041, FL-042, FL-043, FL-048, FL-055, FL-064, FL-069, FL-070. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-25:** the first feature code exists. 72 of 77 work items are `Completed`: FL-001, FL-002, FL-003, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-024, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-035, FL-036, FL-037, FL-039, FL-040, FL-041, FL-042, FL-043, FL-044, FL-045, FL-046, FL-047, FL-049, FL-050, FL-051, FL-052, FL-053, FL-054, FL-056, FL-057, FL-058, FL-059, FL-061, FL-062, FL-063, FL-064, FL-065, FL-066, FL-067, FL-068, FL-069, FL-070, FL-071, FL-072, FL-073, FL-075, FL-076, FL-077. 3 are `Under Review`, waiting for the owner: FL-038, FL-048, FL-055. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -90,7 +90,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-058](epics/EPIC-06.md#fl-058-recall-tool-end-to-end) | recall tool end to end | EPIC-06 | FL-008, FL-034, FL-031 | Completed |
 | [FL-066](epics/EPIC-07.md#fl-066-performance-benchmark-and-budgets) | Performance benchmark and budgets | EPIC-07 | FL-002, FL-058, FL-035 | Completed |
 | [FL-068](epics/EPIC-03.md#fl-068-sqlite-single-value-rule-error-mapping-and-two-writers-on-one-file) | SQLite single-value rule, error mapping and two writers on one file | EPIC-03 | FL-014, FL-067 | Completed |
-| [FL-069](epics/EPIC-04.md#fl-069-extraction-replay-run-and-recordings) | Extraction replay run and recordings | EPIC-04 | FL-023, FL-029, FL-028, FL-019 | Under Review |
+| [FL-069](epics/EPIC-04.md#fl-069-extraction-replay-run-and-recordings) | Extraction replay run and recordings | EPIC-04 | FL-023, FL-029, FL-028, FL-019 | Completed |
 | [FL-074](epics/EPIC-07.md#fl-074-token-and-tool-call-comparison-with-and-without-factloom) | Token and tool-call comparison with and without Factloom | EPIC-07 | FL-038 | Pending |
 | [FL-075](epics/EPIC-07.md#fl-075-property-based-tests-of-the-time-rules) | Property-based tests of the time rules | EPIC-07 | FL-056, FL-067 | Completed |
 | [FL-076](epics/EPIC-07.md#fl-076-differential-tests-between-the-in-memory-store-and-sqlite) | Differential tests between the in-memory store and SQLite | EPIC-07 | FL-075, FL-068, FL-016, FL-017 | Completed |
@@ -100,11 +100,11 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 
 | ID | Title | Epic | Depends on | Status |
 |---|---|---|---|---|
-| [FL-039](epics/EPIC-07.md#fl-039-scenario-runner) | Scenario runner | EPIC-07 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Under Review |
+| [FL-039](epics/EPIC-07.md#fl-039-scenario-runner) | Scenario runner | EPIC-07 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Completed |
 | [FL-040](epics/EPIC-08.md#fl-040-create-the-maintenance-package-and-its-boundary-rules) | Create the maintenance package and its boundary rules | EPIC-08 | FL-001 | Completed |
-| [FL-041](epics/EPIC-08.md#fl-041-conflict-judge) | Conflict judge | EPIC-08 | FL-040, FL-011, FL-019, FL-027, FL-028 | Under Review |
-| [FL-042](epics/EPIC-08.md#fl-042-automatic-correction-inside-remember) | Automatic correction inside remember | EPIC-08 | FL-035, FL-041, FL-039 | Under Review |
-| [FL-043](epics/EPIC-08.md#fl-043-proposed-changes-storage-and-operations) | Proposed changes: storage and operations | EPIC-08 | FL-042 | Under Review |
+| [FL-041](epics/EPIC-08.md#fl-041-conflict-judge) | Conflict judge | EPIC-08 | FL-040, FL-011, FL-019, FL-027, FL-028 | Completed |
+| [FL-042](epics/EPIC-08.md#fl-042-automatic-correction-inside-remember) | Automatic correction inside remember | EPIC-08 | FL-035, FL-041, FL-039 | Completed |
+| [FL-043](epics/EPIC-08.md#fl-043-proposed-changes-storage-and-operations) | Proposed changes: storage and operations | EPIC-08 | FL-042 | Completed |
 | [FL-044](epics/EPIC-08.md#fl-044-revisevalidtime-operation) | reviseValidTime operation | EPIC-08 | FL-010 | Completed |
 | [FL-045](epics/EPIC-08.md#fl-045-confidence-history-and-adjustconfidence) | Confidence history and adjustConfidence | EPIC-08 | FL-015, FL-016, FL-017 | Completed |
 | [FL-046](epics/EPIC-08.md#fl-046-feedback-operation-and-migration) | Feedback operation and migration | EPIC-08 | FL-015, FL-022 | Completed |
@@ -112,7 +112,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-059](epics/EPIC-08.md#fl-059-givefeedback-tool) | give_feedback tool | EPIC-08 | FL-046, FL-036, FL-058 | Completed |
 | [FL-060](epics/EPIC-08.md#fl-060-acting-on-feedback) | Acting on feedback | EPIC-08 | FL-046, FL-045, FL-042 | Pending |
 | [FL-061](epics/EPIC-08.md#fl-061-purge-operation) | Purge operation | EPIC-08 | FL-047, FL-016, FL-017 | Completed |
-| [FL-070](epics/EPIC-08.md#fl-070-human-approval-policy-in-remember-with-a-command-to-list-approve-and-reject) | Human-approval policy in remember, with a command to list, approve and reject | EPIC-08 | FL-043, FL-042, FL-034 | Under Review |
+| [FL-070](epics/EPIC-08.md#fl-070-human-approval-policy-in-remember-with-a-command-to-list-approve-and-reject) | Human-approval policy in remember, with a command to list, approve and reject | EPIC-08 | FL-043, FL-042, FL-034 | Completed |
 | [FL-072](epics/EPIC-08.md#fl-072-purge-command) | Purge command | EPIC-08 | FL-061, FL-034 | Completed |
 
 ### Phase 3: Self-healing
@@ -129,7 +129,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-055](epics/EPIC-09.md#fl-055-usage-tracking) | Usage tracking | EPIC-09 | FL-015, FL-031, FL-058 | Under Review |
 | [FL-062](epics/EPIC-09.md#fl-062-deterministic-verification-manifest-version-check-and-succession) | Deterministic verification: manifest version check and succession | EPIC-09 | FL-050, FL-018 | Completed |
 | [FL-063](epics/EPIC-09.md#fl-063-undo-a-merge-and-refuse-a-conflicting-merge) | Undo a merge and refuse a conflicting merge | EPIC-09 | FL-052 | Completed |
-| [FL-064](epics/EPIC-09.md#fl-064-duplicate-entity-detection-by-similarity) | Duplicate entity detection by similarity | EPIC-09 | FL-053, FL-028 | Under Review |
+| [FL-064](epics/EPIC-09.md#fl-064-duplicate-entity-detection-by-similarity) | Duplicate entity detection by similarity | EPIC-09 | FL-053, FL-028 | Completed |
 | [FL-065](epics/EPIC-09.md#fl-065-archive-and-unarchive-operations) | Archive and unarchive operations | EPIC-09 | FL-055, FL-058 | Completed |
 | [FL-071](epics/EPIC-09.md#fl-071-deterministic-verification-function-check-by-text-search) | Deterministic verification: function check by text search | EPIC-09 | FL-050, FL-018 | Completed |
 | [FL-073](epics/EPIC-09.md#fl-073-archived-facts-left-out-of-recall-and-the-archiving-job) | Archived facts left out of recall, and the archiving job | EPIC-09 | FL-065, FL-048, FL-058 | Completed |
