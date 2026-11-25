@@ -2,7 +2,7 @@
 // `node --test` runs it with every other test there, so an answer that breaks the existing tests
 // fails as well.
 import { spawn } from 'node:child_process';
-import { copyFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 /** Where the checks are kept, out of the agent's sight until the second session has ended. */
@@ -28,6 +28,8 @@ export type CheckOutcome = {
 
 /** Copies the check of a task into the working tree and runs every test there with `node --test`. */
 export async function runTaskCheck(directory: string, taskId: string): Promise<CheckOutcome> {
+  // The agent may have moved or removed the test directory; the check still runs.
+  mkdirSync(join(directory, 'test'), { recursive: true });
   copyFileSync(join(CHECKS_DIRECTORY, `${taskId}.test.mjs`), join(directory, 'test', CHECK_FILE_NAME));
   const child = spawn(process.execPath, ['--test'], {
     cwd: directory,

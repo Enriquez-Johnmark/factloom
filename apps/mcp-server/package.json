@@ -9,7 +9,8 @@
     "record:judge": "node src/record-judge.ts",
     "record:verification": "node src/record-verification.ts",
     "record:entities": "node src/record-entities.ts",
-    "record:scenarios": "node src/record-scenarios.ts"
+    "record:scenarios": "node src/record-scenarios.ts",
+    "compare:agent": "node evals/agent-comparison/run-agent-comparison.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",
