@@ -2,6 +2,7 @@ import type {
   ConflictJudge,
   Domain,
   Embedder,
+  FeedbackResponder,
   LlmClient,
   MemoryStore,
   Namespace,
@@ -23,6 +24,8 @@ export type ServerDeps = {
   readonly llm: LlmClient;
   /** Used only by `remember`, to decide whether a stored fact gives way to a new one (FL-042). */
   readonly judge?: ConflictJudge;
+  /** Used only by `giveFeedback`, to act on feedback once it is recorded (FL-060). */
+  readonly feedbackResponder?: FeedbackResponder;
   readonly namespace: Namespace;
   readonly now: () => Timestamp;
   readonly newId: () => string;

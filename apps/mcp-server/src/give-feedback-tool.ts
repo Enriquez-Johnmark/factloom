@@ -11,7 +11,9 @@ const GiveFeedbackOutputSchema = z.object({
 
 /**
  * Registers `give_feedback`: passes on that a recalled fact was found right, wrong or out of
- * date. It records the signal and changes no fact, so it is not destructive.
+ * date. It records the signal, and the feedback responder in the dependencies may then change
+ * the fact's confidence or retract or end it (FL-060). Nothing is deleted, so it is not
+ * destructive.
  */
 export const registerGiveFeedbackTool: RegisterTool = (server, deps) => {
   server.registerTool(
