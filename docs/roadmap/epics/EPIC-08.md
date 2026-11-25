@@ -83,7 +83,7 @@ When new information conflicts with a stored fact, Factloom resolves the **confl
 | FL-040 | Create the maintenance package and its boundary rules | 2 | FL-001 | Completed |
 | FL-041 | Conflict judge | 2 | FL-040, FL-011, FL-019, FL-027, FL-028 | Under Review |
 | FL-042 | Automatic correction inside remember | 2 | FL-035, FL-041, FL-039 | Under Review |
-| FL-043 | Proposed changes: storage and operations | 2 | FL-042 | Pending |
+| FL-043 | Proposed changes: storage and operations | 2 | FL-042 | Under Review |
 | FL-070 | Human-approval policy in remember, with a command to list, approve and reject | 2 | FL-043, FL-042, FL-034 | Pending |
 | FL-044 | reviseValidTime operation | 2 | FL-010 | Completed |
 | FL-045 | Confidence history and adjustConfidence | 2 | FL-015, FL-016, FL-017 | Completed |
@@ -514,7 +514,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 2 |
 | Depends on | FL-042 |
 | Requirements | REQ-17 (REQ-CA-16) |
@@ -564,20 +564,88 @@ The item was split to fit one session. It keeps the storage and the three operat
 - [`SCHEMA.md`](../../architecture/SCHEMA.md), rule 7: a proposal belongs to one namespace and refers only to facts in it.
 
 **Acceptance criteria.**
-- [ ] Contract suite cases pass against both stores: a recorded proposal is returned by the read; an approved or rejected one is not; a proposal for a fact in another namespace is `not_found`; deciding twice is `already_exists`.
-- [ ] A unit test shows that `proposeChange` stores one pending proposal and leaves the stored fact live and current.
-- [ ] A unit test with a fixed clock shows that approving a succession proposal ends the stored fact and records the successor, that both new rows have the approval time as `createdAt`, and that a read with a known-at date between proposal and approval returns the stored fact unchanged.
-- [ ] A unit test shows the proposal is marked approved and the facts are changed in one commit: with a store that fails the commit, neither happens.
-- [ ] A unit test shows approval with trigger `agent` is `invalid_input`.
-- [ ] A unit test shows that rejecting a proposal changes no fact, and that the proposal is no longer returned by the read of pending proposals.
-- [ ] A unit test shows that approving a proposal whose stored fact has been invalidated since returns `already_invalidated` and leaves the proposal pending.
-- [ ] A SQLite adapter test shows a direct `UPDATE` of a decided proposal and a `DELETE` of any proposal are refused by triggers.
+- [x] Contract suite cases pass against both stores: a recorded proposal is returned by the read; an approved or rejected one is not; a proposal for a fact in another namespace is `not_found`; deciding twice is `already_exists`.
+- [x] A unit test shows that `proposeChange` stores one pending proposal and leaves the stored fact live and current.
+- [x] A unit test with a fixed clock shows that approving a succession proposal ends the stored fact and records the successor, that both new rows have the approval time as `createdAt`, and that a read with a known-at date between proposal and approval returns the stored fact unchanged.
+- [x] A unit test shows the proposal is marked approved and the facts are changed in one commit: with a store that fails the commit, neither happens.
+- [x] A unit test shows approval with trigger `agent` is `invalid_input`.
+- [x] A unit test shows that rejecting a proposal changes no fact, and that the proposal is no longer returned by the read of pending proposals.
+- [x] A unit test shows that approving a proposal whose stored fact has been invalidated since returns `already_invalidated` and leaves the proposal pending.
+- [x] A SQLite adapter test shows a direct `UPDATE` of a decided proposal and a `DELETE` of any proposal are refused by triggers.
 
-- [ ] `pnpm check` exits 0.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Contract suite against both stores. Unit tests of the three operations. SQLite adapter tests for the triggers. `pnpm check`.
 
 **Completion evidence.** The commit; the passing check output; the updated `INTERFACES.md` and `SCHEMA.md`.
+
+**Recorded evidence.** Done on 2026-11-25 on Linux x64 with Node.js v22.23.4, with the owner's approval to go ahead while FL-042, on which it depends, is under review. Every acceptance criterion is met. The item is `Under Review` because FL-042 is.
+
+Commits, in order:
+
+1. `feat(storage): add the proposed change migration`;
+2. `test(storage): expect the ninth migration when a new file is opened`;
+3. `feat(core): add record_proposal, decide_proposal and the read of pending proposals to both stores`;
+4. `feat(core): add proposeChange, approveProposedChange and rejectProposedChange`;
+5. `docs: add Q-85, purge does not yet reach a proposal's new fact`.
+
+The first commit does not pass `pnpm check` on its own: the test of a new file's migrations still listed eight. It was committed because the check's failure was not read before the commit; the second commit fixes it. Neither was pushed before the second, and history was not rewritten.
+
+Built:
+
+- **The table.** `proposed_change`, migration `0009_add_proposed_change.sql`: the stored fact, the kind, `changed_at` for a succession, `new_fact` as JSON, the source, the reason code, `proposed_at`, `state` and `decided_at`. CHECK constraints tie `changed_at` to a succession and `decided_at` to a decision. Triggers refuse every delete and every update but deciding a pending proposal once, in the style of `entity_merge_changes_only_by_undo`. A partial index serves the pending read.
+- **The types.** `ProposedChange` and `FactDraftSchema` in `core`, with the operation `proposal`, the actions `proposal.recorded`, `proposal.approved` and `proposal.rejected`, and the target kind `proposal`, in the code, `INTERFACES.md` and the parity test.
+- **The changes.** `record_proposal` stores a pending proposal whose stored fact and source are in the namespace; `decide_proposal` decides a pending one once, at the change set's `occurredAt`, not before its `proposedAt`. Both stores apply them with the same refusals.
+- **The read.** `MemoryStore.listPendingProposals`: pending proposals of a namespace, oldest first, each with its stored fact.
+- **The operations.** `proposeChange` refuses a stored fact that is not live and a succession that would end it before it began, then commits the source and the proposal. `approveProposedChange` requires the trigger `person` and builds the change set of `endFact` or `invalidateFact` from the stored input at the time of approval, with the proposal's source, which is not recorded again, and the decision in the same commit. `rejectProposedChange` requires `person` and commits the decision. To build without committing, `endFact` and `invalidateFact` were each split into a plan step and a commit step, drawing identifiers in the same order as before; every earlier test of both still passes.
+- **Purge.** The source is a source row; the eleven columns of `proposed_change` are classified in the inventory test of FL-061, `new_fact` as content.
+
+Contract cases, against both stores:
+
+- **P1:** a recorded proposal is returned pending, oldest first, with its stored fact, and changes no fact.
+- **P2:** an approved and a rejected proposal are no longer returned, and each has its decision in the audit log.
+- **P3:** deciding a decided proposal returns `already_exists`.
+- **P4:** deciding a proposal that does not exist returns `not_found`.
+- **P5:** a proposal for a fact that does not exist returns `not_found`.
+- **P6:** a decision before the proposal's time is `invalid_input`.
+- **N2b:** a proposal for a fact of the other namespace returns `not_found`, and neither namespace's read returns it.
+
+Unit tests, with the in-memory store and a fixed clock:
+
+- `proposeChange` stores one pending proposal and leaves the stored fact live and current; it refuses a succession before the stored fact began.
+- Approving a succession ends the stored fact and records the successor, both with the approval time as `createdAt`, and a read with a known-at date between proposal and approval returns the stored fact unchanged.
+- With a store that fails only a commit writing a fact, approval leaves the facts as they were and the proposal pending.
+- Approval with the trigger `agent` is `invalid_input`.
+- Rejecting changes no fact and the proposal is no longer pending; rejecting again is `already_exists`, and an unknown proposal `not_found`.
+- Approving after the stored fact was invalidated returns `already_invalidated` and leaves the proposal pending.
+- Approving a correction invalidates the stored fact, and the replacement is explained by the proposal's source, with trigger `person` and the proposal's reason code.
+
+SQLite adapter tests, in `proposed-change-migration.test.ts`: a `DELETE` of a pending or a decided proposal, an `UPDATE` of its stored fact, an `UPDATE` that changes `new_fact` along with the decision, and a second decision are refused by the triggers; a succession with no moment of change, a decision with no time and a correction with a moment are refused by CHECK constraints; and the migration applies to a database the earlier ones created.
+
+Rules broken by hand, each then restored:
+
+| Break | Test that failed |
+|---|---|
+| SQLite decides a decided proposal again | P3, against the SQLite store |
+| The in-memory read returns decided proposals | P2, against the in-memory store |
+| Any trigger may decide | "refuses an approval whose trigger is agent with invalid_input" |
+| The decision committed on its own, before the facts | "marks the proposal approved and changes the facts in one commit" |
+| The ended copy recorded at the proposal's time | "ends the stored fact and records the successor, both recorded at the time of approval" |
+
+`pnpm check`:
+
+```text
+      Tests  1184 passed (1184)
+```
+
+Differences from the item:
+
+- **A rejection carries the reason code `requested`**, the code for a change a person asked for; the item names none.
+- **A proposal stores its reason code**, so that an approved change is recorded with the reason it was proposed for, such as `judged_ended` or `judged_wrong` from FL-070.
+- **`proposeChange` refuses up front** a stored fact that is not live and a succession that could never be applied, which the item does not ask for.
+- **A decided proposal is told from an unknown one by its audit entries**, because the one read the item adds returns only pending proposals.
+- **Purge does not yet clear `new_fact`.** The column is classified as content, as technical requirement 3 asks, but `purgeContent` reaches only the proposal's source. Nothing records a proposal at run time before FL-070, so Q-85 in `OPEN-QUESTIONS.md` holds the question for FL-070, and FL-070's constraints name it.
+
 
 ### FL-070: Human-approval policy in remember, with a command to list, approve and reject
 
@@ -624,6 +692,7 @@ The item was split to fit one session. It keeps the storage and the three operat
 **Constraints.**
 - [ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md): approval is one commit with its audit entries.
 - [ADR 0011](../../architecture/adr/0011-namespace-on-every-row.md): the command works in the configured namespace only.
+- Q-85 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md): before `remember` stores proposals, decide how purge reaches a proposal's new fact (FL-043).
 - [Architecture rules](../../../.claude/rules/architecture.md): an entry point translates and calls one use case or operation.
 
 **Acceptance criteria.**
