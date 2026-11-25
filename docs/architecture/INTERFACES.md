@@ -896,8 +896,10 @@ The use cases in `@factloom/graph-rag`, one per file. Phase 1. An MCP tool handl
 ```ts
 export type RememberDeps = OperationDeps & {
   readonly llm: LlmClient;
-  /** Phase 2 (FL-042). Without it, or under the policy `human_approval`, a conflict is skipped as in phase 1. */
+  /** Phase 2 (FL-042). Without it, a conflict is skipped as in phase 1. */
   readonly judge?: ConflictJudge;
+  /** FL-078. The repository the memory is about; the extraction reads "we" and "this repository" as it. */
+  readonly repositoryName?: string;
 };
 
 /** Where new information came from, as a caller gives it. */

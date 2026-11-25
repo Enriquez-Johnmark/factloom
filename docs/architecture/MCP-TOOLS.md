@@ -124,7 +124,7 @@ Use case: `remember`.
 | `source.locator` | string | No | A path or URL |
 | `source.version` | string | No | For a file in git, the commit |
 
-Output: `{ facts: RecordedFact[], skipped: SkippedFact[] }`. A text with nothing worth remembering returns two empty lists.
+Output: `{ facts: RecordedFact[], skipped: SkippedFact[] }`. A text with nothing worth remembering returns two empty lists. When the namespace has the form `repo:<name>`, the extraction reads "we", "our", "us" and "this repository" in a text that names no other repository as the repository `<name>` (FL-078); with any other namespace, a text must name its repository for a fact about it to be extracted.
 
 ```ts
 type RecordedFact = {
