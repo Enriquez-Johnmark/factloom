@@ -14,6 +14,7 @@ import {
   createAnthropicMessageSender,
   DEFAULT_LLM_MODELS,
 } from './create-anthropic-llm-client.ts';
+import { buildServerDeps } from './build-server-deps.ts';
 import type { Logger } from './create-factloom-server.ts';
 import { FACTLOOM_TOOLS } from './factloom-tools.ts';
 import { readCommand } from './read-command.ts';
@@ -81,7 +82,7 @@ const llm = createAnthropicLlmClient({
 });
 
 serveFactloom(
-  {
+  buildServerDeps({
     store: opened.value,
     embedder,
     domain: softwareDevelopmentDomain,
@@ -90,6 +91,6 @@ serveFactloom(
     now: () => toTimestamp(new Date()),
     newId: () => randomUUID(),
     log,
-  },
+  }),
   FACTLOOM_TOOLS,
 );

@@ -8,13 +8,14 @@ import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import { toTimestamp } from '@factloom/core';
 import { softwareDevelopmentDomain } from '@factloom/graph-rag';
-import { judgeConflicts, runMaintenance } from '@factloom/maintenance';
+import { runMaintenance } from '@factloom/maintenance';
 import { openSqliteMemoryStore } from '@factloom/storage';
 import {
   createAnthropicLlmClient,
   createAnthropicMessageSender,
   DEFAULT_LLM_MODELS,
 } from './create-anthropic-llm-client.ts';
+import { buildServerDeps } from './build-server-deps.ts';
 import type { Logger } from './create-factloom-server.ts';
 import { FACTLOOM_TOOLS } from './factloom-tools.ts';
 import { createGitRepositoryReader } from './create-git-repository-reader.ts';
@@ -111,19 +112,17 @@ if (command.kind !== 'serve') {
   process.exit(exitCode);
 }
 
+// The use cases receive the conflict judge (FL-042) and the feedback responder (FL-060).
 serveFactloom(
-  {
+  buildServerDeps({
     store: opened.value,
     embedder,
     domain: softwareDevelopmentDomain,
     llm,
-    // The conflict judge of FL-041, through the same client, so that remember can end or
-    // invalidate a stored fact under the domain's policy `automatic` (FL-042).
-    judge: (input) => judgeConflicts({ llm }, input),
     namespace,
     now: () => toTimestamp(new Date()),
     newId: () => randomUUID(),
     log,
-  },
+  }),
   FACTLOOM_TOOLS,
 );

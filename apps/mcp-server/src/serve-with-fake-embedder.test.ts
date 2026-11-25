@@ -131,6 +131,8 @@ const RECORDED_FACT = {
   subject: { type: 'repository', name: 'shop-api' },
   predicate: 'deploys_to',
   object: { value: 'Fly.io' },
+  // Below 1, so that 'right' feedback can raise it (FL-060).
+  confidence: 0.8,
   statement: 'shop-api is deployed to Fly.io.',
 };
 const QUESTION = { question: 'Where is shop-api deployed?' };
@@ -167,7 +169,8 @@ describe('the server over stdio', () => {
     const second = await runServerSession(directory, [
       callTool('recall', QUESTION),
       callTool('get_fact_history', { fact_id: fact.fact_id }),
-      callTool('give_feedback', { fact_id: fact.fact_id, signal: 'wrong' }),
+      // 'right', so that the fact stays live for invalidate_fact: 'wrong' retracts it (FL-060).
+      callTool('give_feedback', { fact_id: fact.fact_id, signal: 'right' }),
       callTool('invalidate_fact', {
         fact_id: fact.fact_id,
         because: 'was_wrong',
@@ -194,7 +197,7 @@ describe('the server over stdio', () => {
       z
         .object({
           feedback_id: z.string().min(1),
-          follow_up: z.enum(['confidence_raised', 'confidence_lowered', 'retracted', 'ended', 'none']),
+          follow_up: z.literal('confidence_raised'),
         })
         .safeParse(feedback?.structuredContent).success,
     ).toBe(true);
