@@ -970,9 +970,14 @@ export declare function changeFact(
   },
 ): Promise<Result<{ readonly invalidatedFactId: FactId; readonly replacement: FactWithSources | null }>>;
 
-/** Phase 2. Records that a recalled fact was found right, wrong or out of date. Changes no fact. */
+export type GiveFeedbackDeps = OperationDeps & {
+  /** Phase 2 (FL-060). Acts on the feedback once it is recorded. Without it, nothing follows. */
+  readonly feedbackResponder?: FeedbackResponder;
+};
+
+/** Phase 2. Records that a recalled fact was found right, wrong or out of date, and acts on it. */
 export declare function giveFeedback(
-  deps: Pick<OperationDeps, 'store' | 'now' | 'newId'>,
+  deps: GiveFeedbackDeps,
   input: {
     readonly namespace: Namespace;
     readonly factId: FactId;
@@ -1015,7 +1020,7 @@ export type FactHistoryEntry = FactWithSources & { readonly auditEntries: readon
 - **`remember`** asks the LLM for facts using the domain's entity types and predicates, which the extraction schema lists as closed sets. It resolves each entity by name, preferring an existing entity of any type when exactly one has that name. It then sorts the extracted facts with `findConflictCandidates`: a fact that restates a live one gains the source; a fact that conflicts with a stored fact, or with another fact from the same text, is returned in `skipped`; the rest are recorded. One call to `recordFacts` writes everything but the corrections. From phase 2 (FL-042), with a conflict judge in its dependencies and the correction policy `automatic`, a fact that conflicts with a stored fact goes to the judge: on `succession` the stored fact is ended by `endFact` with the new fact as successor, on `correction` it is invalidated by `invalidateFact` with the new fact as replacement, each in its own commit after the first, with its own source holding the same text and the reason code `judged_ended` or `judged_wrong` ([ADR 0022](adr/0022-remember-commits-each-correction-on-its-own.md)). Purge covers every one of those sources, since they share a content hash. Under the policy `human_approval` (FL-070) the same judgement stores a proposal with `proposeChange` instead, with the text as its source and the reason code `judged_ended` or `judged_wrong`; the stored fact is not changed, and the new fact is returned in `skipped` with the reason `proposal_stored` and the proposal's identifier. A fact judged `unrelated` that still overlaps, a judge that fails, a succession whose moment of change is not after the stored fact's start, and a fact that more than one stored fact would give way to are skipped as in phase 1. A fact whose text gives no date has `validFrom: null`, meaning the start is unknown, so it is returned for any earlier as-of date.
 - **`recordStructuredFacts`** applies the same restatement rule, and returns `conflict` instead of skipping.
 - **Secrets are refused.** `remember`, `recordStructuredFacts`, `changeFact` and `giveFeedback` check their text against a fixed list of secret patterns before anything is stored or sent to the LLM, and return `invalid_input` naming the kind of secret, never the secret.
-- **`giveFeedback`** checks the comment against the secret patterns and refuses it with `invalid_input` before anything is stored. Otherwise it calls `recordFeedback` once, with reason code `feedback_given` and the comment, if any, as the content of a source observed now. `followUp` says what product 2 did about it.
+- **`giveFeedback`** checks the comment against the secret patterns and refuses it with `invalid_input` before anything is stored. Otherwise it calls `recordFeedback` once, with reason code `feedback_given` and the comment, if any, as the content of a source observed now. With a feedback responder among its dependencies (FL-060), it then calls the responder with its own dependencies and the new feedback's identifier, and `followUp` is what the responder did; the composition root passes `actOnFeedback` from `@factloom/maintenance`. That is a second commit: if it fails, the result is its error and the feedback stays on record. Without a responder, no fact changes and `followUp` is `none`.
 - **`changeFact`** resolves the replacement's entities, then calls `invalidateFact` for `was_wrong` or `endFact` for `no_longer_true`. It is one commit either way.
 - **`recall`** runs the vector and keyword lanes, then the graph lane: the live facts that touch the entities the first two found, ranked by how many of those entities each fact touches and then by how recently it was recorded. The three ranked lists are merged by weighted reciprocal rank fusion, a pure function tested without a database. If only `knownAt` is given, `validAt` takes the same date, so the question means "what did Factloom believe was true then".
 - **`getFactHistory`** follows supersession links in both directions from the given fact, and reads each audit entry's explaining source with `getSource` to fill `explanation`. For a single-valued predicate it also includes every other fact for the same subject and predicate, which is the timeline of that value. Entries are ordered by valid time, then by recorded time.

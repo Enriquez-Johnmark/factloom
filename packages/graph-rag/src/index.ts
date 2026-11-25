@@ -9,7 +9,7 @@ export const graphRagBuiltOn: readonly string[] = [corePackageName];
 export type { ChangeFactInput } from './change-fact.ts';
 export { changeFact } from './change-fact.ts';
 export type { ExplainedAuditEntry, FactHistoryEntry, GetFactHistoryInput } from './get-fact-history.ts';
-export type { GiveFeedbackInput } from './give-feedback.ts';
+export type { GiveFeedbackDeps, GiveFeedbackInput } from './give-feedback.ts';
 export { giveFeedback } from './give-feedback.ts';
 export { getFactHistory } from './get-fact-history.ts';
 export type { RecalledFact, RecallInput, RecallSettings } from './recall.ts';

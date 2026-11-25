@@ -1,4 +1,13 @@
-import { createTestDeps, type MemoryStore, type OperationDeps, recordFacts } from '@factloom/core';
+import {
+  adjustConfidence,
+  createTestDeps,
+  err,
+  type FeedbackResponder,
+  type MemoryStore,
+  type OperationDeps,
+  ok,
+  recordFacts,
+} from '@factloom/core';
 import { describe, expect, it } from 'vitest';
 import { giveFeedback } from './give-feedback.ts';
 import { softwareDevelopmentDomain } from './software-development-domain.ts';
@@ -134,7 +143,7 @@ describe('giveFeedback', () => {
     expect(given.ok ? null : given.error.code).toBe('not_found');
   });
 
-  it('says that nothing followed', async () => {
+  it('says that nothing followed when it has no feedback responder', async () => {
     const { on, factId } = await rememberJest();
 
     const given = await giveFeedback(on('2026-04-02'), {
@@ -167,5 +176,66 @@ describe('giveFeedback', () => {
     ];
     expect(written).toHaveLength(2);
     expect(JSON.stringify(written)).not.toContain('Vitest');
+  });
+  it('returns what the feedback responder did', async () => {
+    const { on, factId } = await rememberJest();
+    const responder: FeedbackResponder = async () => ok('retracted');
+
+    const given = await giveFeedback(
+      { ...on('2026-04-02'), feedbackResponder: responder },
+      { namespace: NAMESPACE, factId, signal: 'wrong', comment: null, trigger: 'agent' },
+    );
+
+    expect(given.ok && given.value.followUp).toBe('retracted');
+  });
+
+  it('gives the feedback responder feedback that is already on record', async () => {
+    const { on, factId } = await rememberJest();
+    const responder: FeedbackResponder = async (deps, input) => {
+      const listed = await deps.store.listFeedback({ namespace: input.namespace, factId: input.factId });
+      if (!listed.ok) return listed;
+      const isRecorded = listed.value.some((feedback) => feedback.id === input.feedbackId);
+      return isRecorded ? ok('none') : err('not_found', 'The feedback was not recorded first.');
+    };
+
+    const given = await giveFeedback(
+      { ...on('2026-04-02'), feedbackResponder: responder },
+      { namespace: NAMESPACE, factId, signal: 'right', comment: null, trigger: 'agent' },
+    );
+
+    expect(given.ok && given.value.followUp).toBe('none');
+  });
+
+  it('returns the error when the follow-up commit fails, and keeps the feedback on record', async () => {
+    const { store, on, factId } = await rememberJest();
+    let commits = 0;
+    // The first commit, the feedback's, succeeds; the second, the follow-up's, fails.
+    const failingSecond: MemoryStore = {
+      ...store,
+      commit: async (changeSet) => {
+        commits += 1;
+        return commits === 1 ? store.commit(changeSet) : err('storage_failed', 'The disk is full.');
+      },
+    };
+    const raise: FeedbackResponder = async (deps, input) => {
+      const adjusted = await adjustConfidence(deps, {
+        ...input,
+        trigger: 'feedback',
+        reasonCode: 'feedback_right',
+        confidence: 1,
+      });
+      return adjusted.ok ? ok('confidence_raised') : adjusted;
+    };
+
+    const given = await giveFeedback(
+      { ...on('2026-04-02'), store: failingSecond, feedbackResponder: raise },
+      { namespace: NAMESPACE, factId, signal: 'right', comment: COMMENT, trigger: 'agent' },
+    );
+
+    expect(given.ok ? null : given.error.code).toBe('storage_failed');
+    const feedback = await store.listFeedback({ namespace: NAMESPACE, factId });
+    expect(feedback.ok && feedback.value).toMatchObject([{ factId, signal: 'right', trigger: 'agent' }]);
+    const fact = await store.getFact({ namespace: NAMESPACE, factId });
+    expect(fact.ok && fact.value?.fact.confidence).toBe(0.9);
   });
 });
