@@ -1,0 +1,31 @@
+[
+  { "id": "cus_003", "name": "Ana Lima", "email": "ana.lima@example.com", "region": "EU", "tier": "retail" },
+  {
+    "id": "cus_001",
+    "name": "Bram de Vries",
+    "email": "bram@example.org",
+    "region": "EU",
+    "tier": "wholesale"
+  },
+  {
+    "id": "cus_004",
+    "name": "Chloe Martin",
+    "email": "chloe.martin@example.net",
+    "region": "UK",
+    "tier": "retail"
+  },
+  {
+    "id": "cus_002",
+    "name": "Dev Patel",
+    "email": "dev.patel@example.com",
+    "region": "US_CA",
+    "tier": "retail"
+  },
+  {
+    "id": "cus_005",
+    "name": "Emil Novak",
+    "email": "emil@example.org",
+    "region": "US_NY",
+    "tier": "wholesale"
+  }
+]

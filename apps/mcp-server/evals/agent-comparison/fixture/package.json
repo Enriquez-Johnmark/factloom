@@ -1,0 +1,13 @@
+{
+  "name": "invoice-service",
+  "version": "1.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Creates and lists the invoices of the shop's customers.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
