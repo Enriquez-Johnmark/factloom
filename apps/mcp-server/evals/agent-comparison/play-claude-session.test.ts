@@ -34,9 +34,11 @@ describe('the arguments of a session', () => {
     });
 
     expect(args.slice(0, 2)).toEqual(['-p', 'Add a route.']);
-    expect(args.slice(-4)).toEqual([
+    expect(args.slice(-6)).toEqual([
       '--allowedTools',
       'Bash(node *),Bash(npm test *),Bash(npm run *),Bash(git *),mcp__factloom__*',
+      '--settings',
+      '{"autoMemoryEnabled":false}',
       '--mcp-config',
       '/tmp/mcp.json',
     ]);
@@ -45,12 +47,24 @@ describe('the arguments of a session', () => {
     expect(args.join(' ')).toContain('--model sonnet');
   });
 
-  it('differs between the configurations only by the server configuration', () => {
+  it('differs between the configurations only by the server configuration and auto memory turned off', () => {
     const without = buildClaudeArguments({ prompt: 'x', model: null, mcpConfigPath: null });
     const withFactloom = buildClaudeArguments({ prompt: 'x', model: null, mcpConfigPath: '/tmp/mcp.json' });
 
-    expect(withFactloom).toEqual([...without, '--mcp-config', '/tmp/mcp.json']);
+    expect(withFactloom).toEqual([
+      ...without,
+      '--settings',
+      '{"autoMemoryEnabled":false}',
+      '--mcp-config',
+      '/tmp/mcp.json',
+    ]);
     expect(without).not.toContain('--model');
+  });
+
+  it('keeps auto memory, as shipped, in the run without Factloom', () => {
+    const without = buildClaudeArguments({ prompt: 'x', model: null, mcpConfigPath: null });
+
+    expect(without).not.toContain('--settings');
   });
 
   it('records the arguments without the prompt or the temporary path', () => {

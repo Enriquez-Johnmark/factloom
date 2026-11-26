@@ -23,6 +23,15 @@ export const ALLOWED_TOOLS = [
   `mcp__${FACTLOOM_SERVER_NAME}__*`,
 ];
 
+/**
+ * The settings of the run with Factloom: Claude Code's auto memory turned off, as the
+ * registration guide tells a user to do (FL-079). With both memories, the agent of the first run
+ * kept everything in auto memory and never called Factloom. The key is from
+ * https://code.claude.com/docs/en/memory.md, read on 2026-11-26. The run without Factloom keeps
+ * auto memory, as shipped (FL-074, functional requirement 3).
+ */
+export const FACTLOOM_RUN_SETTINGS = JSON.stringify({ autoMemoryEnabled: false });
+
 /** What stands in for each prompt in the recorded arguments: the prompts are in the task set. */
 export const PROMPT_PLACEHOLDER = '<prompt>';
 
@@ -40,7 +49,7 @@ const INTERRUPT_GRACE = 30_000;
  * `--allowedTools` and `--mcp-config` take several values and would take a prompt after them as
  * one; `--mcp-config` is last for the same reason. Both configurations pass
  * `--strict-mcp-config`, so that only Factloom, when it is registered here, is loaded, and no
- * server from the person's own configuration.
+ * server from the person's own configuration. The run with Factloom also turns auto memory off.
  */
 export function buildClaudeArguments(input: {
   readonly prompt: string;
@@ -61,7 +70,9 @@ export function buildClaudeArguments(input: {
     ...(input.model === null ? [] : ['--model', input.model]),
     '--allowedTools',
     ALLOWED_TOOLS.join(','),
-    ...(input.mcpConfigPath === null ? [] : ['--mcp-config', input.mcpConfigPath]),
+    ...(input.mcpConfigPath === null
+      ? []
+      : ['--settings', FACTLOOM_RUN_SETTINGS, '--mcp-config', input.mcpConfigPath]),
   ];
 }
 
