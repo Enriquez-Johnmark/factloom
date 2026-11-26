@@ -81,6 +81,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Completed |
 | FL-076 | Differential tests between the in-memory store and SQLite | 1 | FL-075, FL-068, FL-016, FL-017 | Completed |
 | FL-077 | Mutation-testing trial on core | 1 | FL-008, FL-009, FL-010, FL-011 | Completed |
+| FL-081 | Token comparison on why-did-this-change tasks | 1 | FL-074, FL-080 | Pending |
 
 ### FL-027: Timeline scenarios as reviewed data
 
@@ -1138,3 +1139,58 @@ $ vitest run
 
 The workflow runs for these commits passed on Linux and macOS arm64: https://github.com/Enriquez-Johnmark/factloom/actions/runs/43802767744 and https://github.com/Enriquez-Johnmark/factloom/actions/runs/43804148703.
 
+### FL-081: Token comparison on why-did-this-change tasks
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 1 |
+| Depends on | FL-074, FL-080 |
+| Requirements | REQ-37 |
+| Components | `apps/mcp-server` (evals), a fixture repository with a git history, the runner of FL-074 |
+
+**Objective.** Measure whether Factloom saves tokens and tool calls when what the agent needs is why, or when, the code changed: knowledge that the code does not show and that an agent without memory digs for in the git history. Publish the result whatever it shows.
+
+**Background.** The three comparisons of FL-074, FL-079 and FL-080 ([third report](../../../apps/mcp-server/evals/agent-comparison/results/2026-11-26-third/report.md)) gave the agent its knowledge in the first session's prompt, with a request to remember it. Claude Code's file memory keeps that as well as Factloom does, and with the recall hook the two came out level. A reason for a change is different: it is often only in a commit message, and an agent finds it with `git log`, `git blame` and `git show`, a turn each, while Factloom holds it as a fact with when it became true ([`GLOSSARY.md`](../../../GLOSSARY.md), "valid time"), and can answer what was true before. That is where Factloom is expected to save the most, and it is not measured. Asked for by the owner on 2026-11-26.
+
+**Outcome.** A second task set and a report, committed, of token use, tool calls and task success on it with and without Factloom, and a statement in the root `README.md` of what the report shows.
+
+**Scope.**
+- A fixture repository with a git history, built by a script so that it is the same on every run, in which several functions changed, each commit message giving the reason.
+- About ten tasks, each in two sessions. In the first, the agent makes a change and is told why, and commits it with that reason. In the second, started fresh, it gets a task whose right answer depends on why or when something changed: for example a request to "simplify" a function back to what the change replaced.
+- At least two tasks ask about the past, such as the value of a setting before a change, answered in a file that the check reads.
+- Each task has a check that passes or fails by running something, so that a cheaper wrong answer does not count as a saving.
+- The runner of FL-074 plays the set, with the configurations of FL-080: without Factloom, Claude Code as shipped, auto memory on; with Factloom, as the registration guide sets it up, auto memory off and the recall hook.
+
+**Non-goals.**
+- Changing the task set of FL-074, or its results.
+- A claim of statistical significance. About ten tasks show a direction, not a law, and the report says so.
+- Tuning Factloom to the tasks. A weakness the tasks reveal becomes a separate work item, and the task stays in the set.
+- Factloom reading the git history by itself. The fact reaches memory as the guide says: the agent records it, or `remember` extracts it.
+
+**Functional requirements.**
+1. The task set, the fixture's history and the checks are committed before any run, and are not changed after seeing results. A change is listed in the report with its reason.
+2. In every task the reason is in the git history, so that the run without Factloom can find it; a task the baseline cannot answer at all would measure knowledge, not cost.
+3. Every figure in the report comes from the agent's own usage output. Nothing is estimated.
+4. The report states the result plainly in each of three cases: a saving, no clear difference, or a cost.
+
+**Technical requirements.**
+1. The task set lives in `apps/mcp-server/evals/`, beside the agent comparison, and the runner takes the set to play as an option; the set of FL-074 stays the default.
+2. The runner is not part of `pnpm check` or `pnpm eval`: it needs a signed-in agent and spends real tokens. The owner starts it by hand.
+3. Each run starts from a clean copy of the fixture, with its history, and, with Factloom, a new database file and namespace.
+4. Secrets: as in FL-074, nothing prints or stores a key or a session token, and the home directory is shown as `~`.
+
+**Constraints.**
+- Findings are labelled as measured or unverified, and nothing is stated as fact without its source ([engineering principles](../../../.claude/rules/engineering-principles.md)).
+- Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
+
+**Acceptance criteria.**
+- [ ] The task set, the fixture's history and the checks are committed in a commit that precedes the commit of the first results.
+- [ ] Unit tests show each check passing on one solution and failing on the fixture as it is, and the fixture's history being the same on every build.
+- [ ] The owner runs the runner once per configuration and commits the raw usage output and the generated report. The report names the agent, the model, the date and the number of tasks.
+- [ ] The root `README.md` states the measured result in one or two sentences that match the report, including when the result is no saving or a cost.
+- [ ] `pnpm check` still exits 0 and does not start the runner.
+
+**Validation.** Unit tests for the fixture's build and the checks on every check; the comparison is a manual run by the owner, because it needs a signed-in agent and spends tokens.
+
+**Completion evidence.** The commit of the task set, the commit of the raw output and report, and the sentence added to `README.md`.
