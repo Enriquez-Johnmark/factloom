@@ -59,6 +59,13 @@ export const softwareDevelopmentDomain: Domain = {
         'A symbol does what a value says, for example the function parseDate described_as "parses a calendar date".',
       cardinality: 'multi',
     },
+    // The code base map of FL-082 (ADR 0023): the path is the value, so a rename is a succession.
+    {
+      name: 'defined_in',
+      description:
+        'A symbol is defined in a file, given as its path from the repository root, for example the function parseDate defined_in "lib/dates.js".',
+      cardinality: 'single',
+    },
   ],
   extractionInstructions: [
     'The texts come from work on software: notes, commit messages, conversations with a coding agent.',
