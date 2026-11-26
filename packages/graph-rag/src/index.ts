@@ -23,6 +23,10 @@ export type { CheckedField } from './check-for-secrets.ts';
 export { checkForSecrets } from './check-for-secrets.ts';
 export type { DependencyVersion } from './read-dependency-version.ts';
 export { describeDependencyVersion, readDependencyVersion } from './read-dependency-version.ts';
-export { findSymbolNames, softwareDevelopmentDomain } from './software-development-domain.ts';
+export {
+  findSymbolNames,
+  PATH_VALUED_PREDICATES,
+  softwareDevelopmentDomain,
+} from './software-development-domain.ts';
 export type { SourceInput } from './source-input.ts';
 export type { StructuredFactInput } from './structured-fact-input.ts';

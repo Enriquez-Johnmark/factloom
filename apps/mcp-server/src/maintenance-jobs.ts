@@ -3,6 +3,7 @@ import {
   checkForSecrets,
   describeDependencyVersion,
   findSymbolNames,
+  PATH_VALUED_PREDICATES,
   readDependencyVersion,
 } from '@factloom/graph-rag';
 import {
@@ -65,7 +66,11 @@ export function buildMaintenanceJobs(
       name: 'verify_anchored_facts',
       run: () => verifyAnchoredFacts({ ...deps, rungs: buildVerificationRungs(deps.llm) }, { namespace }),
     },
-    { name: 'repair_moved_anchors', run: () => repairMovedAnchors(deps, { namespace }) },
+    // A map fact whose file was renamed is continued at the new path (FL-082).
+    {
+      name: 'repair_moved_anchors',
+      run: () => repairMovedAnchors({ ...deps, pathPredicates: PATH_VALUED_PREDICATES }, { namespace }),
+    },
     {
       name: 'find_duplicate_entities',
       // The name stage of FL-053, then the similarity and LLM stages of FL-064, made anew for

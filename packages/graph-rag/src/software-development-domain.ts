@@ -81,6 +81,12 @@ export const softwareDevelopmentDomain: Domain = {
 };
 
 /**
+ * The predicates whose value is a path from the repository root. When maintenance finds such a
+ * file renamed, it ends the fact and continues it at the new path (FL-082).
+ */
+export const PATH_VALUED_PREDICATES: readonly string[] = ['defined_in'];
+
+/**
  * The names a fact needs in its anchored file, for the name check of the verification job
  * (FL-071): the name of each of its entities that is a symbol. Empty for a fact that names
  * no symbol, which the check then leaves to the next rung.
