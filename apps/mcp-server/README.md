@@ -48,6 +48,16 @@ The server's name comes before `--env`: `--env` takes several values, and given 
 
 Claude Code asks before it uses a server from `.mcp.json` in an interactive session. Check the registration with `claude mcp list`, or with `/mcp` in a session, which shows the server as connected with its six tools.
 
+**Turn off Claude Code's own memory in that repository.** Claude Code ships a file memory, auto memory, that is on by default. With both, the agent kept what it learned in auto memory and never called Factloom: in the agent comparison of 2026-11-26, it made no Factloom tool call in 20 sessions, and said it avoided "keeping two copies" (FL-079). To make Factloom the repository's memory, add this to the repository's `.claude/settings.json`, which Claude Code's [memory documentation](https://code.claude.com/docs/en/memory.md) names as the way to turn auto memory off for one project (read 2026-11-26):
+
+```json
+{
+  "autoMemoryEnabled": false
+}
+```
+
+For one session only, `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` in the environment does the same ([environment variables](https://code.claude.com/docs/en/env-vars.md)). Notes already in auto memory stay in their files and are no longer loaded; record the ones worth keeping with `record_fact`.
+
 **Codex.** Register the server in `~/.codex/config.toml`:
 
 ```sh
