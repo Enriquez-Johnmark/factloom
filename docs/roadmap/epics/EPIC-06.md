@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Status | Pending |
-| Phases | 1 |
-| Packages | `apps/mcp-server` |
+| Phases | 1, 3 |
+| Packages | `apps/mcp-server`; FL-082 also `@factloom/graph-rag` and `@factloom/maintenance` |
 | Requirements | REQ-04, REQ-09, REQ-10, REQ-11, REQ-12, REQ-13, REQ-25, REQ-29, REQ-35, REQ-36, REQ-37 |
 
 Terms in bold are defined in [`GLOSSARY.md`](../../../GLOSSARY.md).
@@ -76,6 +76,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Completed |
 | FL-079 | A registered coding agent uses Factloom rather than only its built-in memory | 1 | FL-074, FL-038 | Completed |
 | FL-080 | Fewer turns for a coding agent that uses Factloom | 1 | FL-079 | Completed |
+| FL-082 | A self-healing codebase map for coding agents | 3 | FL-080, FL-081, FL-050, FL-054 | Pending |
 
 ### FL-034: Server configuration and composition root
 
@@ -753,3 +754,61 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 - **Not part of the comparison.** Every session of every run, with and without Factloom, fired two `SessionStart` hooks with empty output, from the owner's own Claude Code settings (the maintenance hook of FL-048 among them); they are the same in both configurations.
 - **Secrets:** the secret pattern search matched only the hook's command, `ANTHROPIC_API_KEY=` with no value, by design; no key in the files. The raw output shows the home directory as `~`.
 - **`README.md`:** the sentence under "What it is for" states the three measurements; the registration guide gives the hook's measured result and says Factloom is level with auto memory, not cheaper.
+
+### FL-082: A self-healing codebase map for coding agents
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 3 |
+| Depends on | FL-080, FL-081, FL-050, FL-054 |
+| Requirements | REQ-37 |
+| Components | `@factloom/graph-rag` (software development domain), `apps/mcp-server` (server instructions, registration guide), `@factloom/maintenance` (verification), the agent comparison of FL-074 |
+
+**Objective.** Cut the turns a coding agent spends finding its way around a repository, by keeping a map of the code base in Factloom (where things are, what each part does, how to build and test) that the recall hook hands over, and that maintenance keeps true as the code changes. Measure it against Claude Code as shipped and against a hand-written map in `CLAUDE.md`, and publish the result whatever it shows.
+
+**Background.** In the comparisons of FL-074 to FL-080, input tokens were 98% of the total, and each turn sent about 16,000 tokens of context again ([third report](../../../apps/mcp-server/evals/agent-comparison/results/2026-11-26-third/report.md): 1,859,692 input tokens over 116 turns without Factloom). A task's cost is therefore close to its turns times its context. Many turns go to finding things: which file does what, where a function lives, how to run the tests. A map in `CLAUDE.md` saves those turns, but Claude Code loads it whole into every session, and nothing keeps it true when files move or functions are renamed. Factloom has the parts for a map that is both targeted and current: facts about symbols and files, a recall hook that adds only the five that match the prompt (FL-080), and maintenance that checks a fact against the file it came from (FL-050), flags one whose symbol is gone (FL-071) and follows a renamed file (FL-054). None of this has been measured as a map; the saving is a goal, not a finding. Asked for by the owner on 2026-11-26.
+
+**Outcome.** A way for map facts to reach Factloom, the registration guide's set-up for it, and a report of the comparison on a task set that needs finding one's way, including tasks where the code changed after the map was made.
+
+**Scope.**
+- The map's facts: the few predicates the software development domain needs for them, beside `described_as`, such as where a symbol is defined and what a file is for, each a fact whose source is the file it describes at a commit, so that maintenance can verify it.
+- How map facts get in, decided at the start of the item and measured as chosen: the agent records them as it explores, told so by the server's instructions, or a command reads the repository once and seeds them. The choice and its reason go in an ADR.
+- A task set for the runner of FL-081 (`--task-set`), on a fixture larger than FL-074's, with about ten tasks whose second session has to find code it was not shown. In some tasks the code changes between the sessions, as a teammate's commit would: a file renamed, a function moved.
+- Three set-ups, played as two comparisons with the same runner: Claude Code as shipped against Factloom with its map; and Claude Code with a map in `CLAUDE.md`, written once before the first session and not updated after, as in practice, against Factloom with its map. In the Factloom runs, maintenance runs before each session, as the session start hook of the guide does.
+
+**Non-goals.**
+- Storing code, or indexing whole files. Factloom holds facts about the code; the agent still reads a file to change it.
+- Changing the task sets of FL-074 or FL-081, or their results.
+- A claim of statistical significance. About ten tasks show a direction, not a law.
+- Tuning the map to the tasks: map facts are made the same way for every file.
+
+**Functional requirements.**
+1. A map fact names the file, or the symbol and its file, that it is about, and its source is that file at a commit, so that the verification of FL-050 checks it and the repair of FL-054 follows a rename.
+2. The recall hook hands over map facts with the other facts, five at most, with no change to its output format.
+3. The `CLAUDE.md` map of the comparison holds the same knowledge as the map facts at the start of the first session, written once.
+4. The task set, the fixture, its changes between sessions and the checks are committed before any run, and are not changed after seeing results.
+5. Every figure in the reports comes from the agent's own usage output. Each report states a saving, no clear difference or a cost, plainly.
+
+**Technical requirements.**
+1. New predicates are added to the domain with a reason each, as the domain's comment asks, and the extraction cases and recordings are made again if the extraction instructions change.
+2. The server's instructions stay at most 1,000 characters (the test of `create-factloom-server.test.ts`); a sentence added for the map replaces words, not adds them, if it must.
+3. The runner of FL-074 and FL-081 is reused; a set-up difference is passed only in the configuration under test, and the report lists it.
+4. Secrets: as in FL-074, nothing prints or stores a key or a session token, and the home directory is shown as `~`.
+
+**Constraints.**
+- Findings are labelled as measured or unverified, and nothing is stated as fact without its source ([engineering principles](../../../.claude/rules/engineering-principles.md)).
+- Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
+
+**Acceptance criteria.**
+- [ ] An ADR records how map facts get in, with the alternatives rejected.
+- [ ] Unit tests show a map fact anchored to its file, confirmed by verification when the file is unchanged, flagged when its symbol is gone, and following a rename.
+- [ ] Unit tests show the recall hook handing over map facts that match a prompt.
+- [ ] The task set and its checks are committed before the first results, with tests that each check fails on the fixture and passes on one solution.
+- [ ] The owner runs both comparisons and commits the raw output and the two reports.
+- [ ] The root `README.md` states the measured result in one or two sentences that match the reports, including when it is no saving or a cost.
+- [ ] `pnpm check` exits 0 and does not start the runner.
+
+**Validation.** Unit tests for the domain, the anchoring and verification of map facts, and the hook; the comparisons are manual runs by the owner, because they need a signed-in agent and spend tokens.
+
+**Completion evidence.** The ADR, the commits, the task set commit, the two reports and the `README.md` sentence.
