@@ -74,7 +74,7 @@ Factloom can take new information and record it as entities and facts with a **s
 | FL-022 | Secret check that refuses a write | 1 | FL-004 | Completed |
 | FL-023 | remember use case, tested with a scripted LLM | 1 | FL-008, FL-011, FL-020, FL-021, FL-022, FL-056 | Completed |
 | FL-069 | Extraction replay run and recordings | 1 | FL-023, FL-029, FL-028, FL-019 | Completed |
-| FL-078 | remember reads "we" as the configured repository | 1 | FL-069, FL-034 | Under Review |
+| FL-078 | remember reads "we" as the configured repository | 1 | FL-069, FL-034 | Completed |
 | FL-024 | recordStructuredFacts use case | 1 | FL-008, FL-011, FL-020, FL-022, FL-023, FL-056 | Completed |
 | FL-025 | changeFact use case | 1 | FL-009, FL-010, FL-020, FL-022, FL-056 | Completed |
 
@@ -747,7 +747,7 @@ For the owner's review:
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-069, FL-034 |
 | Requirements | REQ-26, REQ-30 |
@@ -786,7 +786,7 @@ For the owner's review:
 - [x] A unit test shows `repo:shop-api` gives `shop-api` and `team:ops` gives no name.
 - [x] At least two new extraction cases with an unnamed subject pass in replay, with the namespace's repository as subject.
 - [x] Every extraction case and every timeline scenario still passes in replay after the recordings are made again.
-- [ ] On the owner's Mac, `remember` with "We use Vitest for unit tests." records a fact about the configured repository.
+- [x] On the owner's Mac, `remember` with "We use Vitest for unit tests." records a fact about the configured repository.
 - [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests, the extraction cases and scenarios in replay, one call on the owner's Mac.
@@ -808,6 +808,8 @@ The recording run: `pnpm run record:extraction` with the owner's key set for the
 ```
 
 Differences from the item: the earlier extraction recordings and the scenario recordings did not need new keys, because the evals run under namespaces that give no repository name, so their instructions are unchanged; only the two new cases carry one.
+
+**Owner's call on the Mac, 2026-11-26.** With the namespace `repo:fl038-test` and Claude Code 2.1.331, `remember` with "We use Vitest for unit tests." recorded fact `ad3d3ef9-4a1f-45a3-a217-bb79a15f20ae`, "The repository fl038-test runs its unit tests with Vitest.", with nothing skipped. Before FL-078 the same text had recorded nothing. The item is `Completed`.
 
 
 ### FL-024: recordStructuredFacts use case

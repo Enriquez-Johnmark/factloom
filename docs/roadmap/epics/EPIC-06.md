@@ -73,7 +73,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-035 | remember and record_fact tools | 1 | FL-019, FL-058, FL-023, FL-024 | Completed |
 | FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-018, FL-035, FL-058, FL-025, FL-032 | Completed |
 | FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Completed |
-| FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Under Review |
+| FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Completed |
 
 ### FL-034: Server configuration and composition root
 
@@ -506,7 +506,7 @@ The entry was broken by hand twice and the test failed each time: the store open
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-037 |
 | Requirements | REQ-10, REQ-29, REQ-36 |
@@ -549,23 +549,23 @@ The entry was broken by hand twice and the test failed each time: the store open
 - [ADR 0011](../../architecture/adr/0011-namespace-on-every-row.md).
 
 **Acceptance criteria.**
-- [ ] With no `ANTHROPIC_API_KEY` set, the owner asks the agent in each host to save one fact and recall it. The agent records it with `record_fact` and recalls it, and the result is recorded in the guide for each set-up the owner has access to. A set-up the owner cannot test is marked untested, not assumed to work.
+- [x] With no `ANTHROPIC_API_KEY` set, the owner asks the agent in each host to save one fact and recall it. The agent records it with `record_fact` and recalls it, and the result is recorded in the guide for each set-up the owner has access to. A set-up the owner cannot test is marked untested, not assumed to work.
 
 The owner runs each step on the Apple Silicon Mac, in order, and records the result in the completion record.
 
-- [ ] `uname -m`, `sw_vers` and `node --version`. Record the three outputs. The first is `arm64`.
-- [ ] At the repository root: `pnpm install`, then `pnpm check`. Record pass or fail. A pass means the native SQLite modules loaded and the smoke test ran on this machine.
-- [ ] `cd spikes/sqlite-vec-fts5 && npm ci && node spike.mjs`. Record the `platform` line and the last line. Expected: `platform: 'darwin-arm64'` and `SPIKE OK`. This is the check Q-01 names.
-- [ ] If any native module fails to load in the two steps above: record the exact message and the output of `xattr` on the file it names, set this work item to `Blocked`, and stop. This is the check Q-02 names.
-- [ ] `cd spikes/embedding-retrieval && npm ci && node compare.mjs`, then `du -sh node_modules`. Record the "Size and time" rows for `bge-small-en-v1.5`, the load time of the first run, and the size. This is the check Q-23 names.
-- [ ] Claude Code: run the guide's `claude mcp add` command with a namespace made for this test. Start a session, run `/mcp`, and record that the server is connected and lists five tools. Record `claude --version`.
-- [ ] In that session, ask the agent to call `record_fact` with subject `repository` named `factloom`, predicate `uses_package_manager`, object `dependency` named `pnpm`. Record the returned outcome and fact identifier. Record how long the call took, since it includes the model download.
-- [ ] End the session, start a new one, and ask the agent to call `recall` with the question "Which package manager does this repository use?". Record that the fact is returned.
-- [ ] With `ANTHROPIC_API_KEY` set in the registration, ask the agent to call `remember` with the text "We use Vitest for unit tests." Record the returned facts and how long the call took.
+- [x] `uname -m`, `sw_vers` and `node --version`. Record the three outputs. The first is `arm64`.
+- [x] At the repository root: `pnpm install`, then `pnpm check`. Record pass or fail. A pass means the native SQLite modules loaded and the smoke test ran on this machine.
+- [x] `cd spikes/sqlite-vec-fts5 && npm ci && node spike.mjs`. Record the `platform` line and the last line. Expected: `platform: 'darwin-arm64'` and `SPIKE OK`. This is the check Q-01 names.
+- [x] If any native module fails to load in the two steps above: record the exact message and the output of `xattr` on the file it names, set this work item to `Blocked`, and stop. This is the check Q-02 names.
+- [x] `cd spikes/embedding-retrieval && npm ci && node compare.mjs`, then `du -sh node_modules`. Record the "Size and time" rows for `bge-small-en-v1.5`, the load time of the first run, and the size. This is the check Q-23 names.
+- [x] Claude Code: run the guide's `claude mcp add` command with a namespace made for this test. Start a session, run `/mcp`, and record that the server is connected and lists five tools. Record `claude --version`.
+- [x] In that session, ask the agent to call `record_fact` with subject `repository` named `factloom`, predicate `uses_package_manager`, object `dependency` named `pnpm`. Record the returned outcome and fact identifier. Record how long the call took, since it includes the model download.
+- [x] End the session, start a new one, and ask the agent to call `recall` with the question "Which package manager does this repository use?". Record that the fact is returned.
+- [x] With `ANTHROPIC_API_KEY` set in the registration, ask the agent to call `remember` with the text "We use Vitest for unit tests." Record the returned facts and how long the call took.
 - [ ] Codex: run the guide's `codex mcp add` command with the same database and namespace. Start a session, run `/mcp`, and record that the server is connected. Record `codex --version`.
 - [ ] In the Codex session, ask the agent to call `recall` with the same question. Record that the fact recorded from Claude Code is returned. Then ask it to call `get_fact_history` for that fact and record the number of entries.
-- [ ] The README section carries the confirmation line of requirement 7.
-- [ ] Rows Q-01, Q-02, Q-15 and Q-23 of `OPEN-QUESTIONS.md` are closed with the recorded results, and [`mcp.md`](../../research/technical/mcp.md), [`sqlite.md`](../../research/technical/sqlite.md) and [`embeddings.md`](../../research/technical/embeddings.md) say "confirmed" with the date where they said "likely" or "unverified" for these points. A row whose step failed stays open, with the failure recorded.
+- [x] The README section carries the confirmation line of requirement 7.
+- [x] Rows Q-01, Q-02, Q-15 and Q-23 of `OPEN-QUESTIONS.md` are closed with the recorded results, and [`mcp.md`](../../research/technical/mcp.md), [`sqlite.md`](../../research/technical/sqlite.md) and [`embeddings.md`](../../research/technical/embeddings.md) say "confirmed" with the date where they said "likely" or "unverified" for these points. A row whose step failed stays open, with the failure recorded.
 
 **Validation.** A run by the owner on the Apple Silicon Mac. No automated test can stand in for the two hosts.
 
@@ -601,3 +601,18 @@ Differences from the item:
 
 - **Six tools.** `/mcp` will list six tools, not five: `give_feedback` was added in phase 2.
 - **The guide adds `tool_timeout_sec = 300`** to the Codex table. Codex's default of 60 seconds may be too short for the first call, which downloads the embedding model.
+
+**Owner's run on the Mac, 2026-11-25 and 2026-11-26.** On the owner's MacBook Air with an Apple M1 (8 cores):
+
+- **Machine:** `uname -m` printed `arm64`; `sw_vers` printed macOS 26.5, build 25F71; `node --version` printed v26.13.1, inside the range of ADR 0015.
+- **The workspace:** pnpm 12.18.0 was installed with `npm install -g pnpm@12.18.0`, as none was installed. `pnpm install` passed the lockfile's supply-chain policies, and `pnpm check` passed: 124 test files, 1,211 tests, in 15 s. The native SQLite modules loaded and the smoke test ran on this machine.
+- **`spikes/sqlite-vec-fts5`:** `platform: 'darwin-arm64'`, SQLite 3.54.1, sqlite-vec v0.1.9, FTS5 compiled in, and the last line `SPIKE OK`. No native module failed to load, so the Q-02 step did not apply.
+- **`spikes/embedding-retrieval`:** with `@huggingface/transformers` 4.3.2, `Xenova/bge-small-en-v1.5` q8, the model Factloom loads, was 32.4 MB, loaded in 17.11 s including the download, and embedded a text in 3.3 ms over 140 texts. The fp32 model was 126.9 MB and took 5.3 ms. `du -sh node_modules` printed 849M.
+- **Claude Code 2.1.331, on a subscription:** the guide's `claude mcp add --transport stdio --scope local factloom --env FACTLOOM_NAMESPACE=repo:fl038-test -- node .../apps/mcp-server/src/main.ts` ran as written. `claude mcp list` showed the server connected, and `/mcp` showed it connected with six tools, protocol 2026-07-28. Claude Code stored the registration in `$CLAUDE_CONFIG_DIR/.claude.json`, which on this Mac is `~/.claude-personal/.claude.json`.
+- **`record_fact`, with no key:** the agent recorded fact `7ea176a3-10f2-4823-a987-29693d79f531`, "The repository factloom uses pnpm as its package manager.", with outcome `recorded`, writing the statement itself. Its duration, which includes the model download, was not measured.
+- **`recall` in a new session:** "Which package manager does this repository use?" returned that fact, with confidence 1 and score 0.75.
+- **`remember`, with the key in the registration:** "We use Vitest for unit tests." first returned no fact and nothing skipped, because the text names no repository. That finding became FL-078. With FL-078 pulled, the same text recorded fact `ad3d3ef9-4a1f-45a3-a217-bb79a15f20ae`, "The repository fl038-test runs its unit tests with Vitest.", nothing skipped, in a turn of 14 s.
+- **Codex:** not run. The owner does not use Codex, so its two criteria are not ticked, and the guide marks the Codex set-ups untested, as the first criterion allows. Q-15 stays open for Codex only.
+
+The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-11-14; Q-23 is closed with the measurements above, and `mcp.md` and `embeddings.md` say "confirmed" with the date. The item is `Completed` with the owner's decision on Codex.
+
