@@ -77,7 +77,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-029 | Extraction cases | 1 | FL-018, FL-027 | Completed |
 | FL-039 | Scenario runner | 2 | FL-027, FL-028, FL-069, FL-025, FL-032, FL-015 | Completed |
 | FL-066 | Performance benchmark and budgets | 1 | FL-002, FL-058, FL-035 | Completed |
-| FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Under Review |
+| FL-074 | Token and tool-call comparison with and without Factloom | 1 | FL-038 | Completed |
 | FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Completed |
 | FL-076 | Differential tests between the in-memory store and SQLite | 1 | FL-075, FL-068, FL-016, FL-017 | Completed |
 | FL-077 | Mutation-testing trial on core | 1 | FL-008, FL-009, FL-010, FL-011 | Completed |
@@ -745,7 +745,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-038 |
 | Requirements | REQ-37 |
@@ -788,9 +788,9 @@ Differences from the item:
 **Acceptance criteria.**
 - [x] The task set and its checks are committed in a commit that precedes the commit of the first results.
 - [x] Unit tests of the report's arithmetic (totals, differences, medians) pass under `pnpm check`.
-- [ ] The owner runs the runner once per configuration and commits the raw usage output and the generated report. The report names the agent, the model, the date and the number of tasks.
-- [ ] The report has, for each task and in total, input tokens, output tokens, tool calls and pass or fail, with and without Factloom.
-- [ ] The root `README.md` states the measured result in one or two sentences that match the report, including when the result is no saving or a cost.
+- [x] The owner runs the runner once per configuration and commits the raw usage output and the generated report. The report names the agent, the model, the date and the number of tasks.
+- [x] The report has, for each task and in total, input tokens, output tokens, tool calls and pass or fail, with and without Factloom.
+- [x] The root `README.md` states the measured result in one or two sentences that match the report, including when the result is no saving or a cost.
 - [x] `pnpm check` still exits 0 and does not start the runner.
 
 **Validation.** Unit tests for the report arithmetic on every check. The comparison itself is a manual run by the owner, because it needs a signed-in agent and spends tokens.
@@ -817,6 +817,12 @@ Differences from the item: reference answers were added; the outcome rule is the
 
 For the owner: in a plain terminal, from `apps/mcp-server`, `pnpm run compare:agent --dry-run`, then `pnpm run compare:agent --run --configuration without --model <model>` and `pnpm run compare:agent --run --configuration with --model <model> --results <the first run's directory>`. That is 40 sessions in all, each cut off after 30 minutes. Then commit the results directory and add the README sentence that matches the report.
 
+**The owner's run, 2026-11-26.** On the owner's Mac (Apple Silicon), Claude Code 2.1.332 with claude-sonnet-5-5, signed in with an API key (`apiKeySource` in each session's init event), both configurations on the same day: without Factloom from 09:27:00Z, with it from 09:33:22Z. 40 sessions, all ending in `success`; in all 20 sessions with Factloom the init event reports the server `connected`. Committed in `4a700b0` with the raw stream-json output, the check output and the generated [`report.md`](../../../apps/mcp-server/evals/agent-comparison/results/2026-11-26/report.md), merged in `84d3467`. The task set (`bc53b5e`) precedes them, and the report lists no change to it.
+
+- **Result, as the report states it:** no clear difference. Median per-task change in input and output tokens +1.8%, inside the report's 10% band; total input tokens 1,859,692 without and 1,837,695 with, output 30,495 and 33,868; tool calls 96 and 98; checks 10 of 10 both ways. Per task the change runs from −34.2% (utc-dates) to +53.4% (refund-rounding).
+- **What the run shows besides, measured from the raw output:** the agent made no Factloom tool call in any of the 20 sessions with Factloom. In the first session of every task, in both configurations, it wrote what it learned to Claude Code's auto memory, the `memory/` folder Claude Code keeps per project, and read it back in the second. The baseline keeping auto memory is functional requirement 3, so the run is as specified; what it measures is the cost of registering Factloom with an agent that does not use it. Why the agent prefers its built-in memory, and what makes it use Factloom, is FL-079.
+- **Secrets:** the results were searched for key patterns (`sk-ant-`, `ANTHROPIC_API_KEY=`, bearer tokens): none. They name the owner's local user name in paths, and the two commits carry the Mac's default git identity, unsigned, not the project's; both are pushed and stay, as history is not rewritten.
+- **`README.md`:** the sentence under "What it is for" states the result and that the agent did not call Factloom, in `1bac162`.
 
 ### FL-075: Property-based tests of the time rules
 
