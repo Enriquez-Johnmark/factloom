@@ -75,7 +75,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Completed |
 | FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Completed |
 | FL-079 | A registered coding agent uses Factloom rather than only its built-in memory | 1 | FL-074, FL-038 | Completed |
-| FL-080 | Fewer turns for a coding agent that uses Factloom | 1 | FL-079 | Pending |
+| FL-080 | Fewer turns for a coding agent that uses Factloom | 1 | FL-079 | Under Review |
 
 ### FL-034: Server configuration and composition root
 
@@ -692,7 +692,7 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 1 |
 | Depends on | FL-079 |
 | Requirements | REQ-37 |
@@ -727,10 +727,20 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 - Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
 
 **Acceptance criteria.**
-- [ ] Each lever tried is confirmed in the agent's documentation, with the page cited.
+- [x] Each lever tried is confirmed in the agent's documentation, with the page cited.
 - [ ] The owner's third run is committed, with fewer turns in the second sessions than FL-079's 101, and its report and the `README.md` sentence match.
-- [ ] `pnpm check` exits 0 and does not start the runner.
+- [x] `pnpm check` exits 0 and does not start the runner.
 
 **Validation.** Unit tests for any runner or server change; the owner's run for the rest.
 
 **Completion evidence.** The commits, the cited pages, the third report and the `README.md` sentence.
+
+**Recorded evidence.** Prepared on 2026-11-26 on Linux x64 with Node.js v22.23.4. The item is `Under Review`: the third run (criterion 2) is the owner's.
+
+- **The lever tried: a prompt hook, confirmed in the documentation.** [hooks.md](https://code.claude.com/docs/en/hooks.md) and [hooks-guide.md](https://code.claude.com/docs/en/hooks-guide.md), read on 2026-11-26: a `UserPromptSubmit` hook receives the prompt in a JSON document on standard input; "For `UserPromptSubmit` hooks, use `hookSpecificOutput.additionalContext` ... to inject text into Claude's context"; the event has "no matcher support"; a `command` string without `args` "is passed to a shell", which "expands variables"; "A hook process inherits the parent environment"; the default timeout on this event is 30 seconds; output is capped at 10,000 characters. [headless.md](https://code.claude.com/docs/en/headless.md): outside `--bare`, a `-p` session runs hooks. That hooks given with `--settings` run outside bare mode is inferred from the bare-mode sentence, not stated; the owner's run shows it.
+- **Why it is the lever, from the second report.** It removes both costs the report shows for the second sessions: the `ToolSearch` turn and the `recall` turn, and the case where the agent skipped `recall` (database-variable).
+- **The lever not tried: `alwaysLoad`.** Confirmed in [mcp.md](https://code.claude.com/docs/en/mcp.md), "Exempt a server from deferral". Not tried in this run: with the hook, a second session needs no Factloom tool, and `alwaysLoad` would put the six tool definitions in every turn of every session to save one `ToolSearch` turn in each first session. One lever per run keeps the report readable.
+- **The code.** `factloom hook recall` (`src/run-recall-hook.ts`): reads the prompt, recalls the current facts that match it, five at most, records their usage as `recall` does, and prints them as `hookSpecificOutput.additionalContext`, with a line saying to call `recall` only for what they do not cover; with no match it prints nothing, so it adds nothing to the context. It makes no LLM call. Unit tests on the in-memory store, and a stdio test through the test entry on a SQLite file, seen to fail with the command's routing broken. The exact command of the run's settings was run through `sh -c` with the test entry: it printed the JSON and exited 0.
+- **The runner.** The run with Factloom passes `--settings` with auto memory off and the hook; the settings hold no path, so the report shows them as they are. The hook's server, database and namespace reach it through environment variables set on the agent's process, the same as the server's configuration, and `ANTHROPIC_API_KEY` is emptied in the hook's command, as in the server's. The run without Factloom is unchanged.
+- **The guide.** `apps/mcp-server/README.md` gains the hook step, with the settings and the cited pages, and says it is unmeasured until this item's report.
+- **Not verified here.** How long the hook takes with the real embedding model, which it loads on each prompt, against the 30-second timeout: the model is not cached in this container. The owner times it once before the run.
