@@ -1,0 +1,20 @@
+✔ parses a calendar date to midnight UTC (1.791666ms)
+✔ refuses text that is not a calendar date (0.1825ms)
+✔ adds days across the end of a month (0.075958ms)
+✔ adds amounts in cents (0.414917ms)
+✔ formats cents with two decimals and the currency (0.092083ms)
+✔ lists the invoices with their totals (0.761375ms)
+✔ creates an invoice for a known customer (0.115417ms)
+✔ refuses an invoice for an unknown customer (0.062833ms)
+✔ returns a known customer (0.087917ms)
+✔ answers 404 for an unknown customer (0.08775ms)
+✔ returns a known customer (0.488584ms)
+✔ answers an unknown customer with 404 and the agreed error body (0.170125ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 73.173334

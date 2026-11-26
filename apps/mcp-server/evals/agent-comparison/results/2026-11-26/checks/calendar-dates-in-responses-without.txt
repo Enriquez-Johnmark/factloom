@@ -1,0 +1,18 @@
+✔ parses a calendar date to midnight UTC (3.106084ms)
+✔ refuses text that is not a calendar date (0.319416ms)
+✔ adds days across the end of a month (0.178292ms)
+✔ adds amounts in cents (0.449ms)
+✔ formats cents with two decimals and the currency (0.099084ms)
+✔ lists the invoices with their totals (0.9065ms)
+✔ gives each invoice a due date 30 days after issuance, as a calendar date (0.102917ms)
+✔ creates an invoice for a known customer (0.114875ms)
+✔ refuses an invoice for an unknown customer (0.063667ms)
+✔ gives the due date 30 days after the issue date as a calendar date (0.667834ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 91.970334

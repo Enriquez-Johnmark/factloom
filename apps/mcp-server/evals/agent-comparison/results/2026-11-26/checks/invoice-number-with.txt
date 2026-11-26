@@ -1,0 +1,17 @@
+✔ parses a calendar date to midnight UTC (2.109ms)
+✔ refuses text that is not a calendar date (0.1985ms)
+✔ adds days across the end of a month (0.07675ms)
+✔ adds amounts in cents (0.422334ms)
+✔ formats cents with two decimals and the currency (0.090083ms)
+✔ lists the invoices with their totals (0.726791ms)
+✔ creates an invoice for a known customer (0.109625ms)
+✔ refuses an invoice for an unknown customer (0.061625ms)
+✔ prints an invoice number as INV, the year and a six-digit sequence (0.378666ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 74.268833

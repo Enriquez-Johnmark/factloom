@@ -1,0 +1,19 @@
+✔ parses a calendar date to midnight UTC (1.950209ms)
+✔ refuses text that is not a calendar date (0.182166ms)
+✔ adds days across the end of a month (0.075667ms)
+✔ adds amounts in cents (0.422875ms)
+✔ formats cents with two decimals and the currency (0.092834ms)
+✔ lists the invoices with their totals (0.704958ms)
+✔ creates an invoice for a known customer (0.104208ms)
+✔ refuses an invoice for an unknown customer (0.058ms)
+✔ reads the database URL from INVOICE_DB_URL (0.432542ms)
+✔ does not fall back to DATABASE_URL (0.132625ms)
+✔ still reads the port (0.063042ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 74.884375

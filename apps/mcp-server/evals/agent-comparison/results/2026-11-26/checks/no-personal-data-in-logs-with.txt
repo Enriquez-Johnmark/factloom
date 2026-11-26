@@ -1,0 +1,18 @@
+✔ parses a calendar date to midnight UTC (1.86025ms)
+✔ refuses text that is not a calendar date (0.178417ms)
+✔ adds days across the end of a month (0.073541ms)
+✔ adds amounts in cents (0.417792ms)
+✔ formats cents with two decimals and the currency (0.096ms)
+✔ lists the invoices with their totals (0.708292ms)
+✔ creates an invoice for a known customer (0.102083ms)
+✔ refuses an invoice for an unknown customer (0.05975ms)
+✔ logs one line with the invoice and the customer id (0.873333ms)
+✔ logs neither the name nor the email address of the customer (0.1485ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 72.001375

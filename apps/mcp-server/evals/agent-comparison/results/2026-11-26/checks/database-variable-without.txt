@@ -1,0 +1,22 @@
+✔ returns the database url from INVOICE_DB_URL (1.580167ms)
+✔ throws when INVOICE_DB_URL is not set (0.591875ms)
+✔ ignores DATABASE_URL, which is the platform's shared database (0.205ms)
+✔ parses a calendar date to midnight UTC (1.059708ms)
+✔ refuses text that is not a calendar date (0.161167ms)
+✔ adds days across the end of a month (0.102542ms)
+✔ adds amounts in cents (0.431833ms)
+✔ formats cents with two decimals and the currency (0.091334ms)
+✔ lists the invoices with their totals (0.78375ms)
+✔ creates an invoice for a known customer (0.116ms)
+✔ refuses an invoice for an unknown customer (0.060083ms)
+✔ reads the database URL from INVOICE_DB_URL (0.607208ms)
+✔ does not fall back to DATABASE_URL (0.172ms)
+✔ still reads the port (0.075917ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 101.184416

@@ -1,0 +1,21 @@
+✔ parses a calendar date to midnight UTC (1.421166ms)
+✔ refuses text that is not a calendar date (0.167ms)
+✔ adds days across the end of a month (0.074125ms)
+✔ adds the regional tax for a retail customer (0.484292ms)
+✔ adds no tax for a wholesale customer in a taxed region (0.073375ms)
+✔ refuses an unknown customer (0.211167ms)
+✔ adds amounts in cents (0.436833ms)
+✔ formats cents with two decimals and the currency (0.092208ms)
+✔ lists the invoices with their totals (0.751125ms)
+✔ creates an invoice for a known customer (0.116625ms)
+✔ refuses an invoice for an unknown customer (0.063458ms)
+✔ adds the region tax for a retail customer (0.44775ms)
+✔ adds no tax for a wholesale customer (0.071208ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 78.91125

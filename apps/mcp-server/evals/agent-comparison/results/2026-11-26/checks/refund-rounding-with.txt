@@ -1,0 +1,22 @@
+✔ parses a calendar date to midnight UTC (2.37775ms)
+✔ refuses text that is not a calendar date (0.188375ms)
+✔ adds days across the end of a month (0.0815ms)
+✔ adds amounts in cents (0.447792ms)
+✔ formats cents with two decimals and the currency (0.0915ms)
+✔ refunds a percentage of the total in cents (0.453875ms)
+✔ rounds down to the cent, never to nearest (0.08025ms)
+✔ handles fractional percents without float error (0.073ms)
+✔ rejects invalid input (0.840542ms)
+✔ lists the invoices with their totals (1.302459ms)
+✔ creates an invoice for a known customer (0.259417ms)
+✔ refuses an invoice for an unknown customer (0.165625ms)
+✔ rounds a partial refund down to the whole cent (0.559875ms)
+✔ refunds an exact amount unchanged (0.225167ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 91.715167
