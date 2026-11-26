@@ -74,7 +74,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-018, FL-035, FL-058, FL-025, FL-032 | Completed |
 | FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Completed |
 | FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Completed |
-| FL-079 | A registered coding agent uses Factloom rather than only its built-in memory | 1 | FL-074, FL-038 | Under Review |
+| FL-079 | A registered coding agent uses Factloom rather than only its built-in memory | 1 | FL-074, FL-038 | Completed |
 | FL-080 | Fewer turns for a coding agent that uses Factloom | 1 | FL-079 | Pending |
 
 ### FL-034: Server configuration and composition root
@@ -622,7 +622,7 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-074, FL-038 |
 | Requirements | REQ-37 |
@@ -662,15 +662,15 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 
 **Acceptance criteria.**
 - [x] The cause is stated with its evidence: a documentation page, or a run's raw output.
-- [ ] In the owner's second run with Factloom, the agent calls `remember` or `record_fact` in the first session and `recall` in the second, in at least 8 of the 10 tasks.
-- [ ] The second report is committed, and the `README.md` sentence matches it.
+- [x] In the owner's second run with Factloom, the agent calls `remember` or `record_fact` in the first session and `recall` in the second, in at least 8 of the 10 tasks.
+- [x] The second report is committed, and the `README.md` sentence matches it.
 - [x] `pnpm check` exits 0 and does not start the runner.
 
 **Validation.** Unit or smoke tests for any server change; the owner's run for the rest, because it needs a signed-in agent and spends tokens.
 
 **Completion evidence.** The commits, the cited pages, the second report and the `README.md` sentence.
 
-**Recorded evidence.** Prepared on 2026-11-26 on Linux x64 with Node.js v22.23.4. The item is `Under Review`: the second run (criteria 2 and 3) is the owner's, because it needs a signed-in agent and spends tokens.
+**Recorded evidence.** Prepared on 2026-11-26 on Linux x64 with Node.js v22.23.4. The second run (criteria 2 and 3) is the owner's, below.
 
 - **The cause, from the raw output of FL-074's run.** In all ten first sessions with Factloom, the agent wrote to auto memory, and in three it said why: "I didn't also write it to Factloom, to avoid keeping two copies" (refund-rounding, and invoice-number in nearly the same words), "I used the file-based memory, not the Factloom repo memory" (utc-dates). So it saw Factloom and chose the memory Claude Code ships, to keep one copy. In the second sessions, Claude Code loads the auto memory index by itself, while Factloom needs a `recall` call, and the instructions asked for one only before answering a question, which a coding task is not. What auto memory saves is in the [memory documentation](https://code.claude.com/docs/en/memory.md) (decisions "that Claude can't derive from the code", accessed 2026-11-26); the exact words of its prompt are not documented.
 - **The changes.**
@@ -679,6 +679,14 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
   - The runner passes `--settings '{"autoMemoryEnabled":false}'` in the run with Factloom only, so that run follows the guide and the baseline stays as shipped (FL-074, functional requirement 3). `--settings` is listed by `claude --help` of Claude Code 2.1.332 here, and the report's "How it was run" shows the setting. Unit tests: the two configurations differ only by the server configuration and this setting.
   - The runner now writes the home directory as `~` in the raw and check output, because the first run's results published the owner's user name in paths. A user name printed outside a path, as in `ls -l` output, is not caught.
 - **Not verified.** That the setting turns auto memory off was not seen here: a `claude -p` run in this container reported `memory_paths: null` with and without it, unlike the owner's run, so the owner's second run is the test. That run made two real one-word model calls through the container's network proxy, which supplied a credential in place of the dummy key given; no other session was started.
+
+**The owner's second run, 2026-11-26.** On the owner's Mac, Claude Code 2.1.332 with claude-sonnet-5-5, the configuration with Factloom only, into `results/2026-11-26-second/`; the run without Factloom is the first run's, copied unchanged (run log, raw output and checks), because nothing in it changed and the agent's version was the same. Committed in `51f4810`, with the project's author and signed.
+
+- **Criterion 2, met: 9 of 10 tasks.** From the raw output: in the first session of every task the agent called `record_fact` (with `recall` first in two), and in the second it called `recall` in nine. The tenth, database-variable, made no Factloom call in its second session, used `DATABASE_URL`, which the recorded fact forbids, and failed its check. No session wrote to an auto memory folder, and every init event reports `memory_paths` empty, so the setting took effect: the open point above is settled.
+- **The result, as the report states it: a cost.** 9 of 10 checks passed with Factloom against 10 of 10 without; the median task's tokens rose by 17.7%; total input tokens 2,039,567 against 1,859,692, output 31,653 against 30,495, tool calls 116 against 96. Per task the change runs from −20.3% (currency-from-region) to +39.9% (no-personal-data-in-logs).
+- **Where it comes from, summed from the report's session table.** First sessions: 731,307 input tokens with Factloom against 670,507, in 35 turns against 40. Second sessions: 1,308,260 against 1,189,185, in 101 turns against 76. With Factloom the agent made 16 `ToolSearch` calls, to load the deferred Factloom tools, and its `Read` and `Write` calls fell from 24 to 12 and 25 to 9. Each extra turn sends the context again, mostly from the cache; auto memory is in the context from the start and needs no turn. That reading is from these figures, not a measurement of each cause, and is what FL-080 takes up.
+- **Secrets and privacy:** no key pattern in the new files. The raw output of the run with Factloom shows the home directory as `~`; the copied baseline files still hold the owner's user name, as they already did in `results/2026-11-26/`.
+- **`README.md`:** the sentence under "What it is for" now states both measurements; the registration guide says the set-up costs tokens and what to choose it for.
 
 ### FL-080: Fewer turns for a coding agent that uses Factloom
 
