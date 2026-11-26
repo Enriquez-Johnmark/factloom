@@ -106,6 +106,37 @@ describe('the recall tool over stdio', () => {
   }, 30_000);
 });
 
+describe('the recall hook over stdio', () => {
+  it('adds the facts that match a prompt to the context from a SQLite file', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'factloom-hook-'));
+    directories.push(directory);
+    const databasePath = join(directory, 'factloom.db');
+    const factId = await recordOneFact(databasePath);
+    const hook = startServerProcess(
+      ENTRY,
+      { FACTLOOM_DB: databasePath, FACTLOOM_NAMESPACE: NAMESPACE },
+      directory,
+      ['hook', 'recall'],
+    );
+
+    hook.send({
+      hook_event_name: 'UserPromptSubmit',
+      prompt: 'Where are the sessions of the shop API kept?',
+    });
+    hook.close();
+    const { code, standardOutput } = await hook.finished;
+
+    expect(code).toBe(0);
+    const output = z
+      .object({ hookSpecificOutput: z.object({ hookEventName: z.string(), additionalContext: z.string() }) })
+      .parse(JSON.parse(standardOutput));
+    expect(output.hookSpecificOutput.hookEventName).toBe('UserPromptSubmit');
+    expect(output.hookSpecificOutput.additionalContext).toContain(
+      `- The shop API keeps its sessions in redis. (fact ${factId})`,
+    );
+  }, 30_000);
+});
+
 describe('the server instructions over stdio', () => {
   it('gives its instructions in the initialize result', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'factloom-instructions-'));

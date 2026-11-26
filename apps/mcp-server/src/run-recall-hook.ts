@@ -1,0 +1,93 @@
+// The prompt hook of FL-080: Claude Code runs `factloom hook recall` when a prompt is submitted,
+// with the prompt in a JSON document on standard input, and adds the `additionalContext` of
+// `hookSpecificOutput` that the command prints on exit 0 to the agent's context
+// (https://code.claude.com/docs/en/hooks.md and hooks-guide.md, read on 2026-11-26).
+// The agent then has the facts that match the task without spending turns to load and call
+// recall, which is where the comparison of FL-079 measured Factloom's cost.
+import type { Embedder, MemoryStore, Namespace, Timestamp } from '@factloom/core';
+import { recall } from '@factloom/graph-rag';
+import { z } from 'zod';
+import type { Logger } from './create-factloom-server.ts';
+
+/** The most facts the hook prints: few, because they enter the context with every prompt. */
+export const RECALL_HOOK_LIMIT = 5;
+
+/** The question recall takes is at most this long, as in the recall tool. */
+const QUESTION_LENGTH_LIMIT = 2000;
+
+/** What a prompt hook receives on standard input; only the prompt is read. */
+const PromptHookInputSchema = z.object({ prompt: z.string() });
+
+const HEADING =
+  "Factloom, this repository's memory, recalled these current facts for this prompt, best match first. Call recall only for what they do not cover.";
+
+/** Reads the prompt from the hook's standard input, or returns null when it is not a hook input. */
+function readPrompt(standardInput: string): string | null {
+  try {
+    const parsed = PromptHookInputSchema.safeParse(JSON.parse(standardInput));
+    return parsed.success ? parsed.data.prompt : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Runs the prompt hook: recalls the current facts that match the prompt, records their usage as
+ * recall does, and writes them as a short list in the hook's JSON output, or nothing when none
+ * match. Returns the exit code: 0, or 1 when it failed, which Claude Code treats as an error
+ * that does not block the prompt.
+ */
+export async function runRecallHook(
+  deps: {
+    readonly store: MemoryStore;
+    readonly embedder: Embedder;
+    readonly namespace: Namespace;
+    readonly now: () => Timestamp;
+    readonly log: Logger;
+  },
+  io: { readonly standardInput: string; readonly write: (text: string) => void },
+): Promise<number> {
+  const prompt = readPrompt(io.standardInput);
+  if (prompt === null) {
+    deps.log('The recall hook needs a JSON document with a prompt on standard input.');
+    return 1;
+  }
+  if (prompt.trim() === '') return 0;
+  const recalled = await recall(deps, {
+    namespace: deps.namespace,
+    question: prompt.slice(0, QUESTION_LENGTH_LIMIT),
+    validAt: null,
+    knownAt: null,
+    limit: RECALL_HOOK_LIMIT,
+  });
+  if (!recalled.ok) {
+    deps.log(`The recall hook failed: ${recalled.error.code}: ${recalled.error.message}`);
+    return 1;
+  }
+  const { facts } = recalled.value;
+  if (facts.length === 0) return 0;
+  // Awaited, unlike in the recall tool: the process ends when the hook returns.
+  const usage = await deps.store.recordFactUsage({
+    namespace: deps.namespace,
+    factIds: facts.map((found) => found.fact.id),
+    recalledAt: deps.now(),
+  });
+  if (!usage.ok) deps.log(`The usage of recalled facts was not recorded: ${usage.error.code}`);
+  const lines = facts.map((found) => `- ${found.fact.statement} (fact ${found.fact.id})`);
+  const output = {
+    hookSpecificOutput: {
+      hookEventName: 'UserPromptSubmit',
+      additionalContext: [HEADING, ...lines].join('\n'),
+    },
+  };
+  io.write(`${JSON.stringify(output)}\n`);
+  return 0;
+}
+
+/** Reads all of standard input as text, for the hook's input. */
+export async function readStandardInput(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin)
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+  return Buffer.concat(chunks).toString('utf8');
+}

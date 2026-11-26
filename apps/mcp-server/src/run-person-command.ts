@@ -3,7 +3,10 @@ import { type ProposalsCommandDeps, runProposalsCommand } from './run-proposals-
 import { type PurgeCommandDeps, runPurgeCommand } from './run-purge-command.ts';
 
 /** A command a person runs, which is not an MCP server: purge (FL-072) or proposals (FL-070). */
-export type PersonCommand = Exclude<Command, { readonly kind: 'serve' } | { readonly kind: 'maintenance' }>;
+export type PersonCommand = Exclude<
+  Command,
+  { readonly kind: 'serve' } | { readonly kind: 'maintenance' } | { readonly kind: 'recall_hook' }
+>;
 
 /** Runs a command a person runs and returns its exit code. The one place a command argument is routed. */
 export function runPersonCommand(

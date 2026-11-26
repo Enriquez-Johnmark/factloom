@@ -1,7 +1,7 @@
 // A test entry: the server of main.ts with the fake embedder of core in place of the local
 // model, so that tests over stdio need no model and no network. Never reached from main.ts.
 // It reads the same configuration and differs from main.ts only in the embedder it builds, and
-// in running only the commands a person runs besides the server: not maintenance.
+// in running only the commands a person runs and the recall hook besides the server: not maintenance.
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -20,6 +20,7 @@ import { FACTLOOM_TOOLS } from './factloom-tools.ts';
 import { readCommand } from './read-command.ts';
 import { readConfiguration } from './read-configuration.ts';
 import { runPersonCommand } from './run-person-command.ts';
+import { readStandardInput, runRecallHook } from './run-recall-hook.ts';
 import { serveFactloom } from './serve-factloom.ts';
 
 const log: Logger = (message) => {
@@ -58,6 +59,14 @@ const store =
 if (command.kind === 'maintenance') {
   log('This test entry does not run maintenance.');
   process.exit(1);
+}
+if (command.kind === 'recall_hook') {
+  const exitCode = await runRecallHook(
+    { store: opened.value, embedder, namespace, now: () => toTimestamp(new Date()), log },
+    { standardInput: await readStandardInput(), write: (text) => process.stdout.write(text) },
+  );
+  await opened.value.close();
+  process.exit(exitCode);
 }
 if (command.kind !== 'serve') {
   const exitCode = await runPersonCommand(

@@ -24,6 +24,7 @@ import { buildMaintenanceJobs } from './maintenance-jobs.ts';
 import { readCommand } from './read-command.ts';
 import { readConfiguration } from './read-configuration.ts';
 import { runPersonCommand } from './run-person-command.ts';
+import { readStandardInput, runRecallHook } from './run-recall-hook.ts';
 import { serveFactloom } from './serve-factloom.ts';
 
 const log: Logger = (message) => {
@@ -95,6 +96,14 @@ if (command.kind === 'maintenance') {
   process.exit(report.jobs.some((job) => job.status === 'failed') ? 1 : 0);
 }
 
+if (command.kind === 'recall_hook') {
+  const exitCode = await runRecallHook(
+    { store: opened.value, embedder, namespace, now: () => toTimestamp(new Date()), log },
+    { standardInput: await readStandardInput(), write: (text) => process.stdout.write(text) },
+  );
+  await opened.value.close();
+  process.exit(exitCode);
+}
 if (command.kind !== 'serve') {
   const exitCode = await runPersonCommand(
     {
