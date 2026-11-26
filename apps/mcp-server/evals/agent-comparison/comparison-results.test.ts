@@ -1,10 +1,12 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Configuration } from './compare-runs.ts';
+import type { TaskSetName } from './task-sets.ts';
 import {
   appendRunLogEntry,
+  findRunLogPath,
   hideHomeDirectory,
   readRunLog,
   type SessionEntry,
@@ -50,10 +52,16 @@ function sessionEntry(taskId: string, session: 1 | 2, inputTokens: number): Sess
   };
 }
 
-function logRun(directory: string, configuration: Configuration, inputTokens: number): void {
+function logRun(
+  directory: string,
+  configuration: Configuration,
+  inputTokens: number,
+  taskSet: TaskSetName = 'memory',
+): void {
   appendRunLogEntry(directory, configuration, {
     kind: 'run',
     configuration,
+    taskSet,
     startedAt: '2026-11-30T10:00:00.000Z',
     agentVersion: '2.1.332 (Claude Code)',
     agentArguments: ['-p', '<prompt>'],
@@ -92,7 +100,30 @@ describe('the results directory', () => {
     const report = readFileSync(writeReport(directory), 'utf8');
 
     expect(report).toContain('| refund-rounding | 1,000 | 500 |');
-    expect(report).toContain('| Tasks | 10 in the set, 1 compared;');
+    expect(report).toContain('| Tasks | 10 in the set of memory tasks of FL-074, 1 compared;');
+  });
+
+  it('reads a run log that names no task set, written before FL-081, as one of the memory tasks', () => {
+    const directory = createResultsDirectory();
+    const runLine = {
+      kind: 'run',
+      configuration: 'without',
+      startedAt: '2026-11-26T09:27:00.528Z',
+      agentVersion: '2.1.332 (Claude Code)',
+      agentArguments: ['-p', '<prompt>'],
+      nodeVersion: 'v26.13.1',
+      platform: 'darwin arm64',
+    };
+    writeFileSync(findRunLogPath(directory, 'without'), `${JSON.stringify(runLine)}\n`);
+
+    expect(readRunLog(directory, 'without')?.run.taskSet).toBe('memory');
+  });
+
+  it('records the task set a run log names', () => {
+    const directory = createResultsDirectory();
+    logRun(directory, 'with', 500, 'memory');
+
+    expect(readRunLog(directory, 'with')?.run.taskSet).toBe('memory');
   });
 
   it('withholds a file that holds a credential and says why without repeating it', () => {

@@ -13,10 +13,10 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import { basename, dirname, join } from 'node:path';
 import { checkForSecrets } from '@factloom/graph-rag';
 import { z } from 'zod';
-import { AGENT_TASKS, TASK_SET_CHANGES } from './agent-tasks.ts';
 import { type CheckResult, type Configuration, compareRuns, type PlayedSession } from './compare-runs.ts';
 import { formatComparisonReport } from './format-comparison-report.ts';
 import { SessionUsageSchema } from './read-claude-stream.ts';
+import { DEFAULT_TASK_SET_NAME, findTaskSet, TASK_SET_NAMES, type TaskSet } from './task-sets.ts';
 
 /** Where the owner's runs are kept, one directory per date unless another is given. */
 export const RESULTS_DIRECTORY = join(import.meta.dirname, 'results');
@@ -26,6 +26,8 @@ const ConfigurationSchema = z.enum(['without', 'with']);
 const RunEntrySchema = z.strictObject({
   kind: z.literal('run'),
   configuration: ConfigurationSchema,
+  /** The task set played. A log written before FL-081 names none, and played the default. */
+  taskSet: z.enum(TASK_SET_NAMES).default(DEFAULT_TASK_SET_NAME),
   startedAt: z.string(),
   /** What `claude --version` printed before the run. */
   agentVersion: z.string(),
@@ -156,14 +158,25 @@ export function collectResults(logs: readonly RunLog[]): {
   return { sessions, checks };
 }
 
+/** The task set of a directory's run logs, which must all name the same one. */
+function findReportTaskSet(logs: readonly RunLog[]): TaskSet {
+  const names = [...new Set(logs.map((log) => log.run.taskSet))];
+  if (names.length > 1)
+    throw new Error(`The run logs were played with different task sets: ${names.join(', ')}.`);
+  const taskSet = findTaskSet(names[0] ?? DEFAULT_TASK_SET_NAME);
+  if (taskSet === null) throw new Error(`Unknown task set: ${names[0] ?? ''}.`);
+  return taskSet;
+}
+
 /** Builds the report from the run logs in a results directory and writes it as report.md. */
 export function writeReport(resultsDirectory: string): string {
   const logs = ConfigurationSchema.options.flatMap((configuration) => {
     const log = readRunLog(resultsDirectory, configuration);
     return log === null ? [] : [log];
   });
+  const taskSet = findReportTaskSet(logs);
   const { sessions, checks } = collectResults(logs);
-  const comparison = compareRuns({ taskIds: AGENT_TASKS.map((task) => task.id), sessions, checks });
+  const comparison = compareRuns({ taskIds: taskSet.tasks.map((task) => task.id), sessions, checks });
   const report = formatComparisonReport({
     comparison,
     runs: logs.map((log) => ({
@@ -173,8 +186,9 @@ export function writeReport(resultsDirectory: string): string {
     })),
     sessions,
     checks,
-    taskCount: AGENT_TASKS.length,
-    taskSetChanges: TASK_SET_CHANGES,
+    taskCount: taskSet.tasks.length,
+    taskSetDescription: taskSet.description,
+    taskSetChanges: taskSet.changes,
   });
   const path = join(resultsDirectory, 'report.md');
   const withheld = writeCheckedFile(path, report);

@@ -36,21 +36,23 @@ import {
   MCP_CONFIG_PLACEHOLDER,
   playClaudeSession,
 } from './play-claude-session.ts';
-import { prepareFixtureCopy } from './prepare-fixture-copy.ts';
 import { readClaudeStream } from './read-claude-stream.ts';
 import { runTaskCheck } from './run-task-check.ts';
+import { DEFAULT_TASK_SET_NAME, findTaskSet, TASK_SET_NAMES, type TaskSet } from './task-sets.ts';
 import { SERVER_ENTRY, warmUpFactloomServer } from './warm-up-factloom-server.ts';
 
-const USAGE = `Plays the ${AGENT_TASKS.length} tasks of FL-074 through Claude Code, with and without Factloom, and writes the report.
+const USAGE = `Plays a task set through Claude Code, with and without Factloom, and writes the report:
+the ${AGENT_TASKS.length} memory tasks of FL-074 by default, or with --task-set another set (${TASK_SET_NAMES.join(', ')}).
 
 Usage, from apps/mcp-server:
-  pnpm run compare:agent --dry-run [--configuration without|with]
+  pnpm run compare:agent --dry-run [--task-set <name>] [--configuration without|with]
       Prepares each task's working tree and server configuration, prints the command each
       session would run, checks that each task's check fails on the untouched fixture, and
       removes everything. Starts no agent and spends no tokens.
-  pnpm run compare:agent --run --configuration without|with [--model <model>] [--tasks <id,id>] [--results <directory>] [--keep]
-      Plays every task in one configuration: ${AGENT_TASKS.length * 2} sessions of a signed-in Claude Code, which spend
-      real tokens. Run it once per configuration, into the same results directory.
+  pnpm run compare:agent --run [--task-set <name>] --configuration without|with [--model <model>] [--tasks <id,id>] [--results <directory>] [--keep]
+      Plays every task of the set in one configuration: two sessions each of a signed-in Claude
+      Code, which spend real tokens. Run it once per configuration, into the same results directory.
+      A task that carries a first-session commit has its first session's work committed with it.
   pnpm run compare:agent --report <results directory>
       Rebuilds report.md from the run logs in the directory. Starts no agent.
 
@@ -58,13 +60,15 @@ Needs: the claude command on PATH, signed in; Node.js; for --configuration with,
 access to huggingface.co the first time, to download Factloom's embedding model. --model is
 passed to claude as it is, such as sonnet; without it, Claude Code uses its default model, and
 the report names the model each session reported. The results go to
-evals/agent-comparison/results/<date> unless --results says otherwise.`;
+evals/agent-comparison/results/<date>, with -<task set> after the date for a set other than the
+default, unless --results says otherwise.`;
 
 const options = {
   'dry-run': { type: 'boolean' },
   run: { type: 'boolean' },
   report: { type: 'string' },
   configuration: { type: 'string' },
+  'task-set': { type: 'string' },
   model: { type: 'string' },
   tasks: { type: 'string' },
   results: { type: 'string' },
@@ -91,12 +95,17 @@ function readConfigurations(value: string | undefined, isRequired: boolean): Con
   return stop(`--configuration is without or with, not ${value}.`);
 }
 
-function selectTasks(value: string | undefined): AgentTask[] {
-  if (value === undefined) return [...AGENT_TASKS];
+function readTaskSet(value: string | undefined): TaskSet {
+  const taskSet = findTaskSet(value ?? DEFAULT_TASK_SET_NAME);
+  return taskSet ?? stop(`--task-set is one of ${TASK_SET_NAMES.join(', ')}, not ${value ?? ''}.`);
+}
+
+function selectTasks(value: string | undefined, taskSet: TaskSet): AgentTask[] {
+  if (value === undefined) return [...taskSet.tasks];
   const ids = value.split(',').map((id) => id.trim());
-  const unknown = ids.filter((id) => !AGENT_TASKS.some((task) => task.id === id));
+  const unknown = ids.filter((id) => !taskSet.tasks.some((task) => task.id === id));
   if (unknown.length > 0) stop(`Unknown task: ${unknown.join(', ')}.`);
-  return AGENT_TASKS.filter((task) => ids.includes(task.id));
+  return taskSet.tasks.filter((task) => ids.includes(task.id));
 }
 
 function readAgentVersion(): string | null {
@@ -111,8 +120,8 @@ function readAgentVersion(): string | null {
 }
 
 /** A working tree and, with Factloom, the server configuration of one task's run. */
-function prepareTaskRun(task: AgentTask, configuration: Configuration, runStamp: string) {
-  const workingDirectory = prepareFixtureCopy();
+function prepareTaskRun(task: AgentTask, configuration: Configuration, runStamp: string, taskSet: TaskSet) {
+  const workingDirectory = taskSet.prepareCopy();
   // Outside the working tree, so the agent does not find the database among the files.
   const serverDirectory = mkdtempSync(join(tmpdir(), 'factloom-agent-comparison-'));
   let mcpConfigPath: string | null = null;
@@ -135,14 +144,18 @@ function prepareTaskRun(task: AgentTask, configuration: Configuration, runStamp:
   return { workingDirectory, serverDirectory, mcpConfigPath, environment, remove };
 }
 
-async function dryRun(configurations: readonly Configuration[], tasks: readonly AgentTask[]): Promise<void> {
+async function dryRun(
+  configurations: readonly Configuration[],
+  tasks: readonly AgentTask[],
+  taskSet: TaskSet,
+): Promise<void> {
   const version = readAgentVersion();
   say(version === null ? 'claude was not found on PATH.' : `claude --version: ${version}`);
   say(`Factloom server entry: ${SERVER_ENTRY}${existsSync(SERVER_ENTRY) ? '' : ' (missing)'}`);
   let unexpected = 0;
   for (const configuration of configurations) {
     for (const task of tasks) {
-      const prepared = prepareTaskRun(task, configuration, 'dry-run');
+      const prepared = prepareTaskRun(task, configuration, 'dry-run', taskSet);
       try {
         const args = (prompt: string) =>
           describeClaudeArguments(
@@ -156,7 +169,7 @@ async function dryRun(configurations: readonly Configuration[], tasks: readonly 
             `  ${MCP_CONFIG_PLACEHOLDER}: ${JSON.stringify(JSON.parse(readFileSync(prepared.mcpConfigPath, 'utf8')))}`,
           );
         }
-        const check = await runTaskCheck(prepared.workingDirectory, task.id);
+        const check = await runTaskCheck(prepared.workingDirectory, task.id, taskSet.checksDirectory);
         if (check.passed) unexpected += 1;
         say(
           `  check on the untouched fixture: ${check.passed ? 'passes, which it must not' : 'fails, as it must'}`,
@@ -228,6 +241,7 @@ async function playAndRecord(input: {
 
 async function run(input: {
   readonly configuration: Configuration;
+  readonly taskSet: TaskSet;
   readonly tasks: readonly AgentTask[];
   readonly model: string | null;
   readonly resultsDirectory: string;
@@ -254,6 +268,7 @@ async function run(input: {
   appendRunLogEntry(resultsDirectory, configuration, {
     kind: 'run',
     configuration,
+    taskSet: input.taskSet.name,
     startedAt,
     agentVersion,
     agentArguments: describeClaudeArguments(exampleArgs),
@@ -261,7 +276,7 @@ async function run(input: {
     platform: `${process.platform} ${process.arch}`,
   });
   for (const [index, task] of input.tasks.entries()) {
-    const prepared = prepareTaskRun(task, configuration, runStamp);
+    const prepared = prepareTaskRun(task, configuration, runStamp, input.taskSet);
     try {
       for (const session of [1, 2] as const) {
         const prompt = session === 1 ? task.firstSession : task.secondSession;
@@ -280,8 +295,13 @@ async function run(input: {
         }
         // Without the right servers, the sessions would not compare what the report says.
         if (played.serverProblem !== null) stop(`Stopped: ${played.serverProblem}`);
+        // The reason goes into the git history in both configurations (FL-081).
+        const { commitFirstSession } = input.taskSet;
+        if (session === 1 && task.firstSessionCommit !== undefined && commitFirstSession !== null) {
+          commitFirstSession(prepared.workingDirectory, task.firstSessionCommit);
+        }
       }
-      const check = await runTaskCheck(prepared.workingDirectory, task.id);
+      const check = await runTaskCheck(prepared.workingDirectory, task.id, input.taskSet.checksDirectory);
       const checkPath = join(resultsDirectory, 'checks', `${task.id}-${configuration}.txt`);
       const withheld = writeCheckedFile(checkPath, hideHomeDirectory(check.output, homedir()));
       appendRunLogEntry(resultsDirectory, configuration, {
@@ -318,15 +338,20 @@ const values = readOptions();
 if (values.report !== undefined) {
   say(`Report: ${writeReport(values.report)}`);
 } else if (values['dry-run'] === true) {
-  await dryRun(readConfigurations(values.configuration, false), selectTasks(values.tasks));
+  const taskSet = readTaskSet(values['task-set']);
+  await dryRun(readConfigurations(values.configuration, false), selectTasks(values.tasks, taskSet), taskSet);
 } else if (values.run === true) {
   const [configuration] = readConfigurations(values.configuration, true);
   if (configuration === undefined) stop('--run needs --configuration without or --configuration with.');
+  const taskSet = readTaskSet(values['task-set']);
+  const date = toTimestamp(new Date()).slice(0, 10);
+  const defaultDirectory = taskSet.name === DEFAULT_TASK_SET_NAME ? date : `${date}-${taskSet.name}`;
   await run({
     configuration,
-    tasks: selectTasks(values.tasks),
+    taskSet,
+    tasks: selectTasks(values.tasks, taskSet),
     model: values.model ?? null,
-    resultsDirectory: values.results ?? join(RESULTS_DIRECTORY, toTimestamp(new Date()).slice(0, 10)),
+    resultsDirectory: values.results ?? join(RESULTS_DIRECTORY, defaultDirectory),
     keep: values.keep === true,
   });
 } else {

@@ -1,0 +1,47 @@
+// The task sets the agent comparison can play: the memory tasks of FL-074, the default, and the
+// change-history tasks of FL-081. A run log names its set, so that the report is built from the
+// tasks that were played.
+import { AGENT_TASKS, type AgentTask, TASK_SET_CHANGES, type TaskSetChange } from './agent-tasks.ts';
+import { prepareFixtureCopy } from './prepare-fixture-copy.ts';
+import { CHECKS_DIRECTORY } from './run-task-check.ts';
+
+/** The names a run log and the runner's `--task-set` option take. */
+export const TASK_SET_NAMES = ['memory'] as const;
+export type TaskSetName = (typeof TASK_SET_NAMES)[number];
+
+/** The set a run plays when none is named, and that a run log without a name was played with. */
+export const DEFAULT_TASK_SET_NAME: TaskSetName = 'memory';
+
+export type TaskSet = {
+  readonly name: TaskSetName;
+  /** What the set is, in a few words, for the report. */
+  readonly description: string;
+  readonly tasks: readonly AgentTask[];
+  readonly changes: readonly TaskSetChange[];
+  /** Builds a clean copy of the set's fixture repository and returns its directory. */
+  readonly prepareCopy: () => string;
+  readonly checksDirectory: string;
+  /**
+   * Commits the first session's work with the task's message, for a set whose tasks carry one;
+   * null for a set whose tasks commit nothing.
+   */
+  readonly commitFirstSession: ((directory: string, message: string) => void) | null;
+};
+
+const TASK_SETS: Readonly<Record<TaskSetName, TaskSet>> = {
+  memory: {
+    name: 'memory',
+    description: 'memory tasks of FL-074',
+    tasks: AGENT_TASKS,
+    changes: TASK_SET_CHANGES,
+    prepareCopy: prepareFixtureCopy,
+    checksDirectory: CHECKS_DIRECTORY,
+    commitFirstSession: null,
+  },
+};
+
+/** Finds a task set by name, or returns null for a name that is not one. */
+export function findTaskSet(name: string): TaskSet | null {
+  const known = TASK_SET_NAMES.find((candidate) => candidate === name);
+  return known === undefined ? null : TASK_SETS[known];
+}

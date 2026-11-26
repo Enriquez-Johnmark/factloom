@@ -92,7 +92,7 @@ describe('the statement of the result', () => {
 });
 
 describe('the report', () => {
-  it('names the agent, the model, the dates and the number of tasks', () => {
+  it('names the agent, the model, the dates, the task set and the number of tasks', () => {
     const { comparison, sessions, checks } = oneTask(500, 1, { without: true, with: true });
 
     const report = formatComparisonReport({
@@ -101,13 +101,16 @@ describe('the report', () => {
       sessions,
       checks,
       taskCount: 10,
+      taskSetDescription: 'memory tasks of FL-074',
       taskSetChanges: [],
     });
 
     expect(report).toContain('| Agent | Claude Code 2.1.332 (without); 2.1.332 (with) |');
     expect(report).toContain('| Model | claude-test-model (without); claude-test-model (with) |');
     expect(report).toContain('| Date | 2026-11-30 (without); 2026-12-01 (with) |');
-    expect(report).toContain('| Tasks | 10 in the set, 1 compared; each in two sessions per configuration |');
+    expect(report).toContain(
+      '| Tasks | 10 in the set of memory tasks of FL-074, 1 compared; each in two sessions per configuration |',
+    );
     expect(report).toContain('None since the task set was committed.');
   });
 
@@ -120,6 +123,7 @@ describe('the report', () => {
       sessions,
       checks,
       taskCount: 10,
+      taskSetDescription: 'memory tasks of FL-074',
       taskSetChanges: [],
     });
 
@@ -146,6 +150,7 @@ describe('the report', () => {
       sessions,
       checks,
       taskCount: 10,
+      taskSetDescription: 'memory tasks of FL-074',
       taskSetChanges: [{ date: '2026-12-02', taskId: 'refund-rounding', reason: 'A typo in the prompt.' }],
     });
 

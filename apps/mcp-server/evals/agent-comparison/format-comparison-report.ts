@@ -194,6 +194,8 @@ export function formatComparisonReport(input: {
   readonly sessions: readonly PlayedSession[];
   readonly checks: readonly CheckResult[];
   readonly taskCount: number;
+  /** What the task set is, such as "memory tasks of FL-074". */
+  readonly taskSetDescription: string;
   readonly taskSetChanges: readonly TaskSetChange[];
 }): string {
   const { comparison } = input;
@@ -222,7 +224,7 @@ export function formatComparisonReport(input: {
     `| Agent | ${AGENT_NAME} ${described.versions} |`,
     `| Model | ${described.models} |`,
     `| Date | ${described.dates} |`,
-    `| Tasks | ${input.taskCount} in the set, ${count} compared; each in two sessions per configuration |`,
+    `| Tasks | ${input.taskCount} in the set of ${input.taskSetDescription}, ${count} compared; each in two sessions per configuration |`,
     '',
     '## Result',
     '',
