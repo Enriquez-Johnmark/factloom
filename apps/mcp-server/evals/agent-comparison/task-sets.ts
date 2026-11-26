@@ -35,6 +35,18 @@ export type TaskSet = {
    * null for a set whose tasks commit nothing.
    */
   readonly commitFirstSession: ((directory: string, message: string) => void) | null;
+  /** Whether the run with Factloom runs maintenance before each session, as the guide's hook does (FL-082). */
+  readonly runsMaintenance: boolean;
+  /**
+   * Writes and commits the set's hand-written `CLAUDE.md` map in a copy, for a run without
+   * Factloom with `--baseline claude-md`; null for a set that has none (FL-082).
+   */
+  readonly claudeMdBaseline: ((directory: string) => void) | null;
+  /**
+   * Makes and commits a task's change between its two sessions, as a teammate's commit would,
+   * in both configurations; null for a set whose tasks have none (FL-082).
+   */
+  readonly betweenSessions: ((directory: string, taskId: string) => void) | null;
 };
 
 const TASK_SETS: Readonly<Record<TaskSetName, TaskSet>> = {
@@ -46,6 +58,9 @@ const TASK_SETS: Readonly<Record<TaskSetName, TaskSet>> = {
     prepareCopy: prepareFixtureCopy,
     checksDirectory: CHECKS_DIRECTORY,
     commitFirstSession: null,
+    runsMaintenance: false,
+    claudeMdBaseline: null,
+    betweenSessions: null,
   },
   'change-history': {
     name: 'change-history',
@@ -55,6 +70,9 @@ const TASK_SETS: Readonly<Record<TaskSetName, TaskSet>> = {
     prepareCopy: prepareChangeHistoryCopy,
     checksDirectory: CHANGE_HISTORY_CHECKS_DIRECTORY,
     commitFirstSession,
+    runsMaintenance: false,
+    claudeMdBaseline: null,
+    betweenSessions: null,
   },
 };
 

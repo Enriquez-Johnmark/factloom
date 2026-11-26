@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   buildClaudeArguments,
   buildFactloomHookEnvironment,
+  buildFactloomRunSettings,
   FACTLOOM_RUN_SETTINGS,
   buildFactloomMcpConfig,
   describeClaudeArguments,
@@ -88,13 +89,41 @@ describe('the arguments of a session', () => {
         serverEntry: '/f/apps/mcp-server/src/main.ts',
         databasePath: '/tmp/x/factloom.db',
         namespace: 'eval:agent-comparison:utc-dates:run',
+        repositoryDirectory: '/tmp/invoice-service-1',
       }),
     ).toEqual({
       FACTLOOM_COMPARISON_NODE: '/usr/bin/node',
       FACTLOOM_COMPARISON_SERVER_ENTRY: '/f/apps/mcp-server/src/main.ts',
       FACTLOOM_DB: '/tmp/x/factloom.db',
       FACTLOOM_NAMESPACE: 'eval:agent-comparison:utc-dates:run',
+      FACTLOOM_REPO: '/tmp/invoice-service-1',
     });
+  });
+
+  it('runs maintenance at session start, with its report kept out of the context, when the task set asks for it', () => {
+    const settings = z
+      .object({
+        autoMemoryEnabled: z.literal(false),
+        hooks: z.object({
+          UserPromptSubmit: z.array(z.unknown()).length(1),
+          SessionStart: z.array(
+            z.object({
+              matcher: z.literal('startup'),
+              hooks: z.array(z.object({ type: z.literal('command'), command: z.string() })),
+            }),
+          ),
+        }),
+      })
+      .parse(JSON.parse(buildFactloomRunSettings({ runsMaintenance: true })));
+
+    expect(settings.hooks.SessionStart[0]?.hooks[0]?.command).toBe(
+      'ANTHROPIC_API_KEY= "$FACTLOOM_COMPARISON_NODE" "$FACTLOOM_COMPARISON_SERVER_ENTRY" maintenance > /dev/null',
+    );
+  });
+
+  it('runs no maintenance hook unless the task set asks for it', () => {
+    expect(buildFactloomRunSettings({ runsMaintenance: false })).toBe(FACTLOOM_RUN_SETTINGS);
+    expect(FACTLOOM_RUN_SETTINGS).not.toContain('SessionStart');
   });
 
   it('keeps auto memory, as shipped, in the run without Factloom', () => {
@@ -120,13 +149,14 @@ describe('the arguments of a session', () => {
 });
 
 describe('the server configuration', () => {
-  it('registers Factloom with its own database and namespace and no key of its own', () => {
+  it('registers Factloom with its own database, namespace and repository and no key of its own', () => {
     const config: unknown = JSON.parse(
       buildFactloomMcpConfig({
         nodePath: '/usr/bin/node',
         serverEntry: '/repo/apps/mcp-server/src/main.ts',
         databasePath: '/tmp/run/factloom.db',
         namespace: 'eval:agent-comparison:refund-rounding:1',
+        repositoryDirectory: '/tmp/invoice-service-1',
       }),
     );
 
@@ -139,6 +169,7 @@ describe('the server configuration', () => {
           env: {
             FACTLOOM_NAMESPACE: 'eval:agent-comparison:refund-rounding:1',
             FACTLOOM_DB: '/tmp/run/factloom.db',
+            FACTLOOM_REPO: '/tmp/invoice-service-1',
             ANTHROPIC_API_KEY: '',
           },
         },

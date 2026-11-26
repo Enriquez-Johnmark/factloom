@@ -33,6 +33,15 @@ const RECALL_HOOK_COMMAND =
   'ANTHROPIC_API_KEY= "$FACTLOOM_COMPARISON_NODE" "$FACTLOOM_COMPARISON_SERVER_ENTRY" hook recall';
 
 /**
+ * The maintenance command, as a session start hook (FL-082): the jobs run once before the agent
+ * starts, as the registration guide's hook does, so a map fact whose file moved is repaired
+ * before the agent recalls it. Its report goes to /dev/null: a session start hook's standard
+ * output is added to the agent's context (hooks.md, read on 2026-11-26).
+ */
+const MAINTENANCE_HOOK_COMMAND =
+  'ANTHROPIC_API_KEY= "$FACTLOOM_COMPARISON_NODE" "$FACTLOOM_COMPARISON_SERVER_ENTRY" maintenance > /dev/null';
+
+/**
  * The settings of the run with Factloom, as the registration guide sets Claude Code up: auto
  * memory turned off (FL-079), with the key from https://code.claude.com/docs/en/memory.md, and
  * the recall hook on each prompt (FL-080), so that the facts that match the prompt are in the
@@ -40,10 +49,24 @@ const RECALL_HOOK_COMMAND =
  * The settings hold no path, so the report shows them as they are. The run without Factloom
  * keeps auto memory and no hook, as shipped (FL-074, functional requirement 3).
  */
-export const FACTLOOM_RUN_SETTINGS = JSON.stringify({
-  autoMemoryEnabled: false,
-  hooks: { UserPromptSubmit: [{ hooks: [{ type: 'command', command: RECALL_HOOK_COMMAND }] }] },
-});
+export function buildFactloomRunSettings(options: { readonly runsMaintenance: boolean }): string {
+  return JSON.stringify({
+    autoMemoryEnabled: false,
+    hooks: {
+      UserPromptSubmit: [{ hooks: [{ type: 'command', command: RECALL_HOOK_COMMAND }] }],
+      ...(options.runsMaintenance
+        ? {
+            SessionStart: [
+              { matcher: 'startup', hooks: [{ type: 'command', command: MAINTENANCE_HOOK_COMMAND }] },
+            ],
+          }
+        : {}),
+    },
+  });
+}
+
+/** The settings of the run with Factloom for a task set that runs no maintenance (FL-079, FL-080). */
+export const FACTLOOM_RUN_SETTINGS = buildFactloomRunSettings({ runsMaintenance: false });
 
 /**
  * The variables the recall hook reads, set on the agent's process in the run with Factloom: the
@@ -54,12 +77,14 @@ export function buildFactloomHookEnvironment(input: {
   readonly serverEntry: string;
   readonly databasePath: string;
   readonly namespace: string;
+  readonly repositoryDirectory: string;
 }): Readonly<Record<string, string>> {
   return {
     FACTLOOM_COMPARISON_NODE: input.nodePath,
     FACTLOOM_COMPARISON_SERVER_ENTRY: input.serverEntry,
     FACTLOOM_DB: input.databasePath,
     FACTLOOM_NAMESPACE: input.namespace,
+    FACTLOOM_REPO: input.repositoryDirectory,
   };
 }
 
@@ -87,6 +112,8 @@ export function buildClaudeArguments(input: {
   readonly prompt: string;
   readonly model: string | null;
   readonly mcpConfigPath: string | null;
+  /** The settings of the run with Factloom; those of FL-080 when none are given. */
+  readonly factloomSettings?: string;
 }): string[] {
   return [
     '-p',
@@ -104,7 +131,7 @@ export function buildClaudeArguments(input: {
     ALLOWED_TOOLS.join(','),
     ...(input.mcpConfigPath === null
       ? []
-      : ['--settings', FACTLOOM_RUN_SETTINGS, '--mcp-config', input.mcpConfigPath]),
+      : ['--settings', input.factloomSettings ?? FACTLOOM_RUN_SETTINGS, '--mcp-config', input.mcpConfigPath]),
   ];
 }
 
@@ -128,6 +155,8 @@ export function buildFactloomMcpConfig(input: {
   readonly serverEntry: string;
   readonly databasePath: string;
   readonly namespace: string;
+  /** The working tree, which the server's file sources and maintenance read (FL-082). */
+  readonly repositoryDirectory: string;
 }): string {
   return JSON.stringify(
     {
@@ -139,6 +168,7 @@ export function buildFactloomMcpConfig(input: {
           env: {
             FACTLOOM_NAMESPACE: input.namespace,
             FACTLOOM_DB: input.databasePath,
+            FACTLOOM_REPO: input.repositoryDirectory,
             ANTHROPIC_API_KEY: '',
           },
         },

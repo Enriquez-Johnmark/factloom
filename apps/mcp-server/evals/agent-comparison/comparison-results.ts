@@ -23,11 +23,20 @@ export const RESULTS_DIRECTORY = join(import.meta.dirname, 'results');
 
 const ConfigurationSchema = z.enum(['without', 'with']);
 
+/** What a run without Factloom can start from: Claude Code as shipped, or with a `CLAUDE.md` map. */
+export const BASELINES = ['as-shipped', 'claude-md'] as const;
+export type Baseline = (typeof BASELINES)[number];
+
 const RunEntrySchema = z.strictObject({
   kind: z.literal('run'),
   configuration: ConfigurationSchema,
   /** The task set played. A log written before FL-081 names none, and played the default. */
   taskSet: z.enum(TASK_SET_NAMES).default(DEFAULT_TASK_SET_NAME),
+  /**
+   * What the run without Factloom started from: Claude Code as shipped, or with the task set's
+   * hand-written `CLAUDE.md` map (FL-082). A log written before FL-082 names none: as shipped.
+   */
+  baseline: z.enum(BASELINES).default('as-shipped'),
   startedAt: z.string(),
   /** What `claude --version` printed before the run. */
   agentVersion: z.string(),
@@ -187,7 +196,9 @@ export function writeReport(resultsDirectory: string): string {
     sessions,
     checks,
     taskCount: taskSet.tasks.length,
-    taskSetDescription: taskSet.description,
+    taskSetDescription: logs.some((log) => log.run.baseline === 'claude-md')
+      ? `${taskSet.description}, the run without Factloom starting from a hand-written CLAUDE.md map`
+      : taskSet.description,
     taskSetChanges: taskSet.changes,
   });
   const path = join(resultsDirectory, 'report.md');

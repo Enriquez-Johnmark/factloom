@@ -19,6 +19,7 @@ import { parseArgs } from 'node:util';
 import { toTimestamp } from '@factloom/core';
 import { AGENT_TASKS, type AgentTask } from './agent-tasks.ts';
 import {
+  type Baseline,
   appendRunLogEntry,
   findRunLogPath,
   RESULTS_DIRECTORY,
@@ -31,6 +32,7 @@ import {
   buildClaudeArguments,
   buildFactloomHookEnvironment,
   buildFactloomMcpConfig,
+  buildFactloomRunSettings,
   describeClaudeArguments,
   findServerProblem,
   MCP_CONFIG_PLACEHOLDER,
@@ -49,10 +51,11 @@ Usage, from apps/mcp-server:
       Prepares each task's working tree and server configuration, prints the command each
       session would run, checks that each task's check fails on the untouched fixture, and
       removes everything. Starts no agent and spends no tokens.
-  pnpm run compare:agent --run [--task-set <name>] --configuration without|with [--model <model>] [--tasks <id,id>] [--results <directory>] [--keep]
+  pnpm run compare:agent --run [--task-set <name>] --configuration without|with [--baseline as-shipped|claude-md] [--model <model>] [--tasks <id,id>] [--results <directory>] [--keep]
       Plays every task of the set in one configuration: two sessions each of a signed-in Claude
       Code, which spend real tokens. Run it once per configuration, into the same results directory.
       A task that carries a first-session commit has its first session's work committed with it.
+      --baseline claude-md starts the run without Factloom from the set's hand-written CLAUDE.md map.
   pnpm run compare:agent --report <results directory>
       Rebuilds report.md from the run logs in the directory. Starts no agent.
 
@@ -69,6 +72,7 @@ const options = {
   report: { type: 'string' },
   configuration: { type: 'string' },
   'task-set': { type: 'string' },
+  baseline: { type: 'string' },
   model: { type: 'string' },
   tasks: { type: 'string' },
   results: { type: 'string' },
@@ -93,6 +97,15 @@ function readConfigurations(value: string | undefined, isRequired: boolean): Con
   }
   if (value === 'without' || value === 'with') return [value];
   return stop(`--configuration is without or with, not ${value}.`);
+}
+
+/** The baseline of a run: as shipped, or, for a run without Factloom of a set that has one, its CLAUDE.md map. */
+function readBaseline(value: string | undefined, configuration: Configuration, taskSet: TaskSet): Baseline {
+  if (value === undefined || value === 'as-shipped') return 'as-shipped';
+  if (value !== 'claude-md') return stop(`--baseline is as-shipped or claude-md, not ${value}.`);
+  if (configuration !== 'without') return stop('--baseline claude-md is for the run without Factloom.');
+  if (taskSet.claudeMdBaseline === null) return stop(`The task set ${taskSet.name} has no CLAUDE.md map.`);
+  return 'claude-md';
 }
 
 function readTaskSet(value: string | undefined): TaskSet {
@@ -133,6 +146,7 @@ function prepareTaskRun(task: AgentTask, configuration: Configuration, runStamp:
       serverEntry: SERVER_ENTRY,
       databasePath: join(serverDirectory, 'factloom.db'),
       namespace: `eval:agent-comparison:${task.id}:${runStamp}`,
+      repositoryDirectory: workingDirectory,
     };
     writeFileSync(mcpConfigPath, buildFactloomMcpConfig(server));
     environment = buildFactloomHookEnvironment(server);
@@ -159,7 +173,12 @@ async function dryRun(
       try {
         const args = (prompt: string) =>
           describeClaudeArguments(
-            buildClaudeArguments({ prompt, model: null, mcpConfigPath: prepared.mcpConfigPath }),
+            buildClaudeArguments({
+              prompt,
+              model: null,
+              mcpConfigPath: prepared.mcpConfigPath,
+              factloomSettings: buildFactloomRunSettings({ runsMaintenance: taskSet.runsMaintenance }),
+            }),
           );
         say(`\n${task.id}, ${configuration} Factloom, in a copy at ${prepared.workingDirectory}`);
         say(`  session 1: claude ${args(task.firstSession).join(' ')}`);
@@ -241,6 +260,7 @@ async function playAndRecord(input: {
 
 async function run(input: {
   readonly configuration: Configuration;
+  readonly baseline: Baseline;
   readonly taskSet: TaskSet;
   readonly tasks: readonly AgentTask[];
   readonly model: string | null;
@@ -260,15 +280,18 @@ async function run(input: {
   }
   const startedAt = toTimestamp(new Date());
   const runStamp = startedAt.replace(/[^0-9]/gu, '');
+  const factloomSettings = buildFactloomRunSettings({ runsMaintenance: input.taskSet.runsMaintenance });
   const exampleArgs = buildClaudeArguments({
     prompt: '',
     model: input.model,
     mcpConfigPath: configuration === 'with' ? 'path' : null,
+    factloomSettings,
   });
   appendRunLogEntry(resultsDirectory, configuration, {
     kind: 'run',
     configuration,
     taskSet: input.taskSet.name,
+    baseline: input.baseline,
     startedAt,
     agentVersion,
     agentArguments: describeClaudeArguments(exampleArgs),
@@ -278,6 +301,10 @@ async function run(input: {
   for (const [index, task] of input.tasks.entries()) {
     const prepared = prepareTaskRun(task, configuration, runStamp, input.taskSet);
     try {
+      // The map is written once, before the first session, and never updated, as in practice.
+      if (configuration === 'without' && input.baseline === 'claude-md') {
+        input.taskSet.claudeMdBaseline?.(prepared.workingDirectory);
+      }
       for (const session of [1, 2] as const) {
         const prompt = session === 1 ? task.firstSession : task.secondSession;
         const played = await playAndRecord({
@@ -285,7 +312,12 @@ async function run(input: {
           configuration,
           task,
           session,
-          args: buildClaudeArguments({ prompt, model: input.model, mcpConfigPath: prepared.mcpConfigPath }),
+          args: buildClaudeArguments({
+            prompt,
+            model: input.model,
+            mcpConfigPath: prepared.mcpConfigPath,
+            factloomSettings,
+          }),
           workingDirectory: prepared.workingDirectory,
           environment: prepared.environment,
         });
@@ -300,6 +332,8 @@ async function run(input: {
         if (session === 1 && task.firstSessionCommit !== undefined && commitFirstSession !== null) {
           commitFirstSession(prepared.workingDirectory, task.firstSessionCommit);
         }
+        // A teammate's commit between the sessions, the same in both configurations (FL-082).
+        if (session === 1) input.taskSet.betweenSessions?.(prepared.workingDirectory, task.id);
       }
       const check = await runTaskCheck(prepared.workingDirectory, task.id, input.taskSet.checksDirectory);
       const checkPath = join(resultsDirectory, 'checks', `${task.id}-${configuration}.txt`);
@@ -348,6 +382,7 @@ if (values.report !== undefined) {
   const defaultDirectory = taskSet.name === DEFAULT_TASK_SET_NAME ? date : `${date}-${taskSet.name}`;
   await run({
     configuration,
+    baseline: readBaseline(values.baseline, configuration, taskSet),
     taskSet,
     tasks: selectTasks(values.tasks, taskSet),
     model: values.model ?? null,

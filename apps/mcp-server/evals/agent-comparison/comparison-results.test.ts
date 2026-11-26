@@ -6,6 +6,7 @@ import type { Configuration } from './compare-runs.ts';
 import type { TaskSetName } from './task-sets.ts';
 import {
   appendRunLogEntry,
+  type Baseline,
   findRunLogPath,
   hideHomeDirectory,
   readRunLog,
@@ -57,11 +58,13 @@ function logRun(
   configuration: Configuration,
   inputTokens: number,
   taskSet: TaskSetName = 'memory',
+  baseline: Baseline = 'as-shipped',
 ): void {
   appendRunLogEntry(directory, configuration, {
     kind: 'run',
     configuration,
     taskSet,
+    baseline,
     startedAt: '2026-11-30T10:00:00.000Z',
     agentVersion: '2.1.332 (Claude Code)',
     agentArguments: ['-p', '<prompt>'],
@@ -125,6 +128,16 @@ describe('the results directory', () => {
     logRun(directory, 'with', 250, 'change-history');
 
     expect(() => writeReport(directory)).toThrow(/different task sets/);
+  });
+
+  it('says in the report when the run without Factloom started from a CLAUDE.md map', () => {
+    const directory = createResultsDirectory();
+    logRun(directory, 'without', 500, 'memory', 'claude-md');
+    logRun(directory, 'with', 250);
+
+    const report = readFileSync(writeReport(directory), 'utf8');
+
+    expect(report).toContain('the run without Factloom starting from a hand-written CLAUDE.md map');
   });
 
   it('records the task set a run log names', () => {
