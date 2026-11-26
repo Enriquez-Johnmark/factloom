@@ -31,7 +31,9 @@ export async function runTaskCheck(directory: string, taskId: string): Promise<C
   // The agent may have moved or removed the test directory; the check still runs.
   mkdirSync(join(directory, 'test'), { recursive: true });
   copyFileSync(join(CHECKS_DIRECTORY, `${taskId}.test.mjs`), join(directory, 'test', CHECK_FILE_NAME));
-  const child = spawn(process.execPath, ['--test'], {
+  // The TAP reporter is named, because the default differs between Node.js versions: TAP when
+  // not on a terminal in Node.js 22, spec in Node.js 26, which CI runs too.
+  const child = spawn(process.execPath, ['--test', '--test-reporter=tap'], {
     cwd: directory,
     env: { PATH: process.env.PATH ?? '', TZ: CHECK_TIME_ZONE },
     stdio: ['ignore', 'pipe', 'pipe'],
