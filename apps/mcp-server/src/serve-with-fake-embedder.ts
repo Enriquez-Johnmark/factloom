@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
-import { createFakeEmbedder, toTimestamp } from '@factloom/core';
+import { createFakeEmbedder, ok, toTimestamp } from '@factloom/core';
 import { softwareDevelopmentDomain } from '@factloom/graph-rag';
 import { openSqliteMemoryStore } from '@factloom/storage';
 import {
@@ -49,6 +49,12 @@ if (!opened.ok) {
   process.exit(1);
 }
 
+// For the usage timing of FL-055 only: with FACTLOOM_TIMING_USAGE=off, recall records no usage.
+const store =
+  process.env.FACTLOOM_TIMING_USAGE === 'off'
+    ? { ...opened.value, recordFactUsage: () => Promise.resolve(ok(null)) }
+    : opened.value;
+
 if (command.kind === 'maintenance') {
   log('This test entry does not run maintenance.');
   process.exit(1);
@@ -83,7 +89,7 @@ const llm = createAnthropicLlmClient({
 
 serveFactloom(
   buildServerDeps({
-    store: opened.value,
+    store,
     embedder,
     domain: softwareDevelopmentDomain,
     llm,
