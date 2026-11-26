@@ -5,7 +5,7 @@
 | Status | Pending |
 | Phases | 1 |
 | Packages | `apps/mcp-server` |
-| Requirements | REQ-04, REQ-09, REQ-10, REQ-11, REQ-12, REQ-13, REQ-25, REQ-29, REQ-35, REQ-36 |
+| Requirements | REQ-04, REQ-09, REQ-10, REQ-11, REQ-12, REQ-13, REQ-25, REQ-29, REQ-35, REQ-36, REQ-37 |
 
 Terms in bold are defined in [`GLOSSARY.md`](../../../GLOSSARY.md).
 
@@ -74,6 +74,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-018, FL-035, FL-058, FL-025, FL-032 | Completed |
 | FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Completed |
 | FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Completed |
+| FL-079 | A registered coding agent uses Factloom rather than only its built-in memory | 1 | FL-074, FL-038 | Pending |
 
 ### FL-034: Server configuration and composition root
 
@@ -616,3 +617,52 @@ Differences from the item:
 
 The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-11-14; Q-23 is closed with the measurements above, and `mcp.md` and `embeddings.md` say "confirmed" with the date. The item is `Completed` with the owner's decision on Codex.
 
+### FL-079: A registered coding agent uses Factloom rather than only its built-in memory
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 1 |
+| Depends on | FL-074, FL-038 |
+| Requirements | REQ-37 |
+| Components | `apps/mcp-server` (server, tool descriptions, registration guide), the agent comparison of FL-074 |
+
+**Objective.** Make a coding agent that has Factloom registered save what it learns to Factloom and recall it there, and measure the comparison of FL-074 again.
+
+**Background.** Found in the owner's run of FL-074 on 2026-11-26 ([report](../../../apps/mcp-server/evals/agent-comparison/results/2026-11-26/report.md), raw output beside it): with the server `connected` and its six tools listed, Claude Code 2.1.332 called no Factloom tool in any of 20 sessions. In the first session of every task it wrote to its own auto memory, and read it back in the second. The comparison therefore measured what registering Factloom costs an agent that does not use it. Two levers are documented or present, and neither is tried yet:
+- Claude Code turns auto memory off with `autoMemoryEnabled: false` in a project's settings, or with `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` ([memory](https://code.claude.com/docs/en/memory.md), [environment variables](https://code.claude.com/docs/en/env-vars.md), accessed 2026-11-26; confirmed in the documentation, not yet run).
+- The server sends no instructions in its MCP initialize result; no file in `apps/mcp-server/src` sets them. Whether Claude Code passes a server's instructions to the model, and whether they change its choice, is unverified, and the item starts by confirming it in the documentation.
+
+**Outcome.** A set-up that a user can copy, under which the agent calls Factloom in the tasks of FL-074, and a second report of the comparison.
+
+**Scope.**
+- The cause: from the agent's documentation and the raw output, why the agent chose its built-in memory.
+- The smallest change that a user would also get: server instructions saying what Factloom is for and when to call `recall` and `remember`, clearer tool descriptions, or a step in the registration guide that turns auto memory off for a repository that uses Factloom, or more than one of these.
+- The comparison of FL-074 run again by the owner into a new dated results folder, with the task set and checks unchanged.
+
+**Non-goals.**
+- Changing the task set or checks of FL-074, or turning auto memory off in its baseline: its functional requirement 3 stays.
+- Wording that names the tasks. A change must help any repository, not these ten.
+
+**Functional requirements.**
+1. Each change is stated with the documentation page it relies on, cited with its access date.
+2. Server instructions, if added, are a few sentences, and the stdio smoke test reads them from the initialize result.
+3. The second report and the `README.md` sentence are written whatever they show.
+
+**Technical requirements.**
+1. The runner of FL-074 is reused as it is; a set-up step it needs, such as a settings file for the run, is passed the same way in both configurations unless it is the change under test, and the report lists it.
+2. Secrets: as in FL-074, nothing prints or stores a key or a session token.
+
+**Constraints.**
+- Findings are labelled as measured or unverified, and nothing is stated as fact without its source ([engineering principles](../../../.claude/rules/engineering-principles.md)).
+- Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
+
+**Acceptance criteria.**
+- [ ] The cause is stated with its evidence: a documentation page, or a run's raw output.
+- [ ] In the owner's second run with Factloom, the agent calls `remember` or `record_fact` in the first session and `recall` in the second, in at least 8 of the 10 tasks.
+- [ ] The second report is committed, and the `README.md` sentence matches it.
+- [ ] `pnpm check` exits 0 and does not start the runner.
+
+**Validation.** Unit or smoke tests for any server change; the owner's run for the rest, because it needs a signed-in agent and spends tokens.
+
+**Completion evidence.** The commits, the cited pages, the second report and the `README.md` sentence.
