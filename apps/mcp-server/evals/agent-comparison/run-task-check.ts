@@ -26,11 +26,18 @@ export type CheckOutcome = {
   readonly output: string;
 };
 
-/** Copies the check of a task into the working tree and runs every test there with `node --test`. */
-export async function runTaskCheck(directory: string, taskId: string): Promise<CheckOutcome> {
+/**
+ * Copies the check of a task into the working tree and runs every test there with `node --test`.
+ * The checks are those of FL-074 unless another task set's directory is given (FL-081).
+ */
+export async function runTaskCheck(
+  directory: string,
+  taskId: string,
+  checksDirectory: string = CHECKS_DIRECTORY,
+): Promise<CheckOutcome> {
   // The agent may have moved or removed the test directory; the check still runs.
   mkdirSync(join(directory, 'test'), { recursive: true });
-  copyFileSync(join(CHECKS_DIRECTORY, `${taskId}.test.mjs`), join(directory, 'test', CHECK_FILE_NAME));
+  copyFileSync(join(checksDirectory, `${taskId}.test.mjs`), join(directory, 'test', CHECK_FILE_NAME));
   // The TAP reporter is named, because the default differs between Node.js versions: TAP when
   // not on a terminal in Node.js 22, spec in Node.js 26, which CI runs too.
   const child = spawn(process.execPath, ['--test', '--test-reporter=tap'], {
