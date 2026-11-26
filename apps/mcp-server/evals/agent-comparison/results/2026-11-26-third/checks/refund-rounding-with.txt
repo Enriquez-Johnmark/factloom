@@ -1,0 +1,88 @@
+TAP version 13
+# Subtest: parses a calendar date to midnight UTC
+ok 1 - parses a calendar date to midnight UTC
+  ---
+  duration_ms: 4.281084
+  type: 'test'
+  ...
+# Subtest: refuses text that is not a calendar date
+ok 2 - refuses text that is not a calendar date
+  ---
+  duration_ms: 0.184208
+  type: 'test'
+  ...
+# Subtest: adds days across the end of a month
+ok 3 - adds days across the end of a month
+  ---
+  duration_ms: 0.079666
+  type: 'test'
+  ...
+# Subtest: adds amounts in cents
+ok 4 - adds amounts in cents
+  ---
+  duration_ms: 0.422292
+  type: 'test'
+  ...
+# Subtest: formats cents with two decimals and the currency
+ok 5 - formats cents with two decimals and the currency
+  ---
+  duration_ms: 0.091625
+  type: 'test'
+  ...
+# Subtest: refunds a whole percentage of the total
+ok 6 - refunds a whole percentage of the total
+  ---
+  duration_ms: 0.450667
+  type: 'test'
+  ...
+# Subtest: rounds down to the whole cent
+ok 7 - rounds down to the whole cent
+  ---
+  duration_ms: 0.073042
+  type: 'test'
+  ...
+# Subtest: rejects invalid input
+ok 8 - rejects invalid input
+  ---
+  duration_ms: 0.14775
+  type: 'test'
+  ...
+# Subtest: lists the invoices with their totals
+ok 9 - lists the invoices with their totals
+  ---
+  duration_ms: 0.787917
+  type: 'test'
+  ...
+# Subtest: creates an invoice for a known customer
+ok 10 - creates an invoice for a known customer
+  ---
+  duration_ms: 0.121125
+  type: 'test'
+  ...
+# Subtest: refuses an invoice for an unknown customer
+ok 11 - refuses an invoice for an unknown customer
+  ---
+  duration_ms: 0.065542
+  type: 'test'
+  ...
+# Subtest: rounds a partial refund down to the whole cent
+ok 12 - rounds a partial refund down to the whole cent
+  ---
+  duration_ms: 0.38
+  type: 'test'
+  ...
+# Subtest: refunds an exact amount unchanged
+ok 13 - refunds an exact amount unchanged
+  ---
+  duration_ms: 0.06925
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 80.857709

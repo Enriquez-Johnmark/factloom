@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: parses a calendar date to midnight UTC
+ok 1 - parses a calendar date to midnight UTC
+  ---
+  duration_ms: 1.574292
+  type: 'test'
+  ...
+# Subtest: refuses text that is not a calendar date
+ok 2 - refuses text that is not a calendar date
+  ---
+  duration_ms: 0.189084
+  type: 'test'
+  ...
+# Subtest: adds days across the end of a month
+ok 3 - adds days across the end of a month
+  ---
+  duration_ms: 0.079917
+  type: 'test'
+  ...
+# Subtest: adds amounts in cents
+ok 4 - adds amounts in cents
+  ---
+  duration_ms: 0.632625
+  type: 'test'
+  ...
+# Subtest: formats cents with two decimals and the currency
+ok 5 - formats cents with two decimals and the currency
+  ---
+  duration_ms: 0.122583
+  type: 'test'
+  ...
+# Subtest: lists the invoices with their totals
+ok 6 - lists the invoices with their totals
+  ---
+  duration_ms: 1.286459
+  type: 'test'
+  ...
+# Subtest: creates an invoice for a known customer
+ok 7 - creates an invoice for a known customer
+  ---
+  duration_ms: 0.174083
+  type: 'test'
+  ...
+# Subtest: refuses an invoice for an unknown customer
+ok 8 - refuses an invoice for an unknown customer
+  ---
+  duration_ms: 0.072667
+  type: 'test'
+  ...
+# Subtest: logs one line with the invoice and the customer id
+ok 9 - logs one line with the invoice and the customer id
+  ---
+  duration_ms: 0.966459
+  type: 'test'
+  ...
+# Subtest: logs neither the name nor the email address of the customer
+ok 10 - logs neither the name nor the email address of the customer
+  ---
+  duration_ms: 0.148
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 85.894417

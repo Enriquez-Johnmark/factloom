@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: returns the database url from INVOICE_DB_URL
+ok 1 - returns the database url from INVOICE_DB_URL
+  ---
+  duration_ms: 0.474333
+  type: 'test'
+  ...
+# Subtest: throws when INVOICE_DB_URL is not set
+ok 2 - throws when INVOICE_DB_URL is not set
+  ---
+  duration_ms: 0.220291
+  type: 'test'
+  ...
+# Subtest: ignores DATABASE_URL
+ok 3 - ignores DATABASE_URL
+  ---
+  duration_ms: 0.075166
+  type: 'test'
+  ...
+# Subtest: parses a calendar date to midnight UTC
+ok 4 - parses a calendar date to midnight UTC
+  ---
+  duration_ms: 3.56725
+  type: 'test'
+  ...
+# Subtest: refuses text that is not a calendar date
+ok 5 - refuses text that is not a calendar date
+  ---
+  duration_ms: 0.370916
+  type: 'test'
+  ...
+# Subtest: adds days across the end of a month
+ok 6 - adds days across the end of a month
+  ---
+  duration_ms: 0.210167
+  type: 'test'
+  ...
+# Subtest: adds amounts in cents
+ok 7 - adds amounts in cents
+  ---
+  duration_ms: 1.142917
+  type: 'test'
+  ...
+# Subtest: formats cents with two decimals and the currency
+ok 8 - formats cents with two decimals and the currency
+  ---
+  duration_ms: 0.12625
+  type: 'test'
+  ...
+# Subtest: lists the invoices with their totals
+ok 9 - lists the invoices with their totals
+  ---
+  duration_ms: 0.843917
+  type: 'test'
+  ...
+# Subtest: creates an invoice for a known customer
+ok 10 - creates an invoice for a known customer
+  ---
+  duration_ms: 0.152083
+  type: 'test'
+  ...
+# Subtest: refuses an invoice for an unknown customer
+ok 11 - refuses an invoice for an unknown customer
+  ---
+  duration_ms: 0.06975
+  type: 'test'
+  ...
+# Subtest: reads the database URL from INVOICE_DB_URL
+ok 12 - reads the database URL from INVOICE_DB_URL
+  ---
+  duration_ms: 1.105333
+  type: 'test'
+  ...
+# Subtest: does not fall back to DATABASE_URL
+ok 13 - does not fall back to DATABASE_URL
+  ---
+  duration_ms: 0.172917
+  type: 'test'
+  ...
+# Subtest: still reads the port
+ok 14 - still reads the port
+  ---
+  duration_ms: 0.0675
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 140.5145
