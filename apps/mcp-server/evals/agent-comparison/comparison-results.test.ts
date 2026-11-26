@@ -119,6 +119,14 @@ describe('the results directory', () => {
     expect(readRunLog(directory, 'without')?.run.taskSet).toBe('memory');
   });
 
+  it('refuses to build one report from run logs of two task sets', () => {
+    const directory = createResultsDirectory();
+    logRun(directory, 'without', 500, 'memory');
+    logRun(directory, 'with', 250, 'change-history');
+
+    expect(() => writeReport(directory)).toThrow(/different task sets/);
+  });
+
   it('records the task set a run log names', () => {
     const directory = createResultsDirectory();
     logRun(directory, 'with', 500, 'memory');

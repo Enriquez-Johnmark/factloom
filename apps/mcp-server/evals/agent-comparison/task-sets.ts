@@ -1,12 +1,21 @@
 // The task sets the agent comparison can play: the memory tasks of FL-074, the default, and the
 // change-history tasks of FL-081. A run log names its set, so that the report is built from the
 // tasks that were played.
+import {
+  CHANGE_HISTORY_TASK_SET_CHANGES,
+  CHANGE_HISTORY_TASKS,
+} from '../change-history/change-history-tasks.ts';
+import {
+  CHANGE_HISTORY_CHECKS_DIRECTORY,
+  commitFirstSession,
+  prepareChangeHistoryCopy,
+} from '../change-history/prepare-change-history-copy.ts';
 import { AGENT_TASKS, type AgentTask, TASK_SET_CHANGES, type TaskSetChange } from './agent-tasks.ts';
 import { prepareFixtureCopy } from './prepare-fixture-copy.ts';
 import { CHECKS_DIRECTORY } from './run-task-check.ts';
 
 /** The names a run log and the runner's `--task-set` option take. */
-export const TASK_SET_NAMES = ['memory'] as const;
+export const TASK_SET_NAMES = ['memory', 'change-history'] as const;
 export type TaskSetName = (typeof TASK_SET_NAMES)[number];
 
 /** The set a run plays when none is named, and that a run log without a name was played with. */
@@ -37,6 +46,15 @@ const TASK_SETS: Readonly<Record<TaskSetName, TaskSet>> = {
     prepareCopy: prepareFixtureCopy,
     checksDirectory: CHECKS_DIRECTORY,
     commitFirstSession: null,
+  },
+  'change-history': {
+    name: 'change-history',
+    description: 'change-history tasks of FL-081',
+    tasks: CHANGE_HISTORY_TASKS,
+    changes: CHANGE_HISTORY_TASK_SET_CHANGES,
+    prepareCopy: prepareChangeHistoryCopy,
+    checksDirectory: CHANGE_HISTORY_CHECKS_DIRECTORY,
+    commitFirstSession,
   },
 };
 
