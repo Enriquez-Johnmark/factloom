@@ -5,9 +5,9 @@
  */
 export const SERVER_INSTRUCTIONS = [
   "Factloom is this repository's long-term memory: facts about the code and the project, each with when it was true, when it was learned, and where it came from.",
-  'At the start of a task in this repository, and before answering a question about it, call recall with what the task is about; pass as_of or known_at to ask about the past.',
-  'When you are asked to remember something, or learn something lasting, such as a decision and its reason, a convention, the cause of a bug, a dependency or how to build and test, save it here: record_fact for one fact you can state as subject, predicate and object, or remember to extract facts from text.',
-  'remember needs an Anthropic API key; without one, use record_fact.',
-  'When a stored fact is wrong or no longer true, call invalidate_fact rather than recording a contradiction. get_fact_history shows how a fact changed and why. When you only know a recalled fact was found right, wrong or out of date, call give_feedback.',
+  'At the start of a task, and before answering a question about the project, call recall with what it is about; as_of or known_at ask about the past.',
+  'Save what you are asked to remember and what you learn that lasts, such as a decision and its reason, a convention, the cause of a bug or how to build and test: record_fact for one subject, predicate and object, or remember for a text, which needs an Anthropic API key.',
+  'When you find where something is in the code, record it: defined_in, the symbol as subject, its path as value, a statement of what it does, and source kind file with the path.',
+  'If a stored fact is wrong or no longer true, call invalidate_fact; get_fact_history shows how it changed; give_feedback says a recalled fact was right, wrong or out of date.',
   'Never store a secret.',
 ].join(' ');
