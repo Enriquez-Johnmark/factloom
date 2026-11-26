@@ -75,6 +75,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Completed |
 | FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Completed |
 | FL-079 | A registered coding agent uses Factloom rather than only its built-in memory | 1 | FL-074, FL-038 | Under Review |
+| FL-080 | Fewer turns for a coding agent that uses Factloom | 1 | FL-079 | Pending |
 
 ### FL-034: Server configuration and composition root
 
@@ -678,3 +679,50 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
   - The runner passes `--settings '{"autoMemoryEnabled":false}'` in the run with Factloom only, so that run follows the guide and the baseline stays as shipped (FL-074, functional requirement 3). `--settings` is listed by `claude --help` of Claude Code 2.1.332 here, and the report's "How it was run" shows the setting. Unit tests: the two configurations differ only by the server configuration and this setting.
   - The runner now writes the home directory as `~` in the raw and check output, because the first run's results published the owner's user name in paths. A user name printed outside a path, as in `ls -l` output, is not caught.
 - **Not verified.** That the setting turns auto memory off was not seen here: a `claude -p` run in this container reported `memory_paths: null` with and without it, unlike the owner's run, so the owner's second run is the test. That run made two real one-word model calls through the container's network proxy, which supplied a credential in place of the dummy key given; no other session was started.
+
+### FL-080: Fewer turns for a coding agent that uses Factloom
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 1 |
+| Depends on | FL-079 |
+| Requirements | REQ-37 |
+| Components | `apps/mcp-server` (registration guide, server), the agent comparison of FL-074 |
+
+**Objective.** Cut the turns an agent spends reaching Factloom, so that using it costs fewer tokens, and measure the comparison again.
+
+**Background.** The second comparison of FL-079 ([report](../../../apps/mcp-server/evals/agent-comparison/results/2026-11-26-second/report.md)) measured a cost: +17.7% tokens for the median task, 101 turns against 76 in the second sessions, 16 `ToolSearch` calls, and one task failed because the agent did not call `recall`. Claude Code defers MCP tools by default, so a tool is loaded with a search before its first call ([MCP](https://code.claude.com/docs/en/mcp.md), "Configure tool search", accessed 2026-11-26), and auto memory is in the context from the start. Two levers, neither run:
+- `alwaysLoad: true` in the server's configuration loads its tools without a search step (same page; Claude Code 2.1.287 or later). It would remove the `ToolSearch` turn and add the six tool definitions to every session's context.
+- A hook that puts the result of a `recall` into the context at the start of a session, so that no turn is needed and the agent cannot skip it. Whether a Claude Code hook can add context this way is unverified, and the item starts by confirming it in the hooks documentation.
+
+**Outcome.** A set-up in the registration guide with fewer turns than FL-079's, and a third report of the comparison.
+
+**Scope.**
+- Each lever confirmed in the agent's documentation, then tried in the comparison, the run with Factloom only, the baseline as in FL-079.
+- The guide updated with what the run shows.
+
+**Non-goals.**
+- Changing the task set or checks of FL-074, or its baseline.
+- Wording or recall results that name the tasks.
+
+**Functional requirements.**
+1. Each change is stated with the documentation page it relies on, cited with its access date.
+2. The third report and the `README.md` sentence are written whatever they show.
+
+**Technical requirements.**
+1. The runner of FL-074 is reused; a set-up change under test is passed only in the run with Factloom, and the report lists it.
+2. Secrets: as in FL-074, nothing prints or stores a key or a session token.
+
+**Constraints.**
+- Findings are labelled as measured or unverified, and nothing is stated as fact without its source ([engineering principles](../../../.claude/rules/engineering-principles.md)).
+- Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
+
+**Acceptance criteria.**
+- [ ] Each lever tried is confirmed in the agent's documentation, with the page cited.
+- [ ] The owner's third run is committed, with fewer turns in the second sessions than FL-079's 101, and its report and the `README.md` sentence match.
+- [ ] `pnpm check` exits 0 and does not start the runner.
+
+**Validation.** Unit tests for any runner or server change; the owner's run for the rest.
+
+**Completion evidence.** The commits, the cited pages, the third report and the `README.md` sentence.
