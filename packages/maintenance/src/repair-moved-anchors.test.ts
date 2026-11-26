@@ -147,4 +147,155 @@ describe('repairMovedAnchors', () => {
     expect(result.ok ? null : result.error.code).toBe('invalid_input');
     expect(await locators(store, factId)).toEqual(['docs/database.md']);
   });
+
+  it('ends a fact whose value is the moved path and continues it at the new path, its statement updated', async () => {
+    const store = createInMemoryStore();
+    const factId = await recordPathFact(store);
+    const repository = {
+      ...fakeRepository({ 'lib/time.js': 'blob-dates' }, { 'lib/dates.js': 'lib/time.js' }),
+      readContentId: async (commit: string, path: string) =>
+        ok(
+          commit === 'c-anchor' && path === 'lib/dates.js'
+            ? 'blob-dates'
+            : commit === 'c-head' && path === 'lib/time.js'
+              ? 'blob-dates'
+              : null,
+        ),
+      listCommitsTouching: async () =>
+        ok([{ commit: 'c-head', committedAt: toTimestamp(new Date('2026-02-20')) }]),
+    };
+
+    const result = await repairMovedAnchors(
+      {
+        ...createTestDeps({ now: '2026-03-01', domain: PATH_DOMAIN, store, newId: countFrom('repair') }),
+        repository,
+        pathPredicates: ['defined_in'],
+      },
+      { namespace: NAMESPACE },
+    );
+
+    expect(result.ok && result.value).toMatchObject({ examined: 1, changed: 1, flagged: 0 });
+    const original = await store.getFact({ namespace: NAMESPACE, factId });
+    expect(original.ok && original.value?.fact.invalidatedAt).not.toBeNull();
+    const live = await store.listFacts({
+      namespace: NAMESPACE,
+      subjectEntityId: 'entity-parse-date',
+      predicate: 'defined_in',
+      touchingEntityIds: null,
+      supersededByFactId: null,
+      time: 'live',
+      limit: 10,
+    });
+    expect(
+      live.ok &&
+        live.value.map((found) => [
+          found.fact.object,
+          found.fact.statement,
+          found.fact.validFrom,
+          found.fact.validTo,
+        ]),
+    ).toEqual(
+      expect.arrayContaining([
+        [
+          { kind: 'value', value: 'lib/dates.js' },
+          'parseDate, in lib/dates.js, parses a calendar date.',
+          null,
+          '2026-02-20T00:00:00.000Z',
+        ],
+        [
+          { kind: 'value', value: 'lib/time.js' },
+          'parseDate, in lib/time.js, parses a calendar date.',
+          '2026-02-20T00:00:00.000Z',
+          null,
+        ],
+      ]),
+    );
+    expect(live.ok && live.value).toHaveLength(2);
+  });
+
+  it('only re-anchors a fact whose predicate does not hold a path', async () => {
+    const store = createInMemoryStore();
+    const factId = await recordCheckedFact(store, 'source_missing');
+
+    const result = await repairMovedAnchors(
+      {
+        ...createTestDeps({ now: '2026-03-01', store }),
+        repository: fakeRepository(
+          { 'docs/storage.md': 'blob-1' },
+          { 'docs/database.md': 'docs/storage.md' },
+        ),
+        pathPredicates: ['defined_in'],
+      },
+      { namespace: NAMESPACE },
+    );
+
+    expect(result.ok && result.value.changed).toBe(1);
+    const original = await store.getFact({ namespace: NAMESPACE, factId });
+    expect(original.ok && original.value?.fact.invalidatedAt).toBeNull();
+  });
 });
+
+/** The test domain with a symbol type and the path predicate of the code base map (FL-082). */
+const PATH_DOMAIN = {
+  ...TEST_DOMAIN,
+  entityTypes: [...TEST_DOMAIN.entityTypes, 'symbol'],
+  predicates: [
+    ...TEST_DOMAIN.predicates,
+    { name: 'defined_in', description: 'A symbol is defined in a file.', cardinality: 'single' as const },
+  ],
+};
+
+/** A map fact: parseDate is defined in lib/dates.js, anchored there, and found missing. */
+async function recordPathFact(store: MemoryStore): Promise<string> {
+  const deps = createTestDeps({ now: '2026-01-10', domain: PATH_DOMAIN, store });
+  const recorded = await recordFacts(deps, {
+    namespace: NAMESPACE,
+    trigger: 'agent',
+    reasonCode: 'stated',
+    source: {
+      kind: 'file',
+      locator: 'lib/dates.js',
+      version: 'c-anchor',
+      content: null,
+      observedAt: deps.now(),
+    },
+    drafts: [
+      {
+        fact: {
+          subjectEntityId: 'entity-parse-date',
+          predicate: 'defined_in',
+          object: { kind: 'value', value: 'lib/dates.js' },
+          statement: 'parseDate, in lib/dates.js, parses a calendar date.',
+          confidence: 1,
+          validFrom: null,
+          validTo: null,
+        },
+        newEntities: [{ id: 'entity-parse-date', type: 'symbol', name: 'parseDate' }],
+      },
+    ],
+    restatedFactIds: [],
+  });
+  if (!recorded.ok) throw new Error(recorded.error.message);
+  const factId = recorded.value.factIds[0] ?? 'none';
+  await recordVerification(
+    createTestDeps({ now: '2026-02-25', domain: PATH_DOMAIN, store, newId: () => 'vr-map' }),
+    {
+      namespace: NAMESPACE,
+      trigger: 'maintenance',
+      reasonCode: 'verification_due',
+      factId,
+      outcome: 'source_missing',
+      method: 'deterministic',
+    },
+  );
+  return factId;
+}
+
+/** A counting identifier generator with its own prefix, so a run's identifiers do not meet the recording's. */
+function countFrom(prefix: string): () => string {
+  let count = 0;
+  return () => {
+    count += 1;
+    return `${prefix}-${count}`;
+  };
+}
