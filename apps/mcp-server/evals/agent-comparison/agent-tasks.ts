@@ -8,14 +8,23 @@
 // The set is fixed before any run (functional requirement 1). A change after a run is added to
 // TASK_SET_CHANGES with its reason, and the report lists it.
 
-/** What the first session gives the agent. */
-export type KnowledgeKind = 'decision' | 'convention' | 'bug cause';
+/**
+ * What the first session gives the agent. The last two are those of FL-081: why a change was
+ * made, and a value from before a change.
+ */
+export type KnowledgeKind = 'decision' | 'convention' | 'bug cause' | 'change reason' | 'earlier value';
 
 export type AgentTask = {
   readonly id: string;
   readonly knowledge: KnowledgeKind;
-  /** The prompt of the first session: the knowledge, with a request to remember it. */
+  /** The prompt of the first session: the knowledge, with a request to remember it in FL-074. */
   readonly firstSession: string;
+  /**
+   * The message the runner commits the first session's work with, giving the reason, so that
+   * the reason is in the git history in both configurations (FL-081, functional requirement 2).
+   * Absent in FL-074, whose tasks commit nothing.
+   */
+  readonly firstSessionCommit?: string;
   /** The prompt of the second session: a task that depends on that knowledge. */
   readonly secondSession: string;
 };
