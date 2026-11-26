@@ -85,7 +85,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-048 | Maintenance run entry point | 3 | FL-040, FL-034, FL-037 | Under Review |
+| FL-048 | Maintenance run entry point | 3 | FL-040, FL-034, FL-037 | Completed |
 | FL-049 | Verification records and the stale and orphaned lists | 3 | FL-015, FL-045, FL-061 | Completed |
 | FL-050 | Deterministic verification: repository reader and path checks | 3 | FL-018, FL-048, FL-049 | Completed |
 | FL-071 | Deterministic verification: function check by text search | 3 | FL-050, FL-018 | Completed |
@@ -104,7 +104,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-040, FL-034, FL-037 |
 | Requirements | REQ-20, REQ-21, REQ-24 |
@@ -154,7 +154,7 @@ REQ-20 says duplicates are merged "on a schedule", and the glossary defines self
 - [x] A test starts the command as a child process on a temporary database with no jobs and shows exit code 0 and a standard output that parses as the report schema.
 - [x] A test starts the command without a namespace and shows a non-zero exit code and a message on standard error.
 - [x] The MCP smoke test still passes: starting the application with no argument serves MCP over stdio.
-- [ ] The owner adds the documented session start hook for Claude Code on the Mac, starts a session in a repository, and records the report that the run produced. The same is done for Codex. If a host's hook cannot be made to run the command, the guide says so and the reason is added to [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md).
+- [x] The owner adds the documented session start hook for Claude Code on the Mac, starts a session in a repository, and records the report that the run produced. The same is done for Codex. If a host's hook cannot be made to run the command, the guide says so and the reason is added to [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md).
 
 **Validation.** Unit tests of the run function with fake jobs. Two child-process tests of the command. The MCP smoke test. The owner's two hook runs.
 
@@ -199,6 +199,15 @@ For the owner's review:
 
 - Add the Claude Code hook from `apps/mcp-server/README.md`, start a session in a repository, and record `~/.factloom/last-maintenance.json`.
 - Do the same for Codex, after trusting the hook with `/hooks`. If either hook cannot be made to run the command, record why in the guide and in `OPEN-QUESTIONS.md`.
+
+**Owner's run on the Mac, 2026-11-26.** On the owner's MacBook Air (macOS 26.5, arm64, Node.js v26.13.1) with Claude Code 2.1.331, the guide's `SessionStart` hook was added to the user settings, beside a hook the owner already had, with the matcher `startup` and the namespace `repo:fl038-test`. Claude Code keeps that owner's settings in `$CLAUDE_CONFIG_DIR`, `~/.claude-personal/settings.json`, not `~/.claude/settings.json`; the guide's "likely" location holds only when that variable is unset. Starting a session wrote this report to `~/.factloom/last-maintenance.json`:
+
+```json
+{"startedAt":"2026-11-26T02:34:45.285Z","finishedAt":"2026-11-26T02:34:45.314Z","jobs":[{"name":"verify_anchored_facts","status":"ok","error":null,"examined":0,"changed":0,"flagged":0,"failed":0,"undecided":0,"flaggedItems":[]},{"name":"repair_moved_anchors","status":"ok","error":null,"examined":0,"changed":0,"flagged":0,"failed":0,"undecided":0,"flaggedItems":[]},{"name":"find_duplicate_entities","status":"ok","error":null,"examined":0,"changed":0,"flagged":0,"failed":0,"undecided":0,"flaggedItems":[]},{"name":"archive_unused_facts","status":"ok","error":null,"examined":0,"changed":0,"flagged":0,"failed":0,"undecided":0,"flaggedItems":[]}]}
+```
+
+The four jobs ran in 29 ms and examined nothing, as expected for a test memory holding one fact with no anchor and no usage history. The owner does not use Codex, so its hook is untested, as the item allows for a host the owner cannot try. The item is `Completed`.
+
 
 ### FL-049: Verification records and the stale and orphaned lists
 
