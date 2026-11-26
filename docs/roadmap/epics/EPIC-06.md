@@ -76,7 +76,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Completed |
 | FL-079 | A registered coding agent uses Factloom rather than only its built-in memory | 1 | FL-074, FL-038 | Completed |
 | FL-080 | Fewer turns for a coding agent that uses Factloom | 1 | FL-079 | Completed |
-| FL-082 | A self-healing codebase map for coding agents | 3 | FL-080, FL-081, FL-050, FL-054 | Pending |
+| FL-082 | A self-healing codebase map for coding agents | 3 | FL-080, FL-081, FL-050, FL-054 | Under Review |
 
 ### FL-034: Server configuration and composition root
 
@@ -759,7 +759,7 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 3 |
 | Depends on | FL-080, FL-081, FL-050, FL-054 |
 | Requirements | REQ-37 |
@@ -801,14 +801,28 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 - Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
 
 **Acceptance criteria.**
-- [ ] An ADR records how map facts get in, with the alternatives rejected.
-- [ ] Unit tests show a map fact anchored to its file, confirmed by verification when the file is unchanged, flagged when its symbol is gone, and following a rename.
-- [ ] Unit tests show the recall hook handing over map facts that match a prompt.
-- [ ] The task set and its checks are committed before the first results, with tests that each check fails on the fixture and passes on one solution.
+- [x] An ADR records how map facts get in, with the alternatives rejected.
+- [x] Unit tests show a map fact anchored to its file, confirmed by verification when the file is unchanged, flagged when its symbol is gone, and following a rename.
+- [x] Unit tests show the recall hook handing over map facts that match a prompt.
+- [x] The task set and its checks are committed before the first results, with tests that each check fails on the fixture and passes on one solution.
 - [ ] The owner runs both comparisons and commits the raw output and the two reports.
 - [ ] The root `README.md` states the measured result in one or two sentences that match the reports, including when it is no saving or a cost.
-- [ ] `pnpm check` exits 0 and does not start the runner.
+- [x] `pnpm check` exits 0 and does not start the runner.
 
 **Validation.** Unit tests for the domain, the anchoring and verification of map facts, and the hook; the comparisons are manual runs by the owner, because they need a signed-in agent and spend tokens.
 
 **Completion evidence.** The ADR, the commits, the task set commit, the two reports and the `README.md` sentence.
+
+**Recorded evidence.** Prepared on 2026-11-26 on Linux x64 with Node.js v22.23.4. The item is `Under Review`: the two comparisons and the `README.md` sentence (criteria 5 and 6) are the owner's runs.
+
+- **How map facts get in: [ADR 0023](../../architecture/adr/0023-the-agent-records-the-codebase-map.md)** (`3065995`). The agent records them with `record_fact` as it explores; a seeding command, with or without an LLM, and a file entity named by its path are rejected there, with the reasons.
+- **The predicate** (`ac7ff76`): `defined_in`, a symbol defined in a file given as its path, one at a time. The extraction instructions changed, so the extraction and scenario recordings were made again with the record commands (`145d38f`), with the owner's key for each command only: extraction 22 of 22 cases, precision 1.000, recall 0.964; scenarios staleness 0 of 13, false invalidation 0 of 13, missed invalidation 0 of 2, historical accuracy 10 of 10, as before.
+- **Anchoring** (`2ea532c`): a `file` source with no commit gets the path from the repository root and the commit `HEAD` names, from `FACTLOOM_REPO`; a path outside the repository, or a repository that cannot be read, leaves the source as given. Unit tests, and a test seen to fail with the stamping removed.
+- **The hook** (`c94dd5c`): it leaves out a fact whose latest verification is `contradicted` or `source_missing`, and keeps one confirmed after such a finding; it asks recall for twice its limit, so that a fact left out makes room. **Instructions** (`8f6ae31`): one sentence asks the agent to record where code is with `defined_in`; 948 characters in all.
+- **Self-healing** (`c3675a7`, `a5e9508`): when the repair of FL-054 finds the file of a fact under a path-valued predicate renamed, and the fact's value is the old path, it ends the fact at the committer time of the last commit to touch the old path and continues it at the new path, its statement's path replaced, as a succession with the reason `anchor_moved`; any other fact is re-anchored as before. The domain names its path-valued predicates (`PATH_VALUED_PREDICATES`), and the composition root passes them. A function moved to another file is not repaired: the name check of FL-071 finds it gone, and the hook leaves the fact out.
+- **The runner** (`ccce4a8`, `ba1fa8d`, and the commit that wires the set): the run with Factloom of a set that asks for it runs maintenance as a session start hook, its report sent to `/dev/null` because a session start hook's output enters the context; `--baseline claude-md` writes and commits the set's `CLAUDE.md` map before the first session of the run without Factloom, and the report says so; a set's change between the sessions is made and committed in both configurations; a change that cannot be made, because the first session rewrote the code it moves, leaves the task out of every figure, and the run goes on. Both the server and the hooks are given the working tree as `FACTLOOM_REPO`, because the directory a host starts a server in is unverified (Q-16).
+- **The task set** (`apps/mcp-server/evals/codebase-map/`), written in a separate git worktree by a helper agent and reviewed here: a `lending-desk` service of 44 source files in 13 folders, some indirection (an index that re-exports, `helpers/`, `legacy/`), 14 test files; ten tasks, none of whose prompts names a file; five with a teammate's change between the sessions, three renames and two moves of functions; a hand-written `CLAUDE.md` map of the fixture as built. 53 tests: the copy builds to the same `HEAD` twice; the fixture's tests pass on the copy and after each change; each check fails on the copy, fails after a right first session and the change, and passes after a right second session. Dry run: every check fails on the untouched fixture.
+- **Differs from the item as written.** Functional requirement 3 asks the `CLAUDE.md` map to hold the knowledge the map facts hold at the start of the first session. Under ADR 0023 Factloom's map is empty then and grows as the agent works, so the `CLAUDE.md` map instead describes the whole fixture as a developer would write it before any task, and goes stale where a teammate's change moves code. The second comparison therefore sets a map written once against a map learned and kept true.
+- **Known limits of the set.** Some checks call one function, such as `findBlockingHold` and `composeNotice`: an agent that gets the behaviour right one layer away fails them. A move of functions expects a top-level function to end with `}` alone on a line, and gives the moved function only the imports the task data lists. The `CLAUDE.md` map names `isOpenOn`, `nextOpenDay` and `findBlockingHold` in their first files, as a general map would.
+- **Not verified here.** A repair during a real session: maintenance loads the embedding model, which is not cached in this container. The owner's run is that test.
+- **`pnpm check`:** 134 test files, 1,416 tests passed.
