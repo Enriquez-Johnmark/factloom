@@ -1,0 +1,11 @@
+{
+  "name": "lending-desk",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "The lending desk service of the city library: checkouts, returns, renewals, holds, fees and notices.",
+  "scripts": {
+    "start": "node lib/server/http.js",
+    "test": "node --test"
+  }
+}
