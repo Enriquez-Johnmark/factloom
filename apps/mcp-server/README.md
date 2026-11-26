@@ -60,6 +60,28 @@ For one session only, `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` in the environment doe
 
 This set-up was measured, and it costs tokens: in the [second comparison](evals/agent-comparison/results/2026-11-26-second/report.md), the median task used 17.7% more tokens than Claude Code with auto memory, because loading and calling Factloom's tools takes turns that auto memory, already in the context, does not. Choose it for what auto memory cannot do (facts with a start and an end, answers about a past date, a record of why a fact changed), not to save tokens.
 
+**Add the recall hook.** Auto memory is in the context from the start; Factloom's facts reach the agent only when it loads and calls `recall`, which is where those tokens went. A `UserPromptSubmit` hook closes that gap: on each prompt, Claude Code runs `hook recall` with the prompt on standard input, and the command adds the current facts that match it, five at most, to the agent's context, or nothing when none match. It makes no LLM call and needs no key. In the same `.claude/settings.json`:
+
+```json
+{
+  "autoMemoryEnabled": false,
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FACTLOOM_NAMESPACE=repo:shop-api node /absolute/path/to/factloom/apps/mcp-server/src/main.ts hook recall"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The event, its input with the `prompt` field, the output in `hookSpecificOutput.additionalContext`, that the event takes no matcher, that the command runs in a shell with Claude Code's environment, and its default timeout of 30 seconds are from https://code.claude.com/docs/en/hooks.md and https://code.claude.com/docs/en/hooks-guide.md, read on 2026-11-26. Use the namespace and database of the server's registration. The first call loads the embedding model, downloading it if it is not in `~/.factloom/models`. Whether the hook saves tokens is what FL-080 measures; until its report, it is unmeasured.
+
 **Codex.** Register the server in `~/.codex/config.toml`:
 
 ```sh
@@ -100,6 +122,7 @@ The agent's own plan and Factloom's key are separate ([`MCP-TOOLS.md`](../../doc
 |---|---|
 | `node src/main.ts` | Serves MCP over stdio: the six tools of [`MCP-TOOLS.md`](../../docs/architecture/MCP-TOOLS.md) |
 | `node src/main.ts maintenance` | Runs the maintenance jobs once, prints one JSON report and exits (FL-048) |
+| `node src/main.ts hook recall` | The prompt hook: reads a host's hook input on standard input and prints the facts that match its prompt as the hook's context (FL-080) |
 | `node src/main.ts purge sources <fact-id>` | Lists the sources behind a fact, without their content (FL-072) |
 | `node src/main.ts purge source <source-id> --reason secret_stored` | Purges one source ([ADR 0012](../../docs/architecture/adr/0012-purge-is-the-one-exception.md)) |
 | `node src/main.ts proposals list` | Lists the pending proposals, oldest first (FL-070) |
