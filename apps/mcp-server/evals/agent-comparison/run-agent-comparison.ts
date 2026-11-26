@@ -29,6 +29,7 @@ import {
 import type { Configuration } from './compare-runs.ts';
 import {
   buildClaudeArguments,
+  buildFactloomHookEnvironment,
   buildFactloomMcpConfig,
   describeClaudeArguments,
   findServerProblem,
@@ -115,21 +116,23 @@ function prepareTaskRun(task: AgentTask, configuration: Configuration, runStamp:
   // Outside the working tree, so the agent does not find the database among the files.
   const serverDirectory = mkdtempSync(join(tmpdir(), 'factloom-agent-comparison-'));
   let mcpConfigPath: string | null = null;
+  let environment: Readonly<Record<string, string>> = {};
   if (configuration === 'with') {
     mcpConfigPath = join(serverDirectory, 'mcp-config.json');
-    const config = buildFactloomMcpConfig({
+    const server = {
       nodePath: process.execPath,
       serverEntry: SERVER_ENTRY,
       databasePath: join(serverDirectory, 'factloom.db'),
       namespace: `eval:agent-comparison:${task.id}:${runStamp}`,
-    });
-    writeFileSync(mcpConfigPath, config);
+    };
+    writeFileSync(mcpConfigPath, buildFactloomMcpConfig(server));
+    environment = buildFactloomHookEnvironment(server);
   }
   const remove = () => {
     rmSync(workingDirectory, { recursive: true, force: true });
     rmSync(serverDirectory, { recursive: true, force: true });
   };
-  return { workingDirectory, serverDirectory, mcpConfigPath, remove };
+  return { workingDirectory, serverDirectory, mcpConfigPath, environment, remove };
 }
 
 async function dryRun(configurations: readonly Configuration[], tasks: readonly AgentTask[]): Promise<void> {
@@ -182,10 +185,15 @@ async function playAndRecord(input: {
   readonly session: 1 | 2;
   readonly args: readonly string[];
   readonly workingDirectory: string;
+  readonly environment: Readonly<Record<string, string>>;
 }): Promise<{ readonly isReadable: boolean; readonly serverProblem: string | null }> {
   const { resultsDirectory, configuration, task, session } = input;
   say(`${task.id}, ${configuration} Factloom, session ${session}: playing`);
-  const finished = await playClaudeSession({ args: input.args, workingDirectory: input.workingDirectory });
+  const finished = await playClaudeSession({
+    args: input.args,
+    workingDirectory: input.workingDirectory,
+    environment: input.environment,
+  });
   const rawPath = join(resultsDirectory, 'raw', `${task.id}-${configuration}-${session}.jsonl`);
   const withheld = writeCheckedFile(rawPath, hideHomeDirectory(finished.output, homedir()));
   const read = readClaudeStream(finished.output);
@@ -264,6 +272,7 @@ async function run(input: {
           session,
           args: buildClaudeArguments({ prompt, model: input.model, mcpConfigPath: prepared.mcpConfigPath }),
           workingDirectory: prepared.workingDirectory,
+          environment: prepared.environment,
         });
         // A first session that cannot be read is a set-up problem, so it costs one session only.
         if (index === 0 && session === 1 && !played.isReadable) {

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import {
   buildClaudeArguments,
+  buildFactloomHookEnvironment,
+  FACTLOOM_RUN_SETTINGS,
   buildFactloomMcpConfig,
   describeClaudeArguments,
   findServerProblem,
@@ -38,7 +41,7 @@ describe('the arguments of a session', () => {
       '--allowedTools',
       'Bash(node *),Bash(npm test *),Bash(npm run *),Bash(git *),mcp__factloom__*',
       '--settings',
-      '{"autoMemoryEnabled":false}',
+      FACTLOOM_RUN_SETTINGS,
       '--mcp-config',
       '/tmp/mcp.json',
     ]);
@@ -54,11 +57,44 @@ describe('the arguments of a session', () => {
     expect(withFactloom).toEqual([
       ...without,
       '--settings',
-      '{"autoMemoryEnabled":false}',
+      FACTLOOM_RUN_SETTINGS,
       '--mcp-config',
       '/tmp/mcp.json',
     ]);
     expect(without).not.toContain('--model');
+  });
+
+  it('turns auto memory off and registers the recall hook in the run with Factloom', () => {
+    const settings = z
+      .object({
+        autoMemoryEnabled: z.literal(false),
+        hooks: z.object({
+          UserPromptSubmit: z.array(
+            z.object({ hooks: z.array(z.object({ type: z.literal('command'), command: z.string() })) }),
+          ),
+        }),
+      })
+      .parse(JSON.parse(FACTLOOM_RUN_SETTINGS));
+
+    expect(settings.hooks.UserPromptSubmit[0]?.hooks[0]?.command).toBe(
+      'ANTHROPIC_API_KEY= "$FACTLOOM_COMPARISON_NODE" "$FACTLOOM_COMPARISON_SERVER_ENTRY" hook recall',
+    );
+  });
+
+  it('gives the hook the server, database and namespace of the run through the environment', () => {
+    expect(
+      buildFactloomHookEnvironment({
+        nodePath: '/usr/bin/node',
+        serverEntry: '/f/apps/mcp-server/src/main.ts',
+        databasePath: '/tmp/x/factloom.db',
+        namespace: 'eval:agent-comparison:utc-dates:run',
+      }),
+    ).toEqual({
+      FACTLOOM_COMPARISON_NODE: '/usr/bin/node',
+      FACTLOOM_COMPARISON_SERVER_ENTRY: '/f/apps/mcp-server/src/main.ts',
+      FACTLOOM_DB: '/tmp/x/factloom.db',
+      FACTLOOM_NAMESPACE: 'eval:agent-comparison:utc-dates:run',
+    });
   });
 
   it('keeps auto memory, as shipped, in the run without Factloom', () => {

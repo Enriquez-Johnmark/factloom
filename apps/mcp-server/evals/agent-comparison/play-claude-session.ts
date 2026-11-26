@@ -24,13 +24,44 @@ export const ALLOWED_TOOLS = [
 ];
 
 /**
- * The settings of the run with Factloom: Claude Code's auto memory turned off, as the
- * registration guide tells a user to do (FL-079). With both memories, the agent of the first run
- * kept everything in auto memory and never called Factloom. The key is from
- * https://code.claude.com/docs/en/memory.md, read on 2026-11-26. The run without Factloom keeps
- * auto memory, as shipped (FL-074, functional requirement 3).
+ * The recall hook's command. Shell form, so the variables of `buildFactloomHookEnvironment`
+ * expand, and `ANTHROPIC_API_KEY` is emptied as in the server's configuration, so the hook can
+ * spend no tokens the agent's usage does not show. Shell form, expansion and an inherited
+ * environment are from https://code.claude.com/docs/en/hooks.md, read on 2026-11-26.
  */
-export const FACTLOOM_RUN_SETTINGS = JSON.stringify({ autoMemoryEnabled: false });
+const RECALL_HOOK_COMMAND =
+  'ANTHROPIC_API_KEY= "$FACTLOOM_COMPARISON_NODE" "$FACTLOOM_COMPARISON_SERVER_ENTRY" hook recall';
+
+/**
+ * The settings of the run with Factloom, as the registration guide sets Claude Code up: auto
+ * memory turned off (FL-079), with the key from https://code.claude.com/docs/en/memory.md, and
+ * the recall hook on each prompt (FL-080), so that the facts that match the prompt are in the
+ * context without a turn. `UserPromptSubmit` takes no matcher (hooks.md, read on 2026-11-26).
+ * The settings hold no path, so the report shows them as they are. The run without Factloom
+ * keeps auto memory and no hook, as shipped (FL-074, functional requirement 3).
+ */
+export const FACTLOOM_RUN_SETTINGS = JSON.stringify({
+  autoMemoryEnabled: false,
+  hooks: { UserPromptSubmit: [{ hooks: [{ type: 'command', command: RECALL_HOOK_COMMAND }] }] },
+});
+
+/**
+ * The variables the recall hook reads, set on the agent's process in the run with Factloom: the
+ * same server, database and namespace as the server's configuration.
+ */
+export function buildFactloomHookEnvironment(input: {
+  readonly nodePath: string;
+  readonly serverEntry: string;
+  readonly databasePath: string;
+  readonly namespace: string;
+}): Readonly<Record<string, string>> {
+  return {
+    FACTLOOM_COMPARISON_NODE: input.nodePath,
+    FACTLOOM_COMPARISON_SERVER_ENTRY: input.serverEntry,
+    FACTLOOM_DB: input.databasePath,
+    FACTLOOM_NAMESPACE: input.namespace,
+  };
+}
 
 /** What stands in for each prompt in the recorded arguments: the prompts are in the task set. */
 export const PROMPT_PLACEHOLDER = '<prompt>';
@@ -49,7 +80,8 @@ const INTERRUPT_GRACE = 30_000;
  * `--allowedTools` and `--mcp-config` take several values and would take a prompt after them as
  * one; `--mcp-config` is last for the same reason. Both configurations pass
  * `--strict-mcp-config`, so that only Factloom, when it is registered here, is loaded, and no
- * server from the person's own configuration. The run with Factloom also turns auto memory off.
+ * server from the person's own configuration. The run with Factloom also passes its settings:
+ * auto memory off and the recall hook.
  */
 export function buildClaudeArguments(input: {
   readonly prompt: string;
@@ -147,10 +179,12 @@ export type FinishedSession = {
 export async function playClaudeSession(input: {
   readonly args: readonly string[];
   readonly workingDirectory: string;
+  /** Variables added to the person's own, such as those of the recall hook. */
+  readonly environment: Readonly<Record<string, string>>;
 }): Promise<FinishedSession> {
   const child = spawn('claude', input.args, {
     cwd: input.workingDirectory,
-    env: { ...process.env, ENABLE_CLAUDEAI_MCP_SERVERS: 'false' },
+    env: { ...process.env, ...input.environment, ENABLE_CLAUDEAI_MCP_SERVERS: 'false' },
     stdio: ['ignore', 'pipe', 'ignore'],
   });
   let output = '';
