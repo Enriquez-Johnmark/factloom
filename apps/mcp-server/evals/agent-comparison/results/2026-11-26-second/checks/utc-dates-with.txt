@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: parses a calendar date to midnight UTC
+ok 1 - parses a calendar date to midnight UTC
+  ---
+  duration_ms: 1.767333
+  type: 'test'
+  ...
+# Subtest: refuses text that is not a calendar date
+ok 2 - refuses text that is not a calendar date
+  ---
+  duration_ms: 0.175
+  type: 'test'
+  ...
+# Subtest: adds days across the end of a month
+ok 3 - adds days across the end of a month
+  ---
+  duration_ms: 0.086125
+  type: 'test'
+  ...
+# Subtest: finds the end of a month, at midnight UTC
+ok 4 - finds the end of a month, at midnight UTC
+  ---
+  duration_ms: 0.072833
+  type: 'test'
+  ...
+# Subtest: finds the end of February in common and leap years
+ok 5 - finds the end of February in common and leap years
+  ---
+  duration_ms: 0.072125
+  type: 'test'
+  ...
+# Subtest: finds the end of December without leaving the year
+ok 6 - finds the end of December without leaving the year
+  ---
+  duration_ms: 0.056792
+  type: 'test'
+  ...
+# Subtest: ignores the time of day
+ok 7 - ignores the time of day
+  ---
+  duration_ms: 0.05625
+  type: 'test'
+  ...
+# Subtest: adds amounts in cents
+ok 8 - adds amounts in cents
+  ---
+  duration_ms: 0.431917
+  type: 'test'
+  ...
+# Subtest: formats cents with two decimals and the currency
+ok 9 - formats cents with two decimals and the currency
+  ---
+  duration_ms: 0.0945
+  type: 'test'
+  ...
+# Subtest: lists the invoices with their totals
+ok 10 - lists the invoices with their totals
+  ---
+  duration_ms: 0.671958
+  type: 'test'
+  ...
+# Subtest: creates an invoice for a known customer
+ok 11 - creates an invoice for a known customer
+  ---
+  duration_ms: 0.103333
+  type: 'test'
+  ...
+# Subtest: refuses an invoice for an unknown customer
+ok 12 - refuses an invoice for an unknown customer
+  ---
+  duration_ms: 0.05675
+  type: 'test'
+  ...
+# Subtest: returns the last day of the month at midnight UTC
+ok 13 - returns the last day of the month at midnight UTC
+  ---
+  duration_ms: 1.354083
+  type: 'test'
+  ...
+# Subtest: keeps the month of a date at midnight UTC on the first day
+ok 14 - keeps the month of a date at midnight UTC on the first day
+  ---
+  duration_ms: 0.099833
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 76.9445

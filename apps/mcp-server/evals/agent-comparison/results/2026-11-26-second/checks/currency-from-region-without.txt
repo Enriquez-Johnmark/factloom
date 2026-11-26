@@ -1,0 +1,20 @@
+✔ parses a calendar date to midnight UTC (3.180417ms)
+✔ refuses text that is not a calendar date (0.196416ms)
+✔ adds days across the end of a month (0.07975ms)
+✔ adds amounts in cents (0.417958ms)
+✔ formats cents with two decimals and the currency (0.093375ms)
+✔ lists the invoices with their totals (0.813917ms)
+✔ creates an invoice for a known customer (0.148ms)
+✔ invoices in the currency of the customer region, ignoring the request (0.114542ms)
+✔ refuses an invoice for an unknown customer (0.062792ms)
+✔ gives a UK customer GBP even when the request asks for another currency (0.590208ms)
+✔ gives every US region USD (0.182458ms)
+✔ gives an EU customer EUR (0.075042ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 79.281

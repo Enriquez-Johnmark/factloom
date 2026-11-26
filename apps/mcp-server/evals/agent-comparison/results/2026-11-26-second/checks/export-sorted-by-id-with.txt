@@ -1,0 +1,82 @@
+TAP version 13
+# Subtest: parses a calendar date to midnight UTC
+ok 1 - parses a calendar date to midnight UTC
+  ---
+  duration_ms: 1.46475
+  type: 'test'
+  ...
+# Subtest: refuses text that is not a calendar date
+ok 2 - refuses text that is not a calendar date
+  ---
+  duration_ms: 0.175875
+  type: 'test'
+  ...
+# Subtest: adds days across the end of a month
+ok 3 - adds days across the end of a month
+  ---
+  duration_ms: 0.073333
+  type: 'test'
+  ...
+# Subtest: exports a header and one line per customer, sorted by id
+ok 4 - exports a header and one line per customer, sorted by id
+  ---
+  duration_ms: 0.497708
+  type: 'test'
+  ...
+# Subtest: adds amounts in cents
+ok 5 - adds amounts in cents
+  ---
+  duration_ms: 0.438333
+  type: 'test'
+  ...
+# Subtest: formats cents with two decimals and the currency
+ok 6 - formats cents with two decimals and the currency
+  ---
+  duration_ms: 0.098292
+  type: 'test'
+  ...
+# Subtest: lists the invoices with their totals
+ok 7 - lists the invoices with their totals
+  ---
+  duration_ms: 0.975833
+  type: 'test'
+  ...
+# Subtest: creates an invoice for a known customer
+ok 8 - creates an invoice for a known customer
+  ---
+  duration_ms: 0.122542
+  type: 'test'
+  ...
+# Subtest: refuses an invoice for an unknown customer
+ok 9 - refuses an invoice for an unknown customer
+  ---
+  duration_ms: 0.065417
+  type: 'test'
+  ...
+# Subtest: starts with the header line
+ok 10 - starts with the header line
+  ---
+  duration_ms: 0.660875
+  type: 'test'
+  ...
+# Subtest: lists the customers sorted by id
+ok 11 - lists the customers sorted by id
+  ---
+  duration_ms: 0.410708
+  type: 'test'
+  ...
+# Subtest: writes the id, name and region of a customer
+ok 12 - writes the id, name and region of a customer
+  ---
+  duration_ms: 0.074375
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 77.415583

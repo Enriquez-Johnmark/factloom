@@ -1,0 +1,88 @@
+TAP version 13
+# Subtest: parses a calendar date to midnight UTC
+ok 1 - parses a calendar date to midnight UTC
+  ---
+  duration_ms: 2.0255
+  type: 'test'
+  ...
+# Subtest: refuses text that is not a calendar date
+ok 2 - refuses text that is not a calendar date
+  ---
+  duration_ms: 0.17475
+  type: 'test'
+  ...
+# Subtest: adds days across the end of a month
+ok 3 - adds days across the end of a month
+  ---
+  duration_ms: 0.075083
+  type: 'test'
+  ...
+# Subtest: adds the tax of the customer region
+ok 4 - adds the tax of the customer region
+  ---
+  duration_ms: 0.460541
+  type: 'test'
+  ...
+# Subtest: charges no tax to wholesale customers
+ok 5 - charges no tax to wholesale customers
+  ---
+  duration_ms: 0.072792
+  type: 'test'
+  ...
+# Subtest: throws for an unknown customer
+ok 6 - throws for an unknown customer
+  ---
+  duration_ms: 0.199125
+  type: 'test'
+  ...
+# Subtest: adds amounts in cents
+ok 7 - adds amounts in cents
+  ---
+  duration_ms: 0.411875
+  type: 'test'
+  ...
+# Subtest: formats cents with two decimals and the currency
+ok 8 - formats cents with two decimals and the currency
+  ---
+  duration_ms: 0.123792
+  type: 'test'
+  ...
+# Subtest: lists the invoices with their totals
+ok 9 - lists the invoices with their totals
+  ---
+  duration_ms: 0.772833
+  type: 'test'
+  ...
+# Subtest: creates an invoice for a known customer
+ok 10 - creates an invoice for a known customer
+  ---
+  duration_ms: 0.115541
+  type: 'test'
+  ...
+# Subtest: refuses an invoice for an unknown customer
+ok 11 - refuses an invoice for an unknown customer
+  ---
+  duration_ms: 0.062167
+  type: 'test'
+  ...
+# Subtest: adds the region tax for a retail customer
+ok 12 - adds the region tax for a retail customer
+  ---
+  duration_ms: 0.47475
+  type: 'test'
+  ...
+# Subtest: adds no tax for a wholesale customer
+ok 13 - adds no tax for a wholesale customer
+  ---
+  duration_ms: 0.075375
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 77.933583

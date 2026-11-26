@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: reads the database url and port from the environment
+ok 1 - reads the database url and port from the environment
+  ---
+  duration_ms: 0.782084
+  type: 'test'
+  ...
+# Subtest: defaults the port to 8080
+ok 2 - defaults the port to 8080
+  ---
+  duration_ms: 0.097709
+  type: 'test'
+  ...
+# Subtest: throws when DATABASE_URL is not set
+ok 3 - throws when DATABASE_URL is not set
+  ---
+  duration_ms: 0.238542
+  type: 'test'
+  ...
+# Subtest: parses a calendar date to midnight UTC
+ok 4 - parses a calendar date to midnight UTC
+  ---
+  duration_ms: 3.92525
+  type: 'test'
+  ...
+# Subtest: refuses text that is not a calendar date
+ok 5 - refuses text that is not a calendar date
+  ---
+  duration_ms: 0.331125
+  type: 'test'
+  ...
+# Subtest: adds days across the end of a month
+ok 6 - adds days across the end of a month
+  ---
+  duration_ms: 0.089834
+  type: 'test'
+  ...
+# Subtest: adds amounts in cents
+ok 7 - adds amounts in cents
+  ---
+  duration_ms: 0.44925
+  type: 'test'
+  ...
+# Subtest: formats cents with two decimals and the currency
+ok 8 - formats cents with two decimals and the currency
+  ---
+  duration_ms: 0.109917
+  type: 'test'
+  ...
+# Subtest: lists the invoices with their totals
+ok 9 - lists the invoices with their totals
+  ---
+  duration_ms: 1.826542
+  type: 'test'
+  ...
+# Subtest: creates an invoice for a known customer
+ok 10 - creates an invoice for a known customer
+  ---
+  duration_ms: 0.502625
+  type: 'test'
+  ...
+# Subtest: refuses an invoice for an unknown customer
+ok 11 - refuses an invoice for an unknown customer
+  ---
+  duration_ms: 0.100459
+  type: 'test'
+  ...
+# Subtest: reads the database URL from INVOICE_DB_URL
+not ok 12 - reads the database URL from INVOICE_DB_URL
+  ---
+  duration_ms: 1.830333
+  type: 'test'
+  location: '/private/var/folders/wg/kshmq8sn7zl5m1ch85m7yvvh0000gn/T/invoice-service-CsFJWq/test/task-check.test.mjs:6:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'postgres://shared'
+    - 'postgres://invoices'
+                  ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'postgres://invoices'
+  actual: 'postgres://shared'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///private/var/folders/wg/kshmq8sn7zl5m1ch85m7yvvh0000gn/T/invoice-service-CsFJWq/test/task-check.test.mjs:8:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.start (node:internal/test_runner/test:1262:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+  ...
+# Subtest: does not fall back to DATABASE_URL
+not ok 13 - does not fall back to DATABASE_URL
+  ---
+  duration_ms: 0.2425
+  type: 'test'
+  location: '/private/var/folders/wg/kshmq8sn7zl5m1ch85m7yvvh0000gn/T/invoice-service-CsFJWq/test/task-check.test.mjs:11:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected exception.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  operator: 'throws'
+  stack: |-
+    TestContext.<anonymous> (file:///private/var/folders/wg/kshmq8sn7zl5m1ch85m7yvvh0000gn/T/invoice-service-CsFJWq/test/task-check.test.mjs:12:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+    Test.run (node:internal/test_runner/test:1467:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: still reads the port
+not ok 14 - still reads the port
+  ---
+  duration_ms: 0.061708
+  type: 'test'
+  location: '/private/var/folders/wg/kshmq8sn7zl5m1ch85m7yvvh0000gn/T/invoice-service-CsFJWq/test/task-check.test.mjs:15:1'
+  failureType: 'testCodeFailure'
+  error: 'DATABASE_URL is not set'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    readConfig (file:///private/var/folders/wg/kshmq8sn7zl5m1ch85m7yvvh0000gn/T/invoice-service-CsFJWq/lib/config.js:8:11)
+    TestContext.<anonymous> (file:///private/var/folders/wg/kshmq8sn7zl5m1ch85m7yvvh0000gn/T/invoice-service-CsFJWq/test/task-check.test.mjs:16:16)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+    Test.run (node:internal/test_runner/test:1467:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 11
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 110.940125

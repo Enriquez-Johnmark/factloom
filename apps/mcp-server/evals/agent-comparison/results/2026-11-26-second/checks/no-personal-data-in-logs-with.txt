@@ -1,0 +1,76 @@
+TAP version 13
+# Subtest: logs one line with the invoice, the customer id and the total
+ok 1 - logs one line with the invoice, the customer id and the total
+  ---
+  duration_ms: 1.84775
+  type: 'test'
+  ...
+# Subtest: parses a calendar date to midnight UTC
+ok 2 - parses a calendar date to midnight UTC
+  ---
+  duration_ms: 1.050083
+  type: 'test'
+  ...
+# Subtest: refuses text that is not a calendar date
+ok 3 - refuses text that is not a calendar date
+  ---
+  duration_ms: 0.150625
+  type: 'test'
+  ...
+# Subtest: adds days across the end of a month
+ok 4 - adds days across the end of a month
+  ---
+  duration_ms: 0.06875
+  type: 'test'
+  ...
+# Subtest: adds amounts in cents
+ok 5 - adds amounts in cents
+  ---
+  duration_ms: 1.103167
+  type: 'test'
+  ...
+# Subtest: formats cents with two decimals and the currency
+ok 6 - formats cents with two decimals and the currency
+  ---
+  duration_ms: 0.135541
+  type: 'test'
+  ...
+# Subtest: lists the invoices with their totals
+ok 7 - lists the invoices with their totals
+  ---
+  duration_ms: 0.748541
+  type: 'test'
+  ...
+# Subtest: creates an invoice for a known customer
+ok 8 - creates an invoice for a known customer
+  ---
+  duration_ms: 0.112375
+  type: 'test'
+  ...
+# Subtest: refuses an invoice for an unknown customer
+ok 9 - refuses an invoice for an unknown customer
+  ---
+  duration_ms: 0.064209
+  type: 'test'
+  ...
+# Subtest: logs one line with the invoice and the customer id
+ok 10 - logs one line with the invoice and the customer id
+  ---
+  duration_ms: 1.193125
+  type: 'test'
+  ...
+# Subtest: logs neither the name nor the email address of the customer
+ok 11 - logs neither the name nor the email address of the customer
+  ---
+  duration_ms: 0.152625
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 87.720041
