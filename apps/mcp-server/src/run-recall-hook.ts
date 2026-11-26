@@ -4,8 +4,16 @@
 // (https://code.claude.com/docs/en/hooks.md and hooks-guide.md, read on 2026-11-26).
 // The agent then has the facts that match the task without spending turns to load and call
 // recall, which is where the comparison of FL-079 measured Factloom's cost.
-import type { Embedder, MemoryStore, Namespace, Timestamp } from '@factloom/core';
-import { recall } from '@factloom/graph-rag';
+import {
+  type Embedder,
+  type MemoryStore,
+  type Namespace,
+  ok,
+  type Result,
+  type Timestamp,
+  type VerificationOutcome,
+} from '@factloom/core';
+import { type RecalledFact, recall } from '@factloom/graph-rag';
 import { z } from 'zod';
 import type { Logger } from './create-factloom-server.ts';
 
@@ -20,6 +28,32 @@ const PromptHookInputSchema = z.object({ prompt: z.string() });
 
 const HEADING =
   "Factloom, this repository's memory, recalled these current facts for this prompt, best match first. Call recall only for what they do not cover.";
+
+/** What the latest verification of a fact must not be for the hook to hand it over. */
+const OUT_OF_DATE_OUTCOMES: readonly VerificationOutcome[] = ['contradicted', 'source_missing'];
+
+/**
+ * The facts whose latest verification did not find their file or symbol gone, at most the
+ * hook limit, in order. A map fact whose function moved is contradicted until maintenance
+ * repairs it (FL-071, FL-082), and handing it over would send the agent to the wrong file.
+ */
+async function keepCurrentlyVerified(
+  deps: { readonly store: MemoryStore; readonly namespace: Namespace },
+  facts: readonly RecalledFact[],
+): Promise<Result<readonly RecalledFact[]>> {
+  const kept: RecalledFact[] = [];
+  for (const found of facts) {
+    if (kept.length === RECALL_HOOK_LIMIT) break;
+    const verifications = await deps.store.listVerifications({
+      namespace: deps.namespace,
+      factId: found.fact.id,
+    });
+    if (!verifications.ok) return verifications;
+    const latest = verifications.value.at(-1);
+    if (latest === undefined || !OUT_OF_DATE_OUTCOMES.includes(latest.outcome)) kept.push(found);
+  }
+  return ok(kept);
+}
 
 /** Reads the prompt from the hook's standard input, or returns null when it is not a hook input. */
 function readPrompt(standardInput: string): string | null {
@@ -58,22 +92,27 @@ export async function runRecallHook(
     question: prompt.slice(0, QUESTION_LENGTH_LIMIT),
     validAt: null,
     knownAt: null,
-    limit: RECALL_HOOK_LIMIT,
+    // Twice the limit, so that facts left out as out of date leave room for the next matches.
+    limit: RECALL_HOOK_LIMIT * 2,
   });
   if (!recalled.ok) {
     deps.log(`The recall hook failed: ${recalled.error.code}: ${recalled.error.message}`);
     return 1;
   }
-  const { facts } = recalled.value;
-  if (facts.length === 0) return 0;
+  const facts = await keepCurrentlyVerified(deps, recalled.value.facts);
+  if (!facts.ok) {
+    deps.log(`The recall hook failed: ${facts.error.code}: ${facts.error.message}`);
+    return 1;
+  }
+  if (facts.value.length === 0) return 0;
   // Awaited, unlike in the recall tool: the process ends when the hook returns.
   const usage = await deps.store.recordFactUsage({
     namespace: deps.namespace,
-    factIds: facts.map((found) => found.fact.id),
+    factIds: facts.value.map((found) => found.fact.id),
     recalledAt: deps.now(),
   });
   if (!usage.ok) deps.log(`The usage of recalled facts was not recorded: ${usage.error.code}`);
-  const lines = facts.map((found) => `- ${found.fact.statement} (fact ${found.fact.id})`);
+  const lines = facts.value.map((found) => `- ${found.fact.statement} (fact ${found.fact.id})`);
   const output = {
     hookSpecificOutput: {
       hookEventName: 'UserPromptSubmit',

@@ -1,4 +1,4 @@
-import { createTestDeps, recordFacts } from '@factloom/core';
+import { createTestDeps, recordFacts, recordVerification } from '@factloom/core';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { RECALL_HOOK_LIMIT, runRecallHook } from './run-recall-hook.ts';
@@ -121,6 +121,43 @@ describe('the recall hook', () => {
     const { context } = await runHook(deps, PROMPT_INPUT);
 
     expect(context.split('\n').filter((line) => line.startsWith('- '))).toHaveLength(RECALL_HOOK_LIMIT);
+  });
+
+  it('leaves out a fact whose latest verification found its file or symbol gone', async () => {
+    const { deps, factId } = await depsWithOneFact();
+    const verified = await recordVerification(deps, {
+      namespace: NAMESPACE,
+      trigger: 'maintenance',
+      reasonCode: 'verification_due',
+      factId,
+      outcome: 'contradicted',
+      method: 'deterministic',
+    });
+    if (!verified.ok) throw new Error(verified.error.message);
+
+    const { exitCode, output } = await runHook(deps, PROMPT_INPUT);
+
+    expect(exitCode).toBe(0);
+    expect(output).toBe('');
+  });
+
+  it('keeps a fact confirmed after an earlier verification found a problem', async () => {
+    const { deps, factId } = await depsWithOneFact();
+    for (const outcome of ['source_missing', 'confirmed'] as const) {
+      const verified = await recordVerification(deps, {
+        namespace: NAMESPACE,
+        trigger: 'maintenance',
+        reasonCode: 'verification_due',
+        factId,
+        outcome,
+        method: 'deterministic',
+      });
+      if (!verified.ok) throw new Error(verified.error.message);
+    }
+
+    const { context } = await runHook(deps, PROMPT_INPUT);
+
+    expect(context).toContain(`(fact ${factId})`);
   });
 
   it('fails without printing when standard input is not a prompt hook input', async () => {
