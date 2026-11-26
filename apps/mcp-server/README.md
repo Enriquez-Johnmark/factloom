@@ -160,7 +160,7 @@ Both hosts add what a session start hook prints to standard output to the sessio
 }
 ```
 
-Neither hook has been run yet. The owner runs each once on the Mac and records the report in FL-048.
+The Claude Code hook was run on 2026-11-26 on macOS 26.5 with Claude Code 2.1.331: a session start wrote the report with the four jobs `ok`. Claude Code reads user settings from `$CLAUDE_CONFIG_DIR/settings.json` when that variable is set, so put the hook there. The Codex hook has not been run.
 
 - Design: [`docs/architecture/MCP-TOOLS.md`](../../docs/architecture/MCP-TOOLS.md)
 - Work items: [`EPIC-06`](../../docs/roadmap/epics/EPIC-06.md), [`EPIC-08`](../../docs/roadmap/epics/EPIC-08.md), [`EPIC-09`](../../docs/roadmap/epics/EPIC-09.md)
