@@ -10,7 +10,7 @@ A memory layer for AI systems. Factloom stores what an agent learns as facts tha
 
 It then keeps that memory correct: when new information contradicts a stored fact, the old fact is ended or invalidated and linked to its replacement. Nothing is deleted.
 
-> **Status: early implementation.** No feature works yet. This repository holds the research, the architecture, the roadmap and a workspace in which the first few work items are done. The features below are goals, and the [roadmap](docs/roadmap/ROADMAP.md) says which work item delivers each one and which are complete.
+> **Status: phases 0 to 3 are built.** Memory for coding agents, self-correction and self-healing work, and Factloom runs with Claude Code as an MCP server, confirmed on an Apple Silicon Mac on 2026-11-25. 80 of the 82 work items are complete; the two open ones measure where Factloom could save an agent tokens. Phases 4 to 6, a generic core with Postgres and an HTTP API, document management and other domains, are planned and have no work items yet. The [roadmap](docs/roadmap/ROADMAP.md) has the status of each item.
 
 ## What it is for
 
@@ -26,7 +26,7 @@ It is not a business database. It holds knowledge extracted from text, with sour
 
 | Product | What it does |
 |---|---|
-| **Temporal graph RAG** | Stores entities and facts with two time axes. Recalls by meaning (vectors), by words (full-text search) and by connection (the graph of entities), filtered by time. |
+| **Temporal graph RAG** | Stores entities and facts with two time axes. Recalls by meaning (vectors) and by words (full-text search), filtered by time. A third lane, by connection in the graph of entities, is computed but given no weight, because it did not help on the retrieval eval set ([ADR 0020](docs/architecture/adr/0020-recall-defaults-chosen-by-measurement.md)). |
 | **Self-correcting and self-healing memory** | Fixes wrong content when new information or feedback contradicts a fact. On a schedule, merges duplicate entities, verifies facts against their sources and archives unused ones. |
 
 ## How it is designed
@@ -35,25 +35,25 @@ It is not a business database. It holds knowledge extracted from text, with sour
 - **Facts are never edited.** A fact row changes once at most, when it is invalidated. An edit is a new row, and a database trigger enforces it. This keeps both time axes correct with one query condition.
 - **Every fact has a source, and every change has an audit entry.**
 - **One value at a time.** For a predicate that can hold only one value, such as the test framework a repository uses, no two live facts may overlap in time. The storage layer checks this inside the transaction.
-- **Five MCP tools:** `recall`, `remember`, `record_fact`, `invalidate_fact`, `get_fact_history`.
+- **Six MCP tools:** `recall`, `remember`, `record_fact`, `invalidate_fact`, `get_fact_history`, `give_feedback`. A recall hook hands an agent the facts that match each prompt without a tool call ([registration guide](apps/mcp-server/README.md)).
 - **A small core.** Storage, the LLM and embeddings sit behind interfaces. Only a domain adapter knows about its domain.
 
-The design was checked by running it where it could be: the schema passes 31 checks covering the time rules, and the interface signatures type-check under the project's strict compiler settings. See [`spikes/`](spikes/).
+Every push runs `pnpm check`, the format check, lint, type check and more than 1,200 tests, on Linux and on macOS with Apple Silicon. The claims the design rests on were first tested with throwaway scripts in [`spikes/`](spikes/).
 
 ## Performance
 
-Speed is a requirement with numbers, not an adjective. These are **targets** until the first benchmark confirms or revises them ([REQ-35](docs/product/REQUIREMENTS.md)):
+Speed is a requirement with numbers, not an adjective ([REQ-35](docs/product/REQUIREMENTS.md)). The benchmark's first run, on 2026-11-16 on a Linux continuous integration machine, met every budget, with nothing changed to meet one (FL-066 in [EPIC-07](docs/roadmap/epics/EPIC-07.md)):
 
-| Operation | Target |
-|---|---|
-| `recall` over 10,000 facts | 150 ms at the 95th percentile |
-| `recall` over 100,000 facts | 500 ms at the 95th percentile |
-| `record_fact`, excluding embedding | 50 ms |
-| Server start, once the embedding model is downloaded | 2 seconds |
+| Operation | Budget | First run |
+|---|---|---|
+| `recall` over 10,000 facts, 95th percentile | 150 ms | 98.7 ms |
+| `recall` over 100,000 facts, 95th percentile | 500 ms | 350.4 ms |
+| `record_fact`, excluding embedding, 95th percentile | 50 ms | 6.0 ms on 10,000 facts |
+| Server start, once the embedding model is downloaded | 2 seconds | 553 ms |
 
-A benchmark work item measures these and fails when a target is missed. The rule is to measure first and optimise only what misses.
+The benchmark runs weekly and on demand, and fails when a budget is exceeded by more than 20%. The rule is to measure first and optimise only what misses.
 
-What has been measured so far, on a Linux VM and not on a developer machine: exact vector search over 10,000 vectors took about 10 ms, and embedding one short text took about 5 to 7 ms. `remember` is bounded by the LLM call that extracts facts, which took about 3.5 seconds in one test; `record_fact` makes no LLM call.
+On the owner's MacBook Air (Apple M1), the embedding model embedded a text in 3.3 ms, and the first load took 17 seconds including its download ([Q-23](docs/research/OPEN-QUESTIONS.md)). `remember` is bounded by the LLM call that extracts facts, which took about 3.5 seconds in one test; `record_fact` makes no LLM call.
 
 ## What is deliberately left out, and why
 
@@ -115,7 +115,7 @@ The full plan, with every work item and its dependencies, is in [`docs/roadmap/R
 
 TypeScript on Node.js in a pnpm monorepo. SQLite through `better-sqlite3`, with FTS5 and `sqlite-vec`. Zod for schemas, the MCP TypeScript SDK, Vitest. Claude through the Anthropic API for extraction, behind an interface. A local embedding model, `bge-small-en-v1.5`, so no text leaves the machine to be embedded. The reasons are in the [decision records](docs/architecture/DECISIONS.md).
 
-The stack has been run on Linux with Node.js 22, and on macOS with Apple Silicon and Node.js 24: the workspace check and the schema checks with the SQLite driver and the vector extension pass on both.
+The stack runs on Linux and on macOS with Apple Silicon, with Node.js 22 and 26: continuous integration checks both systems on every push, and the server was confirmed in Claude Code on macOS 26.5 with Node.js 26 (FL-038).
 
 ## How this project is built
 
