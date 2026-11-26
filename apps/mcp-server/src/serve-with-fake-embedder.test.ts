@@ -8,6 +8,7 @@ import { createFakeEmbedder, createTestDeps, recordFacts } from '@factloom/core'
 import { openSqliteMemoryStore } from '@factloom/storage';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { SERVER_INSTRUCTIONS } from './server-instructions.ts';
 import {
   INITIALIZE_REQUEST,
   INITIALIZED_NOTIFICATION,
@@ -102,6 +103,33 @@ describe('the recall tool over stdio', () => {
     expect(answer.result.structuredContent.facts).toContainEqual(
       expect.objectContaining({ fact_id: factId, statement: 'The shop API keeps its sessions in redis.' }),
     );
+  }, 30_000);
+});
+
+describe('the server instructions over stdio', () => {
+  it('gives its instructions in the initialize result', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'factloom-instructions-'));
+    directories.push(directory);
+    const server = startServerProcess(
+      ENTRY,
+      { FACTLOOM_DB: join(directory, 'factloom.db'), FACTLOOM_NAMESPACE: NAMESPACE },
+      directory,
+    );
+
+    server.send(INITIALIZE_REQUEST);
+    await waitFor(() => server.readStandardOutput().includes('"id":1'), 15_000);
+    server.close();
+    const { code, standardOutput } = await server.finished;
+
+    expect(code).toBe(0);
+    const initialized = z
+      .object({ id: z.literal(1), result: z.object({ instructions: z.string() }) })
+      .parse(
+        parseOutputLines(standardOutput).find(
+          (message) => z.object({ id: z.literal(1) }).safeParse(message).success,
+        ),
+      );
+    expect(initialized.result.instructions).toBe(SERVER_INSTRUCTIONS);
   }, 30_000);
 });
 
