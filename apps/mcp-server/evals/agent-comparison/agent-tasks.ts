@@ -9,10 +9,17 @@
 // TASK_SET_CHANGES with its reason, and the report lists it.
 
 /**
- * What the first session gives the agent. The last two are those of FL-081: why a change was
- * made, and a value from before a change.
+ * What the first session gives the agent. 'change reason' and 'earlier value' are those of
+ * FL-081: why a change was made, and a value from before a change. 'code location' is that of
+ * FL-082: where in the code base something is, which the agent finds while it works.
  */
-export type KnowledgeKind = 'decision' | 'convention' | 'bug cause' | 'change reason' | 'earlier value';
+export type KnowledgeKind =
+  | 'decision'
+  | 'convention'
+  | 'bug cause'
+  | 'change reason'
+  | 'earlier value'
+  | 'code location';
 
 export type AgentTask = {
   readonly id: string;
