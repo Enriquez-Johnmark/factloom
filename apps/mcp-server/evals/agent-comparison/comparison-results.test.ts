@@ -2,14 +2,15 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { Configuration } from './compare-runs.ts';
 import {
   appendRunLogEntry,
+  hideHomeDirectory,
   readRunLog,
   type SessionEntry,
   writeCheckedFile,
   writeReport,
 } from './comparison-results.ts';
-import type { Configuration } from './compare-runs.ts';
 
 const directories: string[] = [];
 function createResultsDirectory(): string {
@@ -104,5 +105,19 @@ describe('the results directory', () => {
     expect(withheld).not.toBeNull();
     expect(withheld).not.toContain('hunter2horse');
     expect(existsSync(path)).toBe(false);
+  });
+});
+
+describe('the output kept in the results', () => {
+  it('shows the home directory as ~, so that a user name in a path is not published', () => {
+    const output = '{"cwd":"/Users/ana/work","file":"/Users/ana/.claude/projects/x/memory/MEMORY.md"}';
+
+    expect(hideHomeDirectory(output, '/Users/ana')).toBe(
+      '{"cwd":"~/work","file":"~/.claude/projects/x/memory/MEMORY.md"}',
+    );
+  });
+
+  it('leaves a path that only starts like the home directory unchanged', () => {
+    expect(hideHomeDirectory('/Users/anabel/notes', '/Users/ana')).toBe('/Users/anabel/notes');
   });
 });

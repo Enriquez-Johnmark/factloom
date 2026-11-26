@@ -83,6 +83,17 @@ export function findRunLogPath(resultsDirectory: string, configuration: Configur
 }
 
 /**
+ * Shows the home directory as `~` in an agent's output, so that the user name in its paths is
+ * not published with the results. A path that only starts like the home directory, such as
+ * `/Users/anabel` for `/Users/ana`, is left as it is.
+ */
+export function hideHomeDirectory(output: string, homeDirectory: string): string {
+  if (homeDirectory === '') return output;
+  const escaped = homeDirectory.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return output.replace(new RegExp(`${escaped}(?=$|[/"'\\s:,\\\\])`, 'g'), '~');
+}
+
+/**
  * Writes a text file of the results unless the secret check refuses it. Returns null when it
  * was written, or the reason it was withheld, which names the kind of secret and not its value.
  */

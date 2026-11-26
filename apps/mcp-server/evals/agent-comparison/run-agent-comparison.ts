@@ -13,7 +13,7 @@
 // in from the person's own environment, and only the agent's stream-json output is kept.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { parseArgs } from 'node:util';
 import { toTimestamp } from '@factloom/core';
@@ -22,6 +22,7 @@ import {
   appendRunLogEntry,
   findRunLogPath,
   RESULTS_DIRECTORY,
+  hideHomeDirectory,
   writeCheckedFile,
   writeReport,
 } from './comparison-results.ts';
@@ -186,7 +187,7 @@ async function playAndRecord(input: {
   say(`${task.id}, ${configuration} Factloom, session ${session}: playing`);
   const finished = await playClaudeSession({ args: input.args, workingDirectory: input.workingDirectory });
   const rawPath = join(resultsDirectory, 'raw', `${task.id}-${configuration}-${session}.jsonl`);
-  const withheld = writeCheckedFile(rawPath, finished.output);
+  const withheld = writeCheckedFile(rawPath, hideHomeDirectory(finished.output, homedir()));
   const read = readClaudeStream(finished.output);
   const usage = read.ok ? read.value : null;
   const serverProblem = usage === null ? null : findServerProblem(usage, configuration);
@@ -273,7 +274,7 @@ async function run(input: {
       }
       const check = await runTaskCheck(prepared.workingDirectory, task.id);
       const checkPath = join(resultsDirectory, 'checks', `${task.id}-${configuration}.txt`);
-      const withheld = writeCheckedFile(checkPath, check.output);
+      const withheld = writeCheckedFile(checkPath, hideHomeDirectory(check.output, homedir()));
       appendRunLogEntry(resultsDirectory, configuration, {
         kind: 'check',
         taskId: task.id,
