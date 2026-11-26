@@ -74,7 +74,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-036 | invalidate_fact and get_fact_history tools | 1 | FL-018, FL-035, FL-058, FL-025, FL-032 | Completed |
 | FL-037 | Smoke test over stdio with a restart | 1 | FL-002, FL-035, FL-036 | Completed |
 | FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Completed |
-| FL-079 | A registered coding agent uses Factloom rather than only its built-in memory | 1 | FL-074, FL-038 | Pending |
+| FL-079 | A registered coding agent uses Factloom rather than only its built-in memory | 1 | FL-074, FL-038 | Under Review |
 
 ### FL-034: Server configuration and composition root
 
@@ -621,7 +621,7 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 1 |
 | Depends on | FL-074, FL-038 |
 | Requirements | REQ-37 |
@@ -631,7 +631,9 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 
 **Background.** Found in the owner's run of FL-074 on 2026-11-26 ([report](../../../apps/mcp-server/evals/agent-comparison/results/2026-11-26/report.md), raw output beside it): with the server `connected` and its six tools listed, Claude Code 2.1.332 called no Factloom tool in any of 20 sessions. In the first session of every task it wrote to its own auto memory, and read it back in the second. The comparison therefore measured what registering Factloom costs an agent that does not use it. Two levers are documented or present, and neither is tried yet:
 - Claude Code turns auto memory off with `autoMemoryEnabled: false` in a project's settings, or with `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` ([memory](https://code.claude.com/docs/en/memory.md), [environment variables](https://code.claude.com/docs/en/env-vars.md), accessed 2026-11-26; confirmed in the documentation, not yet run).
-- The server sends no instructions in its MCP initialize result; no file in `apps/mcp-server/src` sets them. Whether Claude Code passes a server's instructions to the model, and whether they change its choice, is unverified, and the item starts by confirming it in the documentation.
+- The server's instructions in its MCP initialize result (`src/server-instructions.ts`, from FL-034). Claude Code loads them at session start ([MCP](https://code.claude.com/docs/en/mcp.md), "Scale with MCP tool search", accessed 2026-11-26). They said to call `recall` "before answering a question about the project" and to save "something lasting"; whether different words change the agent's choice is unverified until a run.
+
+(This background first said the server sent no instructions. That was wrong: a search cut short missed the file. Corrected on 2026-11-26.)
 
 **Outcome.** A set-up that a user can copy, under which the agent calls Factloom in the tasks of FL-074, and a second report of the comparison.
 
@@ -658,11 +660,21 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 - Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
 
 **Acceptance criteria.**
-- [ ] The cause is stated with its evidence: a documentation page, or a run's raw output.
+- [x] The cause is stated with its evidence: a documentation page, or a run's raw output.
 - [ ] In the owner's second run with Factloom, the agent calls `remember` or `record_fact` in the first session and `recall` in the second, in at least 8 of the 10 tasks.
 - [ ] The second report is committed, and the `README.md` sentence matches it.
-- [ ] `pnpm check` exits 0 and does not start the runner.
+- [x] `pnpm check` exits 0 and does not start the runner.
 
 **Validation.** Unit or smoke tests for any server change; the owner's run for the rest, because it needs a signed-in agent and spends tokens.
 
 **Completion evidence.** The commits, the cited pages, the second report and the `README.md` sentence.
+
+**Recorded evidence.** Prepared on 2026-11-26 on Linux x64 with Node.js v22.23.4. The item is `Under Review`: the second run (criteria 2 and 3) is the owner's, because it needs a signed-in agent and spends tokens.
+
+- **The cause, from the raw output of FL-074's run.** In all ten first sessions with Factloom, the agent wrote to auto memory, and in three it said why: "I didn't also write it to Factloom, to avoid keeping two copies" (refund-rounding, and invoice-number in nearly the same words), "I used the file-based memory, not the Factloom repo memory" (utc-dates). So it saw Factloom and chose the memory Claude Code ships, to keep one copy. In the second sessions, Claude Code loads the auto memory index by itself, while Factloom needs a `recall` call, and the instructions asked for one only before answering a question, which a coding task is not. What auto memory saves is in the [memory documentation](https://code.claude.com/docs/en/memory.md) (decisions "that Claude can't derive from the code", accessed 2026-11-26); the exact words of its prompt are not documented.
+- **The changes.**
+  - The server instructions now say to call `recall` "at the start of a task in this repository, and before answering a question about it", and to save "when you are asked to remember something, or learn something lasting". 976 characters, under the test's 1,000 and Claude Code's 4,096. A new stdio test reads them from the initialize result; it was seen to fail with the instructions removed.
+  - The registration guide (`apps/mcp-server/README.md`) tells a Claude Code user to turn auto memory off in a repository whose memory is Factloom, with `"autoMemoryEnabled": false` in `.claude/settings.json`, citing the memory documentation, and names `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` for one session ([environment variables](https://code.claude.com/docs/en/env-vars.md)).
+  - The runner passes `--settings '{"autoMemoryEnabled":false}'` in the run with Factloom only, so that run follows the guide and the baseline stays as shipped (FL-074, functional requirement 3). `--settings` is listed by `claude --help` of Claude Code 2.1.332 here, and the report's "How it was run" shows the setting. Unit tests: the two configurations differ only by the server configuration and this setting.
+  - The runner now writes the home directory as `~` in the raw and check output, because the first run's results published the owner's user name in paths. A user name printed outside a path, as in `ls -l` output, is not caught.
+- **Not verified.** That the setting turns auto memory off was not seen here: a `claude -p` run in this container reported `memory_paths: null` with and without it, unlike the owner's run, so the owner's second run is the test. That run made two real one-word model calls through the container's network proxy, which supplied a credential in place of the dummy key given; no other session was started.
