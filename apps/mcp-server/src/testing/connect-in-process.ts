@@ -2,6 +2,7 @@ import { type ConflictJudge, createTestDeps, type LlmClient, type MemoryStore } 
 import { softwareDevelopmentDomain } from '@factloom/graph-rag';
 import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
+import type { FileSourceAnchorer } from '../anchor-file-source.ts';
 import { createFactloomServer, type RegisterTool } from '../create-factloom-server.ts';
 
 export const TEST_NAMESPACE = 'repo:shop-api';
@@ -24,6 +25,7 @@ export async function connectInProcess(options: {
   readonly now: string;
   readonly llm: LlmClient;
   readonly judge?: ConflictJudge;
+  readonly anchorFileSource?: FileSourceAnchorer;
 }): Promise<Client> {
   const deps = createTestDeps({ now: options.now, store: options.store, newId: options.newId });
   const server = createFactloomServer(
@@ -33,6 +35,7 @@ export async function connectInProcess(options: {
       domain: softwareDevelopmentDomain,
       llm: options.llm,
       ...(options.judge === undefined ? {} : { judge: options.judge }),
+      ...(options.anchorFileSource === undefined ? {} : { anchorFileSource: options.anchorFileSource }),
       namespace: TEST_NAMESPACE,
       now: deps.now,
       newId: options.newId,

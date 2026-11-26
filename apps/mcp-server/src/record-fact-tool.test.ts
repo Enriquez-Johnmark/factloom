@@ -49,6 +49,10 @@ function createMemory() {
       newId,
       now,
       llm: UNREACHABLE_LLM,
+      anchorFileSource: (locator) =>
+        Promise.resolve(
+          locator.startsWith('/') ? null : { locator, version: 'c0ffee0000000000000000000000000000000000' },
+        ),
     });
     clients.push(client);
     return client;
@@ -67,7 +71,54 @@ function createMemory() {
   return { store, record, errorText };
 }
 
+const DEFINED_IN = {
+  subject: { type: 'symbol', name: 'createLabel' },
+  predicate: 'defined_in',
+  object: { value: 'lib/labels.js' },
+  statement: 'createLabel, in lib/labels.js, asks the carrier for a shipping label.',
+};
+
 describe('the record_fact tool', () => {
+  it('records a file source without a commit at the commit HEAD names, so it can be verified', async () => {
+    const memory = createMemory();
+
+    const fact = await memory.record({ ...DEFINED_IN, source: { kind: 'file', locator: 'lib/labels.js' } });
+
+    const stored = await memory.store.getFact({ namespace: TEST_NAMESPACE, factId: fact.fact_id });
+    expect(
+      stored.ok && stored.value?.sources.map(({ kind, locator, version }) => ({ kind, locator, version })),
+    ).toEqual([
+      { kind: 'file', locator: 'lib/labels.js', version: 'c0ffee0000000000000000000000000000000000' },
+    ]);
+  });
+
+  it('keeps the commit a file source names', async () => {
+    const memory = createMemory();
+
+    const fact = await memory.record({
+      ...DEFINED_IN,
+      source: { kind: 'file', locator: 'lib/labels.js', version: 'abc1234' },
+    });
+
+    const stored = await memory.store.getFact({ namespace: TEST_NAMESPACE, factId: fact.fact_id });
+    expect(stored.ok && stored.value?.sources[0]?.version).toBe('abc1234');
+  });
+
+  it('records a file source it cannot anchor as given, without a commit', async () => {
+    const memory = createMemory();
+
+    const fact = await memory.record({
+      ...DEFINED_IN,
+      source: { kind: 'file', locator: '/elsewhere/labels.js' },
+    });
+
+    const stored = await memory.store.getFact({ namespace: TEST_NAMESPACE, factId: fact.fact_id });
+    expect(stored.ok && stored.value?.sources[0]).toMatchObject({
+      locator: '/elsewhere/labels.js',
+      version: null,
+    });
+  });
+
   it('records a fact with no LLM call', async () => {
     const memory = createMemory();
 

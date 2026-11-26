@@ -1,7 +1,7 @@
 import { remember } from '@factloom/graph-rag';
 import { z } from 'zod';
 import type { RegisterTool } from './create-factloom-server.ts';
-import { readSourceInput, SourceInputSchema } from './source-input-schema.ts';
+import { readAnchoredSourceInput, SourceInputSchema } from './source-input-schema.ts';
 import { RecordedFactOutputSchema, toRecordedFactOutput } from './to-recorded-fact-output.ts';
 import { toToolError } from './to-tool-error.ts';
 import { toToolSuccess } from './to-tool-success.ts';
@@ -55,7 +55,7 @@ export const registerRememberTool: RegisterTool = (server, deps) => {
       const remembered = await remember(deps, {
         namespace: deps.namespace,
         text,
-        source: readSourceInput(source),
+        source: await readAnchoredSourceInput(source, deps.anchorFileSource),
         trigger: 'agent',
       });
       if (!remembered.ok) {

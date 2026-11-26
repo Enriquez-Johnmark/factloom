@@ -18,6 +18,7 @@ import {
 import { buildServerDeps } from './build-server-deps.ts';
 import type { Logger } from './create-factloom-server.ts';
 import { FACTLOOM_TOOLS } from './factloom-tools.ts';
+import { createFileSourceAnchorer } from './anchor-file-source.ts';
 import { createGitRepositoryReader } from './create-git-repository-reader.ts';
 import { createLocalEmbedder } from './create-local-embedder.ts';
 import { buildMaintenanceJobs } from './maintenance-jobs.ts';
@@ -121,13 +122,16 @@ if (command.kind !== 'serve') {
   process.exit(exitCode);
 }
 
-// The use cases receive the conflict judge (FL-042) and the feedback responder (FL-060).
+// The use cases receive the conflict judge (FL-042) and the feedback responder (FL-060). A file
+// source is anchored at the HEAD of the repository maintenance reads (FL-082).
+const repository = createGitRepositoryReader(repositoryDirectory);
 serveFactloom(
   buildServerDeps({
     store: opened.value,
     embedder,
     domain: softwareDevelopmentDomain,
     llm,
+    anchorFileSource: createFileSourceAnchorer(repositoryDirectory, repository.readHead),
     namespace,
     now: () => toTimestamp(new Date()),
     newId: () => randomUUID(),

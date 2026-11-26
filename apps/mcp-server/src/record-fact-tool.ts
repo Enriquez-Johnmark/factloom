@@ -2,7 +2,7 @@ import { recordStructuredFacts } from '@factloom/graph-rag';
 import { z } from 'zod';
 import type { RegisterTool } from './create-factloom-server.ts';
 import { buildFactInputShape, readFactInput } from './fact-input-schema.ts';
-import { readSourceInput, SourceInputSchema } from './source-input-schema.ts';
+import { readAnchoredSourceInput, SourceInputSchema } from './source-input-schema.ts';
 import { RecordedFactOutputSchema, toRecordedFactOutput } from './to-recorded-fact-output.ts';
 import { toToolError } from './to-tool-error.ts';
 import { toToolSuccess } from './to-tool-success.ts';
@@ -32,7 +32,7 @@ export const registerRecordFactTool: RegisterTool = (server, deps) => {
       const recorded = await recordStructuredFacts(deps, {
         namespace: deps.namespace,
         facts: [fact.value],
-        source: readSourceInput(source),
+        source: await readAnchoredSourceInput(source, deps.anchorFileSource),
         trigger: 'agent',
       });
       if (!recorded.ok) return toToolError(recorded.error);

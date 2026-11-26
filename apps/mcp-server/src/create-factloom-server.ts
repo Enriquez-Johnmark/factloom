@@ -9,6 +9,7 @@ import type {
   Timestamp,
 } from '@factloom/core';
 import { McpServer } from '@modelcontextprotocol/server';
+import type { FileSourceAnchorer } from './anchor-file-source.ts';
 import { SERVER_INSTRUCTIONS } from './server-instructions.ts';
 
 /** Writes one line for a person to read. The server's only way of logging: it goes to standard error. */
@@ -28,6 +29,8 @@ export type ServerDeps = {
   readonly judge?: ConflictJudge;
   /** Used only by `giveFeedback`, to act on feedback once it is recorded (FL-060). */
   readonly feedbackResponder?: FeedbackResponder;
+  /** Used by `record_fact` and `remember`: gives a file source with no commit the repository's HEAD (FL-082). */
+  readonly anchorFileSource?: FileSourceAnchorer;
   readonly namespace: Namespace;
   readonly now: () => Timestamp;
   readonly newId: () => string;
