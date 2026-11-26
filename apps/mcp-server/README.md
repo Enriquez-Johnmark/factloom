@@ -58,6 +58,8 @@ Claude Code asks before it uses a server from `.mcp.json` in an interactive sess
 
 For one session only, `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` in the environment does the same ([environment variables](https://code.claude.com/docs/en/env-vars.md)). Notes already in auto memory stay in their files and are no longer loaded; record the ones worth keeping with `record_fact`.
 
+This set-up was measured, and it costs tokens: in the [second comparison](evals/agent-comparison/results/2026-11-26-second/report.md), the median task used 17.7% more tokens than Claude Code with auto memory, because loading and calling Factloom's tools takes turns that auto memory, already in the context, does not. Choose it for what auto memory cannot do (facts with a start and an end, answers about a past date, a record of why a fact changed), not to save tokens.
+
 **Codex.** Register the server in `~/.codex/config.toml`:
 
 ```sh
