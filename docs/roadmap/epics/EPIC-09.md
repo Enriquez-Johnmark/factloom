@@ -96,7 +96,7 @@ One command runs a maintenance pass over a namespace and reports what it did. Th
 | FL-053 | Duplicate entity detection by name | 3 | FL-048, FL-052, FL-063 | Completed |
 | FL-064 | Duplicate entity detection by similarity | 3 | FL-053, FL-028 | Completed |
 | FL-054 | Anchor repair for moved and renamed files | 3 | FL-050 | Completed |
-| FL-055 | Usage tracking | 3 | FL-015, FL-031, FL-058 | Under Review |
+| FL-055 | Usage tracking | 3 | FL-015, FL-031, FL-058 | Completed |
 | FL-065 | Archive and unarchive operations | 3 | FL-055, FL-058 | Completed |
 | FL-073 | Archived facts left out of recall, and the archiving job | 3 | FL-065, FL-048, FL-058 | Completed |
 
@@ -1632,7 +1632,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-015, FL-031, FL-058 |
 | Requirements | REQ-23 |
@@ -1689,7 +1689,7 @@ Differences from the item:
 - [x] A SQLite adapter test shows the row counts of `fact`, `source`, `entity` and `audit_log` are unchanged by a usage write.
 - [x] A test shows `get_fact_history` records no usage.
 - [x] The test over stdio of the `recall` tool (FL-058) still passes.
-- [ ] The owner records the two timings of technical requirement 5 in `OPEN-QUESTIONS.md`.
+- [x] The owner records the two timings of technical requirement 5 in `OPEN-QUESTIONS.md`.
 - [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests of `recall` and of the handler. The contract suite against both stores. The stdio test of the `recall` tool. The owner's timing run. `pnpm check`.
@@ -1747,6 +1747,18 @@ The timing of technical requirement 5 was run once by the agent, in process, not
 The workflow run on Linux and macOS arm64, with Node.js 22 and 26, passed at the third commit: https://github.com/Johnmark-Tech/factloom/actions/runs/43998180414.
 
 For the owner's review: repeat the timing with the server running against a database of 10,000 facts, on the Mac, and record both numbers in Q-11.
+
+**Owner's timing on the Mac, 2026-11-26.** The script of the agent's first run was not kept, so `src/time-recall-usage.ts` was written for the owner's run (`pnpm run time:usage`): it builds a database of 10,000 facts with the benchmark's synthetic builder, starts the server over stdio through the test entry, and times 100 `recall` calls after 5 untimed, with usage recording on and with it off (the test entry's `FACTLOOM_TIMING_USAGE=off`, never read by `main.ts`), twice each in turn. On the owner's MacBook Air (Apple M1, 8 cores, macOS 26.5, Node.js v26.13.1):
+
+| Usage recording | Total (ms) | Median per call (ms) | p95 per call (ms) |
+|---|---|---|---|
+| on | 1754 | 18.2 | 20.1 |
+| off | 1565 | 16.6 | 17.5 |
+| on | 1956 | 18.7 | 24.2 |
+| off | 1644 | 16.9 | 20.4 |
+
+Recording usage costs about 1.6 to 1.8 ms per call at the median, about 10%, well inside the recall budget of REQ-35. Both timings are in Q-11, which records that this is the cost of the write in one process, not contention between two. The item is `Completed`.
+
 
 ### FL-065: Archive and unarchive operations
 
