@@ -1,0 +1,3 @@
+fix(parcels): use the volumetric divisor of 4000 from 1 April
+
+The carrier's price letter of February moves our account from a volumetric divisor of 5000 to 4000 for parcels shipped from 1 April 2026. This change goes out with the release of 1 April.

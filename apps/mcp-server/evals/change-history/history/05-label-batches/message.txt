@@ -1,0 +1,3 @@
+feat(labels): create the labels of a batch of shipments
+
+The warehouse prints the morning's labels in one batch.

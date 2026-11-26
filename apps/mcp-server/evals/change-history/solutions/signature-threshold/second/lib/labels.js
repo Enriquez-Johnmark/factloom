@@ -1,0 +1,29 @@
+import { formatAddressLines } from './addresses.js';
+import { callCarrier } from './carrier.js';
+
+/** A parcel declared at more than this many cents needs a signature on delivery. */
+export const SIGNATURE_THRESHOLD_CENTS = 30_000;
+
+/** Asks the carrier for a shipment's label, and returns the shipment with its tracking number and label. */
+export async function createLabel(shipment, transport) {
+  const needsSignature = shipment.declaredValueCents > SIGNATURE_THRESHOLD_CENTS;
+  const payload = {
+    reference: shipment.orderId,
+    addressLines: formatAddressLines(shipment.address),
+    weightGrams: shipment.parcel.weightGrams,
+    signatureRequired: needsSignature,
+    // A parcel above the threshold is never left at the door: the insurer would not pay for it.
+    leaveAtDoor: shipment.leaveAtDoor === true && !needsSignature,
+  };
+  try {
+    const answer = await callCarrier(transport, 'label', payload);
+    return { ...shipment, trackingNumber: answer.trackingNumber, label: answer.label };
+  } catch (error) {
+    throw new Error(`The carrier gave no label for order ${shipment.orderId}`, { cause: error });
+  }
+}
+
+/** Creates the labels of several shipments, and returns the shipments in the same order. */
+export function createLabels(shipments, transport) {
+  return Promise.all(shipments.map((shipment) => createLabel(shipment, transport)));
+}

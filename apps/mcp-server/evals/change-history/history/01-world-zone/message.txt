@@ -1,0 +1,3 @@
+feat(rates): add a flat rate for the world zone
+
+Orders from outside Europe paid nothing for shipping, because their zone had no rate.

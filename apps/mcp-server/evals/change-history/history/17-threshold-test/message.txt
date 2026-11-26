@@ -1,0 +1,1 @@
+test(rates): cover an order exactly at the free-shipping threshold

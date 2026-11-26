@@ -1,0 +1,3 @@
+fix(parcels): round the volumetric weight up to the gram
+
+The carrier rounds up, so our quotes were a gram short on some parcels.

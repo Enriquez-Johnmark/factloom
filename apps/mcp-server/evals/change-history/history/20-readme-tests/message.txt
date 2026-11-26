@@ -1,0 +1,1 @@
+docs: say how to run the tests

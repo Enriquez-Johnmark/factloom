@@ -1,0 +1,3 @@
+fix(addresses): drop the spaces around the street
+
+Customers paste addresses with trailing spaces, and the label printed them.

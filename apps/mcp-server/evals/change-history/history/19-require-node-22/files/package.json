@@ -1,0 +1,13 @@
+{
+  "name": "shipping-service",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Buys carrier labels for the shop's orders and quotes their shipping costs.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

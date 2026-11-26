@@ -1,0 +1,3 @@
+feat(tracking): refresh shipment statuses from the carrier
+
+The nightly job asks the carrier for the status of every open shipment, 100 tracking numbers per request.
