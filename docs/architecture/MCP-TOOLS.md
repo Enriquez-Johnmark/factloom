@@ -122,7 +122,7 @@ Use case: `remember`.
 | `source` | object | No | Where it came from. Default: a note from the agent |
 | `source.kind` | string | No | For example `agent_note`, `conversation`, `file`. Default: `agent_note` |
 | `source.locator` | string | No | A path or URL |
-| `source.version` | string | No | For a file in git, the commit |
+| `source.version` | string | No | For a file in git, the commit. Left out for a `file` source, the server records the repository's `HEAD` and the path from the repository root, so maintenance can check the fact (ADR 0023) |
 
 Output: `{ facts: RecordedFact[], skipped: SkippedFact[] }`. A text with nothing worth remembering returns two empty lists. When the namespace has the form `repo:<name>`, the extraction reads "we", "our", "us" and "this repository" in a text that names no other repository as the repository `<name>` (FL-078); with any other namespace, a text must name its repository for a fact about it to be extracted.
 
