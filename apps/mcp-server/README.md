@@ -75,10 +75,10 @@ The agent's own plan and Factloom's key are separate ([`MCP-TOOLS.md`](../../doc
 
 | Set-up | Registered as above | Tools that work with no key of Factloom's own | Confirmed |
 |---|---|---|---|
-| Claude Code on a subscription | Expected (Q-79) | All but `remember` | Not yet (FL-038) |
-| Claude Code on an API key | Expected (Q-79) | All but `remember` | Not yet (FL-038) |
-| Codex on a subscription | Expected (Q-79) | All but `remember` | Not yet (FL-038) |
-| Codex on an API key | Expected (Q-79). An OpenAI key does not serve `remember`, which calls Anthropic | All but `remember` | Not yet (FL-038) |
+| Claude Code on a subscription | Yes, on 2026-11-25 | All but `remember`; `remember` worked with an Anthropic API key added to the registration | Yes, macOS 26.5 with Claude Code 2.1.331 (FL-038) |
+| Claude Code on an API key | Expected (Q-79) | All but `remember` | Untested |
+| Codex on a subscription | Expected (Q-79) | All but `remember` | Untested |
+| Codex on an API key | Expected (Q-79). An OpenAI key does not serve `remember`, which calls Anthropic | All but `remember` | Untested |
 
 ## Modes
 
