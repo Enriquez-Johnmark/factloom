@@ -258,6 +258,19 @@ async function playAndRecord(input: {
   return { isReadable: usage !== null, serverProblem };
 }
 
+/** Makes a task's change between sessions, if its set has one. False, with the reason said, when it cannot be made. */
+function applyTeammateChange(taskSet: TaskSet, directory: string, taskId: string): boolean {
+  try {
+    taskSet.betweenSessions?.(directory, taskId);
+    return true;
+  } catch (error) {
+    say(
+      `  the change between the sessions could not be made, so ${taskId} is left out: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return false;
+  }
+}
+
 async function run(input: {
   readonly configuration: Configuration;
   readonly baseline: Baseline;
@@ -305,6 +318,7 @@ async function run(input: {
       if (configuration === 'without' && input.baseline === 'claude-md') {
         input.taskSet.claudeMdBaseline?.(prepared.workingDirectory);
       }
+      let isLeftOut = false;
       for (const session of [1, 2] as const) {
         const prompt = session === 1 ? task.firstSession : task.secondSession;
         const played = await playAndRecord({
@@ -332,8 +346,17 @@ async function run(input: {
         if (session === 1 && task.firstSessionCommit !== undefined && commitFirstSession !== null) {
           commitFirstSession(prepared.workingDirectory, task.firstSessionCommit);
         }
-        // A teammate's commit between the sessions, the same in both configurations (FL-082).
-        if (session === 1) input.taskSet.betweenSessions?.(prepared.workingDirectory, task.id);
+        // A teammate's commit between the sessions, the same in both configurations (FL-082). If
+        // it cannot be made, because the first session rewrote the code it moves, the task is
+        // left out: the report names it, and the run goes on.
+        if (session === 1 && !applyTeammateChange(input.taskSet, prepared.workingDirectory, task.id)) {
+          isLeftOut = true;
+          break;
+        }
+      }
+      if (isLeftOut) {
+        writeReport(resultsDirectory);
+        continue;
       }
       const check = await runTaskCheck(prepared.workingDirectory, task.id, input.taskSet.checksDirectory);
       const checkPath = join(resultsDirectory, 'checks', `${task.id}-${configuration}.txt`);

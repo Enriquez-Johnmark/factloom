@@ -1,5 +1,5 @@
-// The task sets the agent comparison can play: the memory tasks of FL-074, the default, and the
-// change-history tasks of FL-081. A run log names its set, so that the report is built from the
+// The task sets the agent comparison can play: the memory tasks of FL-074, the default, the
+// change-history tasks of FL-081 and the code base map tasks of FL-082. A run log names its set, so that the report is built from the
 // tasks that were played.
 import {
   CHANGE_HISTORY_TASK_SET_CHANGES,
@@ -10,12 +10,20 @@ import {
   commitFirstSession,
   prepareChangeHistoryCopy,
 } from '../change-history/prepare-change-history-copy.ts';
+import { CODEBASE_MAP_TASK_SET_CHANGES, CODEBASE_MAP_TASKS } from '../codebase-map/codebase-map-tasks.ts';
+import {
+  applyBetweenSessions,
+  CODEBASE_MAP_CHECKS_DIRECTORY,
+  commitFirstSession as commitCodebaseMapFirstSession,
+  prepareCodebaseMapCopy,
+  writeClaudeMdBaseline,
+} from '../codebase-map/prepare-codebase-map-copy.ts';
 import { AGENT_TASKS, type AgentTask, TASK_SET_CHANGES, type TaskSetChange } from './agent-tasks.ts';
 import { prepareFixtureCopy } from './prepare-fixture-copy.ts';
 import { CHECKS_DIRECTORY } from './run-task-check.ts';
 
 /** The names a run log and the runner's `--task-set` option take. */
-export const TASK_SET_NAMES = ['memory', 'change-history'] as const;
+export const TASK_SET_NAMES = ['memory', 'change-history', 'codebase-map'] as const;
 export type TaskSetName = (typeof TASK_SET_NAMES)[number];
 
 /** The set a run plays when none is named, and that a run log without a name was played with. */
@@ -73,6 +81,18 @@ const TASK_SETS: Readonly<Record<TaskSetName, TaskSet>> = {
     runsMaintenance: false,
     claudeMdBaseline: null,
     betweenSessions: null,
+  },
+  'codebase-map': {
+    name: 'codebase-map',
+    description: 'code base map tasks of FL-082',
+    tasks: CODEBASE_MAP_TASKS,
+    changes: CODEBASE_MAP_TASK_SET_CHANGES,
+    prepareCopy: prepareCodebaseMapCopy,
+    checksDirectory: CODEBASE_MAP_CHECKS_DIRECTORY,
+    commitFirstSession: commitCodebaseMapFirstSession,
+    runsMaintenance: true,
+    claudeMdBaseline: writeClaudeMdBaseline,
+    betweenSessions: applyBetweenSessions,
   },
 };
 
