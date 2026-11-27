@@ -77,6 +77,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-079 | A registered coding agent uses Factloom rather than only its built-in memory | 1 | FL-074, FL-038 | Completed |
 | FL-080 | Fewer turns for a coding agent that uses Factloom | 1 | FL-079 | Completed |
 | FL-082 | A self-healing codebase map for coding agents | 3 | FL-080, FL-081, FL-050, FL-054 | Under Review |
+| FL-083 | The recall hook says when memory has nothing, and the agent records a reason it is told | 1 | FL-080, FL-081 | Pending |
 
 ### FL-034: Server configuration and composition root
 
@@ -826,3 +827,47 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 - **Known limits of the set.** Some checks call one function, such as `findBlockingHold` and `composeNotice`: an agent that gets the behaviour right one layer away fails them. A move of functions expects a top-level function to end with `}` alone on a line, and gives the moved function only the imports the task data lists. The `CLAUDE.md` map names `isOpenOn`, `nextOpenDay` and `findBlockingHold` in their first files, as a general map would.
 - **Not verified here.** A repair during a real session: maintenance loads the embedding model, which is not cached in this container. The owner's run is that test.
 - **`pnpm check`:** 134 test files, 1,416 tests passed.
+
+### FL-083: The recall hook says when memory has nothing, and the agent records a reason it is told
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 1 |
+| Depends on | FL-080, FL-081 |
+| Requirements | REQ-37 |
+| Components | `apps/mcp-server` (recall hook, server instructions) |
+
+**Objective.** Remove the two weaknesses the change-history comparison of FL-081 found: turns spent looking up a memory that holds nothing, and reasons the agent was told but did not record.
+
+**Background.** In FL-081's run with Factloom ([report](../../../apps/mcp-server/evals/agent-comparison/results/2026-11-26-change-history/report.md), evidence in EPIC-07), the recall hook printed nothing when no fact matched, and the server's instructions then sent the agent to `recall` itself: 10 `ToolSearch` and 20 `recall` calls, most on an empty memory, and the median task cost 19.2% more tokens. The agent recorded the reason it was given in one first session of ten: the instructions name "a decision and its reason" among what to save, but say nothing about a reason the person gives for a change. Where it did record one, it used `described_as` on the changed constant, with the reason in the statement.
+
+**Outcome.** A hook that says, in one line, when memory has nothing for a prompt, and instructions that ask for the reason of a change to be recorded.
+
+**Scope.**
+- The recall hook adds one line when no current fact matches the prompt, or every match is out of date, saying so and that `recall` need not be called for it.
+- The server instructions: call `recall` only when the prompt came without the hook's facts or its line; when the person says why a change is made, record that reason before finishing.
+
+**Non-goals.**
+- A run of its own. The change is measured through the runs of FL-082, which use the guide's set-up as it then stands.
+- Recording reasons without the agent, for example from commit messages: that needs `remember` and a key, and is a separate decision.
+
+**Functional requirements.**
+1. The hook's line is short and in the same `hookSpecificOutput.additionalContext` as its facts.
+2. The instructions stay at most 1,000 characters.
+
+**Technical requirements.**
+1. The hook's tests cover a memory with no fact, and a memory whose only match is out of date.
+
+**Constraints.**
+- Findings are labelled as measured or unverified, and nothing is stated as fact without its source ([engineering principles](../../../.claude/rules/engineering-principles.md)).
+- Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
+
+**Acceptance criteria.**
+- [ ] Unit tests show the hook adding its line when no fact matches and when the only match is out of date, and adding facts, not the line, when facts match.
+- [ ] The server instructions ask for a reason the person gives to be recorded, and for `recall` only when the hook gave nothing, in at most 1,000 characters.
+- [ ] `pnpm check` exits 0.
+
+**Validation.** Unit tests; the effect on tokens through FL-082's runs.
+
+**Completion evidence.** The commits and the test names.
