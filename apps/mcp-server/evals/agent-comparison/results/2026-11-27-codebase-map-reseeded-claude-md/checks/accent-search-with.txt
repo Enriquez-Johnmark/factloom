@@ -1,0 +1,400 @@
+TAP version 13
+# Subtest: finds the items whose title or author holds every word of the query
+ok 1 - finds the items whose title or author holds every word of the query
+  ---
+  duration_ms: 1.327625
+  type: 'test'
+  ...
+# Subtest: sorts the results by title, ignoring a leading The, A or An
+ok 2 - sorts the results by title, ignoring a leading The, A or An
+  ---
+  duration_ms: 9.755584
+  type: 'test'
+  ...
+# Subtest: files titles under the word after a leading article only
+ok 3 - files titles under the word after a leading article only
+  ---
+  duration_ms: 0.151417
+  type: 'test'
+  ...
+# Subtest: ignores accents in the query and in the catalogued text
+ok 4 - ignores accents in the query and in the catalogued text
+  ---
+  duration_ms: 2.371458
+  type: 'test'
+  ...
+# Subtest: finds nothing for an empty query
+ok 5 - finds nothing for an empty query
+  ---
+  duration_ms: 0.083459
+  type: 'test'
+  ...
+# Subtest: accepts a barcode with the right check digit only
+ok 6 - accepts a barcode with the right check digit only
+  ---
+  duration_ms: 0.162542
+  type: 'test'
+  ...
+# Subtest: removes spaces and dashes from a scanned barcode
+ok 7 - removes spaces and dashes from a scanned barcode
+  ---
+  duration_ms: 0.085583
+  type: 'test'
+  ...
+# Subtest: lends an item and gives the loan its due date
+ok 8 - lends an item and gives the loan its due date
+  ---
+  duration_ms: 2.642833
+  type: 'test'
+  ...
+# Subtest: reads a barcode with spaces and dashes in it
+ok 9 - reads a barcode with spaces and dashes in it
+  ---
+  duration_ms: 0.141791
+  type: 'test'
+  ...
+# Subtest: refuses an item that is already on loan
+ok 10 - refuses an item that is already on loan
+  ---
+  duration_ms: 0.397667
+  type: 'test'
+  ...
+# Subtest: refuses an item that is held for another member
+ok 11 - refuses an item that is held for another member
+  ---
+  duration_ms: 0.109333
+  type: 'test'
+  ...
+# Subtest: lends a held item to the member who holds it, and marks the hold collected
+ok 12 - lends a held item to the member who holds it, and marks the hold collected
+  ---
+  duration_ms: 0.114167
+  type: 'test'
+  ...
+# Subtest: refuses an item that is withdrawn
+ok 13 - refuses an item that is withdrawn
+  ---
+  duration_ms: 0.080334
+  type: 'test'
+  ...
+# Subtest: adds days across the end of a month and a year
+ok 14 - adds days across the end of a month and a year
+  ---
+  duration_ms: 5.114625
+  type: 'test'
+  ...
+# Subtest: counts the days between two dates
+ok 15 - counts the days between two dates
+  ---
+  duration_ms: 0.899208
+  type: 'test'
+  ...
+# Subtest: gives the day of the week, Sunday being 0
+ok 16 - gives the day of the week, Sunday being 0
+  ---
+  duration_ms: 0.228166
+  type: 'test'
+  ...
+# Subtest: a branch is closed on its closed weekdays
+ok 17 - a branch is closed on its closed weekdays
+  ---
+  duration_ms: 0.238917
+  type: 'test'
+  ...
+# Subtest: the next open day of a closed day is the first day the branch opens again
+ok 18 - the next open day of a closed day is the first day the branch opens again
+  ---
+  duration_ms: 0.236958
+  type: 'test'
+  ...
+# Subtest: a book is due three weeks after it is lent
+ok 19 - a book is due three weeks after it is lent
+  ---
+  duration_ms: 3.94275
+  type: 'test'
+  ...
+# Subtest: a due date that falls on a closed day moves to the next open day
+ok 20 - a due date that falls on a closed day moves to the next open day
+  ---
+  duration_ms: 0.106208
+  type: 'test'
+  ...
+# Subtest: a laptop is due the next day
+ok 21 - a laptop is due the next day
+  ---
+  duration_ms: 0.0665
+  type: 'test'
+  ...
+# Subtest: a member in good standing may borrow
+ok 22 - a member in good standing may borrow
+  ---
+  duration_ms: 2.352417
+  type: 'test'
+  ...
+# Subtest: a member whose card has expired may not borrow
+ok 23 - a member whose card has expired may not borrow
+  ---
+  duration_ms: 0.145041
+  type: 'test'
+  ...
+# Subtest: a member who owes ten dollars or more may not borrow
+ok 24 - a member who owes ten dollars or more may not borrow
+  ---
+  duration_ms: 0.121333
+  type: 'test'
+  ...
+# Subtest: a junior member may have at most ten items on loan
+ok 25 - a junior member may have at most ten items on loan
+  ---
+  duration_ms: 0.129416
+  type: 'test'
+  ...
+# Subtest: a renewed card lasts three years for an adult and one year for a junior
+ok 26 - a renewed card lasts three years for an adult and one year for a junior
+  ---
+  duration_ms: 0.098417
+  type: 'test'
+  ...
+# Subtest: charges nothing for an item returned within the grace day
+ok 27 - charges nothing for an item returned within the grace day
+  ---
+  duration_ms: 1.4005
+  type: 'test'
+  ...
+# Subtest: charges the daily rate of the format for each day late
+ok 28 - charges the daily rate of the format for each day late
+  ---
+  duration_ms: 0.248167
+  type: 'test'
+  ...
+# Subtest: charges staff nothing
+ok 29 - charges staff nothing
+  ---
+  duration_ms: 0.158041
+  type: 'test'
+  ...
+# Subtest: a member owes the sum of their unpaid fees
+ok 30 - a member owes the sum of their unpaid fees
+  ---
+  duration_ms: 0.796584
+  type: 'test'
+  ...
+# Subtest: waives a fee only for a known reason
+ok 31 - waives a fee only for a known reason
+  ---
+  duration_ms: 0.666375
+  type: 'test'
+  ...
+# Subtest: places a hold at the end of the queue
+ok 32 - places a hold at the end of the queue
+  ---
+  duration_ms: 14.292792
+  type: 'test'
+  ...
+# Subtest: refuses a second hold of the same member on an item
+ok 33 - refuses a second hold of the same member on an item
+  ---
+  duration_ms: 0.149875
+  type: 'test'
+  ...
+# Subtest: readies the hold placed first
+ok 34 - readies the hold placed first
+  ---
+  duration_ms: 0.150291
+  type: 'test'
+  ...
+# Subtest: a ready hold can be collected for a week, until the branch next opens
+ok 35 - a ready hold can be collected for a week, until the branch next opens
+  ---
+  duration_ms: 1.593083
+  type: 'test'
+  ...
+# Subtest: expires the ready holds that nobody collected in time
+ok 36 - expires the ready holds that nobody collected in time
+  ---
+  duration_ms: 0.192583
+  type: 'test'
+  ...
+# Subtest: a notice by email goes to the email address, with a subject
+ok 37 - a notice by email goes to the email address, with a subject
+  ---
+  duration_ms: 0.64325
+  type: 'test'
+  ...
+# Subtest: a notice by text message goes to the phone number, greets by the preferred name and has no subject
+ok 38 - a notice by text message goes to the phone number, greets by the preferred name and has no subject
+  ---
+  duration_ms: 0.132125
+  type: 'test'
+  ...
+# Subtest: the morning run reminds members of loans due within two days, and of overdue loans
+ok 39 - the morning run reminds members of loans due within two days, and of overdue loans
+  ---
+  duration_ms: 1.637292
+  type: 'test'
+  ...
+# Subtest: renews a loan from today for a new loan period
+ok 40 - renews a loan from today for a new loan period
+  ---
+  duration_ms: 3.139833
+  type: 'test'
+  ...
+# Subtest: refuses a renewal once a book has been renewed twice
+ok 41 - refuses a renewal once a book has been renewed twice
+  ---
+  duration_ms: 1.098667
+  type: 'test'
+  ...
+# Subtest: renews a DVD at most once
+ok 42 - renews a DVD at most once
+  ---
+  duration_ms: 0.333292
+  type: 'test'
+  ...
+# Subtest: refuses to renew an overdue loan
+ok 43 - refuses to renew an overdue loan
+  ---
+  duration_ms: 0.229916
+  type: 'test'
+  ...
+# Subtest: lists the overdue loans, the longest overdue first
+ok 44 - lists the overdue loans, the longest overdue first
+  ---
+  duration_ms: 8.684625
+  type: 'test'
+  ...
+# Subtest: counts the items on loan of each branch
+ok 45 - counts the items on loan of each branch
+  ---
+  duration_ms: 0.161667
+  type: 'test'
+  ...
+# Subtest: exports the loans for the county as CSV
+ok 46 - exports the loans for the county as CSV
+  ---
+  duration_ms: 0.130583
+  type: 'test'
+  ...
+# Subtest: closes the loan of a returned item
+ok 47 - closes the loan of a returned item
+  ---
+  duration_ms: 0.766458
+  type: 'test'
+  ...
+# Subtest: charges the late fee of a late return to the member
+ok 48 - charges the late fee of a late return to the member
+  ---
+  duration_ms: 0.403458
+  type: 'test'
+  ...
+# Subtest: makes the next hold ready, and gives its notice
+ok 49 - makes the next hold ready, and gives its notice
+  ---
+  duration_ms: 0.982334
+  type: 'test'
+  ...
+# Subtest: refuses an item that is not on loan
+ok 50 - refuses an item that is not on loan
+  ---
+  duration_ms: 0.100084
+  type: 'test'
+  ...
+# Subtest: test/sample-library.js
+ok 12 - test/sample-library.js
+  ---
+  duration_ms: 60.78525
+  type: 'test'
+  ...
+# Subtest: POST /checkouts lends an item
+ok 52 - POST /checkouts lends an item
+  ---
+  duration_ms: 2.449875
+  type: 'test'
+  ...
+# Subtest: POST /checkouts refuses a barcode with a wrong check digit
+ok 53 - POST /checkouts refuses a barcode with a wrong check digit
+  ---
+  duration_ms: 0.192917
+  type: 'test'
+  ...
+# Subtest: POST /loans/:id/renew answers a refusal with its reason as the error code
+ok 54 - POST /loans/:id/renew answers a refusal with its reason as the error code
+  ---
+  duration_ms: 0.183084
+  type: 'test'
+  ...
+# Subtest: GET /members/:id/summary gives the loans and the balance of a member
+ok 55 - GET /members/:id/summary gives the loans and the balance of a member
+  ---
+  duration_ms: 0.1725
+  type: 'test'
+  ...
+# Subtest: GET /catalog searches the catalog
+ok 56 - GET /catalog searches the catalog
+  ---
+  duration_ms: 1.0135
+  type: 'test'
+  ...
+# Subtest: an unknown route answers 404
+ok 57 - an unknown route answers 404
+  ---
+  duration_ms: 0.112084
+  type: 'test'
+  ...
+# Subtest: reads the card number and the barcode of a checkout request
+ok 58 - reads the card number and the barcode of a checkout request
+  ---
+  duration_ms: 0.704666
+  type: 'test'
+  ...
+# Subtest: lends the item and replies with its due date
+ok 59 - lends the item and replies with its due date
+  ---
+  duration_ms: 1.11925
+  type: 'test'
+  ...
+# Subtest: refuses a card nobody holds
+ok 60 - refuses a card nobody holds
+  ---
+  duration_ms: 0.1085
+  type: 'test'
+  ...
+# Subtest: refuses a message that is not a checkout request
+ok 61 - refuses a message that is not a checkout request
+  ---
+  duration_ms: 0.232542
+  type: 'test'
+  ...
+# Subtest: finds an author written with accents from a query without them
+ok 62 - finds an author written with accents from a query without them
+  ---
+  duration_ms: 10.150375
+  type: 'test'
+  ...
+# Subtest: finds a title written with accents from a query without them
+ok 63 - finds a title written with accents from a query without them
+  ---
+  duration_ms: 0.123917
+  type: 'test'
+  ...
+# Subtest: still finds an author from a query with the accents, in any case
+ok 64 - still finds an author from a query with the accents, in any case
+  ---
+  duration_ms: 0.131125
+  type: 'test'
+  ...
+# Subtest: still leaves out the items that do not match
+ok 65 - still leaves out the items that do not match
+  ---
+  duration_ms: 0.066792
+  type: 'test'
+  ...
+1..65
+# tests 65
+# suites 0
+# pass 65
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 218.404917
