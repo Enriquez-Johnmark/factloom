@@ -81,7 +81,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Completed |
 | FL-076 | Differential tests between the in-memory store and SQLite | 1 | FL-075, FL-068, FL-016, FL-017 | Completed |
 | FL-077 | Mutation-testing trial on core | 1 | FL-008, FL-009, FL-010, FL-011 | Completed |
-| FL-081 | Token comparison on why-did-this-change tasks | 1 | FL-074, FL-080 | Pending |
+| FL-081 | Token comparison on why-did-this-change tasks | 1 | FL-074, FL-080 | Under Review |
 
 ### FL-027: Timeline scenarios as reviewed data
 
@@ -1143,7 +1143,7 @@ The workflow runs for these commits passed on Linux and macOS arm64: https://git
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 1 |
 | Depends on | FL-074, FL-080 |
 | Requirements | REQ-37 |
@@ -1185,12 +1185,22 @@ The workflow runs for these commits passed on Linux and macOS arm64: https://git
 - Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
 
 **Acceptance criteria.**
-- [ ] The task set, the fixture's history and the checks are committed in a commit that precedes the commit of the first results.
-- [ ] Unit tests show each check passing on one solution and failing on the fixture as it is, and the fixture's history being the same on every build.
+- [x] The task set, the fixture's history and the checks are committed in a commit that precedes the commit of the first results.
+- [x] Unit tests show each check passing on one solution and failing on the fixture as it is, and the fixture's history being the same on every build.
 - [ ] The owner runs the runner once per configuration and commits the raw usage output and the generated report. The report names the agent, the model, the date and the number of tasks.
 - [ ] The root `README.md` states the measured result in one or two sentences that match the report, including when the result is no saving or a cost.
-- [ ] `pnpm check` still exits 0 and does not start the runner.
+- [x] `pnpm check` still exits 0 and does not start the runner.
 
 **Validation.** Unit tests for the fixture's build and the checks on every check; the comparison is a manual run by the owner, because it needs a signed-in agent and spends tokens.
 
 **Completion evidence.** The commit of the task set, the commit of the raw output and report, and the sentence added to `README.md`.
+
+**Recorded evidence.** Prepared on 2026-11-26 on Linux x64 with Node.js v22.23.4. The item is `Under Review`: the two runs and the `README.md` sentence (criteria 3 and 4) are the owner's, because they need a signed-in agent and spend tokens.
+
+- **The runner.** `a355fb4` lets a task's check come from another set's directory; `aec46bd` lets a task carry the commit of its first session; `a0b1173` adds `--task-set` (default `memory`, the set of FL-074), names the set in the run log and in the report's "Tasks" row, reads a run log written before this item as one of the memory set, and commits a task's first session with its message, `--allow-empty`, after session 1 in both configurations (functional requirement 2). `56a1d8b` adds the set to the runner, with a test that run logs of two sets are refused in one report.
+- **The task set (`be205b8`), written in a separate git worktree by a helper agent and reviewed here.** `apps/mcp-server/evals/change-history/`: a `shipping-service` fixture with a scripted history of 21 commits, the base and 20 steps dated every five days from 2026-03-02 to 2026-06-10, most of them unrelated to the tasks, with a fixed identity and dates and signing off, so the HEAD hash is the same on every build; ten tasks, seven `change reason` and three `earlier value`; a check per task and three reference answers each (`first`, `second`, and `wrong`, a session 2 that ignores the reason). The reasons are only in commit messages, which the tests check against the tree. Session-2 prompts do not name the earlier change.
+- **Criterion 1:** the set is committed in `be205b8`, before any results.
+- **Criterion 2:** 51 tests in `change-history-tasks.test.ts`: the history builds to the same HEAD twice; the fixture's own tests pass; for each task the check fails on the untouched fixture, fails after a right first session alone, passes after a right second session, and fails on the `wrong` answer.
+- **Dry run:** `pnpm run compare:agent --dry-run --task-set change-history` printed `10 tasks, 20 sessions per configuration. No agent was started.`, with every check failing on the untouched fixture.
+- **Known limits of the set, from the helper agent's review and mine.** Two tasks, `ascii-address-lines` and `label-timeout`, tempt only mildly: an agent that ignores the reason can still pass by keeping its fix local, so they measure cost more than they discriminate. `signature-threshold`'s second prompt asks to leave parcels "without asking for a signature"; passing means keeping the signature above 300 euros, which is right only because of the reason. `label-timeout`'s check expects the timeout through `transport.send`'s documented `timeoutMs`.
+- **`pnpm check`:** 132 test files, 1,347 tests passed.

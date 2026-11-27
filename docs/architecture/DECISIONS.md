@@ -26,6 +26,7 @@ The index of architecture decision records. Each record is short: what was decid
 | [0020](adr/0020-recall-defaults-chosen-by-measurement.md) | Recall defaults chosen by measurement: vector 1, keyword 0.5, graph 0, k 1 | Accepted |
 | [0021](adr/0021-no-alias-table-merges-serve-as-aliases.md) | No alias table: merges serve as aliases | Accepted |
 | [0022](adr/0022-remember-commits-each-correction-on-its-own.md) | `remember` commits each correction on its own | Accepted |
+| [0023](adr/0023-the-agent-records-the-codebase-map.md) | The agent records the code base map as it explores | Accepted |
 
 ## How the research questions were settled
 

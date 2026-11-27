@@ -10,6 +10,8 @@ A memory layer for AI systems. Factloom stores what an agent learns as facts tha
 
 It then keeps that memory correct: when new information contradicts a stored fact, the old fact is ended or invalidated and linked to its replacement. Nothing is deleted.
 
+**The name.** A loom weaves threads in two directions, warp and weft, into one fabric. Factloom weaves facts the same way, across two dimensions of time: when each fact was true, and when it was learned. Facts connect through the entities they share. When something changes, a thread is ended and continued, not cut out, so the history stays in the cloth.
+
 > **Status: phases 0 to 3 are built.** Memory for coding agents, self-correction and self-healing work, and Factloom runs with Claude Code as an MCP server, confirmed on an Apple Silicon Mac on 2026-11-25. 80 of the 82 work items are complete; the two open ones measure where Factloom could save an agent tokens. Phases 4 to 6, a generic core with Postgres and an HTTP API, document management and other domains, are planned and have no work items yet. The [roadmap](docs/roadmap/ROADMAP.md) has the status of each item.
 
 ## What it is for
