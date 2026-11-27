@@ -1,11 +1,15 @@
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
+import { retryWhileBusy } from './retry-while-busy.ts';
 
 /**
  * How long a connection waits for another process's write lock before it gives up, in
  * milliseconds. The value the SQLite research ran.
  */
 const BUSY_TIMEOUT_MS = 5000;
+
+/** Setting the journal mode is tried again this often, within the same busy timeout. */
+const JOURNAL_MODE_RETRY = { pauseMs: 25, attempts: BUSY_TIMEOUT_MS / 25 };
 
 /**
  * Opens a connection with the settings every connection needs, and loads the vector
@@ -24,7 +28,10 @@ export function openConnection(path: string): Database.Database {
     db.pragma('foreign_keys = ON');
     step = 'setting the journal mode to WAL';
     // Readers and the one writer do not block each other. An in-memory database stays 'memory'.
-    db.pragma('journal_mode = WAL');
+    // On macOS this reports busy at once, without waiting, while other processes open the same
+    // new file (FL-087), so it is tried again.
+    const connection = db;
+    retryWhileBusy(() => connection.pragma('journal_mode = WAL'), JOURNAL_MODE_RETRY);
     step = 'loading the vector extension';
     sqliteVec.load(db);
     return db;
