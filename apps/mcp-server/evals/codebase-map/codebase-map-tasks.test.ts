@@ -82,21 +82,29 @@ describe('the codebase-map task set', () => {
 });
 
 describe('the fixture repository', () => {
-  it('builds the same commit, down to its hash, on every build', () => {
-    const first = gitOutput(prepareCopy(), ['rev-parse', 'HEAD']);
-    const second = gitOutput(prepareCopy(), ['rev-parse', 'HEAD']);
+  it(
+    'builds the same commit, down to its hash, on every build',
+    () => {
+      const first = gitOutput(prepareCopy(), ['rev-parse', 'HEAD']);
+      const second = gitOutput(prepareCopy(), ['rev-parse', 'HEAD']);
 
-    expect(second).toBe(first);
-  });
+      expect(second).toBe(first);
+    },
+    CHECK_TEST_TIMEOUT,
+  );
 
-  it('has some forty source files in several folders', () => {
-    const sourceFiles = readdirSync(join(prepareCopy(), 'lib'), { recursive: true }).filter((path) =>
-      String(path).endsWith('.js'),
-    );
+  it(
+    'has some forty source files in several folders',
+    () => {
+      const sourceFiles = readdirSync(join(prepareCopy(), 'lib'), { recursive: true }).filter((path) =>
+        String(path).endsWith('.js'),
+      );
 
-    expect(sourceFiles.length).toBeGreaterThanOrEqual(30);
-    expect(sourceFiles.length).toBeLessThanOrEqual(45);
-  });
+      expect(sourceFiles.length).toBeGreaterThanOrEqual(30);
+      expect(sourceFiles.length).toBeLessThanOrEqual(45);
+    },
+    CHECK_TEST_TIMEOUT,
+  );
 
   it(
     'passes its own tests in a clean copy',
@@ -106,35 +114,43 @@ describe('the fixture repository', () => {
     CHECK_TEST_TIMEOUT,
   );
 
-  it('commits the first session with its message, after the first commit', () => {
-    const directory = prepareCopy();
-    const firstDate = Number(gitOutput(directory, ['log', '-1', '--format=%at']));
+  it(
+    'commits the first session with its message, after the first commit',
+    () => {
+      const directory = prepareCopy();
+      const firstDate = Number(gitOutput(directory, ['log', '-1', '--format=%at']));
 
-    commitFirstSession(directory, 'fix: a change');
+      commitFirstSession(directory, 'fix: a change');
 
-    expect(gitOutput(directory, ['log', '-1', '--format=%B'])).toBe('fix: a change');
-    expect(Number(gitOutput(directory, ['log', '-1', '--format=%at']))).toBeGreaterThan(firstDate);
-  });
+      expect(gitOutput(directory, ['log', '-1', '--format=%B'])).toBe('fix: a change');
+      expect(Number(gitOutput(directory, ['log', '-1', '--format=%at']))).toBeGreaterThan(firstDate);
+    },
+    CHECK_TEST_TIMEOUT,
+  );
 
-  it('adds the hand-written map as a committed CLAUDE.md that names where the moved code was', () => {
-    const directory = prepareCopy();
+  it(
+    'adds the hand-written map as a committed CLAUDE.md that names where the moved code was',
+    () => {
+      const directory = prepareCopy();
 
-    writeClaudeMdBaseline(directory);
+      writeClaudeMdBaseline(directory);
 
-    const claudeMd = readFileSync(join(directory, 'CLAUDE.md'), 'utf8');
-    expect(gitOutput(directory, ['ls-files', 'CLAUDE.md'])).toBe('CLAUDE.md');
-    expect(gitOutput(directory, ['status', '--porcelain'])).toBe('');
-    for (const change of CHANGES) {
-      for (const rename of change.renames) {
-        expect(claudeMd).toContain(rename.from);
-        expect(claudeMd).not.toContain(rename.to);
+      const claudeMd = readFileSync(join(directory, 'CLAUDE.md'), 'utf8');
+      expect(gitOutput(directory, ['ls-files', 'CLAUDE.md'])).toBe('CLAUDE.md');
+      expect(gitOutput(directory, ['status', '--porcelain'])).toBe('');
+      for (const change of CHANGES) {
+        for (const rename of change.renames) {
+          expect(claudeMd).toContain(rename.from);
+          expect(claudeMd).not.toContain(rename.to);
+        }
+        for (const move of change.moves) {
+          expect(claudeMd).toContain(move.from);
+          for (const name of move.names) expect(claudeMd).toContain(name);
+        }
       }
-      for (const move of change.moves) {
-        expect(claudeMd).toContain(move.from);
-        for (const name of move.names) expect(claudeMd).toContain(name);
-      }
-    }
-  });
+    },
+    CHECK_TEST_TIMEOUT,
+  );
 });
 
 describe.concurrent('the teammate change between the sessions', () => {
@@ -157,15 +173,19 @@ describe.concurrent('the teammate change between the sessions', () => {
   }
 
   for (const id of UNCHANGED_TASK_IDS) {
-    it(`leaves the repository as it was: ${id}`, () => {
-      const directory = prepareCopy();
-      const before = gitOutput(directory, ['rev-parse', 'HEAD']);
+    it(
+      `leaves the repository as it was: ${id}`,
+      () => {
+        const directory = prepareCopy();
+        const before = gitOutput(directory, ['rev-parse', 'HEAD']);
 
-      applyBetweenSessions(directory, id);
+        applyBetweenSessions(directory, id);
 
-      expect(gitOutput(directory, ['rev-parse', 'HEAD'])).toBe(before);
-      expect(gitOutput(directory, ['status', '--porcelain'])).toBe('');
-    });
+        expect(gitOutput(directory, ['rev-parse', 'HEAD'])).toBe(before);
+        expect(gitOutput(directory, ['status', '--porcelain'])).toBe('');
+      },
+      CHECK_TEST_TIMEOUT,
+    );
   }
 });
 

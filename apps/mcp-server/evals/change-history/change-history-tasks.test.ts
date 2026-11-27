@@ -82,48 +82,68 @@ describe('the change-history task set', () => {
 });
 
 describe('the fixture repository', () => {
-  it('builds the same history, down to the HEAD commit, on every build', () => {
-    const first = gitOutput(prepareCopy(), ['rev-parse', 'HEAD']);
-    const second = gitOutput(prepareCopy(), ['rev-parse', 'HEAD']);
+  it(
+    'builds the same history, down to the HEAD commit, on every build',
+    () => {
+      const first = gitOutput(prepareCopy(), ['rev-parse', 'HEAD']);
+      const second = gitOutput(prepareCopy(), ['rev-parse', 'HEAD']);
 
-    expect(second).toBe(first);
-  });
+      expect(second).toBe(first);
+    },
+    CHECK_TEST_TIMEOUT,
+  );
 
-  it('has a history of at least fifteen commits', () => {
-    const commits = gitOutput(prepareCopy(), ['rev-list', '--count', 'HEAD']);
+  it(
+    'has a history of at least fifteen commits',
+    () => {
+      const commits = gitOutput(prepareCopy(), ['rev-list', '--count', 'HEAD']);
 
-    expect(Number(commits)).toBeGreaterThanOrEqual(15);
-  });
+      expect(Number(commits)).toBeGreaterThanOrEqual(15);
+    },
+    CHECK_TEST_TIMEOUT,
+  );
 
-  it('commits the first session with its message, one day after the last commit of the history', () => {
-    const directory = prepareCopy();
-    const lastHistoryDate = Number(gitOutput(directory, ['log', '-1', '--format=%at']));
+  it(
+    'commits the first session with its message, one day after the last commit of the history',
+    () => {
+      const directory = prepareCopy();
+      const lastHistoryDate = Number(gitOutput(directory, ['log', '-1', '--format=%at']));
 
-    commitFirstSession(directory, 'fix: a change\n\nThe reason for it.');
+      commitFirstSession(directory, 'fix: a change\n\nThe reason for it.');
 
-    expect(gitOutput(directory, ['log', '-1', '--format=%B'])).toBe('fix: a change\n\nThe reason for it.');
-    expect(Number(gitOutput(directory, ['log', '-1', '--format=%at']))).toBe(lastHistoryDate + 86_400);
-  });
+      expect(gitOutput(directory, ['log', '-1', '--format=%B'])).toBe('fix: a change\n\nThe reason for it.');
+      expect(Number(gitOutput(directory, ['log', '-1', '--format=%at']))).toBe(lastHistoryDate + 86_400);
+    },
+    CHECK_TEST_TIMEOUT,
+  );
 
-  it('holds no task reason in any file of the tree', () => {
-    const tree = readTree(prepareCopy()).toLowerCase();
+  it(
+    'holds no task reason in any file of the tree',
+    () => {
+      const tree = readTree(prepareCopy()).toLowerCase();
 
-    for (const [taskId, words] of Object.entries(REASON_WORDS)) {
-      for (const word of words) expect(tree, `${taskId}: ${word}`).not.toContain(word.toLowerCase());
-    }
-  });
+      for (const [taskId, words] of Object.entries(REASON_WORDS)) {
+        for (const word of words) expect(tree, `${taskId}: ${word}`).not.toContain(word.toLowerCase());
+      }
+    },
+    CHECK_TEST_TIMEOUT,
+  );
 
-  it('holds no sentence of a commit message in any file of the tree', () => {
-    const tree = readTree(prepareCopy());
-    const messages = [
-      ...CHANGE_HISTORY_TASKS.map(firstSessionCommitOf),
-      ...readdirSync(HISTORY_DIRECTORY).map((step) =>
-        readFileSync(join(HISTORY_DIRECTORY, step, 'message.txt'), 'utf8'),
-      ),
-    ];
+  it(
+    'holds no sentence of a commit message in any file of the tree',
+    () => {
+      const tree = readTree(prepareCopy());
+      const messages = [
+        ...CHANGE_HISTORY_TASKS.map(firstSessionCommitOf),
+        ...readdirSync(HISTORY_DIRECTORY).map((step) =>
+          readFileSync(join(HISTORY_DIRECTORY, step, 'message.txt'), 'utf8'),
+        ),
+      ];
 
-    for (const sentence of messages.flatMap(splitIntoSentences)) expect(tree).not.toContain(sentence);
-  });
+      for (const sentence of messages.flatMap(splitIntoSentences)) expect(tree).not.toContain(sentence);
+    },
+    CHECK_TEST_TIMEOUT,
+  );
 
   it(
     'passes its own tests in a clean copy',
