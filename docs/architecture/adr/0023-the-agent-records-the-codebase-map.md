@@ -1,6 +1,6 @@
 # The agent records the code base map as it explores
 
-Status: accepted
+Status: accepted. Its way in, the agent recording the map, is replaced by [ADR 0024](0024-maintenance-records-the-codebase-map.md), after FL-082's runs showed the agent did not record it.
 
 The map of FL-082, where things are in a repository and what each part does, reaches Factloom the way any other fact does: the coding agent records it with `record_fact` as it finds its way around, told so by the server's instructions. Each map fact uses the predicate `defined_in`: a symbol is defined in a file, given as a value, one file at a time. Its statement says what the symbol does, so one fact answers both where and what. Its source is the file, of kind `file`; when the agent gives no commit, the server records the repository's `HEAD` as the source's version, so that the verification of FL-050 checks the fact against the file and the repair of FL-054 follows a rename.
 
