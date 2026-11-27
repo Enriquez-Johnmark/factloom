@@ -76,7 +76,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-038 | Registration guide for Claude Code and Codex, confirmed on Apple Silicon | 1 | FL-037 | Completed |
 | FL-079 | A registered coding agent uses Factloom rather than only its built-in memory | 1 | FL-074, FL-038 | Completed |
 | FL-080 | Fewer turns for a coding agent that uses Factloom | 1 | FL-079 | Completed |
-| FL-082 | A self-healing codebase map for coding agents | 3 | FL-080, FL-081, FL-050, FL-054 | Under Review |
+| FL-082 | A self-healing codebase map for coding agents | 3 | FL-080, FL-081, FL-050, FL-054 | Completed |
 | FL-083 | The recall hook says when memory has nothing, and the agent records a reason it is told | 1 | FL-080, FL-081 | Completed |
 
 ### FL-034: Server configuration and composition root
@@ -760,7 +760,7 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-080, FL-081, FL-050, FL-054 |
 | Requirements | REQ-37 |
@@ -806,15 +806,15 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 - [x] Unit tests show a map fact anchored to its file, confirmed by verification when the file is unchanged, flagged when its symbol is gone, and following a rename.
 - [x] Unit tests show the recall hook handing over map facts that match a prompt.
 - [x] The task set and its checks are committed before the first results, with tests that each check fails on the fixture and passes on one solution.
-- [ ] The owner runs both comparisons and commits the raw output and the two reports.
-- [ ] The root `README.md` states the measured result in one or two sentences that match the reports, including when it is no saving or a cost.
+- [x] The owner runs both comparisons and commits the raw output and the two reports.
+- [x] The root `README.md` states the measured result in one or two sentences that match the reports, including when it is no saving or a cost.
 - [x] `pnpm check` exits 0 and does not start the runner.
 
 **Validation.** Unit tests for the domain, the anchoring and verification of map facts, and the hook; the comparisons are manual runs by the owner, because they need a signed-in agent and spend tokens.
 
 **Completion evidence.** The ADR, the commits, the task set commit, the two reports and the `README.md` sentence.
 
-**Recorded evidence.** Prepared on 2026-11-26 on Linux x64 with Node.js v22.23.4. The item is `Under Review`: the two comparisons and the `README.md` sentence (criteria 5 and 6) are the owner's runs.
+**Recorded evidence.** Prepared on 2026-11-26 on Linux x64 with Node.js v22.23.4. The two comparisons and the `README.md` sentence (criteria 5 and 6) are the owner's runs, below.
 
 - **How map facts get in: [ADR 0023](../../architecture/adr/0023-the-agent-records-the-codebase-map.md)** (`3065995`). The agent records them with `record_fact` as it explores; a seeding command, with or without an LLM, and a file entity named by its path are rejected there, with the reasons.
 - **The predicate** (`ac7ff76`): `defined_in`, a symbol defined in a file given as its path, one at a time. The extraction instructions changed, so the extraction and scenario recordings were made again with the record commands (`145d38f`), with the owner's key for each command only: extraction 22 of 22 cases, precision 1.000, recall 0.964; scenarios staleness 0 of 13, false invalidation 0 of 13, missed invalidation 0 of 2, historical accuracy 10 of 10, as before.
@@ -827,6 +827,16 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 - **Known limits of the set.** Some checks call one function, such as `findBlockingHold` and `composeNotice`: an agent that gets the behaviour right one layer away fails them. A move of functions expects a top-level function to end with `}` alone on a line, and gives the moved function only the imports the task data lists. The `CLAUDE.md` map names `isOpenOn`, `nextOpenDay` and `findBlockingHold` in their first files, as a general map would.
 - **Not verified here.** A repair during a real session: maintenance loads the embedding model, which is not cached in this container. The owner's run is that test.
 - **`pnpm check`:** 134 test files, 1,416 tests passed.
+
+**The owner's runs, 2026-11-27.** On the owner's Mac, Claude Code 2.1.332 with claude-sonnet-5-5, after FL-083: comparison 1, without Factloom as shipped and with Factloom, into `results/2026-11-27-codebase-map/`; comparison 2, without Factloom from the `CLAUDE.md` map (`--baseline claude-md`), into `results/2026-11-27-codebase-map-claude-md/`, with the run with Factloom of comparison 1 copied in. Committed in `dd5bfb6`. Every run log holds 20 sessions, 10 checks and its end; no task was left out, so every teammate change was made. The results were searched for key patterns, e-mail addresses and the owner's user name: none.
+
+- **Comparison 1, as the report states it: no clear difference.** Median per-task change in tokens +5.5%, inside the 10% band; input tokens 4,465,108 with Factloom against 4,182,772, output 70,086 against 71,567, tool calls 222 against 215; checks 10 of 10 both ways.
+- **Comparison 2, as the report states it: a cost.** Median +15.5% against the `CLAUDE.md` map; input 4,465,108 against 4,044,142; checks 10 of 10 both ways. Summed from the session tables, the `CLAUDE.md` map was the cheapest first session (1,938,402 input tokens, against 2,120,273 as shipped and 2,280,674 with Factloom) and gave some of that back in the second (2,105,740, against 2,062,499 and 2,184,434), where five tasks had moved code it still named in the old place.
+- **What the raw output shows: the map was not built.** In the 20 sessions with Factloom the agent recorded two facts, one in each session of late-fee-cap, both `described_as`, and no `defined_in` fact; it found its way with `grep`, `find` and `Read` as it did without Factloom. So the hook had nothing to hand over, maintenance had nothing to repair, and the comparison measured the cost of the set-up with an empty memory, not the map. ADR 0023's premise, that the agent records the map as it explores, did not hold in this run.
+- **What FL-083 changed, from the same output.** No session with Factloom called `recall`, against 20 calls in FL-081's run, and `ToolSearch` ran only in late-fee-cap, to record. The hook's line that nothing matches did its job; the instruction to record a reason was not tested by these tasks, which give none.
+- **Not exercised, so still unverified in a real session:** the anchoring of a map fact to its file, the repair of a renamed file, and the hook leaving out a fact whose symbol moved. Each has unit tests.
+- **`README.md`:** the sentence under "What it is for" states both comparisons and that the map was never built.
+
 
 ### FL-083: The recall hook says when memory has nothing, and the agent records a reason it is told
 
