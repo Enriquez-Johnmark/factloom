@@ -353,7 +353,7 @@ The Postgres adapter is a later phase. The schema is written so the move is a tr
 ## Migrations
 
 - Migrations are numbered SQL files in `packages/storage/migrations/`: `0001_initial.sql`, `0002_...sql`.
-- The storage adapter applies pending migrations in order when it opens a database, each in its own transaction, and records the number, name, SHA-256 of the file and time in a `schema_migration` table that the adapter creates itself.
+- The storage adapter applies pending migrations in order when it opens a database, each in its own transaction, and records the number, name, SHA-256 of the file and time in a `schema_migration` table that the adapter creates itself. Each transaction is immediate and first checks that no other process has recorded the file, so several processes may open one new database at once (FL-086).
 - A released migration is never edited. On open, the adapter compares the recorded hash with the file and refuses to continue if they differ.
 - Migrations only move forward. There are no down migrations: a mistake is fixed by a new migration.
 - The Postgres adapter will have its own migration files with the same numbers and names.
