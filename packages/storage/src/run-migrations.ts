@@ -61,7 +61,9 @@ function findHistoryMismatch(
 
 /**
  * Brings a database up to date: applies the migration files that it has not recorded, in
- * number order, each in its own transaction, and records each in `schema_migration`. It
+ * number order, each in its own transaction, and records each in `schema_migration`. A file
+ * that another process applied in the meantime is skipped, so several processes may open one
+ * new database at once. It
  * applies nothing and returns `storage_failed` when a recorded migration has no file or its
  * file was changed. If a migration fails, its transaction is rolled back and later files are
  * not applied.
@@ -90,15 +92,25 @@ export function runMigrations(parts: {
     const recordMigration = db.prepare(
       'INSERT INTO schema_migration (number, name, sha256, applied_at) VALUES (?, ?, ?, ?)',
     );
+    const isRecorded = db.prepare<[number], { number: number }>(
+      'SELECT number FROM schema_migration WHERE number = ?',
+    );
     const appliedNumbers = new Set(applied.map((recorded) => recorded.number));
     const newlyApplied: string[] = [];
     for (const file of files.filter((candidate) => !appliedNumbers.has(candidate.number))) {
       current = `applying the migration ${file.fileName}`;
-      db.transaction(() => {
-        db.exec(file.sql);
-        recordMigration.run(file.number, file.name, file.sha256, now);
-      })();
-      newlyApplied.push(file.fileName);
+      // Another process opening the same new file may have applied it since the list above was
+      // read (FL-086). An immediate transaction takes the write lock before the check, so the
+      // check and the migration see the same database.
+      const wasApplied = db
+        .transaction(() => {
+          if (isRecorded.get(file.number) !== undefined) return false;
+          db.exec(file.sql);
+          recordMigration.run(file.number, file.name, file.sha256, now);
+          return true;
+        })
+        .immediate();
+      if (wasApplied) newlyApplied.push(file.fileName);
     }
     return ok({ applied: newlyApplied });
   } catch (cause) {

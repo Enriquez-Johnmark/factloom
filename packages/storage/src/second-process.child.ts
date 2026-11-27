@@ -113,7 +113,22 @@ function beginAndRecord(): Database.Database {
   return db;
 }
 
+/** Opens the store, which creates and migrates the file if it is new, and closes it. */
+async function openAndClose(): Promise<void> {
+  const opened = openSqliteMemoryStore({
+    path: path ?? '',
+    embeddingModel: 'fixture-model',
+    embeddingDimensions: 4,
+  });
+  if (!opened.ok) throw new Error(opened.error.message);
+  await opened.value.close();
+}
+
 switch (mode) {
+  case 'open-and-exit':
+    await openAndClose();
+    say('opened');
+    break;
   case 'commit-and-exit':
     await commitThroughTheAdapter();
     say('committed');

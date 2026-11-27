@@ -2,7 +2,10 @@
 // second-process.child.ts, run by Node.js from source. It prints one line when it has reached
 // the state its mode promises, and each test waits for that line before it acts.
 import { type ChildProcess, spawn } from 'node:child_process';
+import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 import { at, changeSet, DATABASE, fact, recordFact, writeTimeline } from './memory-store-contract.ts';
 import { openSqliteMemoryStore } from './open-sqlite-memory-store.ts';
@@ -49,6 +52,14 @@ function startChild(mode: string, path: string): Child {
     });
   return { said, exited, kill: () => child.kill('SIGKILL') };
 }
+
+// Four processes on a new file failed about one time in six before FL-086, so these rounds
+// fail almost surely with the runner as it was.
+const ROUNDS_OF_FIRST_OPENS = 6;
+const PROCESSES_PER_ROUND = 5;
+
+/** Each round starts processes that each load Node.js and the adapter, slower on a busy runner. */
+const FIRST_OPEN_TEST_TIMEOUT = 60_000;
 
 /** An open-ended database version, which overlaps the fixture's `pg16` and the child's fact. */
 const OPEN_ENDED = recordFact(
@@ -159,4 +170,27 @@ describe('two processes on one database file', () => {
       audit_log: 3,
     });
   });
+
+  it(
+    'several processes opening one new file at once all succeed',
+    async () => {
+      const directory = mkdtempSync(join(tmpdir(), 'factloom-first-open-'));
+      closeLater(() => rmSync(directory, { recursive: true }));
+      const migrationFiles = readdirSync(join(import.meta.dirname, '..', 'migrations')).filter((name) =>
+        name.endsWith('.sql'),
+      );
+
+      for (let round = 1; round <= ROUNDS_OF_FIRST_OPENS; round += 1) {
+        const path = join(directory, `round-${round}.db`);
+        const openers = Array.from({ length: PROCESSES_PER_ROUND }, () => startChild('open-and-exit', path));
+        expect(await Promise.all(openers.map((child) => child.exited))).toEqual(openers.map(() => 0));
+
+        const rows = new Database(path, { readonly: true });
+        const recorded = rows.prepare('SELECT count(*) AS count FROM schema_migration').get();
+        rows.close();
+        expect(recorded).toEqual({ count: migrationFiles.length });
+      }
+    },
+    FIRST_OPEN_TEST_TIMEOUT,
+  );
 });
