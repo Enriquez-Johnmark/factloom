@@ -78,7 +78,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-080 | Fewer turns for a coding agent that uses Factloom | 1 | FL-079 | Completed |
 | FL-082 | A self-healing codebase map for coding agents | 3 | FL-080, FL-081, FL-050, FL-054 | Completed |
 | FL-083 | The recall hook says when memory has nothing, and the agent records a reason it is told | 1 | FL-080, FL-081 | Completed |
-| FL-084 | The code base map recorded without the agent | 3 | FL-082, FL-083 | Under Review |
+| FL-084 | The code base map recorded without the agent | 3 | FL-082, FL-083 | Completed |
 
 ### FL-034: Server configuration and composition root
 
@@ -894,7 +894,7 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-082, FL-083 |
 | Requirements | REQ-37 |
@@ -938,14 +938,14 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 - [x] An ADR records the way in, with the alternatives rejected, and says what of ADR 0023 it replaces.
 - [x] Unit tests show the declarations read from a text with their comments, a second recording restating rather than adding, a statement holding a secret left out, and the skipped files.
 - [x] On the fixture of FL-082, the map is recorded and its time measured.
-- [ ] The owner's run with Factloom is committed beside the copied baselines, and its two reports and the `README.md` sentence match.
+- [x] The owner's run with Factloom is committed beside the copied baselines, and its two reports and the `README.md` sentence match.
 - [x] `pnpm check` exits 0 and does not start the runner.
 
 **Validation.** Unit and stdio tests; the measurement of the seed's time; the owner's run.
 
 **Completion evidence.** The ADR, the commits, the two reports and the `README.md` sentence.
 
-**Recorded evidence.** Prepared on 2026-11-27 on Linux x64 with Node.js v22.23.4. The item is `Under Review`: the owner's run (criterion 4) is pending.
+**Recorded evidence.** Prepared on 2026-11-27 on Linux x64 with Node.js v22.23.4. The owner's run (criterion 4) is below.
 
 - **The way in: [ADR 0024](../../architecture/adr/0024-maintenance-records-the-codebase-map.md)** (`a004bf4`). A seed at session start, as the maintenance job `record_codebase_map`; capture on read, an LLM summary, a parser and exported declarations only are rejected there, with the reasons. ADR 0023 now says its way in is replaced.
 - **Reading declarations** (`e3383d8`): `readDeclarations` in `graph-rag`, top-level functions, classes, constants and types of a JavaScript or TypeScript text by text search, each with the first sentence of the doc comment or run of line comments directly above it, cut at 200 characters; `isMappedSourcePath` leaves out other languages, tests, type declaration files, dependencies and build output. Eight unit tests.
@@ -956,3 +956,11 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 - **On the fixture of FL-082** (`lending-desk`, 44 source files), with the fake embedder of the tests, through `buildMaintenanceJobs` and the git reader on a copy: the first run recorded 75 facts, and the whole maintenance run took 331 ms; a second run on the same commit wrote nothing, in 270 ms; after the teammate changes of branch-closures (two functions moved) and late-fee-cap (a file renamed), the run continued three facts, in 275 ms, and the map named `isOpenOn` and `nextOpenDay` in `lib/helpers/opening-days.js` and `assessLateFee` in `lib/fees/overdue-charges.js`. The recall hook, asked about branch closures, handed over `nextOpenDay` and `isOpenOn` at their new paths. With the real embedding model a run adds the model's load and an embedding per new fact, about 3.3 ms each on the owner's Mac (Q-23); not measured here, because the model is not cached in this container.
 - **The guide** (`1d4bf18`) describes the job and the map.
 - **`pnpm check`:** 1,437 tests passed.
+
+**The owner's run, 2026-11-27.** On the owner's Mac, Claude Code 2.1.332 with claude-sonnet-5-5, the configuration with Factloom only, into `results/2026-11-27-codebase-map-seeded/` beside the baseline as shipped of FL-082, and copied into `results/2026-11-27-codebase-map-seeded-claude-md/` beside its `CLAUDE.md` baseline; committed in `1cb108a`, merged in `f1e0093`. Every run log holds 20 sessions, 10 checks and its end; no task was left out. The results were searched for key patterns, e-mail addresses and the owner's user name: none.
+
+- **As the reports state them: no clear difference, twice.** Against Claude Code as shipped, median per-task change −4.6%; input tokens 3,866,020 against 4,182,772 (−7.6% in total), output 64,479 against 71,567, tool calls 209 against 215. Against the `CLAUDE.md` map, median +1.8%; input 3,866,020 against 4,044,142 (−4.4% in total), tool calls 209 against 217. Checks 10 of 10 in every configuration.
+- **A defect: the map was not recorded before most first sessions.** In eight of the ten first sessions the maintenance hook failed: in seven with `storage_failed: The database … could not be opened. database is locked`, in one with `could not be brought up to date while applying the migration 0001_initial.sql. table entity already exists`. At the start of a first session the server and the maintenance command both open a database that does not exist yet, and both migrate it at once. In the second sessions the database exists, and no hook failed. So the map was in place for the second sessions, and for most first sessions it was not. The defect is in storage, not in the comparison, and a user of the guide's set-up meets it on the first session in a new repository; it is a separate work item.
+- **Where the map was in place: the second sessions.** Summed from the session tables, the second sessions took 1,857,614 input tokens in 112 turns, against 2,062,499 in 113 as shipped (−9.9%), 2,105,740 in 120 with the `CLAUDE.md` map (−11.8%) and 2,184,434 in 123 with FL-082's empty map: the lowest of the four set-ups. The first sessions took 2,008,406 tokens, between the `CLAUDE.md` map (1,938,402) and as shipped (2,120,273).
+- **How the agent searched, from the raw output.** `grep`, `find` and `ls` commands: 54 with the seeded map, against 70 as shipped, 63 with the `CLAUDE.md` map and 67 with the empty map; 229 turns in all, the fewest. The agent recorded two facts itself, as in FL-082. The recall hook's context does not appear in stream-json, so which map facts it handed over is read from the effect, not seen.
+- **`README.md`:** the sentence under "What it is for" states both comparisons and the defect.
