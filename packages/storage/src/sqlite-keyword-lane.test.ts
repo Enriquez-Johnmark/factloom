@@ -1,5 +1,5 @@
 // Adapter tests of the keyword lane on FTS5: what the contract cases K1 to K5 do not cover.
-import type { Change, MemoryStore } from '@factloom/core';
+import type { Change, MemoryStore } from '@kronomind/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { at, changeSet, entity, fact, NAMESPACE, recordFact, source } from './memory-store-contract.ts';
 import { closeTestStores, openOnFile } from './sqlite-test-store.ts';

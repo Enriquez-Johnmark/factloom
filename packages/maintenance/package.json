@@ -1,5 +1,5 @@
 {
-  "name": "@factloom/maintenance",
+  "name": "@kronomind/maintenance",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@factloom/core": "workspace:*",
+    "@kronomind/core": "workspace:*",
     "zod": "catalog:"
   },
   "files": [

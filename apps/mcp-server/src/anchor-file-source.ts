@@ -2,7 +2,7 @@
 // the file (ADR 0023). An agent rarely knows the commit without a git call of its own; the
 // server knows the repository.
 import { isAbsolute, normalize, relative, sep } from 'node:path';
-import type { Result } from '@factloom/core';
+import type { Result } from '@kronomind/core';
 
 /**
  * Turns the path of a file source into a path from the repository root and the commit `HEAD`

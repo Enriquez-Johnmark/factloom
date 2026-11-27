@@ -4,7 +4,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { err, type LlmClient, type LlmTask, ok } from '@factloom/core';
+import { err, type LlmClient, type LlmTask, ok } from '@kronomind/core';
 import { z } from 'zod';
 
 type LlmRequest = Parameters<LlmClient['generateObject']>[0];

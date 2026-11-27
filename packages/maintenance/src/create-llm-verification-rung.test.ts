@@ -8,7 +8,7 @@ import {
   recordFacts,
   TEST_DOMAIN,
   toTimestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { CONFIDENCE_STEP, verifyAnchoredFacts } from './verify-anchored-facts.ts';
 import { createLlmVerificationRung, MAX_VERIFIED_TEXT_LENGTH } from './create-llm-verification-rung.ts';

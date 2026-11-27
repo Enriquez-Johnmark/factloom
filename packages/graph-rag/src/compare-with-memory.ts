@@ -1,4 +1,4 @@
-import { findConflictCandidates, type Namespace, type OperationDeps, ok, type Result } from '@factloom/core';
+import { findConflictCandidates, type Namespace, type OperationDeps, ok, type Result } from '@kronomind/core';
 import { type Comparison, compareWithCandidates } from './compare-with-candidates.ts';
 import type { PlannedFact } from './plan-facts.ts';
 

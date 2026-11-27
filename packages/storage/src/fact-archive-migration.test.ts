@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { archiveFacts, toTimestamp } from '@factloom/core';
+import { archiveFacts, toTimestamp } from '@kronomind/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { writeTimeline } from './memory-store-contract.ts';
 import { openConnection } from './open-connection.ts';

@@ -1,8 +1,8 @@
 // The judge cases of FL-041 through the conflict judge, answered from recordings: no network
 // and no API key. A missing recording fails the run and names the record command. It sits in
 // src because the model label comes from the task map of the Anthropic client (FL-019).
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
-import { judgeConflicts } from '@factloom/maintenance';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
+import { judgeConflicts } from '@kronomind/maintenance';
 import { describe, expect, it } from 'vitest';
 import { createRecordingLlmClient } from '../evals/create-recording-llm-client.ts';
 import { JUDGE_CASES_DIRECTORY, loadJudgeCases } from '../evals/judge-case.ts';

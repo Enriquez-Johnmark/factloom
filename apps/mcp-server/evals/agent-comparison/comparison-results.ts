@@ -11,7 +11,7 @@
 // credential.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { checkForSecrets } from '@factloom/graph-rag';
+import { checkForSecrets } from '@kronomind/graph-rag';
 import { z } from 'zod';
 import { type CheckResult, type Configuration, compareRuns, type PlayedSession } from './compare-runs.ts';
 import { formatComparisonReport } from './format-comparison-report.ts';

@@ -1,4 +1,4 @@
-import { type LlmClient, ok, type VerificationOutcome } from '@factloom/core';
+import { type LlmClient, ok, type VerificationOutcome } from '@kronomind/core';
 import {
   formatVerificationInput,
   VERIFICATION_INSTRUCTIONS,

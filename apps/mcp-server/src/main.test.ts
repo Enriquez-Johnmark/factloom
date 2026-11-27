@@ -3,8 +3,8 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseDateInput } from '@factloom/core';
-import { openSqliteMemoryStore } from '@factloom/storage';
+import { parseDateInput } from '@kronomind/core';
+import { openSqliteMemoryStore } from '@kronomind/storage';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SERVER_INSTRUCTIONS } from './server-instructions.ts';
 import {

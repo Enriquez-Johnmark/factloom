@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { corePackageName } from './index.ts';
 
-describe('@factloom/core', () => {
+describe('@kronomind/core', () => {
   it('exports its package name', () => {
-    expect(corePackageName).toBe('@factloom/core');
+    expect(corePackageName).toBe('@kronomind/core');
   });
 });

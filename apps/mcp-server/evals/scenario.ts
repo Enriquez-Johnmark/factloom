@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type Domain, err, ok, parseDateInput, type Result } from '@factloom/core';
+import { type Domain, err, ok, parseDateInput, type Result } from '@kronomind/core';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 

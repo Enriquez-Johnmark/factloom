@@ -5,7 +5,7 @@ import {
   type FactWithSources,
   periodsOverlap,
   type Timestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 
 /** A fact about to be recorded, as far as the comparison needs it. */
 export type ComparedFact = {

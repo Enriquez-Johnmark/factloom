@@ -9,7 +9,7 @@ import {
   parseDateInput,
   recordFacts,
   type Timestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { type ChangeFactInput, changeFact } from './change-fact.ts';
 import type { StructuredFactInput } from './structured-fact-input.ts';

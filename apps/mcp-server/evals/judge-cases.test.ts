@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { err, type LlmClient } from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
-import { judgeConflicts } from '@factloom/maintenance';
+import { err, type LlmClient } from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
+import { judgeConflicts } from '@kronomind/maintenance';
 import { describe, expect, it } from 'vitest';
 import { JUDGE_CASES_DIRECTORY, type JudgeCase, loadJudgeCases, parseJudgeCase } from './judge-case.ts';
 import { buildJudgeInput } from './run-judge-eval.ts';

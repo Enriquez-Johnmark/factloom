@@ -1,4 +1,4 @@
-import type { SourceInput } from '@factloom/graph-rag';
+import type { SourceInput } from '@kronomind/graph-rag';
 import { z } from 'zod';
 import type { FileSourceAnchorer } from './anchor-file-source.ts';
 

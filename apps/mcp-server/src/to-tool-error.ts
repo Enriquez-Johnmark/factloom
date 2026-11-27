@@ -1,4 +1,4 @@
-import type { FactloomError } from '@factloom/core';
+import type { FactloomError } from '@kronomind/core';
 import type { CallToolResult } from '@modelcontextprotocol/server';
 
 /**

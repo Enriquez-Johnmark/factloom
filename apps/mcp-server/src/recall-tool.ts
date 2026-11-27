@@ -1,4 +1,4 @@
-import { recall } from '@factloom/graph-rag';
+import { recall } from '@kronomind/graph-rag';
 import { z } from 'zod';
 import type { RegisterTool, ServerDeps } from './create-factloom-server.ts';
 import { readOptionalDate } from './read-optional-date.ts';

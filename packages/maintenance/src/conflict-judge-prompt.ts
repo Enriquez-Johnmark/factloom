@@ -2,7 +2,7 @@
 // provider can cache them; the source text, the new fact and the candidates go in the input.
 // The candidates are numbered from 1, and the answer names them by number, so that the model
 // never copies a fact or an identifier back (contradiction detection research, "Cost control").
-import type { ConflictJudgeInput, FactWithSources, Timestamp } from '@factloom/core';
+import type { ConflictJudgeInput, FactWithSources, Timestamp } from '@kronomind/core';
 import { z } from 'zod';
 
 /** The four verdicts of decision D-12, as the model writes them. */

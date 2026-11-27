@@ -303,7 +303,7 @@ Designed in [ADR 0012](adr/0012-purge-is-the-one-exception.md), "The phase 2 des
 - **Triggers.** `fact_changes_only_by_invalidation` is replaced by `fact_changes_only_by_invalidation_or_purge`, which permits one invalidation as before, now also with `purged_at` unchanged, and one purge: `statement` to `[purged]`, `object_value` to `[purged]` if set, and nothing else. `source_never_updated` is replaced by `source_changes_only_by_purge`: `content` to `[purged]` if set, `content_hash` and `locator` to `NULL`, and nothing else. `fact_embedding_removed_only_by_purge` lets a vector be deleted only when its fact is purged.
 - **Keyword index.** `fact_fts_purge` removes the keyword entry with the old statement when `purged_at` is set. The FTS5 option `secure-delete` is on, so the term leaves the index's shadow tables too.
 - **The change.** The `purge_content` change writes the marker and `purged_at` on its target, removes a purged fact's vector, and writes one audit entry, action `fact.purged` or `source.purged`, `detail` `null`, under the operation `purge` and the reason code `erasure_requested` or `secret_stored`. A live purged fact is invalidated by an `invalidate_fact` change in the same change set.
-- **Freed pages.** They are cleared after the commit by `clearFreedPages` of `@factloom/storage`: `VACUUM`, then `wal_checkpoint(TRUNCATE)`.
+- **Freed pages.** They are cleared after the commit by `clearFreedPages` of `@kronomind/storage`: `VACUUM`, then `wal_checkpoint(TRUNCATE)`.
 - **Completeness.** A test classifies every text and binary column of the migrated schema as content covered by purge or not content, and fails on a column that is in neither list.
 
 ### `entity_merge`, migration `0005_add_entity_merge.sql` (FL-052)

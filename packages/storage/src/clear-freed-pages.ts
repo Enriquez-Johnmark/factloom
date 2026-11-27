@@ -1,4 +1,4 @@
-import { err, ok, type Result } from '@factloom/core';
+import { err, ok, type Result } from '@kronomind/core';
 import { openConnection } from './open-connection.ts';
 
 /**

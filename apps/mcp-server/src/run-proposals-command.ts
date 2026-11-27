@@ -4,7 +4,7 @@ import {
   type OperationDeps,
   type ProposedChange,
   rejectProposedChange,
-} from '@factloom/core';
+} from '@kronomind/core';
 import type { Command } from './read-command.ts';
 
 export type ProposalsCommandDeps = OperationDeps & {

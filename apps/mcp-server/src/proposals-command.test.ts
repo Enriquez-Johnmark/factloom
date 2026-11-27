@@ -12,9 +12,9 @@ import {
   parseDateInput,
   proposeChange,
   recordFacts,
-} from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
-import { openSqliteMemoryStore } from '@factloom/storage';
+} from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
+import { openSqliteMemoryStore } from '@kronomind/storage';
 import { afterEach, describe, expect, it } from 'vitest';
 import { startServerProcess } from './testing/server-process.ts';
 

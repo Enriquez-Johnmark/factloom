@@ -1,4 +1,4 @@
-import { type LlmClient, ok, type Result } from '@factloom/core';
+import { type LlmClient, ok, type Result } from '@kronomind/core';
 import {
   type CodebaseReader,
   checkForSecrets,
@@ -8,7 +8,7 @@ import {
   PATH_VALUED_PREDICATES,
   readDependencyVersion,
   recordCodebaseMap,
-} from '@factloom/graph-rag';
+} from '@kronomind/graph-rag';
 import {
   archiveUnusedFacts,
   createLlmVerificationRung,
@@ -22,7 +22,7 @@ import {
   type RepositoryReader,
   repairMovedAnchors,
   verifyAnchoredFacts,
-} from '@factloom/maintenance';
+} from '@kronomind/maintenance';
 import type { ServerDeps } from './create-factloom-server.ts';
 
 /** Whether a text holds something the secret check of FL-022 matches. */

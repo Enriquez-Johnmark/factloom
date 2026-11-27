@@ -1,8 +1,8 @@
-# @factloom/storage
+# @kronomind/storage
 
-The SQLite adapter for the `MemoryStore` interface in `@factloom/core`, with its SQL and its migrations. It is the only package that contains SQL.
+The SQLite adapter for the `MemoryStore` interface in `@kronomind/core`, with its SQL and its migrations. It is the only package that contains SQL.
 
-It imports `@factloom/core` only. It enforces the rules of the schema and makes no decisions about facts.
+It imports `@kronomind/core` only. It enforces the rules of the schema and makes no decisions about facts.
 
 **Status:** the SQLite adapter is complete for phase 1. `openSqliteMemoryStore` opens a file, applies the migrations, writes a change set with `commit`, and reads facts by structure, by keyword and by vector, each read with the time predicate. All four groups of the storage contract suite run against it.
 

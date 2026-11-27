@@ -1,6 +1,6 @@
 // Adapter tests of the vector lane and of the embedding model checks: what the contract
 // cases V1 to V6 do not cover.
-import type { Change } from '@factloom/core';
+import type { Change } from '@kronomind/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   at,

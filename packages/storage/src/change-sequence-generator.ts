@@ -1,8 +1,8 @@
 // Generates sequences of changes to memory over a small world, for property-based tests.
 // The world is small on purpose: a few subjects, predicates, values and dates, so that
 // overlapping periods, repeated values and boundary dates come up often.
-import type { Change, ChangeSet, Fact, MemoryStore, Timestamp } from '@factloom/core';
-import { toTimestamp } from '@factloom/core';
+import type { Change, ChangeSet, Fact, MemoryStore, Timestamp } from '@kronomind/core';
+import { toTimestamp } from '@kronomind/core';
 import fc from 'fast-check';
 
 export const PROPERTY_NAMESPACE = 'repo:property';

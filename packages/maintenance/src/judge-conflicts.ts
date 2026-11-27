@@ -9,7 +9,7 @@ import {
   ok,
   periodsOverlap,
   type Result,
-} from '@factloom/core';
+} from '@kronomind/core';
 import {
   formatJudgeInput,
   JUDGE_INSTRUCTIONS,

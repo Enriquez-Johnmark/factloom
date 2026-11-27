@@ -38,7 +38,7 @@ export type ConflictJudgeInput = {
 
 /**
  * Gives one verdict per candidate, in the order of the candidates, or `llm_failed` when it
- * could not decide. It changes nothing. `@factloom/maintenance` implements it; a use case
+ * could not decide. It changes nothing. `@kronomind/maintenance` implements it; a use case
  * receives one as a dependency, and a test passes a plain function.
  */
 export type ConflictJudge = (input: ConflictJudgeInput) => Promise<Result<readonly ConflictVerdict[]>>;

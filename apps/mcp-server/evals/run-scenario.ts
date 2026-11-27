@@ -19,15 +19,15 @@ import {
   type TimeFilter,
   type Timestamp,
   toTimestamp,
-} from '@factloom/core';
-import { changeFact, type FactHistoryEntry, getFactHistory, remember } from '@factloom/graph-rag';
-import { openSqliteMemoryStore } from '@factloom/storage';
+} from '@kronomind/core';
+import { changeFact, type FactHistoryEntry, getFactHistory, remember } from '@kronomind/graph-rag';
+import { openSqliteMemoryStore } from '@kronomind/storage';
 import type { Scenario } from './scenario.ts';
 
 const NAMESPACE = 'eval:scenario';
 
 /** The command that records the scenarios' LLM answers, named by the error for a missing recording. */
-export const SCENARIO_RECORD_COMMAND = 'pnpm --filter @factloom/mcp-server run record:scenarios';
+export const SCENARIO_RECORD_COMMAND = 'pnpm --filter @kronomind/mcp-server run record:scenarios';
 
 /** Where the recordings of one scenario file are: one directory per scenario. */
 export function findScenarioRecordingsDirectory(file: string): string {

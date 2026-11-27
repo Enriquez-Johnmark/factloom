@@ -15,7 +15,7 @@ import {
   purgeContent,
   recordFacts,
   type Timestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { type RecallInput, recall, recallWithSettings, searchFactsByGraph } from './recall.ts';
 

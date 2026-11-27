@@ -6,7 +6,7 @@ import {
   type OperationDeps,
   ok,
   type Result,
-} from '@factloom/core';
+} from '@kronomind/core';
 
 /** An entity named in new information, before it is known whether Factloom holds it. */
 export type EntityMention = { readonly type: string; readonly name: string };

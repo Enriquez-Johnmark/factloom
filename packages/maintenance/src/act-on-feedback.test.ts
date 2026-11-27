@@ -9,7 +9,7 @@ import {
   recordFeedback,
   TEST_DOMAIN,
   toTimestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { actOnFeedback, FEEDBACK_CONFIDENCE_DROP, FEEDBACK_CONFIDENCE_RAISE } from './act-on-feedback.ts';
 

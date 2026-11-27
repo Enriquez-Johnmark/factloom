@@ -1,4 +1,4 @@
-import type { Result, Timestamp } from '@factloom/core';
+import type { Result, Timestamp } from '@kronomind/core';
 
 /**
  * What the verification ladder reads from a repository, and nothing more. Paths are relative

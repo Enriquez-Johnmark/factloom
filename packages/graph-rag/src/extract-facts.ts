@@ -10,7 +10,7 @@ import {
   parseDateInput,
   type Result,
   type Timestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { z } from 'zod';
 import type { StructuredFactInput } from './structured-fact-input.ts';
 

@@ -3,7 +3,7 @@
 // ADR 0020. It is in src, beside the embedder's own eval tests, because only src may build
 // the real embedder.
 import { join } from 'node:path';
-import { DEFAULT_RECALL_SETTINGS } from '@factloom/graph-rag';
+import { DEFAULT_RECALL_SETTINGS } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
 import { measureRetrieval, RETRIEVAL_EVAL_SETTINGS } from '../evals/retrieval/measure-retrieval.ts';
 import { readRetrievalCases } from '../evals/retrieval/retrieval-cases.ts';

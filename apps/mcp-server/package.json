@@ -1,5 +1,5 @@
 {
-  "name": "@factloom/mcp-server",
+  "name": "@kronomind/mcp-server",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,10 +15,10 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",
-    "@factloom/core": "workspace:*",
-    "@factloom/graph-rag": "workspace:*",
-    "@factloom/maintenance": "workspace:*",
-    "@factloom/storage": "workspace:*",
+    "@kronomind/core": "workspace:*",
+    "@kronomind/graph-rag": "workspace:*",
+    "@kronomind/maintenance": "workspace:*",
+    "@kronomind/storage": "workspace:*",
     "@huggingface/transformers": "catalog:",
     "@modelcontextprotocol/server": "catalog:",
     "zod": "catalog:"

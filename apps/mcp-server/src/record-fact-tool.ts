@@ -1,4 +1,4 @@
-import { recordStructuredFacts } from '@factloom/graph-rag';
+import { recordStructuredFacts } from '@kronomind/graph-rag';
 import { z } from 'zod';
 import type { RegisterTool } from './create-factloom-server.ts';
 import { buildFactInputShape, readFactInput } from './fact-input-schema.ts';

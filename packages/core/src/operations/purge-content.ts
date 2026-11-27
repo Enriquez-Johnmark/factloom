@@ -118,7 +118,7 @@ async function findPurgeSet(
  * changes nothing and writes no audit entry.
  *
  * What this does not remove (ADR 0012, "What purge does not remove"): freed pages of the
- * database file and its write-ahead log until `clearFreedPages` of `@factloom/storage` runs,
+ * database file and its write-ahead log until `clearFreedPages` of `@kronomind/storage` runs,
  * backups and copies of the file, entity names, and what was sent to the LLM provider.
  */
 export async function purgeContent(

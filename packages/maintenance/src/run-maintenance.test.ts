@@ -1,4 +1,4 @@
-import { err, ok, toTimestamp } from '@factloom/core';
+import { err, ok, toTimestamp } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { type MaintenanceJob, MaintenanceReportSchema, runMaintenance } from './run-maintenance.ts';
 

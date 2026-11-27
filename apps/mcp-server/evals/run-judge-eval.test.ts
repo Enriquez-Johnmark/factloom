@@ -1,5 +1,5 @@
-import { type ConflictJudge, err, ok } from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { type ConflictJudge, err, ok } from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
 import type { JudgeCase } from './judge-case.ts';
 import { formatJudgeReport, type JudgedCandidate, judgeCases, measureJudgeRates } from './run-judge-eval.ts';

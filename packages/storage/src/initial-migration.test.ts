@@ -4,7 +4,7 @@
 // allowed only for testing what the schema itself enforces.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseDateInput, type Timestamp } from '@factloom/core';
+import { parseDateInput, type Timestamp } from '@kronomind/core';
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
 import { beforeEach, describe, expect, it } from 'vitest';

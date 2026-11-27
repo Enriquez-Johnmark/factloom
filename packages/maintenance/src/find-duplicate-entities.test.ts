@@ -9,7 +9,7 @@ import {
   ok,
   TEST_DOMAIN,
   toTimestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { findDuplicateEntities, NAME_STAGE } from './find-duplicate-entities.ts';
 

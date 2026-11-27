@@ -1,5 +1,5 @@
-import { createTestDeps, recordFacts } from '@factloom/core';
-import { giveFeedback, softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { createTestDeps, recordFacts } from '@kronomind/core';
+import { giveFeedback, softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
 import { buildServerDeps, findRepositoryName } from './build-server-deps.ts';
 import { TEST_NAMESPACE, UNREACHABLE_LLM } from './testing/connect-in-process.ts';

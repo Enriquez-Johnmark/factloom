@@ -12,7 +12,7 @@ import {
   ok,
   PURGED_MARKER,
   type Result,
-} from '@factloom/core';
+} from '@kronomind/core';
 import type { Database } from 'better-sqlite3';
 import { LATEST_CONFIDENCE } from './confidence-columns.ts';
 import { resolvedEntityId, sameEntityIds } from './entity-resolution-sql.ts';

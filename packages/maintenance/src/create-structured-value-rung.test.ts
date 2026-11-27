@@ -1,4 +1,4 @@
-import { type FactWithSources, ok, toTimestamp } from '@factloom/core';
+import { type FactWithSources, ok, toTimestamp } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import {
   type CheckedValue,

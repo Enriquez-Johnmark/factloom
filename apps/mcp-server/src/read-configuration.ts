@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { err, type Namespace, NamespaceSchema, ok, type Result } from '@factloom/core';
+import { err, type Namespace, NamespaceSchema, ok, type Result } from '@kronomind/core';
 import { z } from 'zod';
 
 /** What the server needs to know from its environment. */

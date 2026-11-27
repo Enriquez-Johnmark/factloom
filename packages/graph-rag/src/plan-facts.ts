@@ -7,7 +7,7 @@ import {
   type OperationDeps,
   ok,
   type Result,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { type EntityMention, resolveEntities } from './resolve-entities.ts';
 import type { StructuredFactInput } from './structured-fact-input.ts';
 

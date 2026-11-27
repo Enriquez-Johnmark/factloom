@@ -1,15 +1,15 @@
 // The extraction step that the extraction cases of FL-029 measure in production use: the text
 // goes through the `remember` use case on empty memory, and the facts it recorded come back.
 import { join } from 'node:path';
-import { createTestDeps, type FactWithSources, type LlmClient, ok } from '@factloom/core';
-import { remember, softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { createTestDeps, type FactWithSources, type LlmClient, ok } from '@kronomind/core';
+import { remember, softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import type { ExtractedFact, ExtractFacts } from './score-extraction.ts';
 
 /** Where the recordings of the extraction cases are. */
 export const EXTRACTION_RECORDINGS_DIRECTORY = join(import.meta.dirname, 'recordings', 'extraction');
 
 /** The command that records them, named by the error for a missing recording. */
-export const EXTRACTION_RECORD_COMMAND = 'pnpm --filter @factloom/mcp-server run record:extraction';
+export const EXTRACTION_RECORD_COMMAND = 'pnpm --filter @kronomind/mcp-server run record:extraction';
 
 /** A recorded fact in the shape the scorer compares. */
 function toExtractedFact(found: FactWithSources): ExtractedFact {

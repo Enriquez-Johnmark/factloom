@@ -1,4 +1,4 @@
-import { FactUsageSchema, type MemoryStore, type Timestamp, TimestampSchema } from '@factloom/core';
+import { FactUsageSchema, type MemoryStore, type Timestamp, TimestampSchema } from '@kronomind/core';
 import type { Database } from 'better-sqlite3';
 
 /**

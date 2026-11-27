@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseDateInput, type Timestamp } from '@factloom/core';
+import { parseDateInput, type Timestamp } from '@kronomind/core';
 import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 import { runMigrations } from './run-migrations.ts';

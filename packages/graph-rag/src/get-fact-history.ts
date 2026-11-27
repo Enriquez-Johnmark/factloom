@@ -9,7 +9,7 @@ import {
   ok,
   type Result,
   type SourceId,
-} from '@factloom/core';
+} from '@kronomind/core';
 
 /** An audit entry with the content of the source that explains it, or null if there is none or it was purged. */
 export type ExplainedAuditEntry = AuditEntry & { readonly explanation: string | null };

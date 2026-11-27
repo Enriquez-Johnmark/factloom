@@ -1,4 +1,4 @@
-import { DomainSchema } from '@factloom/core';
+import { DomainSchema } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { softwareDevelopmentDomain } from './software-development-domain.ts';
 

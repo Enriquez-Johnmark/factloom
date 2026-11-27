@@ -6,9 +6,9 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
-import { createFakeEmbedder, ok, toTimestamp } from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
-import { openSqliteMemoryStore } from '@factloom/storage';
+import { createFakeEmbedder, ok, toTimestamp } from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
+import { openSqliteMemoryStore } from '@kronomind/storage';
 import {
   createAnthropicLlmClient,
   createAnthropicMessageSender,

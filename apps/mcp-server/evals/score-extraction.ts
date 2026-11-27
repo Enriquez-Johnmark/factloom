@@ -1,7 +1,7 @@
 // Scores extracted facts against an extraction case. A fact matches when its subject name,
 // predicate, object and both dates agree; the statement is not compared, and the entity type is
 // reported apart because entity resolution reuses an existing entity of any type.
-import { normaliseEntityName, parseDateInput, type Result } from '@factloom/core';
+import { normaliseEntityName, parseDateInput, type Result } from '@kronomind/core';
 import type { CaseFact, ExtractionCase } from './extraction-case.ts';
 
 /** A fact as an extraction run returns it: the shape of a case fact. */

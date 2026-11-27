@@ -7,7 +7,7 @@ import type {
   MemoryStore,
   Namespace,
   Timestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { McpServer } from '@modelcontextprotocol/server';
 import type { FileSourceAnchorer } from './anchor-file-source.ts';
 import { SERVER_INSTRUCTIONS } from './server-instructions.ts';

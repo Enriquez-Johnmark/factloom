@@ -1,4 +1,4 @@
-import type { Domain, FactWithSources } from '@factloom/core';
+import type { Domain, FactWithSources } from '@kronomind/core';
 
 /**
  * The software development domain: what Factloom can say about a repository. It starts with

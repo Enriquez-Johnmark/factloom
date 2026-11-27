@@ -1,7 +1,7 @@
-import { createTestDeps } from '@factloom/core';
+import { createTestDeps } from '@kronomind/core';
 import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
 import { createFactloomServer, type ServerDeps } from './create-factloom-server.ts';
 import { SERVER_INSTRUCTIONS } from './server-instructions.ts';

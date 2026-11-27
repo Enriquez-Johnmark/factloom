@@ -1,4 +1,4 @@
-import { type FactWithSources, ok, toTimestamp } from '@factloom/core';
+import { type FactWithSources, ok, toTimestamp } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { createNameCheckRung } from './create-name-check-rung.ts';
 import type { RepositoryReader } from './repository-reader.ts';

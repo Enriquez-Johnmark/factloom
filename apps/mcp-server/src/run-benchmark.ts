@@ -7,9 +7,9 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { cpus, arch, release, tmpdir, type } from 'node:os';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
-import { type Embedder, type MemoryStore, parseDateInput, type Timestamp } from '@factloom/core';
-import { recall, recordStructuredFacts, remember, softwareDevelopmentDomain } from '@factloom/graph-rag';
-import { openSqliteMemoryStore } from '@factloom/storage';
+import { type Embedder, type MemoryStore, parseDateInput, type Timestamp } from '@kronomind/core';
+import { recall, recordStructuredFacts, remember, softwareDevelopmentDomain } from '@kronomind/graph-rag';
+import { openSqliteMemoryStore } from '@kronomind/storage';
 import {
   type BenchmarkRow,
   formatBenchmarkTable,

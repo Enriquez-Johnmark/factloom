@@ -1,5 +1,5 @@
-import { type Domain, ok, type Result } from '@factloom/core';
-import type { StructuredFactInput } from '@factloom/graph-rag';
+import { type Domain, ok, type Result } from '@kronomind/core';
+import type { StructuredFactInput } from '@kronomind/graph-rag';
 import { z } from 'zod';
 import { readOptionalDate } from './read-optional-date.ts';
 

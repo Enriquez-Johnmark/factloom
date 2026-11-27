@@ -1,4 +1,4 @@
-import { err, ok, type Result } from '@factloom/core';
+import { err, ok, type Result } from '@kronomind/core';
 
 /** One ranked list of identifiers, best first, and how much say it has. */
 export type RankedList = { readonly ids: readonly string[]; readonly weight: number };

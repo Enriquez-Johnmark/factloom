@@ -1,4 +1,4 @@
-# @factloom/core
+# @kronomind/core
 
 The innermost package. It owns the types and schemas, the `Result` type and error codes, the interfaces for storage, the LLM and embeddings, and the fact operations that change memory.
 

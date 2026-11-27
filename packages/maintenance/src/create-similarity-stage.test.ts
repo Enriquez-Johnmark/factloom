@@ -8,7 +8,7 @@ import {
   ok,
   TEST_DOMAIN,
   toTimestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { createSimilarityStage } from './create-similarity-stage.ts';
 import { findDuplicateEntities, NAME_STAGE } from './find-duplicate-entities.ts';

@@ -10,8 +10,8 @@ import {
   parseDateInput,
   recordFacts,
   type Timestamp,
-} from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+} from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
 import fc from 'fast-check';

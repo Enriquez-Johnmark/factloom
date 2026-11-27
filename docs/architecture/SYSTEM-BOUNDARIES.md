@@ -6,10 +6,10 @@ Which package may import which, how that is enforced, and what each package's pu
 
 | Package | May import | Must not import |
 |---|---|---|
-| `@factloom/core` | `zod` | Any other `@factloom` package. Any database, LLM, embedding or MCP library. A test framework, in its source files |
-| `@factloom/graph-rag` | `@factloom/core`, `zod` | `@factloom/storage`, `@factloom/maintenance`. Any database, LLM, embedding or MCP library |
-| `@factloom/storage` | `@factloom/core`, `better-sqlite3`, `sqlite-vec` | `@factloom/graph-rag`, `@factloom/maintenance`. Any LLM, embedding or MCP library |
-| `@factloom/maintenance` | `@factloom/core`, `zod` | `@factloom/storage`, `@factloom/graph-rag`. Any database, LLM, embedding or MCP library |
+| `@kronomind/core` | `zod` | Any other `@factloom` package. Any database, LLM, embedding or MCP library. A test framework, in its source files |
+| `@kronomind/graph-rag` | `@kronomind/core`, `zod` | `@kronomind/storage`, `@kronomind/maintenance`. Any database, LLM, embedding or MCP library |
+| `@kronomind/storage` | `@kronomind/core`, `better-sqlite3`, `sqlite-vec` | `@kronomind/graph-rag`, `@kronomind/maintenance`. Any LLM, embedding or MCP library |
+| `@kronomind/maintenance` | `@kronomind/core`, `zod` | `@kronomind/storage`, `@kronomind/graph-rag`. Any database, LLM, embedding or MCP library |
 | `apps/mcp-server` | Every `@factloom` package, the MCP SDK, the Anthropic SDK, the embedding library, `zod` | Nothing is forbidden, but it holds no rules about facts |
 
 ```
@@ -23,24 +23,24 @@ apps/mcp-server ──► graph-rag ─────► core ◄── storage
 
 Two further rules:
 
-- Packages import each other by package name, `@factloom/core`, never by a relative path that leaves the package and never through a path alias.
+- Packages import each other by package name, `@kronomind/core`, never by a relative path that leaves the package and never through a path alias.
 - A package is imported only through its `src/index.ts`. Nothing reaches into another package's files.
 
 ## How the rules are enforced
 
 Three mechanisms, so that a forbidden import fails without anyone remembering the rule.
 
-1. **Declared dependencies.** Each `package.json` lists only what the table allows. pnpm does not make an undeclared workspace package resolvable, so `import '@factloom/storage'` inside `core` fails the type check and fails at run time. This was run in the no-build setup ([toolchain research](../research/technical/toolchain.md)).
+1. **Declared dependencies.** Each `package.json` lists only what the table allows. pnpm does not make an undeclared workspace package resolvable, so `import '@kronomind/storage'` inside `core` fails the type check and fails at run time. This was run in the no-build setup ([toolchain research](../research/technical/toolchain.md)).
 2. **Lint.** Planned: a lint rule per package forbids importing the packages and libraries in the "must not import" column, and forbids deep imports into another package. This catches the case where someone adds a dependency to `package.json` to make an import work.
 3. **One public entry.** Each `package.json` exports only its `index.ts`. No package has a second entry.
 
-The lint rules were run in the scaffold on 2026-11-14, in the no-build workspace: a forbidden import in each of the three packages, a forbidden import with its dependency declared, a deep import by package name and a deep import by relative path each failed the check, and each was then removed. The recorded output is in work item [FL-001](../roadmap/epics/EPIC-01.md). The rules for `maintenance` were run the same way on 2026-11-16: an import of `@factloom/storage`, of `@factloom/graph-rag`, of `better-sqlite3` and a deep import from inside it, and an import of it from `graph-rag` and from `storage`, each failed the check. The recorded output is in work item [FL-040](../roadmap/epics/EPIC-08.md).
+The lint rules were run in the scaffold on 2026-11-14, in the no-build workspace: a forbidden import in each of the three packages, a forbidden import with its dependency declared, a deep import by package name and a deep import by relative path each failed the check, and each was then removed. The recorded output is in work item [FL-001](../roadmap/epics/EPIC-01.md). The rules for `maintenance` were run the same way on 2026-11-16: an import of `@kronomind/storage`, of `@kronomind/graph-rag`, of `better-sqlite3` and a deep import from inside it, and an import of it from `graph-rag` and from `storage`, each failed the check. The recorded output is in work item [FL-040](../roadmap/epics/EPIC-08.md).
 
 ## Public API of each package
 
 Each package exports only what another package needs. Everything else stays private to the package. There are no barrel files inside a package: `src/index.ts` is the only file that re-exports.
 
-### `@factloom/core`
+### `@kronomind/core`
 
 | Group | Exports |
 |---|---|
@@ -58,18 +58,18 @@ Each package exports only what another package needs. Everything else stays priv
 
 The test helpers are ordinary exports of the one `index.ts`. They import no test framework, so nothing in `core`'s source does. The operations of phases 2 and 3 in [`INTERFACES.md`](INTERFACES.md) are added to this list in their phase.
 
-### `@factloom/graph-rag`
+### `@kronomind/graph-rag`
 
 | Group | Exports |
 |---|---|
 | Use cases | `remember`, `recordStructuredFacts`, `changeFact`, `recall`, `getFactHistory`, and from phase 2 `giveFeedback`, with their input and output types |
 | Domain | `softwareDevelopmentDomain`, and from phase 3 the checks the verification job takes from it: `findSymbolNames` (FL-071), and `readDependencyVersion` and `describeDependencyVersion` (FL-062) |
-| Secret check, phase 3 | `checkForSecrets`, with `CheckedField`: the check of FL-022, passed by the composition root to the LLM verification rung of `@factloom/maintenance`, which may not import this package, so that no file it matches is sent to the LLM (FL-051) |
+| Secret check, phase 3 | `checkForSecrets`, with `CheckedField`: the check of FL-022, passed by the composition root to the LLM verification rung of `@kronomind/maintenance`, which may not import this package, so that no file it matches is sent to the LLM (FL-051) |
 | Retrieval eval | `recallWithSettings`, with `RecallSettings` and `DEFAULT_RECALL_SETTINGS`: recall with explicit lane weights, lane list length and fusion constant, for the eval in `apps/mcp-server/evals/` (FL-033) |
 
 Rank fusion and entity resolution are internal.
 
-### `@factloom/storage`
+### `@kronomind/storage`
 
 | Group | Exports |
 |---|---|
@@ -78,7 +78,7 @@ Rank fusion and entity resolution are internal.
 
 The SQL, the migration runner and the row mappers are internal. So is the storage contract suite, `describeMemoryStoreContract`: this package runs it against the in-memory store from `core` and against the SQLite adapter. The suite moves to a shared place when a second adapter exists.
 
-### `@factloom/maintenance`
+### `@kronomind/maintenance`
 
 | Group | Exports |
 |---|---|

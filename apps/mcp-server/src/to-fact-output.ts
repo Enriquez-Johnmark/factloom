@@ -1,4 +1,4 @@
-import type { FactWithSources } from '@factloom/core';
+import type { FactWithSources } from '@kronomind/core';
 import { z } from 'zod';
 
 /** A fact as the tools return it, in the field names of MCP-TOOLS.md. */

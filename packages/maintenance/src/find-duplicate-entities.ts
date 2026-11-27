@@ -6,7 +6,7 @@ import {
   type OperationDeps,
   ok,
   type Result,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { normaliseNameStrictly } from './normalise-name-strictly.ts';
 import type { JobCounts } from './run-maintenance.ts';
 

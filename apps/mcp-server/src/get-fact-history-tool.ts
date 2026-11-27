@@ -1,4 +1,4 @@
-import { getFactHistory } from '@factloom/graph-rag';
+import { getFactHistory } from '@kronomind/graph-rag';
 import { z } from 'zod';
 import type { RegisterTool } from './create-factloom-server.ts';
 import { FactOutputSchema, toFactOutput } from './to-fact-output.ts';

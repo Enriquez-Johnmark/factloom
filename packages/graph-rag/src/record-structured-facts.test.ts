@@ -1,4 +1,4 @@
-import { createTestDeps, type MemoryStore, parseDateInput, type Timestamp } from '@factloom/core';
+import { createTestDeps, type MemoryStore, parseDateInput, type Timestamp } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { recordStructuredFacts } from './record-structured-facts.ts';
 import type { StructuredFactInput } from './structured-fact-input.ts';

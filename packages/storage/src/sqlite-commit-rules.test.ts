@@ -1,7 +1,7 @@
 // Tests of what the SQLite commit refuses: the single-value rule and the error code of each
 // refusal. The store has no read methods yet, so these tests assert on results and on rows
 // read with SQL through a second connection.
-import type { Change } from '@factloom/core';
+import type { Change } from '@kronomind/core';
 import type Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 import {

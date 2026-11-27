@@ -1,4 +1,4 @@
-import { err, ok, parseDateInput, type Result, type Timestamp } from '@factloom/core';
+import { err, ok, parseDateInput, type Result, type Timestamp } from '@kronomind/core';
 
 /**
  * Reads an optional date field of a tool: absent is null; a full UTC timestamp or a calendar

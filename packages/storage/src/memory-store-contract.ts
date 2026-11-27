@@ -1,5 +1,5 @@
 // What every MemoryStore must do. The same cases run against the in-memory store of
-// @factloom/core and against each storage adapter, so that they cannot drift apart.
+// @kronomind/core and against each storage adapter, so that they cannot drift apart.
 // The suite calls only MemoryStore methods and builds every change set by hand, except the
 // purge cases, which run purgeContent of core: what they test is what it leaves readable.
 import type {
@@ -15,8 +15,8 @@ import type {
   Source,
   TimeFilter,
   Timestamp,
-} from '@factloom/core';
-import { parseDateInput, purgeContent } from '@factloom/core';
+} from '@kronomind/core';
+import { parseDateInput, purgeContent } from '@kronomind/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 /** The groups of the suite. An adapter under construction turns them on one by one. */

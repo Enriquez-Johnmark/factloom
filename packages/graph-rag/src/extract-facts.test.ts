@@ -1,4 +1,4 @@
-import { createScriptedLlm, err, type LlmClient, parseDateInput, type Timestamp } from '@factloom/core';
+import { createScriptedLlm, err, type LlmClient, parseDateInput, type Timestamp } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { buildExtractionInstructions, buildExtractionSchema, extractFacts } from './extract-facts.ts';

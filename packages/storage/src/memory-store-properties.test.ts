@@ -1,8 +1,8 @@
 // Property-based tests of the rules of memory. Where the contract suite checks chosen
 // examples, these check invariants against generated sequences of changes. A failure prints
 // its seed and the shortest sequence that still fails; add that sequence to the contract suite.
-import type { Fact, FactWithSources, MemoryStore, TimeFilter } from '@factloom/core';
-import { createInMemoryStore, matchesTimeFilter, periodsOverlap } from '@factloom/core';
+import type { Fact, FactWithSources, MemoryStore, TimeFilter } from '@kronomind/core';
+import { createInMemoryStore, matchesTimeFilter, periodsOverlap } from '@kronomind/core';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {

@@ -6,7 +6,7 @@ import {
   type OperationDeps,
   ok,
   type Result,
-} from '@factloom/core';
+} from '@kronomind/core';
 
 export type RememberedFact = FactWithSources & {
   /** 'restated' when the fact was already live and only gained a source. */

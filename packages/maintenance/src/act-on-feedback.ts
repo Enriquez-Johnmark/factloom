@@ -14,7 +14,7 @@ import {
   ok,
   type ReasonCode,
   type Result,
-} from '@factloom/core';
+} from '@kronomind/core';
 
 /**
  * How much feedback `right` raises a fact's confidence (FL-060). No source gives evidence

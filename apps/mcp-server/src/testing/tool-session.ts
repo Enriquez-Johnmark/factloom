@@ -1,4 +1,4 @@
-import { createInMemoryStore, type MemoryStore } from '@factloom/core';
+import { createInMemoryStore, type MemoryStore } from '@kronomind/core';
 import type { Client } from '@modelcontextprotocol/client';
 import { z } from 'zod';
 import { FACTLOOM_TOOLS } from '../factloom-tools.ts';

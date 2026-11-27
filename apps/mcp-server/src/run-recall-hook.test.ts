@@ -1,4 +1,4 @@
-import { createTestDeps, recordFacts, recordVerification } from '@factloom/core';
+import { createTestDeps, recordFacts, recordVerification } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { NOTHING_MATCHES_LINE, RECALL_HOOK_LIMIT, runRecallHook } from './run-recall-hook.ts';

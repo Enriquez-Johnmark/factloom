@@ -1,4 +1,4 @@
-import { createTestDeps, err, type MemoryStore, type OperationDeps, parseDateInput } from '@factloom/core';
+import { createTestDeps, err, type MemoryStore, type OperationDeps, parseDateInput } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { type EntityMention, resolveEntities } from './resolve-entities.ts';
 

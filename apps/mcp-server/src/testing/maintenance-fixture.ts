@@ -13,10 +13,10 @@ import {
   recordFacts,
   TEST_DOMAIN,
   toTimestamp,
-} from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
-import { runMaintenance } from '@factloom/maintenance';
-import { openSqliteMemoryStore } from '@factloom/storage';
+} from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
+import { runMaintenance } from '@kronomind/maintenance';
+import { openSqliteMemoryStore } from '@kronomind/storage';
 import { createGitRepositoryReader } from '../create-git-repository-reader.ts';
 import { buildMaintenanceJobs } from '../maintenance-jobs.ts';
 import { createFixtureRepository } from './fixture-repository.ts';

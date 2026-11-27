@@ -3,8 +3,8 @@
 // written as a recording that `pnpm check` then replays. Run by hand: it spends tokens. It sits
 // in src, not evals, because it builds the Anthropic client (the precedent of
 // record-extraction.ts). main.ts never loads it.
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
-import { judgeConflicts } from '@factloom/maintenance';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
+import { judgeConflicts } from '@kronomind/maintenance';
 import { createRecordingLlmClient } from '../evals/create-recording-llm-client.ts';
 import { JUDGE_CASES_DIRECTORY, loadJudgeCases } from '../evals/judge-case.ts';
 import {

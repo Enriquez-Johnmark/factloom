@@ -1,4 +1,4 @@
-import { createInMemoryStore, type FactWithSources, parseDateInput } from '@factloom/core';
+import { createInMemoryStore, type FactWithSources, parseDateInput } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { buildSyntheticNamespace } from './build-synthetic-namespace.ts';
 

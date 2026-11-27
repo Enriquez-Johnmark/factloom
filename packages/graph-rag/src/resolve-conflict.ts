@@ -6,7 +6,7 @@ import {
   type FactWithSources,
   JUDGE_CANDIDATE_LIMIT,
   type Timestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import type { PlannedFact } from './plan-facts.ts';
 
 /** What `remember` does with a fact that conflicts with stored facts, once the judge has spoken. */

@@ -1,4 +1,4 @@
-import { err } from '@factloom/core';
+import { err } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { toToolError } from './to-tool-error.ts';
 

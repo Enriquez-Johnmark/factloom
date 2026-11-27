@@ -2,8 +2,8 @@
 // FL-041, each answered from the scenario's recordings under its own task's model, so that a
 // change of either model gives its requests new keys. The replay test and the record command
 // both build them here.
-import type { ConflictJudge, LlmClient } from '@factloom/core';
-import { judgeConflicts } from '@factloom/maintenance';
+import type { ConflictJudge, LlmClient } from '@kronomind/core';
+import { judgeConflicts } from '@kronomind/maintenance';
 import { createRecordingLlmClient } from './create-recording-llm-client.ts';
 import { findScenarioRecordingsDirectory, SCENARIO_RECORD_COMMAND } from './run-scenario.ts';
 

@@ -1,5 +1,5 @@
-import { createInMemoryStore, type MemoryStore } from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { createInMemoryStore, type MemoryStore } from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import type { Client } from '@modelcontextprotocol/client';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';

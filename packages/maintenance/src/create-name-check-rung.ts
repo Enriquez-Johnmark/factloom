@@ -1,4 +1,4 @@
-import { type FactWithSources, ok } from '@factloom/core';
+import { type FactWithSources, ok } from '@kronomind/core';
 import { containsWholeWord } from './contains-whole-word.ts';
 import { decided, type VerificationRung } from './verify-anchored-facts.ts';
 

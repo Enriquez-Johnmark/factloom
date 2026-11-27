@@ -1,6 +1,6 @@
-import { corePackageName } from '@factloom/core';
-import { graphRagBuiltOn } from '@factloom/graph-rag';
-import { openSqliteMemoryStore } from '@factloom/storage';
+import { corePackageName } from '@kronomind/core';
+import { graphRagBuiltOn } from '@kronomind/graph-rag';
+import { openSqliteMemoryStore } from '@kronomind/storage';
 
 /**
  * The workspace packages the server is wired from. A placeholder, so that the scaffold can
@@ -8,6 +8,6 @@ import { openSqliteMemoryStore } from '@factloom/storage';
  * native modules. The composition root replaces it.
  */
 export function listWiredPackages(): readonly string[] {
-  const storage = typeof openSqliteMemoryStore === 'function' ? ['@factloom/storage'] : [];
+  const storage = typeof openSqliteMemoryStore === 'function' ? ['@kronomind/storage'] : [];
   return [...new Set([corePackageName, ...graphRagBuiltOn, ...storage])];
 }

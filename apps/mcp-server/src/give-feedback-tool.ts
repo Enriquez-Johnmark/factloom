@@ -1,4 +1,4 @@
-import { giveFeedback } from '@factloom/graph-rag';
+import { giveFeedback } from '@kronomind/graph-rag';
 import { z } from 'zod';
 import type { RegisterTool } from './create-factloom-server.ts';
 import { toToolError } from './to-tool-error.ts';

@@ -7,7 +7,7 @@ export type FeedbackFollowUp = 'confidence_raised' | 'confidence_lowered' | 'ret
 
 /**
  * Acts on one recorded feedback under the correction policy of the domain in `deps`, through
- * fact operations, and says what it did. `@factloom/maintenance` implements it as
+ * fact operations, and says what it did. `@kronomind/maintenance` implements it as
  * `actOnFeedback`; `giveFeedback` receives one as a dependency, and a test passes a plain
  * function. It takes the use case's own dependencies, so it changes the memory the feedback
  * was recorded in.

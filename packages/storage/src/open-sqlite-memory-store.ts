@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { err, type MemoryStore, ok, type Result, toTimestamp } from '@factloom/core';
+import { err, type MemoryStore, ok, type Result, toTimestamp } from '@kronomind/core';
 import type { Database } from 'better-sqlite3';
 import { createCommit } from './create-commit.ts';
 import { createReads } from './create-reads.ts';

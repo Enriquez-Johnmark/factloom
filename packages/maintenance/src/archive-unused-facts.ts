@@ -5,7 +5,7 @@ import {
   ok,
   type Result,
   toTimestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import type { JobCounts } from './run-maintenance.ts';
 
 /** The most unused facts one run considers. The rest wait for the next run. */

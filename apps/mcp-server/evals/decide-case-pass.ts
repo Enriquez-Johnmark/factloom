@@ -1,4 +1,4 @@
-import type { Result } from '@factloom/core';
+import type { Result } from '@kronomind/core';
 import type { ExtractionCase } from './extraction-case.ts';
 import { type ExtractedFact, matchesCaseFact } from './score-extraction.ts';
 

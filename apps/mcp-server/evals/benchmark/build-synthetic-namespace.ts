@@ -9,7 +9,7 @@ import {
   type Result,
   type Source,
   type Timestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 
 /** A pseudo-random number generator from a seed (mulberry32), so a namespace can be built again. */
 function createRandom(seed: number): () => number {

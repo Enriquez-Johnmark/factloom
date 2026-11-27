@@ -11,12 +11,12 @@ import {
   type Entity,
   type LlmClient,
   toTimestamp,
-} from '@factloom/core';
-import { cosineSimilarity, createSimilarityStage, NAME_STAGE } from '@factloom/maintenance';
+} from '@kronomind/core';
+import { cosineSimilarity, createSimilarityStage, NAME_STAGE } from '@kronomind/maintenance';
 import type { EntityPairCase } from './entity-pair.ts';
 
 export const ENTITY_RECORDINGS_DIRECTORY = join(import.meta.dirname, 'recordings', 'entities');
-export const ENTITY_RECORD_COMMAND = 'pnpm --filter @factloom/mcp-server run record:entities';
+export const ENTITY_RECORD_COMMAND = 'pnpm --filter @kronomind/mcp-server run record:entities';
 
 const NAMESPACE = 'repo:eval';
 

@@ -2,7 +2,7 @@
 // table, the bytes of the file and its write-ahead log, the triggers, and the inventory that
 // keeps purge complete when a later migration adds a column.
 import { readFileSync } from 'node:fs';
-import { type Change, type MemoryStore, purgeContent } from '@factloom/core';
+import { type Change, type MemoryStore, purgeContent } from '@kronomind/core';
 import type Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 import { clearFreedPages } from './clear-freed-pages.ts';

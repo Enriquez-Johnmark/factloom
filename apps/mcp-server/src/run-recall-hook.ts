@@ -12,8 +12,8 @@ import {
   type Result,
   type Timestamp,
   type VerificationOutcome,
-} from '@factloom/core';
-import { type RecalledFact, recall } from '@factloom/graph-rag';
+} from '@kronomind/core';
+import { type RecalledFact, recall } from '@kronomind/graph-rag';
 import { z } from 'zod';
 import type { Logger } from './create-factloom-server.ts';
 

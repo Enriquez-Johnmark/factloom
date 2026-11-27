@@ -1,5 +1,5 @@
-import { createInMemoryStore } from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { createInMemoryStore } from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { FACTLOOM_TOOLS } from './factloom-tools.ts';

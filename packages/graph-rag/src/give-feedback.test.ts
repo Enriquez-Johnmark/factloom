@@ -7,7 +7,7 @@ import {
   type OperationDeps,
   ok,
   recordFacts,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { giveFeedback } from './give-feedback.ts';
 import { softwareDevelopmentDomain } from './software-development-domain.ts';

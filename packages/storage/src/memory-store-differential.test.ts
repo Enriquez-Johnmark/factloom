@@ -3,8 +3,8 @@
 // independently, so a difference is a defect in one of them or a gap in INTERFACES.md. A failure
 // prints the seed, the shortest sequence that still differs, the read and both answers. Settle
 // it in one store or in INTERFACES.md, and add the case to the contract suite.
-import type { AuditEntry, CommitReceipt, Fact, MemoryStore, Result, TimeFilter } from '@factloom/core';
-import { createInMemoryStore } from '@factloom/core';
+import type { AuditEntry, CommitReceipt, Fact, MemoryStore, Result, TimeFilter } from '@kronomind/core';
+import { createInMemoryStore } from '@kronomind/core';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {

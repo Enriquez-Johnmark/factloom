@@ -1,4 +1,4 @@
-import { corePackageName } from '@factloom/core';
+import { corePackageName } from '@kronomind/core';
 
 /**
  * The packages this one is built on. A placeholder export, so that the scaffold can prove

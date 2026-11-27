@@ -15,7 +15,7 @@ import {
   type Result,
   type Timestamp,
   type Trigger,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { type CheckedField, checkForSecrets } from './check-for-secrets.ts';
 import { type EntityMention, resolveEntities } from './resolve-entities.ts';
 import type { StructuredFactInput } from './structured-fact-input.ts';

@@ -1,4 +1,4 @@
-import { type Embedder, err, ok, type Result } from '@factloom/core';
+import { type Embedder, err, ok, type Result } from '@kronomind/core';
 import { type FeatureExtractionPipeline, pipeline } from '@huggingface/transformers';
 
 // What the embedding spike ran (spikes/embedding-retrieval/README.md, "Model configurations")

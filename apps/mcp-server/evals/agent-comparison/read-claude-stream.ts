@@ -11,7 +11,7 @@
 // - tool calls: the `tool_use` blocks in the `message.content` of `assistant` events, counted
 //   once per block id. Several assistant events of one step can share a message, so a block is
 //   never counted twice. A subagent's tool calls are emitted too, and are counted.
-import { err, ok, type Result } from '@factloom/core';
+import { err, ok, type Result } from '@kronomind/core';
 import { z } from 'zod';
 
 /** What one session used, as the agent reported it. */

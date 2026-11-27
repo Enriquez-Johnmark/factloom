@@ -1,4 +1,4 @@
-import { err, ok, type Result } from '@factloom/core';
+import { err, ok, type Result } from '@kronomind/core';
 
 /** The kinds of secret the check recognises. A kind is named in the error, never the secret. */
 export type SecretKind =

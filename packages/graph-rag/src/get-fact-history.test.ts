@@ -13,7 +13,7 @@ import {
   parseDateInput,
   recordFacts,
   type Timestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { type FactHistoryEntry, getFactHistory } from './get-fact-history.ts';
 

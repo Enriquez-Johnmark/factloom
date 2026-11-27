@@ -3,7 +3,7 @@
 // recording that `pnpm check` then replays. Run by hand: it spends tokens. It sits in src,
 // not evals, because it builds the Anthropic client, and the boundary lint keeps evals from
 // importing src (the precedent of print-retrieval-eval.ts, FL-033). main.ts never loads it.
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { createRecordingLlmClient } from '../evals/create-recording-llm-client.ts';
 import { EXTRACTION_CASES_DIRECTORY, loadExtractionCases } from '../evals/extraction-case.ts';
 import {

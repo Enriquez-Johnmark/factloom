@@ -7,8 +7,8 @@ import {
   purgeContent,
   type Result,
   type Source,
-} from '@factloom/core';
-import { clearFreedPages } from '@factloom/storage';
+} from '@kronomind/core';
+import { clearFreedPages } from '@kronomind/storage';
 import type { Command } from './read-command.ts';
 
 export type PurgeCommandDeps = Pick<OperationDeps, 'store' | 'now' | 'newId'> & {

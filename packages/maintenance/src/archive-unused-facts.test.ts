@@ -6,7 +6,7 @@ import {
   recordFacts,
   TEST_DOMAIN,
   toTimestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { archiveUnusedFacts } from './archive-unused-facts.ts';
 

@@ -245,16 +245,16 @@ importers:
       '@anthropic-ai/sdk':
         specifier: 'catalog:'
         version: 1.8.0(zod@4.6.7)
-      '@factloom/core':
+      '@kronomind/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@factloom/graph-rag':
+      '@kronomind/graph-rag':
         specifier: workspace:*
         version: link:../../packages/graph-rag
-      '@factloom/maintenance':
+      '@kronomind/maintenance':
         specifier: workspace:*
         version: link:../../packages/maintenance
-      '@factloom/storage':
+      '@kronomind/storage':
         specifier: workspace:*
         version: link:../../packages/storage
       '@huggingface/transformers':
@@ -291,7 +291,7 @@ importers:
 
   packages/graph-rag:
     dependencies:
-      '@factloom/core':
+      '@kronomind/core':
         specifier: workspace:*
         version: link:../core
       zod:
@@ -300,7 +300,7 @@ importers:
 
   packages/maintenance:
     dependencies:
-      '@factloom/core':
+      '@kronomind/core':
         specifier: workspace:*
         version: link:../core
       zod:
@@ -309,7 +309,7 @@ importers:
 
   packages/storage:
     dependencies:
-      '@factloom/core':
+      '@kronomind/core':
         specifier: workspace:*
         version: link:../core
       better-sqlite3:

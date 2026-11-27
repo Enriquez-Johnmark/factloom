@@ -1,4 +1,4 @@
-# @factloom/mcp-server
+# @kronomind/mcp-server
 
 The MCP server that Claude Code and Codex start as a local process, and the composition root: the one place that names the concrete storage, LLM and embedding implementations and passes them to the use cases.
 

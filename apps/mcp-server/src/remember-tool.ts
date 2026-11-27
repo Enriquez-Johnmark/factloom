@@ -1,4 +1,4 @@
-import { remember } from '@factloom/graph-rag';
+import { remember } from '@kronomind/graph-rag';
 import { z } from 'zod';
 import type { RegisterTool } from './create-factloom-server.ts';
 import { readAnchoredSourceInput, SourceInputSchema } from './source-input-schema.ts';

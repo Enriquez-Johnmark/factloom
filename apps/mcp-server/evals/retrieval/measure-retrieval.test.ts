@@ -1,7 +1,7 @@
 // The harness with the fake embedder of core, so that it runs in `pnpm check`. The real
 // embedder runs in src/retrieval.eval.test.ts, under `pnpm eval`.
-import { createFakeEmbedder } from '@factloom/core';
-import { DEFAULT_RECALL_SETTINGS } from '@factloom/graph-rag';
+import { createFakeEmbedder } from '@kronomind/core';
+import { DEFAULT_RECALL_SETTINGS } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
 import {
   loadStatements,

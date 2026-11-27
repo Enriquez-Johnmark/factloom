@@ -10,7 +10,7 @@ import {
   type OperationDeps,
   ok,
   type Result,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { checkForSecrets } from './check-for-secrets.ts';
 import { type Declaration, isMappedSourcePath, readDeclarations } from './read-declarations.ts';
 import { recordStructuredFacts } from './record-structured-facts.ts';

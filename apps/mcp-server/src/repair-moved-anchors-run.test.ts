@@ -1,6 +1,6 @@
 // The anchor repair job of FL-054 after the verification job of FL-050, as the maintenance
 // command runs them, on fixture repositories and a SQLite file.
-import type { MemoryStore } from '@factloom/core';
+import type { MemoryStore } from '@kronomind/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   cleanUpFixtures,

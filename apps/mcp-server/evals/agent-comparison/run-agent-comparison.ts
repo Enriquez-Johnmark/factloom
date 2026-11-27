@@ -16,7 +16,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { homedir, tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { parseArgs } from 'node:util';
-import { toTimestamp } from '@factloom/core';
+import { toTimestamp } from '@kronomind/core';
 import { AGENT_TASKS, type AgentTask } from './agent-tasks.ts';
 import {
   type Baseline,

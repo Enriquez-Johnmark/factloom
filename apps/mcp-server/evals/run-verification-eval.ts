@@ -9,12 +9,12 @@ import {
   ok,
   toTimestamp,
   type VerificationOutcome,
-} from '@factloom/core';
-import { createLlmVerificationRung, type RepositoryReader } from '@factloom/maintenance';
+} from '@kronomind/core';
+import { createLlmVerificationRung, type RepositoryReader } from '@kronomind/maintenance';
 import type { VerificationAnswerName, VerificationCase } from './verification-case.ts';
 
 export const VERIFICATION_RECORDINGS_DIRECTORY = join(import.meta.dirname, 'recordings', 'verification');
-export const VERIFICATION_RECORD_COMMAND = 'pnpm --filter @factloom/mcp-server run record:verification';
+export const VERIFICATION_RECORD_COMMAND = 'pnpm --filter @kronomind/mcp-server run record:verification';
 
 export type VerificationRow = {
   readonly name: string;

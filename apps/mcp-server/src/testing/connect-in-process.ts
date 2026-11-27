@@ -1,5 +1,5 @@
-import { type ConflictJudge, createTestDeps, type LlmClient, type MemoryStore } from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { type ConflictJudge, createTestDeps, type LlmClient, type MemoryStore } from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
 import type { FileSourceAnchorer } from '../anchor-file-source.ts';

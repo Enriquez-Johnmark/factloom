@@ -11,7 +11,7 @@ import {
   toTimestamp,
   type VerificationMethod,
   type VerificationOutcome,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { type Anchor, findAnchor } from './find-anchor.ts';
 import type { RepositoryReader } from './repository-reader.ts';
 import type { JobCounts } from './run-maintenance.ts';

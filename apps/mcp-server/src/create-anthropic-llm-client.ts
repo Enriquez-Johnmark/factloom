@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { err, type LlmClient, type LlmTask, ok, type Result } from '@factloom/core';
+import { err, type LlmClient, type LlmTask, ok, type Result } from '@kronomind/core';
 import type { z } from 'zod';
 
 /** Which model answers each task. */

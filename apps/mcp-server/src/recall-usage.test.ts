@@ -1,5 +1,5 @@
 // The usage that the recall tool records after it answers (FL-055).
-import { err, type MemoryStore } from '@factloom/core';
+import { err, type MemoryStore } from '@kronomind/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { FACTLOOM_TOOLS } from './factloom-tools.ts';

@@ -7,7 +7,7 @@ import {
   type Result,
   recordFacts,
   recordVerification,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { findAnchor } from './find-anchor.ts';
 import type { RepositoryReader } from './repository-reader.ts';
 import type { JobCounts } from './run-maintenance.ts';

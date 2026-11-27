@@ -2,7 +2,7 @@
 // whether a person expects them to be the same thing. Read the same way as the judge cases.
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { err, ok, type Result } from '@factloom/core';
+import { err, ok, type Result } from '@kronomind/core';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 

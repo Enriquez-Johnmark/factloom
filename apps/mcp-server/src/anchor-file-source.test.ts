@@ -1,4 +1,4 @@
-import { err, ok } from '@factloom/core';
+import { err, ok } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { createFileSourceAnchorer } from './anchor-file-source.ts';
 

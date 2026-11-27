@@ -8,7 +8,7 @@ import {
   type Result,
   type TimeFilter,
   type Timestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { fuseRanks } from './fuse-ranks.ts';
 
 export type RecallInput = {

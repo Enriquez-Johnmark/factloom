@@ -1,7 +1,7 @@
 // The version check of FL-062 in the verification job, as the maintenance command runs it, on
 // fixture repositories whose commits have their own dates, and a SQLite file.
-import { type MemoryStore, type TimeFilter, toTimestamp } from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { type MemoryStore, type TimeFilter, toTimestamp } from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   cleanUpFixtures,

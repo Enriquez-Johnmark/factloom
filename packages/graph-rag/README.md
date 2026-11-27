@@ -1,8 +1,8 @@
-# @factloom/graph-rag
+# @kronomind/graph-rag
 
 Product 1, temporal graph RAG. It holds the use cases: `remember`, `recordStructuredFacts`, `changeFact`, `recall` and `getFactHistory`, with rank fusion and the software development domain.
 
-It imports `@factloom/core` only. It reaches storage, the LLM and embeddings through the interfaces in core, never through a concrete library.
+It imports `@kronomind/core` only. It reaches storage, the LLM and embeddings through the interfaces in core, never through a concrete library.
 
 **Status:** scaffold only. The export in `src/index.ts` is a placeholder.
 

@@ -1,4 +1,4 @@
-import { err, ok } from '@factloom/core';
+import { err, ok } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import type { CaseFact, ExtractionCase } from './extraction-case.ts';
 import { type ExtractedFact, type ExtractFacts, runExtractionCases, scoreCase } from './score-extraction.ts';

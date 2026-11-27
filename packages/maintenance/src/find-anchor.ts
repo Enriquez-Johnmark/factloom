@@ -1,4 +1,4 @@
-import type { Source } from '@factloom/core';
+import type { Source } from '@kronomind/core';
 
 /** The place in a fact's source a check reads: a path at a commit. */
 export type Anchor = { readonly path: string; readonly commit: string };

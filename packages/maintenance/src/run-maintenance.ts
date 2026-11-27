@@ -1,4 +1,4 @@
-import { ERROR_CODES, err, type Result, type Timestamp, TimestampSchema } from '@factloom/core';
+import { ERROR_CODES, err, type Result, type Timestamp, TimestampSchema } from '@kronomind/core';
 import { z } from 'zod';
 
 /** What one job did, in four counts. */

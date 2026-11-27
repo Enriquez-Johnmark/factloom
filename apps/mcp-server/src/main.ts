@@ -6,10 +6,10 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
-import { toTimestamp } from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
-import { runMaintenance } from '@factloom/maintenance';
-import { openSqliteMemoryStore } from '@factloom/storage';
+import { toTimestamp } from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
+import { runMaintenance } from '@kronomind/maintenance';
+import { openSqliteMemoryStore } from '@kronomind/storage';
 import {
   createAnthropicLlmClient,
   createAnthropicMessageSender,

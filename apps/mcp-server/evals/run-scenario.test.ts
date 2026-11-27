@@ -1,8 +1,8 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createScriptedLlm, err, type MemoryStore, parseDateInput } from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { createScriptedLlm, err, type MemoryStore, parseDateInput } from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
 import { buildAskTimeFilter, runScenario } from './run-scenario.ts';
 import { loadScenarios, parseScenario, type Scenario } from './scenario.ts';

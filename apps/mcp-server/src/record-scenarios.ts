@@ -2,7 +2,7 @@
 // FL-042, the conflict judge: every scenario runs with the real Anthropic client, wrapped in record mode, and each answer is written as a
 // recording in the scenario's own directory, which `pnpm check` then replays. Run by hand: it
 // spends tokens. It sits in src for the reason given in record-extraction.ts.
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { createScenarioLlm } from '../evals/create-scenario-llm.ts';
 import { runScenario } from '../evals/run-scenario.ts';
 import { loadScenarios, SCENARIOS_DIRECTORY } from '../evals/scenario.ts';

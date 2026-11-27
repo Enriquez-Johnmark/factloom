@@ -12,9 +12,9 @@ paths:
 - Import another package by its name, through its `index.ts`. Never use a relative path that leaves the package, a path alias, or a deep import.
 
 ```ts
-import { recordFacts } from '@factloom/core'; // yes
+import { recordFacts } from '@kronomind/core'; // yes
 import { recordFacts } from '../../core/src/operations/record-facts.ts'; // no
-import { recordFacts } from '@factloom/core/src/operations/record-facts.ts'; // no
+import { recordFacts } from '@kronomind/core/src/operations/record-facts.ts'; // no
 ```
 
 ## Interfaces live in core

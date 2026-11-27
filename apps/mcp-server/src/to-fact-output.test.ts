@@ -1,4 +1,4 @@
-import { type FactWithSources, parseDateInput, type Timestamp } from '@factloom/core';
+import { type FactWithSources, parseDateInput, type Timestamp } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { toFactOutput } from './to-fact-output.ts';
 

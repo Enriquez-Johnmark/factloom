@@ -8,7 +8,7 @@ import {
   recordVerification,
   TEST_DOMAIN,
   toTimestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { repairMovedAnchors } from './repair-moved-anchors.ts';
 import type { RepositoryReader } from './repository-reader.ts';

@@ -3,8 +3,8 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type ChangeSet, createInMemoryStore, parseDateInput } from '@factloom/core';
-import { openSqliteMemoryStore } from '@factloom/storage';
+import { type ChangeSet, createInMemoryStore, parseDateInput } from '@kronomind/core';
+import { openSqliteMemoryStore } from '@kronomind/storage';
 import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createLocalEmbedder } from './create-local-embedder.ts';

@@ -23,7 +23,7 @@ trap 'rm -rf "$install_directory"' EXIT
 )
 
 # Each package must be a copy from its archive, never a link into the workspace.
-for package in "$install_directory"/node_modules/@factloom/*; do
+for package in "$install_directory"/node_modules/@kronomind/*; do
   if [ -L "$package" ]; then
     echo "$package is a link, not an installed copy." >&2
     exit 1

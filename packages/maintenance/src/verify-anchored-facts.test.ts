@@ -7,7 +7,7 @@ import {
   recordFacts,
   TEST_DOMAIN,
   toTimestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import type { RepositoryReader } from './repository-reader.ts';
 import { type VerificationRung, verifyAnchoredFacts } from './verify-anchored-facts.ts';

@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
 import { findNamesOutsideDomain, parseScenario, type Scenario } from './scenario.ts';
 

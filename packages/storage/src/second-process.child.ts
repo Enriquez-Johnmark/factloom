@@ -1,8 +1,8 @@
 // A second process for the adapter tests, started with `node second-process.child.ts <mode>
 // <path>`. It prints one line when it has reached the state its mode promises, so that the
 // test knows when to act. It is not a test file and holds no assertions.
-import type { ChangeSet, Timestamp } from '@factloom/core';
-import { parseDateInput } from '@factloom/core';
+import type { ChangeSet, Timestamp } from '@kronomind/core';
+import { parseDateInput } from '@kronomind/core';
 import Database from 'better-sqlite3';
 import { openSqliteMemoryStore } from './index.ts';
 

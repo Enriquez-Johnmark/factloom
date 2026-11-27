@@ -7,7 +7,7 @@ import {
   type MemoryStore,
   ok,
   toTimestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import type { Client } from '@modelcontextprotocol/client';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';

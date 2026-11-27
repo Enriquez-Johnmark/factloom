@@ -14,7 +14,7 @@ import {
   type Result,
   recordFacts,
   type Trigger,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { type CheckedField, checkForSecrets } from './check-for-secrets.ts';
 import { conflictsWithEachOther, isSameFact } from './compare-with-candidates.ts';
 import { compareWithMemory } from './compare-with-memory.ts';

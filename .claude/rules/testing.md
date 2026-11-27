@@ -25,14 +25,14 @@ Not: `it('works')`, `it('recall test 2')`, `it('calls searchFactsByVector')`.
 
 ## Unit tests use fakes
 
-- Test a use case with `createInMemoryStore`, `createScriptedLlm` and `createFakeEmbedder` from `@factloom/core`. `createTestDeps`, from the same package, builds all three with a fixed clock and a counting identifier generator. No database and no network.
+- Test a use case with `createInMemoryStore`, `createScriptedLlm` and `createFakeEmbedder` from `@kronomind/core`. `createTestDeps`, from the same package, builds all three with a fixed clock and a counting identifier generator. No database and no network.
 - The helpers import no test framework. Do not add one to the source of `core`.
 - Assert on the result and on what the store contains afterwards. Do not assert on which methods were called.
 - A test that must make no LLM call passes a client that fails if it is called.
 - Use a fixed clock and a counting identifier generator. No test depends on the real time or on random values.
 
 ```ts
-import { createTestDeps, endFact } from '@factloom/core';
+import { createTestDeps, endFact } from '@kronomind/core';
 
 const deps = createTestDeps({ now: '2026-04-02T00:00:00.000Z' });
 const result = await endFact(deps, {

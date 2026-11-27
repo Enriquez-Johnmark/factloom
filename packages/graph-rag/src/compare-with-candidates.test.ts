@@ -1,4 +1,4 @@
-import { type FactObject, type FactWithSources, parseDateInput, type Timestamp } from '@factloom/core';
+import { type FactObject, type FactWithSources, parseDateInput, type Timestamp } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { type ComparedFact, compareWithCandidates } from './compare-with-candidates.ts';
 

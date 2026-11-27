@@ -1,4 +1,4 @@
-import { type FactWithSources, ok, type Result } from '@factloom/core';
+import { type FactWithSources, ok, type Result } from '@kronomind/core';
 import type { RepositoryReader } from './repository-reader.ts';
 import { decided, type RungDecision, type VerificationRung } from './verify-anchored-facts.ts';
 

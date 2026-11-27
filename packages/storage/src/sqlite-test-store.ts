@@ -3,7 +3,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { MemoryStore } from '@factloom/core';
+import type { MemoryStore } from '@kronomind/core';
 import Database from 'better-sqlite3';
 import { openSqliteMemoryStore } from './open-sqlite-memory-store.ts';
 

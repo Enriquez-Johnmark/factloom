@@ -1,7 +1,7 @@
 // The extraction cases of FL-029 through `remember`, answered from recordings: no network and
 // no API key. A missing recording fails the run and names the record command. It sits in src
 // because the model label comes from the task map of the Anthropic client (FL-019).
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
 import { createRecordingLlmClient } from '../evals/create-recording-llm-client.ts';
 import { EXTRACTION_CASES_DIRECTORY, loadExtractionCases } from '../evals/extraction-case.ts';

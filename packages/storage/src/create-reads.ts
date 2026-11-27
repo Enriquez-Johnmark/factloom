@@ -6,7 +6,7 @@ import {
   ok,
   type Result,
   TimestampSchema,
-} from '@factloom/core';
+} from '@kronomind/core';
 import type { Database, Statement } from 'better-sqlite3';
 import { buildKeywordQuery } from './build-keyword-query.ts';
 import { CONFIDENCE_AT_KNOWN_AT, LATEST_CONFIDENCE } from './confidence-columns.ts';

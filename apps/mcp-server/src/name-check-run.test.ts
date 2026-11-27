@@ -1,6 +1,6 @@
 // The name check of FL-071 in the verification job, as the maintenance command runs it, on
 // fixture repositories and a SQLite file.
-import type { MemoryStore } from '@factloom/core';
+import type { MemoryStore } from '@kronomind/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   cleanUpFixtures,

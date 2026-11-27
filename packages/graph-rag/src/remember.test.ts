@@ -9,7 +9,7 @@ import {
   parseDateInput,
   TEST_DOMAIN,
   type Timestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { type RememberResult, remember } from './remember.ts';
 

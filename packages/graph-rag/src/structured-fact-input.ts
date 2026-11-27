@@ -1,4 +1,4 @@
-import type { Timestamp } from '@factloom/core';
+import type { Timestamp } from '@kronomind/core';
 
 /** A fact given by name, before its entities are resolved. */
 export type StructuredFactInput = {

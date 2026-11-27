@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
-import { err, ok, type Result, toTimestamp } from '@factloom/core';
-import type { RepositoryReader } from '@factloom/maintenance';
+import { err, ok, type Result, toTimestamp } from '@kronomind/core';
+import type { RepositoryReader } from '@kronomind/maintenance';
 
 type GitRun = { readonly code: number; readonly standardOutput: string; readonly standardError: string };
 

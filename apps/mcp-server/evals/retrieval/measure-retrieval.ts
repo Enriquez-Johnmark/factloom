@@ -10,9 +10,9 @@ import {
   type NewEntity,
   type OperationDeps,
   recordFacts,
-} from '@factloom/core';
-import { DEFAULT_RECALL_SETTINGS, type RecallSettings, recallWithSettings } from '@factloom/graph-rag';
-import { openSqliteMemoryStore } from '@factloom/storage';
+} from '@kronomind/core';
+import { DEFAULT_RECALL_SETTINGS, type RecallSettings, recallWithSettings } from '@kronomind/graph-rag';
+import { openSqliteMemoryStore } from '@kronomind/storage';
 import { QUESTION_GROUPS, type RetrievalCases } from './retrieval-cases.ts';
 import { averageScores, type RetrievalScores, scoreQuestion } from './retrieval-metrics.ts';
 

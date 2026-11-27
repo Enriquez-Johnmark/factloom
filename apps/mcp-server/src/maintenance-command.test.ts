@@ -3,7 +3,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { MaintenanceReportSchema } from '@factloom/maintenance';
+import { MaintenanceReportSchema } from '@kronomind/maintenance';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createFixtureRepository } from './testing/fixture-repository.ts';
 import { startServerProcess } from './testing/server-process.ts';

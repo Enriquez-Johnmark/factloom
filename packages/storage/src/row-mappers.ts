@@ -15,7 +15,7 @@ import {
   ProposedChangeSchema,
   type Source,
   SourceSchema,
-} from '@factloom/core';
+} from '@kronomind/core';
 
 /**
  * A row that does not parse into its core type. It means the database holds something this

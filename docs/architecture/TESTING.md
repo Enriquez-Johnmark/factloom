@@ -23,20 +23,20 @@ One command, `pnpm check`, runs the format check, lint, type check and every tes
 
 Use cases and fact operations take their dependencies as arguments, so a unit test passes fakes.
 
-- **`createInMemoryStore()`** is a complete `MemoryStore` held in arrays. It is a real implementation of the interface, not a mock: tests assert on what the store contains afterwards, not on which methods were called. It exists so that `graph-rag` can be tested without importing `@factloom/storage`. Its keyword and vector ranking is naive, so tests that use it assert on which facts are returned, not on their exact order.
+- **`createInMemoryStore()`** is a complete `MemoryStore` held in arrays. It is a real implementation of the interface, not a mock: tests assert on what the store contains afterwards, not on which methods were called. It exists so that `graph-rag` can be tested without importing `@kronomind/storage`. Its keyword and vector ranking is naive, so tests that use it assert on which facts are returned, not on their exact order.
 - **`createScriptedLlm(responses)`** returns the given objects in order and fails the test if it is called more often than expected. A test that must make no LLM call passes a client that fails on any call.
 - **`createFakeEmbedder()`** maps text to a small deterministic vector.
 - **`createTestDeps(options)`** builds the dependencies of an operation from the three helpers above, with a fixed clock and a counting identifier generator, so every timestamp and identifier in a test is predictable.
 
-The four helpers are ordinary exports of `@factloom/core`, from its single `index.ts`. There is no separate entry for tests. They import no test framework, so `core` never imports one in its source.
+The four helpers are ordinary exports of `@kronomind/core`, from its single `index.ts`. There is no separate entry for tests. They import no test framework, so `core` never imports one in its source.
 
 Pure functions get direct tests with no fakes: rank fusion, name normalisation, timestamp parsing, building a change set for a succession or a correction.
 
 ## Contract tests
 
-One suite, `describeMemoryStoreContract(createStore)`, defines what any `MemoryStore` must do. It lives in `@factloom/storage`, which is where a test framework is already a development dependency, and that package runs it against:
+One suite, `describeMemoryStoreContract(createStore)`, defines what any `MemoryStore` must do. It lives in `@kronomind/storage`, which is where a test framework is already a development dependency, and that package runs it against:
 
-- the in-memory store from `@factloom/core`, so it cannot drift from the real adapter;
+- the in-memory store from `@kronomind/core`, so it cannot drift from the real adapter;
 - the SQLite adapter.
 
 The suite moves to a shared place when a second adapter, Postgres, exists.

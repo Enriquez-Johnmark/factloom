@@ -1,7 +1,7 @@
 // The verification job of FL-050 as the maintenance command runs it: the jobs the composition
 // root builds, the git reader on a fixture repository, and a SQLite file. Each fixture is one
 // fact about the database, recorded from docs/database.md at a commit.
-import { type MemoryStore, toTimestamp } from '@factloom/core';
+import { type MemoryStore, toTimestamp } from '@kronomind/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   cleanUpFixtures,

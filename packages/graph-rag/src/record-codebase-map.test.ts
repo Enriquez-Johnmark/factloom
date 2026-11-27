@@ -6,7 +6,7 @@ import {
   type Result,
   recordFacts,
   toTimestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { type CodebaseReader, MAP_FILE_SIZE_LIMIT, recordCodebaseMap } from './record-codebase-map.ts';
 import { softwareDevelopmentDomain } from './software-development-domain.ts';

@@ -25,7 +25,7 @@
           "options": {
             "patterns": [
               {
-                "group": ["@factloom/*/**", "**/src/**"],
+                "group": ["@kronomind/*/**", "**/src/**"],
                 "message": "Import another package by its name only, through its index.ts. Do not reach into its files."
               }
             ]
@@ -45,7 +45,7 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@factloom/*", "@factloom/*/**", "**/src/**"],
+                    "group": ["@kronomind/*", "@kronomind/*/**", "**/src/**"],
                     "message": "core is the innermost package. It must not import another @factloom package."
                   },
                   {
@@ -75,8 +75,8 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@factloom/storage", "@factloom/maintenance", "@factloom/*/**", "**/src/**"],
-                    "message": "graph-rag must not import @factloom/storage or @factloom/maintenance, and imports other packages by name only. It reaches storage through the MemoryStore interface in core."
+                    "group": ["@kronomind/storage", "@kronomind/maintenance", "@kronomind/*/**", "**/src/**"],
+                    "message": "graph-rag must not import @kronomind/storage or @kronomind/maintenance, and imports other packages by name only. It reaches storage through the MemoryStore interface in core."
                   },
                   {
                     "group": [
@@ -105,8 +105,8 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@factloom/storage", "@factloom/graph-rag", "@factloom/*/**", "**/src/**"],
-                    "message": "maintenance must not import @factloom/storage or @factloom/graph-rag, and imports other packages by name only. It changes memory only through the fact operations in core."
+                    "group": ["@kronomind/storage", "@kronomind/graph-rag", "@kronomind/*/**", "**/src/**"],
+                    "message": "maintenance must not import @kronomind/storage or @kronomind/graph-rag, and imports other packages by name only. It changes memory only through the fact operations in core."
                   },
                   {
                     "group": [
@@ -135,8 +135,13 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@factloom/graph-rag", "@factloom/maintenance", "@factloom/*/**", "**/src/**"],
-                    "message": "storage must not import @factloom/graph-rag or @factloom/maintenance, and imports other packages by name only."
+                    "group": [
+                      "@kronomind/graph-rag",
+                      "@kronomind/maintenance",
+                      "@kronomind/*/**",
+                      "**/src/**"
+                    ],
+                    "message": "storage must not import @kronomind/graph-rag or @kronomind/maintenance, and imports other packages by name only."
                   },
                   {
                     "group": ["@modelcontextprotocol/*", "@anthropic-ai/*", "@huggingface/*"],

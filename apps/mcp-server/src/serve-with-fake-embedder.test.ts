@@ -4,8 +4,8 @@
 import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createFakeEmbedder, createTestDeps, recordFacts } from '@factloom/core';
-import { openSqliteMemoryStore } from '@factloom/storage';
+import { createFakeEmbedder, createTestDeps, recordFacts } from '@kronomind/core';
+import { openSqliteMemoryStore } from '@kronomind/storage';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { SERVER_INSTRUCTIONS } from './server-instructions.ts';

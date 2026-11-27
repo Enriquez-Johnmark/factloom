@@ -10,7 +10,7 @@ import {
   normaliseEntityName,
   parseDateInput,
   type Timestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { JUDGE_VERDICTS, type JudgeCase, type JudgeVerdictName } from './judge-case.ts';
 
 const NAMESPACE = 'eval:judge';
@@ -198,4 +198,4 @@ export function formatJudgeReport(rows: readonly JudgedCandidate[]): string {
 export const JUDGE_RECORDINGS_DIRECTORY = join(import.meta.dirname, 'recordings', 'judge');
 
 /** The command that records them, named by the error for a missing recording. */
-export const JUDGE_RECORD_COMMAND = 'pnpm --filter @factloom/mcp-server run record:judge';
+export const JUDGE_RECORD_COMMAND = 'pnpm --filter @kronomind/mcp-server run record:judge';

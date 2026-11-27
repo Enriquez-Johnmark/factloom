@@ -1,4 +1,4 @@
-import type { RememberedFact } from '@factloom/graph-rag';
+import type { RememberedFact } from '@kronomind/graph-rag';
 import { z } from 'zod';
 
 /** A fact that a recording tool wrote or restated, in the field names of MCP-TOOLS.md. */

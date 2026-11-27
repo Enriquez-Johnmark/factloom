@@ -6,7 +6,7 @@ import {
   type LlmClient,
   type Timestamp,
   toTimestamp,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { judgeConflicts } from './judge-conflicts.ts';
 

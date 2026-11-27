@@ -9,7 +9,7 @@ import {
   type Result,
   recordFeedback,
   type Trigger,
-} from '@factloom/core';
+} from '@kronomind/core';
 import { checkForSecrets } from './check-for-secrets.ts';
 
 export type GiveFeedbackDeps = OperationDeps & {

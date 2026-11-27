@@ -1,4 +1,4 @@
-import { normaliseEntityName } from '@factloom/core';
+import { normaliseEntityName } from '@kronomind/core';
 
 /**
  * A stricter form of an entity name than the one stores match on: Unicode compatibility forms

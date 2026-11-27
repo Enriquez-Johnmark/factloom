@@ -2,10 +2,10 @@
 // and no API key. Each scenario is one test; the report and the four metrics are printed by
 // the last. A missing recording fails the run and names the record command. It sits in src
 // because the model label comes from the task map of the Anthropic client (FL-019).
-import type { ConflictJudge, LlmClient } from '@factloom/core';
-import { softwareDevelopmentDomain } from '@factloom/graph-rag';
+import type { ConflictJudge, LlmClient } from '@kronomind/core';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
-import { judgeConflicts } from '@factloom/maintenance';
+import { judgeConflicts } from '@kronomind/maintenance';
 import { createScenarioLlm } from '../evals/create-scenario-llm.ts';
 import { runScenario, type ScenarioResult } from '../evals/run-scenario.ts';
 import { loadScenarios, SCENARIOS_DIRECTORY } from '../evals/scenario.ts';

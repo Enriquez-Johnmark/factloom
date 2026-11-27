@@ -1,4 +1,4 @@
-import { createInMemoryStore } from '@factloom/core';
+import { createInMemoryStore } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
 import { describeMemoryStoreContract } from './memory-store-contract.ts';
 

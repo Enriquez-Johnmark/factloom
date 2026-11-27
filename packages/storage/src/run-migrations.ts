@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { err, ok, type Result, type Timestamp } from '@factloom/core';
+import { err, ok, type Result, type Timestamp } from '@kronomind/core';
 import type { Database } from 'better-sqlite3';
 
 /** A migration file name: a four-digit number, an underscore and a name. */

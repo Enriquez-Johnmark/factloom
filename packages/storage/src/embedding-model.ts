@@ -1,4 +1,4 @@
-import { err, type Failure } from '@factloom/core';
+import { err, type Failure } from '@kronomind/core';
 import type { Database } from 'better-sqlite3';
 
 /** The embedding model a database holds vectors of. Written to every embedding row. */

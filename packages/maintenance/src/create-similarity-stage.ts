@@ -6,7 +6,7 @@ import {
   type Namespace,
   ok,
   type Result,
-} from '@factloom/core';
+} from '@kronomind/core';
 import {
   ENTITY_MATCH_INSTRUCTIONS,
   EntityMatchAnswerSchema,

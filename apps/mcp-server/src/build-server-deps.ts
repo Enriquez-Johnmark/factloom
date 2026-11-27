@@ -1,4 +1,4 @@
-import { actOnFeedback, judgeConflicts } from '@factloom/maintenance';
+import { actOnFeedback, judgeConflicts } from '@kronomind/maintenance';
 import type { ServerDeps } from './create-factloom-server.ts';
 
 /**

@@ -1,4 +1,4 @@
-import { err, type Result } from '@factloom/core';
+import { err, type Result } from '@kronomind/core';
 import { decideCasePass } from './decide-case-pass.ts';
 import type { ExtractionCase } from './extraction-case.ts';
 import { formatExtractionReport } from './format-extraction-report.ts';

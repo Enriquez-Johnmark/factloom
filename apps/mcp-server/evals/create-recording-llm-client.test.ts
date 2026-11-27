@@ -1,7 +1,7 @@
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { err, type LlmClient, ok } from '@factloom/core';
+import { err, type LlmClient, ok } from '@kronomind/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { createRecordingLlmClient } from './create-recording-llm-client.ts';
