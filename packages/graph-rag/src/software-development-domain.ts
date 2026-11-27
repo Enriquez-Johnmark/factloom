@@ -87,6 +87,12 @@ export const softwareDevelopmentDomain: Domain = {
 export const PATH_VALUED_PREDICATES: readonly string[] = ['defined_in'];
 
 /**
+ * The entity types whose names are exact identifiers: a symbol is named exactly as the code
+ * names it, so two symbols with different names are never duplicates (FL-084).
+ */
+export const EXACT_NAME_ENTITY_TYPES: readonly string[] = ['symbol'];
+
+/**
  * The names a fact needs in its anchored file, for the name check of the verification job
  * (FL-071): the name of each of its entities that is a symbol. Empty for a fact that names
  * no symbol, which the check then leaves to the next rung.

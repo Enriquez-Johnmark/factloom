@@ -25,6 +25,7 @@ export type { DependencyVersion } from './read-dependency-version.ts';
 export { describeDependencyVersion, readDependencyVersion } from './read-dependency-version.ts';
 export {
   findSymbolNames,
+  EXACT_NAME_ENTITY_TYPES,
   PATH_VALUED_PREDICATES,
   softwareDevelopmentDomain,
 } from './software-development-domain.ts';

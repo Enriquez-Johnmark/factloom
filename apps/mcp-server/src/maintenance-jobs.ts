@@ -3,6 +3,7 @@ import {
   type CodebaseReader,
   checkForSecrets,
   describeDependencyVersion,
+  EXACT_NAME_ENTITY_TYPES,
   findSymbolNames,
   PATH_VALUED_PREDICATES,
   readDependencyVersion,
@@ -103,6 +104,8 @@ export function buildMaintenanceJobs(
         findDuplicateEntities(
           {
             ...deps,
+            // Symbols are named exactly as the code names them, so never duplicates (FL-084).
+            exactEntityTypes: EXACT_NAME_ENTITY_TYPES,
             stages: [
               NAME_STAGE,
               createSimilarityStage({ store: deps.store, embedder: deps.embedder, llm: deps.llm, namespace }),
