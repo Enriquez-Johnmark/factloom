@@ -74,6 +74,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 | FL-015 | SQLite structural reads with the time predicate | 1 | FL-014, FL-068 | Completed |
 | FL-016 | Keyword lane on FTS5 | 1 | FL-015 | Completed |
 | FL-017 | Vector lane on a plain table, with model checking | 1 | FL-002, FL-015 | Completed |
+| FL-086 | Two processes opening a new database at once | 1 | FL-013, FL-014, FL-068 | Pending |
 
 ### FL-012: Storage contract suite: fixture, time, reads, commit and refusals
 
@@ -926,3 +927,54 @@ $ vitest run
  Test Files  32 passed (32)
       Tests  459 passed (459)
 ```
+
+### FL-086: Two processes opening a new database at once
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 1 |
+| Depends on | FL-013, FL-014, FL-068 |
+| Requirements | REQ-11 |
+| Components | `packages/storage` |
+
+**Objective.** Let any number of processes open the same database file at the same moment, when the file does not exist yet, and have every one of them succeed with the schema up to date.
+
+**Background.** FL-084's run with Factloom, on the owner's Mac on 2026-11-27, failed at the start of eight of ten first sessions ([EPIC-06](EPIC-06.md), FL-084). Claude Code starts the MCP server and the maintenance command at once, and both open the same new file. Seven failed with `storage_failed: The database … could not be opened. database is locked`, one with `could not be brought up to date while applying the migration 0001_initial.sql. table entity already exists`. Four processes started at once on a new file in this repository reproduce the second message, and the same for later migrations, such as `duplicate column name: purged_at` in `0004_purge.sql`: about one process in six fails on Linux.
+
+The runner of FL-013 reads `schema_migration` outside a transaction, then applies each file in a deferred transaction. Two processes can both read that nothing is applied, and the second then applies what the first already has. FL-068 tested two writers on one file, but never two processes opening a new one.
+
+**Outcome.** The first session in a new repository starts with its maintenance hook working, and no user meets a race they can do nothing about.
+
+**Scope.**
+- The migration runner: each file is applied in an immediate transaction that first checks, inside it, whether the file is already recorded.
+- An adapter test with several child processes opening one new file at once.
+- The connection settings of FL-014, if the test shows a lock error on open.
+
+**Non-goals.**
+- Retrying a commit: FL-068 leaves that to the caller.
+- A lock held longer than the busy timeout of 5,000 ms.
+- Any change to a migration file or to the DDL.
+
+**Functional requirements.**
+1. Several processes that open the same new file at once each get a store, and the file records each migration once.
+2. A process that finds a migration already applied by another skips it, and applies the ones after it that are not.
+3. The checks of FL-013 stay: a recorded migration with no file or a changed file is refused, and a failed migration is rolled back with later files not applied.
+
+**Technical requirements.**
+1. The applied list that decides whether to apply a file is read inside that file's `BEGIN IMMEDIATE` transaction, so no other writer can change it before the file is applied.
+2. The test starts the processes through `second-process.child.ts`, each opening and closing the store, and runs several rounds, each on a new file.
+
+**Constraints.**
+- [`SCHEMA.md`](../../architecture/SCHEMA.md), "Migrations": each migration in its own transaction, forward only, never edited.
+- [`SCHEMA.md`](../../architecture/SCHEMA.md), "Connection settings", and the busy timeout of FL-014.
+
+**Acceptance criteria.**
+- [ ] Adapter test "several processes opening one new file at once all succeed" passes, and fails with the runner as it was.
+- [ ] After that test, `schema_migration` holds each migration file once.
+- [ ] The tests of FL-013's runner still pass.
+- [ ] `pnpm check` exits 0 on Linux and on macOS arm64.
+
+**Validation.** Adapter tests in `storage` on temporary files, with child processes.
+
+**Completion evidence.** The commits, the test seen failing before the fix, and the passing `pnpm check`. `SCHEMA.md`, "Migrations", says that opening is safe from several processes at once.

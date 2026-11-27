@@ -28,7 +28,7 @@ The consolidated list of what Factloom must do, with the epics and work items th
 | REQ-08 | Every change is in the audit log: what changed, when, why and what triggered it | prompt s.4.1 | Yes | EPIC-02, EPIC-03 | FL-006, FL-007, FL-008, FL-009, FL-010, FL-012, FL-013, FL-014, FL-015, FL-025 |
 | REQ-09 | A fact's history can be read back with its sources | A3 | Yes | EPIC-02, EPIC-03, EPIC-05, EPIC-06 | FL-007, FL-012, FL-015 (the `getSource` read); FL-032, FL-036 |
 | REQ-10 | Claude Code and Codex use Factloom through an MCP server whose tools are described and annotated | prompt s.2, s.3 | Yes | EPIC-06 | FL-034, FL-058, FL-035, FL-036, FL-038, FL-059 |
-| REQ-11 | The server runs from one SQLite file with no other service, and memory persists across restarts | prompt s.3, A4 | Yes | EPIC-03, EPIC-06 | FL-003, FL-013, FL-014, FL-068, FL-017, FL-034, FL-037 |
+| REQ-11 | The server runs from one SQLite file with no other service, and memory persists across restarts | prompt s.3, A4 | Yes | EPIC-03, EPIC-06 | FL-003, FL-013, FL-014, FL-068, FL-017, FL-034, FL-037, FL-086 |
 | REQ-12 | A clean install is started in CI, and the MCP and LLM SDK versions are pinned | A4 | Yes | EPIC-01, EPIC-06 | FL-001, FL-003, FL-019, FL-034, FL-037 |
 | REQ-13 | A structured fact can be recorded with no LLM call | competitive analysis | Yes | EPIC-04, EPIC-06 | FL-020, FL-024, FL-035 |
 | REQ-14 | A restated fact is stored once and gains the new source | competitive analysis | Yes | EPIC-02, EPIC-04 | FL-008, FL-020, FL-023, FL-024 |
