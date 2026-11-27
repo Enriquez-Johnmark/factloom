@@ -26,6 +26,10 @@ const QUESTION_LENGTH_LIMIT = 2000;
 /** What a prompt hook receives on standard input; only the prompt is read. */
 const PromptHookInputSchema = z.object({ prompt: z.string() });
 
+/** What the hook says when memory holds no current fact that matches the prompt (FL-083). */
+export const NOTHING_MATCHES_LINE =
+  "Factloom, this repository's memory, holds no current facts that match this prompt; there is no need to call recall for it.";
+
 const HEADING =
   "Factloom, this repository's memory, recalled these current facts for this prompt, best match first. Call recall only for what they do not cover.";
 
@@ -67,8 +71,8 @@ function readPrompt(standardInput: string): string | null {
 
 /**
  * Runs the prompt hook: recalls the current facts that match the prompt, records their usage as
- * recall does, and writes them as a short list in the hook's JSON output, or nothing when none
- * match. Returns the exit code: 0, or 1 when it failed, which Claude Code treats as an error
+ * recall does, and writes them as a short list in the hook's JSON output, or one line saying
+ * none match. Returns the exit code: 0, or 1 when it failed, which Claude Code treats as an error
  * that does not block the prompt.
  */
 export async function runRecallHook(
@@ -104,7 +108,12 @@ export async function runRecallHook(
     deps.log(`The recall hook failed: ${facts.error.code}: ${facts.error.message}`);
     return 1;
   }
-  if (facts.value.length === 0) return 0;
+  // Said, not left silent: with no line the instructions send the agent to recall itself,
+  // a search and a call for nothing (FL-081, FL-083).
+  if (facts.value.length === 0) {
+    writeContext(io, NOTHING_MATCHES_LINE);
+    return 0;
+  }
   // Awaited, unlike in the recall tool: the process ends when the hook returns.
   const usage = await deps.store.recordFactUsage({
     namespace: deps.namespace,
@@ -113,14 +122,14 @@ export async function runRecallHook(
   });
   if (!usage.ok) deps.log(`The usage of recalled facts was not recorded: ${usage.error.code}`);
   const lines = facts.value.map((found) => `- ${found.fact.statement} (fact ${found.fact.id})`);
-  const output = {
-    hookSpecificOutput: {
-      hookEventName: 'UserPromptSubmit',
-      additionalContext: [HEADING, ...lines].join('\n'),
-    },
-  };
-  io.write(`${JSON.stringify(output)}\n`);
+  writeContext(io, [HEADING, ...lines].join('\n'));
   return 0;
+}
+
+/** Writes the hook's output: a text added to the agent's context. */
+function writeContext(io: { readonly write: (text: string) => void }, text: string): void {
+  const output = { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: text } };
+  io.write(`${JSON.stringify(output)}\n`);
 }
 
 /** Reads all of standard input as text, for the hook's input. */

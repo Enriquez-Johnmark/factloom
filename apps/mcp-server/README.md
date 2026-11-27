@@ -60,7 +60,7 @@ For one session only, `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` in the environment doe
 
 Turning auto memory off alone costs tokens: in the [second comparison](evals/agent-comparison/results/2026-11-26-second/report.md), the median task used 17.7% more tokens than Claude Code with auto memory, because loading and calling Factloom's tools takes turns that auto memory, already in the context, does not. Add the recall hook below as well. Choose Factloom for what auto memory cannot do (facts with a start and an end, answers about a past date, a record of why a fact changed), not to save tokens: with the hook it is level with auto memory, not cheaper.
 
-**Add the recall hook.** Auto memory is in the context from the start; Factloom's facts reach the agent only when it loads and calls `recall`, which is where those tokens went. A `UserPromptSubmit` hook closes that gap: on each prompt, Claude Code runs `hook recall` with the prompt on standard input, and the command adds the current facts that match it, five at most, to the agent's context, or nothing when none match. It makes no LLM call and needs no key. In the same `.claude/settings.json`:
+**Add the recall hook.** Auto memory is in the context from the start; Factloom's facts reach the agent only when it loads and calls `recall`, which is where those tokens went. A `UserPromptSubmit` hook closes that gap: on each prompt, Claude Code runs `hook recall` with the prompt on standard input, and the command adds the current facts that match it, five at most, to the agent's context, or one line saying that none match, so the agent does not look for itself (FL-083). It makes no LLM call and needs no key. In the same `.claude/settings.json`:
 
 ```json
 {

@@ -1,7 +1,7 @@
 import { createTestDeps, recordFacts, recordVerification } from '@factloom/core';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { RECALL_HOOK_LIMIT, runRecallHook } from './run-recall-hook.ts';
+import { NOTHING_MATCHES_LINE, RECALL_HOOK_LIMIT, runRecallHook } from './run-recall-hook.ts';
 
 const NAMESPACE = 'repo:invoice-service';
 
@@ -75,13 +75,21 @@ describe('the recall hook', () => {
     expect(context).toMatch(/^Factloom/);
   });
 
-  it('prints nothing when the memory holds no fact, so that nothing is added to the context', async () => {
+  it('says in one line that memory holds nothing for the prompt when it holds no fact, so the agent need not call recall', async () => {
     const deps = createTestDeps({ now: '2026-11-26T10:00:00.000Z' });
 
-    const { exitCode, output } = await runHook(deps, PROMPT_INPUT);
+    const { exitCode, context } = await runHook(deps, PROMPT_INPUT);
 
     expect(exitCode).toBe(0);
-    expect(output).toBe('');
+    expect(context).toBe(NOTHING_MATCHES_LINE);
+  });
+
+  it('adds the facts that match, and not the line that nothing does', async () => {
+    const { deps } = await depsWithOneFact();
+
+    const { context } = await runHook(deps, PROMPT_INPUT);
+
+    expect(context).not.toContain(NOTHING_MATCHES_LINE);
   });
 
   it('records the usage of the facts it prints, as recall does', async () => {
@@ -123,7 +131,7 @@ describe('the recall hook', () => {
     expect(context.split('\n').filter((line) => line.startsWith('- '))).toHaveLength(RECALL_HOOK_LIMIT);
   });
 
-  it('leaves out a fact whose latest verification found its file or symbol gone', async () => {
+  it('leaves out a fact whose latest verification found its file or symbol gone, and says nothing matches when it was the only one', async () => {
     const { deps, factId } = await depsWithOneFact();
     const verified = await recordVerification(deps, {
       namespace: NAMESPACE,
@@ -135,10 +143,10 @@ describe('the recall hook', () => {
     });
     if (!verified.ok) throw new Error(verified.error.message);
 
-    const { exitCode, output } = await runHook(deps, PROMPT_INPUT);
+    const { exitCode, context } = await runHook(deps, PROMPT_INPUT);
 
     expect(exitCode).toBe(0);
-    expect(output).toBe('');
+    expect(context).toBe(NOTHING_MATCHES_LINE);
   });
 
   it('keeps a fact confirmed after an earlier verification found a problem', async () => {
