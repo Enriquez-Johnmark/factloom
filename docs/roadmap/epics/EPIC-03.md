@@ -74,7 +74,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 | FL-015 | SQLite structural reads with the time predicate | 1 | FL-014, FL-068 | Completed |
 | FL-016 | Keyword lane on FTS5 | 1 | FL-015 | Completed |
 | FL-017 | Vector lane on a plain table, with model checking | 1 | FL-002, FL-015 | Completed |
-| FL-086 | Two processes opening a new database at once | 1 | FL-013, FL-014, FL-068 | Pending |
+| FL-086 | Two processes opening a new database at once | 1 | FL-013, FL-014, FL-068 | Completed |
 
 ### FL-012: Storage contract suite: fixture, time, reads, commit and refusals
 
@@ -932,7 +932,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-013, FL-014, FL-068 |
 | Requirements | REQ-11 |
@@ -970,11 +970,36 @@ The runner of FL-013 reads `schema_migration` outside a transaction, then applie
 - [`SCHEMA.md`](../../architecture/SCHEMA.md), "Connection settings", and the busy timeout of FL-014.
 
 **Acceptance criteria.**
-- [ ] Adapter test "several processes opening one new file at once all succeed" passes, and fails with the runner as it was.
-- [ ] After that test, `schema_migration` holds each migration file once.
-- [ ] The tests of FL-013's runner still pass.
-- [ ] `pnpm check` exits 0 on Linux and on macOS arm64.
+- [x] Adapter test "several processes opening one new file at once all succeed" passes, and fails with the runner as it was.
+- [x] After that test, `schema_migration` holds each migration file once.
+- [x] The tests of FL-013's runner still pass.
+- [x] `pnpm check` exits 0 on Linux and on macOS arm64.
 
 **Validation.** Adapter tests in `storage` on temporary files, with child processes.
 
 **Completion evidence.** The commits, the test seen failing before the fix, and the passing `pnpm check`. `SCHEMA.md`, "Migrations", says that opening is safe from several processes at once.
+
+**Recorded evidence.** Completed on 2026-11-27, in `cda1791` (`fix(storage): let several processes open a new database at once`), with `SCHEMA.md` in its own commit and Q-86 in another. The code is `packages/storage/src/run-migrations.ts`; the test is the last of `sqlite-two-processes.test.ts`, with the mode `open-and-exit` in `second-process.child.ts`.
+
+- **The test was seen failing first.** With the runner as it was, it failed in its first run: one of five processes exited with 1 (`expected [ +0, +0, +0, +0, 1 ] to deeply equal [ +0, +0, +0, +0, +0 ]`). With the fix it passed three runs in a row and in `pnpm check`.
+- **The test runs six rounds of five processes**, each round on a new file, and reads `schema_migration` after each round: one row per migration file. Four processes failed about one time in six before the fix, so six rounds of five fail almost surely without it.
+- **Under more load, by hand, with the fix:** 60 rounds of six processes and 30 rounds of twelve, 720 processes, all exited with 0.
+- **What differs from the work item: the connection settings are unchanged.** In FL-084's run seven of eight failures were `could not be opened. database is locked`, from `openConnection`, before any migration. On Linux, before the fix, that message came from 4 of 132 processes started four at a time, and never from the probes that ran each step of opening on its own, so the step was not caught. After the fix it did not appear in the 720 processes. That it had the same cause is likely, not shown, and it was never seen on macOS here; it is Q-86 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md), answered by the owner's next first session in a new repository.
+
+Not run: the owner's Mac, and FL-084's comparison again.
+
+The workflow runs on Linux and macOS arm64, with Node.js 22 and 26: https://github.com/Enriquez-Johnmark/factloom/actions/runs/45976221910 and https://github.com/Enriquez-Johnmark/factloom/actions/runs/45976375752.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 839 files. No fixes applied.
+$ biome lint .
+Checked 839 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  136 passed (136)
+      Tests  1438 passed (1438)
+```
