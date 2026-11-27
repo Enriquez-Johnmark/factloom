@@ -1,0 +1,214 @@
+TAP version 13
+# Subtest: prints the name, the street, the postcode with the city, and the country
+ok 1 - prints the name, the street, the postcode with the city, and the country
+  ---
+  duration_ms: 0.909875
+  type: 'test'
+  ...
+# Subtest: prints the postcode in capitals with single spaces
+ok 2 - prints the postcode in capitals with single spaces
+  ---
+  duration_ms: 0.098041
+  type: 'test'
+  ...
+# Subtest: drops the spaces around the street
+ok 3 - drops the spaces around the street
+  ---
+  duration_ms: 0.059333
+  type: 'test'
+  ...
+# Subtest: reads the port and the carrier API URL from the environment
+ok 4 - reads the port and the carrier API URL from the environment
+  ---
+  duration_ms: 1.252833
+  type: 'test'
+  ...
+# Subtest: listens on port 8080 and calls the production carrier API by default
+ok 5 - listens on port 8080 and calls the production carrier API by default
+  ---
+  duration_ms: 0.101041
+  type: 'test'
+  ...
+# Subtest: returns the shipment with the tracking number and the label from the carrier
+ok 6 - returns the shipment with the tracking number and the label from the carrier
+  ---
+  duration_ms: 2.248334
+  type: 'test'
+  ...
+# Subtest: sends the order id as the label reference
+ok 7 - sends the order id as the label reference
+  ---
+  duration_ms: 0.114666
+  type: 'test'
+  ...
+# Subtest: asks for a signature only above the signature threshold
+ok 8 - asks for a signature only above the signature threshold
+  ---
+  duration_ms: 0.383833
+  type: 'test'
+  ...
+# Subtest: fails with the order id when the carrier keeps failing
+ok 9 - fails with the order id when the carrier keeps failing
+  ---
+  duration_ms: 0.364917
+  type: 'test'
+  ...
+# Subtest: fails with a CarrierUnavailableError that keeps the carrier error as its cause
+ok 10 - fails with a CarrierUnavailableError that keeps the carrier error as its cause
+  ---
+  duration_ms: 0.174792
+  type: 'test'
+  ...
+# Subtest: creates the labels of several shipments in their order
+ok 11 - creates the labels of several shipments in their order
+  ---
+  duration_ms: 0.127292
+  type: 'test'
+  ...
+# Subtest: tells the customer the order, the tracking number and the address
+ok 12 - tells the customer the order, the tracking number and the address
+  ---
+  duration_ms: 1.503625
+  type: 'test'
+  ...
+# Subtest: links to the tracking page of the parcel
+ok 13 - links to the tracking page of the parcel
+  ---
+  duration_ms: 0.094834
+  type: 'test'
+  ...
+# Subtest: bills the actual weight of a small heavy parcel
+ok 14 - bills the actual weight of a small heavy parcel
+  ---
+  duration_ms: 0.501291
+  type: 'test'
+  ...
+# Subtest: bills the volumetric weight of a large light parcel
+ok 15 - bills the volumetric weight of a large light parcel
+  ---
+  duration_ms: 0.079875
+  type: 'test'
+  ...
+# Subtest: rounds the volumetric weight up to the gram
+ok 16 - rounds the volumetric weight up to the gram
+  ---
+  duration_ms: 0.065375
+  type: 'test'
+  ...
+# Subtest: takes parcels up to 30 kg and refuses heavier ones
+ok 17 - takes parcels up to 30 kg and refuses heavier ones
+  ---
+  duration_ms: 0.669292
+  type: 'test'
+  ...
+# Subtest: charges the flat rate of the zone below the free-shipping threshold
+ok 18 - charges the flat rate of the zone below the free-shipping threshold
+  ---
+  duration_ms: 1.8545
+  type: 'test'
+  ...
+# Subtest: has a flat rate for every zone
+ok 19 - has a flat rate for every zone
+  ---
+  duration_ms: 0.381375
+  type: 'test'
+  ...
+# Subtest: ships for free above the free-shipping threshold
+ok 20 - ships for free above the free-shipping threshold
+  ---
+  duration_ms: 0.066708
+  type: 'test'
+  ...
+# Subtest: ships for free from exactly the free-shipping threshold
+ok 21 - ships for free from exactly the free-shipping threshold
+  ---
+  duration_ms: 0.06
+  type: 'test'
+  ...
+# Subtest: quotes the rate the carrier gives
+ok 22 - quotes the rate the carrier gives
+  ---
+  duration_ms: 0.169416
+  type: 'test'
+  ...
+# Subtest: reuses a quote for the same parcel until it is RATE_CACHE_TTL_MS old
+ok 23 - reuses a quote for the same parcel until it is RATE_CACHE_TTL_MS old
+  ---
+  duration_ms: 0.09825
+  type: 'test'
+  ...
+# Subtest: returns the result of the first attempt that succeeds
+ok 24 - returns the result of the first attempt that succeeds
+  ---
+  duration_ms: 0.465625
+  type: 'test'
+  ...
+# Subtest: gives up with the last error after MAX_ATTEMPTS failed attempts
+ok 25 - gives up with the last error after MAX_ATTEMPTS failed attempts
+  ---
+  duration_ms: 0.29575
+  type: 'test'
+  ...
+# Subtest: throws a CarrierUnavailableError when the carrier keeps failing
+ok 26 - throws a CarrierUnavailableError when the carrier keeps failing
+  ---
+  duration_ms: 1.376084
+  type: 'test'
+  ...
+# Subtest: asks the carrier at most twice for one label
+ok 27 - asks the carrier at most twice for one label
+  ---
+  duration_ms: 0.140875
+  type: 'test'
+  ...
+# Subtest: still gets the label when the first request fails
+ok 28 - still gets the label when the first request fails
+  ---
+  duration_ms: 0.089167
+  type: 'test'
+  ...
+# Subtest: accepts the tracking numbers it issues
+ok 29 - accepts the tracking numbers it issues
+  ---
+  duration_ms: 1.834375
+  type: 'test'
+  ...
+# Subtest: issues tracking numbers for sequence numbers above one hundred million
+ok 30 - issues tracking numbers for sequence numbers above one hundred million
+  ---
+  duration_ms: 0.104709
+  type: 'test'
+  ...
+# Subtest: issues a different tracking number for each sequence number
+ok 31 - issues a different tracking number for each sequence number
+  ---
+  duration_ms: 0.076584
+  type: 'test'
+  ...
+# Subtest: rejects text that is not a tracking number
+ok 32 - rejects text that is not a tracking number
+  ---
+  duration_ms: 0.079875
+  type: 'test'
+  ...
+# Subtest: returns the status of every shipment from the carrier
+ok 33 - returns the status of every shipment from the carrier
+  ---
+  duration_ms: 0.497708
+  type: 'test'
+  ...
+# Subtest: asks about at most TRACKING_BATCH_SIZE tracking numbers per request
+ok 34 - asks about at most TRACKING_BATCH_SIZE tracking numbers per request
+  ---
+  duration_ms: 0.369042
+  type: 'test'
+  ...
+1..34
+# tests 34
+# suites 0
+# pass 34
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 190.344917

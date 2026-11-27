@@ -1,0 +1,226 @@
+TAP version 13
+# Subtest: prints the name, the street, the postcode with the city, and the country
+ok 1 - prints the name, the street, the postcode with the city, and the country
+  ---
+  duration_ms: 1.759709
+  type: 'test'
+  ...
+# Subtest: prints the postcode in capitals with single spaces
+ok 2 - prints the postcode in capitals with single spaces
+  ---
+  duration_ms: 0.104458
+  type: 'test'
+  ...
+# Subtest: replaces accented letters with plain ones in every line
+ok 3 - replaces accented letters with plain ones in every line
+  ---
+  duration_ms: 0.419208
+  type: 'test'
+  ...
+# Subtest: replaces letters that have no accent form, such as ø and ł
+ok 4 - replaces letters that have no accent form, such as ø and ł
+  ---
+  duration_ms: 0.101625
+  type: 'test'
+  ...
+# Subtest: display lines keep the letters as written
+ok 5 - display lines keep the letters as written
+  ---
+  duration_ms: 0.068292
+  type: 'test'
+  ...
+# Subtest: drops the spaces around the street
+ok 6 - drops the spaces around the street
+  ---
+  duration_ms: 0.062083
+  type: 'test'
+  ...
+# Subtest: reads the port and the carrier API URL from the environment
+ok 7 - reads the port and the carrier API URL from the environment
+  ---
+  duration_ms: 0.697958
+  type: 'test'
+  ...
+# Subtest: listens on port 8080 and calls the production carrier API by default
+ok 8 - listens on port 8080 and calls the production carrier API by default
+  ---
+  duration_ms: 0.082792
+  type: 'test'
+  ...
+# Subtest: returns the shipment with the tracking number and the label from the carrier
+ok 9 - returns the shipment with the tracking number and the label from the carrier
+  ---
+  duration_ms: 1.788959
+  type: 'test'
+  ...
+# Subtest: sends the order id as the label reference
+ok 10 - sends the order id as the label reference
+  ---
+  duration_ms: 0.151541
+  type: 'test'
+  ...
+# Subtest: asks for a signature only above the signature threshold
+ok 11 - asks for a signature only above the signature threshold
+  ---
+  duration_ms: 0.759042
+  type: 'test'
+  ...
+# Subtest: fails with the order id when the carrier keeps failing
+ok 12 - fails with the order id when the carrier keeps failing
+  ---
+  duration_ms: 0.508417
+  type: 'test'
+  ...
+# Subtest: creates the labels of several shipments in their order
+ok 13 - creates the labels of several shipments in their order
+  ---
+  duration_ms: 0.309917
+  type: 'test'
+  ...
+# Subtest: tells the customer the order, the tracking number and the address
+ok 14 - tells the customer the order, the tracking number and the address
+  ---
+  duration_ms: 1.893666
+  type: 'test'
+  ...
+# Subtest: writes names and streets as the customer spelled them
+ok 15 - writes names and streets as the customer spelled them
+  ---
+  duration_ms: 0.162916
+  type: 'test'
+  ...
+# Subtest: links to the tracking page of the parcel
+ok 16 - links to the tracking page of the parcel
+  ---
+  duration_ms: 1.68125
+  type: 'test'
+  ...
+# Subtest: bills the actual weight of a small heavy parcel
+ok 17 - bills the actual weight of a small heavy parcel
+  ---
+  duration_ms: 0.479375
+  type: 'test'
+  ...
+# Subtest: bills the volumetric weight of a large light parcel
+ok 18 - bills the volumetric weight of a large light parcel
+  ---
+  duration_ms: 0.077541
+  type: 'test'
+  ...
+# Subtest: rounds the volumetric weight up to the gram
+ok 19 - rounds the volumetric weight up to the gram
+  ---
+  duration_ms: 0.06375
+  type: 'test'
+  ...
+# Subtest: takes parcels up to 30 kg and refuses heavier ones
+ok 20 - takes parcels up to 30 kg and refuses heavier ones
+  ---
+  duration_ms: 0.642958
+  type: 'test'
+  ...
+# Subtest: charges the flat rate of the zone below the free-shipping threshold
+ok 21 - charges the flat rate of the zone below the free-shipping threshold
+  ---
+  duration_ms: 0.858041
+  type: 'test'
+  ...
+# Subtest: has a flat rate for every zone
+ok 22 - has a flat rate for every zone
+  ---
+  duration_ms: 0.377292
+  type: 'test'
+  ...
+# Subtest: ships for free above the free-shipping threshold
+ok 23 - ships for free above the free-shipping threshold
+  ---
+  duration_ms: 0.11625
+  type: 'test'
+  ...
+# Subtest: ships for free from exactly the free-shipping threshold
+ok 24 - ships for free from exactly the free-shipping threshold
+  ---
+  duration_ms: 0.066042
+  type: 'test'
+  ...
+# Subtest: quotes the rate the carrier gives
+ok 25 - quotes the rate the carrier gives
+  ---
+  duration_ms: 0.170958
+  type: 'test'
+  ...
+# Subtest: reuses a quote for the same parcel until it is RATE_CACHE_TTL_MS old
+ok 26 - reuses a quote for the same parcel until it is RATE_CACHE_TTL_MS old
+  ---
+  duration_ms: 0.088042
+  type: 'test'
+  ...
+# Subtest: returns the result of the first attempt that succeeds
+ok 27 - returns the result of the first attempt that succeeds
+  ---
+  duration_ms: 0.522583
+  type: 'test'
+  ...
+# Subtest: gives up with the last error after MAX_ATTEMPTS failed attempts
+ok 28 - gives up with the last error after MAX_ATTEMPTS failed attempts
+  ---
+  duration_ms: 0.542208
+  type: 'test'
+  ...
+# Subtest: shows the name and the street in the confirmation email as the customer entered them
+ok 29 - shows the name and the street in the confirmation email as the customer entered them
+  ---
+  duration_ms: 0.5225
+  type: 'test'
+  ...
+# Subtest: still sends the address lines of the label in plain ASCII
+ok 30 - still sends the address lines of the label in plain ASCII
+  ---
+  duration_ms: 0.662875
+  type: 'test'
+  ...
+# Subtest: accepts the tracking numbers it issues
+ok 31 - accepts the tracking numbers it issues
+  ---
+  duration_ms: 0.848417
+  type: 'test'
+  ...
+# Subtest: issues tracking numbers for sequence numbers above one hundred million
+ok 32 - issues tracking numbers for sequence numbers above one hundred million
+  ---
+  duration_ms: 0.081292
+  type: 'test'
+  ...
+# Subtest: issues a different tracking number for each sequence number
+ok 33 - issues a different tracking number for each sequence number
+  ---
+  duration_ms: 0.076875
+  type: 'test'
+  ...
+# Subtest: rejects text that is not a tracking number
+ok 34 - rejects text that is not a tracking number
+  ---
+  duration_ms: 0.082625
+  type: 'test'
+  ...
+# Subtest: returns the status of every shipment from the carrier
+ok 35 - returns the status of every shipment from the carrier
+  ---
+  duration_ms: 0.47725
+  type: 'test'
+  ...
+# Subtest: asks about at most TRACKING_BATCH_SIZE tracking numbers per request
+ok 36 - asks about at most TRACKING_BATCH_SIZE tracking numbers per request
+  ---
+  duration_ms: 0.344291
+  type: 'test'
+  ...
+1..36
+# tests 36
+# suites 0
+# pass 36
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 156.8925
