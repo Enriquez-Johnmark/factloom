@@ -28,6 +28,7 @@ The index of architecture decision records. Each record is short: what was decid
 | [0022](adr/0022-remember-commits-each-correction-on-its-own.md) | `remember` commits each correction on its own | Accepted |
 | [0023](adr/0023-the-agent-records-the-codebase-map.md) | The agent records the code base map as it explores | Accepted; its way in replaced by 0024 |
 | [0024](adr/0024-maintenance-records-the-codebase-map.md) | Maintenance records the code base map from the repository | Accepted |
+| [0025](adr/0025-the-project-is-named-kronomind.md) | The project is named Kronomind | Accepted |
 
 ## How the research questions were settled
 
