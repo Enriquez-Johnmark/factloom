@@ -188,7 +188,7 @@ export async function recallWithSettings(
 /**
  * Answers a question with the facts that match it, filtered by time, best first. With no
  * date the facts are current; with an as-of date they were true then; with a known-at date
- * they are what Factloom believed then. Each fact comes with its sources and a score. Writes
+ * they are what Kronomind believed then. Each fact comes with its sources and a score. Writes
  * nothing.
  */
 export async function recall(

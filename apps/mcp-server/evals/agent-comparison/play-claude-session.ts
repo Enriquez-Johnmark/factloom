@@ -6,31 +6,31 @@ import { spawn } from 'node:child_process';
 import type { Configuration } from './compare-runs.ts';
 import type { SessionUsage } from './read-claude-stream.ts';
 
-/** The name the Factloom server is registered under, so its tools are `mcp__factloom__<tool>`. */
-export const FACTLOOM_SERVER_NAME = 'factloom';
+/** The name the Kronomind server is registered under, so its tools are `mcp__kronomind__<tool>`. */
+export const KRONOMIND_SERVER_NAME = 'kronomind';
 
 /**
  * Tools the agent may use without a prompt, the same in both configurations so that the
  * permission rules do not differ. Edits are allowed by the permission mode. `Bash(npm test *)`
  * also matches `npm test` with no arguments, per the permission rule syntax of the headless page.
- * `mcp__factloom__*` matches every tool of the server and nothing when it is not registered.
+ * `mcp__kronomind__*` matches every tool of the server and nothing when it is not registered.
  */
 export const ALLOWED_TOOLS = [
   'Bash(node *)',
   'Bash(npm test *)',
   'Bash(npm run *)',
   'Bash(git *)',
-  `mcp__${FACTLOOM_SERVER_NAME}__*`,
+  `mcp__${KRONOMIND_SERVER_NAME}__*`,
 ];
 
 /**
- * The recall hook's command. Shell form, so the variables of `buildFactloomHookEnvironment`
+ * The recall hook's command. Shell form, so the variables of `buildKronomindHookEnvironment`
  * expand, and `ANTHROPIC_API_KEY` is emptied as in the server's configuration, so the hook can
  * spend no tokens the agent's usage does not show. Shell form, expansion and an inherited
  * environment are from https://code.claude.com/docs/en/hooks.md, read on 2026-11-26.
  */
 const RECALL_HOOK_COMMAND =
-  'ANTHROPIC_API_KEY= "$FACTLOOM_COMPARISON_NODE" "$FACTLOOM_COMPARISON_SERVER_ENTRY" hook recall';
+  'ANTHROPIC_API_KEY= "$KRONOMIND_COMPARISON_NODE" "$KRONOMIND_COMPARISON_SERVER_ENTRY" hook recall';
 
 /**
  * The maintenance command, as a session start hook (FL-082): the jobs run once before the agent
@@ -39,17 +39,17 @@ const RECALL_HOOK_COMMAND =
  * output is added to the agent's context (hooks.md, read on 2026-11-26).
  */
 const MAINTENANCE_HOOK_COMMAND =
-  'ANTHROPIC_API_KEY= "$FACTLOOM_COMPARISON_NODE" "$FACTLOOM_COMPARISON_SERVER_ENTRY" maintenance > /dev/null';
+  'ANTHROPIC_API_KEY= "$KRONOMIND_COMPARISON_NODE" "$KRONOMIND_COMPARISON_SERVER_ENTRY" maintenance > /dev/null';
 
 /**
- * The settings of the run with Factloom, as the registration guide sets Claude Code up: auto
+ * The settings of the run with Kronomind, as the registration guide sets Claude Code up: auto
  * memory turned off (FL-079), with the key from https://code.claude.com/docs/en/memory.md, and
  * the recall hook on each prompt (FL-080), so that the facts that match the prompt are in the
  * context without a turn. `UserPromptSubmit` takes no matcher (hooks.md, read on 2026-11-26).
- * The settings hold no path, so the report shows them as they are. The run without Factloom
+ * The settings hold no path, so the report shows them as they are. The run without Kronomind
  * keeps auto memory and no hook, as shipped (FL-074, functional requirement 3).
  */
-export function buildFactloomRunSettings(options: { readonly runsMaintenance: boolean }): string {
+export function buildKronomindRunSettings(options: { readonly runsMaintenance: boolean }): string {
   return JSON.stringify({
     autoMemoryEnabled: false,
     hooks: {
@@ -65,14 +65,14 @@ export function buildFactloomRunSettings(options: { readonly runsMaintenance: bo
   });
 }
 
-/** The settings of the run with Factloom for a task set that runs no maintenance (FL-079, FL-080). */
-export const FACTLOOM_RUN_SETTINGS = buildFactloomRunSettings({ runsMaintenance: false });
+/** The settings of the run with Kronomind for a task set that runs no maintenance (FL-079, FL-080). */
+export const KRONOMIND_RUN_SETTINGS = buildKronomindRunSettings({ runsMaintenance: false });
 
 /**
- * The variables the recall hook reads, set on the agent's process in the run with Factloom: the
+ * The variables the recall hook reads, set on the agent's process in the run with Kronomind: the
  * same server, database and namespace as the server's configuration.
  */
-export function buildFactloomHookEnvironment(input: {
+export function buildKronomindHookEnvironment(input: {
   readonly nodePath: string;
   readonly serverEntry: string;
   readonly databasePath: string;
@@ -80,11 +80,11 @@ export function buildFactloomHookEnvironment(input: {
   readonly repositoryDirectory: string;
 }): Readonly<Record<string, string>> {
   return {
-    FACTLOOM_COMPARISON_NODE: input.nodePath,
-    FACTLOOM_COMPARISON_SERVER_ENTRY: input.serverEntry,
-    FACTLOOM_DB: input.databasePath,
-    FACTLOOM_NAMESPACE: input.namespace,
-    FACTLOOM_REPO: input.repositoryDirectory,
+    KRONOMIND_COMPARISON_NODE: input.nodePath,
+    KRONOMIND_COMPARISON_SERVER_ENTRY: input.serverEntry,
+    KRONOMIND_DB: input.databasePath,
+    KRONOMIND_NAMESPACE: input.namespace,
+    KRONOMIND_REPO: input.repositoryDirectory,
   };
 }
 
@@ -104,16 +104,16 @@ const INTERRUPT_GRACE = 30_000;
  * The arguments of one non-interactive session. The prompt comes right after `-p`, because
  * `--allowedTools` and `--mcp-config` take several values and would take a prompt after them as
  * one; `--mcp-config` is last for the same reason. Both configurations pass
- * `--strict-mcp-config`, so that only Factloom, when it is registered here, is loaded, and no
- * server from the person's own configuration. The run with Factloom also passes its settings:
+ * `--strict-mcp-config`, so that only Kronomind, when it is registered here, is loaded, and no
+ * server from the person's own configuration. The run with Kronomind also passes its settings:
  * auto memory off and the recall hook.
  */
 export function buildClaudeArguments(input: {
   readonly prompt: string;
   readonly model: string | null;
   readonly mcpConfigPath: string | null;
-  /** The settings of the run with Factloom; those of FL-080 when none are given. */
-  readonly factloomSettings?: string;
+  /** The settings of the run with Kronomind; those of FL-080 when none are given. */
+  readonly kronomindSettings?: string;
 }): string[] {
   return [
     '-p',
@@ -131,7 +131,12 @@ export function buildClaudeArguments(input: {
     ALLOWED_TOOLS.join(','),
     ...(input.mcpConfigPath === null
       ? []
-      : ['--settings', input.factloomSettings ?? FACTLOOM_RUN_SETTINGS, '--mcp-config', input.mcpConfigPath]),
+      : [
+          '--settings',
+          input.kronomindSettings ?? KRONOMIND_RUN_SETTINGS,
+          '--mcp-config',
+          input.mcpConfigPath,
+        ]),
   ];
 }
 
@@ -145,12 +150,12 @@ export function describeClaudeArguments(args: readonly string[]): string[] {
 }
 
 /**
- * The server configuration that registers Factloom, over stdio, with its own database and
+ * The server configuration that registers Kronomind, over stdio, with its own database and
  * namespace. `ANTHROPIC_API_KEY` is set to empty, which the server reads as no key, so that
  * `remember` makes no model call of its own: such a call would spend tokens that the agent's
  * usage output does not show.
  */
-export function buildFactloomMcpConfig(input: {
+export function buildKronomindMcpConfig(input: {
   readonly nodePath: string;
   readonly serverEntry: string;
   readonly databasePath: string;
@@ -161,14 +166,14 @@ export function buildFactloomMcpConfig(input: {
   return JSON.stringify(
     {
       mcpServers: {
-        [FACTLOOM_SERVER_NAME]: {
+        [KRONOMIND_SERVER_NAME]: {
           type: 'stdio',
           command: input.nodePath,
           args: [input.serverEntry],
           env: {
-            FACTLOOM_NAMESPACE: input.namespace,
-            FACTLOOM_DB: input.databasePath,
-            FACTLOOM_REPO: input.repositoryDirectory,
+            KRONOMIND_NAMESPACE: input.namespace,
+            KRONOMIND_DB: input.databasePath,
+            KRONOMIND_REPO: input.repositoryDirectory,
             ANTHROPIC_API_KEY: '',
           },
         },
@@ -181,15 +186,15 @@ export function buildFactloomMcpConfig(input: {
 
 /**
  * Says what is wrong with the servers a session reported in its init event, or null when they
- * are as the configuration needs: Factloom connected with it, and absent without it.
+ * are as the configuration needs: Kronomind connected with it, and absent without it.
  */
 export function findServerProblem(usage: SessionUsage, configuration: Configuration): string | null {
-  const factloom = usage.mcpServers.find((server) => server.name === FACTLOOM_SERVER_NAME);
+  const kronomind = usage.mcpServers.find((server) => server.name === KRONOMIND_SERVER_NAME);
   if (configuration === 'without') {
-    return factloom === undefined ? null : 'The Factloom server was loaded in a run without it.';
+    return kronomind === undefined ? null : 'The Kronomind server was loaded in a run without it.';
   }
-  if (factloom === undefined) return 'The Factloom server was not loaded in a run with it.';
-  if (factloom.status !== 'connected') return `The Factloom server's status was ${factloom.status}.`;
+  if (kronomind === undefined) return 'The Kronomind server was not loaded in a run with it.';
+  if (kronomind.status !== 'connected') return `The Kronomind server's status was ${kronomind.status}.`;
   return null;
 }
 

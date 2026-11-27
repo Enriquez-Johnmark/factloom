@@ -174,7 +174,7 @@ describe('two processes on one database file', () => {
   it(
     'several processes opening one new file at once all succeed',
     async () => {
-      const directory = mkdtempSync(join(tmpdir(), 'factloom-first-open-'));
+      const directory = mkdtempSync(join(tmpdir(), 'kronomind-first-open-'));
       closeLater(() => rmSync(directory, { recursive: true }));
       const migrationFiles = readdirSync(join(import.meta.dirname, '..', 'migrations')).filter((name) =>
         name.endsWith('.sql'),

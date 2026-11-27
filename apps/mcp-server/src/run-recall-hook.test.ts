@@ -72,7 +72,7 @@ describe('the recall hook', () => {
     expect(context).toContain(
       `- invoice-service reads its database connection string from INVOICE_DB_URL, never DATABASE_URL. (fact ${factId})`,
     );
-    expect(context).toMatch(/^Factloom/);
+    expect(context).toMatch(/^Kronomind/);
   });
 
   it('says in one line that memory holds nothing for the prompt when it holds no fact, so the agent need not call recall', async () => {

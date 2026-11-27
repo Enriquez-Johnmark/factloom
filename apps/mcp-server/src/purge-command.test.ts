@@ -8,7 +8,7 @@ import { openSqliteMemoryStore } from '@kronomind/storage';
 import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createLocalEmbedder } from './create-local-embedder.ts';
-import { FACTLOOM_TOOLS } from './factloom-tools.ts';
+import { KRONOMIND_TOOLS } from './kronomind-tools.ts';
 import { connectInProcess, UNREACHABLE_LLM } from './testing/connect-in-process.ts';
 import { startServerProcess } from './testing/server-process.ts';
 
@@ -29,9 +29,9 @@ function day(text: string) {
 
 /** A database with one fact about a deploy key, from a source that holds the marker. */
 async function createDatabase(): Promise<{ directory: string; path: string }> {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-purge-'));
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-purge-'));
   directories.push(directory);
-  const path = join(directory, 'factloom.db');
+  const path = join(directory, 'kronomind.db');
   // The vectors are written with the local embedder's model name and size, which the
   // command's store checks on open; no model is loaded.
   const embedder = createLocalEmbedder({ cacheDirectory: join(directory, 'models'), allowDownload: false });
@@ -105,8 +105,8 @@ async function run(
   args: readonly string[],
   namespace: string | null = NAMESPACE,
 ) {
-  const variables: Record<string, string> = { FACTLOOM_DB: path };
-  if (namespace !== null) variables.FACTLOOM_NAMESPACE = namespace;
+  const variables: Record<string, string> = { KRONOMIND_DB: path };
+  if (namespace !== null) variables.KRONOMIND_NAMESPACE = namespace;
   const started = startServerProcess(MAIN, variables, directory, args);
   started.close();
   return started.finished;
@@ -192,12 +192,12 @@ describe('the purge command', () => {
     const refused = await run(directory, path, ['purge', 'sources', 'f-key'], null);
 
     expect(refused.code).not.toBe(0);
-    expect(refused.standardError).toContain('FACTLOOM_NAMESPACE is not set');
+    expect(refused.standardError).toContain('KRONOMIND_NAMESPACE is not set');
   }, 30_000);
 
   it('the server built by the composition root lists no tool for purge', async () => {
     const client = await connectInProcess({
-      tools: FACTLOOM_TOOLS,
+      tools: KRONOMIND_TOOLS,
       store: createInMemoryStore(),
       newId: () => 'id',
       now: '2026-03-10',

@@ -40,14 +40,14 @@ export type ServerDeps = {
 /** Adds one tool to a server. Each tool item adds one to the list the server is created with. */
 export type RegisterTool = (server: McpServer, deps: ServerDeps) => void;
 
-const SERVER_INFO = { name: 'factloom', version: '0.0.0' } as const;
+const SERVER_INFO = { name: 'kronomind', version: '0.0.0' } as const;
 
 /**
- * Creates the Factloom MCP server: its name, its instructions and the given tools, built
+ * Creates the Kronomind MCP server: its name, its instructions and the given tools, built
  * from the given dependencies. It opens nothing and loads nothing, so it answers the
  * initialise request at once.
  */
-export function createFactloomServer(deps: ServerDeps, tools: readonly RegisterTool[]): McpServer {
+export function createKronomindServer(deps: ServerDeps, tools: readonly RegisterTool[]): McpServer {
   const server = new McpServer(SERVER_INFO, { instructions: SERVER_INSTRUCTIONS });
   for (const register of tools) register(server, deps);
   return server;

@@ -8,7 +8,7 @@ import {
   type Result,
 } from '@kronomind/core';
 
-/** An entity named in new information, before it is known whether Factloom holds it. */
+/** An entity named in new information, before it is known whether Kronomind holds it. */
 export type EntityMention = { readonly type: string; readonly name: string };
 
 export type ResolvedEntities = {

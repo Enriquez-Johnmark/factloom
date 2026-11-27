@@ -66,8 +66,8 @@ jobs:
       - name: Run the app from source
         run: node apps/mcp-server/src/main.ts < /dev/null
         env:
-          FACTLOOM_DB: ${{ runner.temp }}/factloom.db
-          FACTLOOM_NAMESPACE: repo:ci
+          KRONOMIND_DB: ${{ runner.temp }}/kronomind.db
+          KRONOMIND_NAMESPACE: repo:ci
 
   # Installs the packed server into an empty directory and checks it over stdio (FL-003).
   # The first start downloads the embedding model from huggingface.co, so the job needs the
@@ -139,7 +139,7 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .cache/models
-          key: factloom-models-${{ runner.os }}
+          key: kronomind-models-${{ runner.os }}
       - name: Show the environment
         run: |
           node --version

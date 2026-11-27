@@ -10,7 +10,7 @@ import { createLocalEmbedder } from './create-local-embedder.ts';
 const directories: string[] = [];
 
 function createEmptyCacheDirectory(): string {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-models-'));
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-models-'));
   directories.push(directory);
   return directory;
 }

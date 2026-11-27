@@ -1,6 +1,6 @@
 import { recordStructuredFacts } from '@kronomind/graph-rag';
 import { z } from 'zod';
-import type { RegisterTool } from './create-factloom-server.ts';
+import type { RegisterTool } from './create-kronomind-server.ts';
 import { buildFactInputShape, readFactInput } from './fact-input-schema.ts';
 import { readAnchoredSourceInput, SourceInputSchema } from './source-input-schema.ts';
 import { RecordedFactOutputSchema, toRecordedFactOutput } from './to-recorded-fact-output.ts';

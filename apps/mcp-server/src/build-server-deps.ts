@@ -1,5 +1,5 @@
 import { actOnFeedback, judgeConflicts } from '@kronomind/maintenance';
-import type { ServerDeps } from './create-factloom-server.ts';
+import type { ServerDeps } from './create-kronomind-server.ts';
 
 /**
  * The repository a namespace is about: `shop-api` for `repo:shop-api`, and none for a namespace

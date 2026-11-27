@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Consistency check for the Factloom roadmap. Prints pass or fail per check and writes items.json."""
+"""Consistency check for the Kronomind roadmap. Prints pass or fail per check and writes items.json."""
 import json
 import re
 import sys
@@ -8,7 +8,7 @@ from pathlib import Path
 
 REPO = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
 # Written outside the repository, so that the format check does not see it.
-OUT = Path(tempfile.gettempdir()) / "factloom-roadmap-items.json"
+OUT = Path(tempfile.gettempdir()) / "kronomind-roadmap-items.json"
 EPICS = sorted((REPO / "docs/roadmap/epics").glob("EPIC-*.md"))
 REQ_FILE = REPO / "docs/product/REQUIREMENTS.md"
 LAST_ITEM, LAST_REQ = 87, 38

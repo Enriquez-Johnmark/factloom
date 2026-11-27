@@ -155,7 +155,7 @@ export function checkForSecrets(fields: readonly CheckedField[]): Result<null> {
     if (pattern !== null) {
       return err(
         'invalid_input',
-        `The field "${field.name}" contains ${pattern.description} (${pattern.kind}). Factloom does not store secrets. Remove it and try again.`,
+        `The field "${field.name}" contains ${pattern.description} (${pattern.kind}). Kronomind does not store secrets. Remove it and try again.`,
       );
     }
   }

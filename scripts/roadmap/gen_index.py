@@ -2,7 +2,7 @@
 import json,re,glob,functools,collections,os,datetime,tempfile
 D=os.path.dirname(os.path.abspath(__file__))+'/'
 R=os.path.join(D,'..','..','docs','roadmap')+'/'
-items=json.load(open(os.path.join(tempfile.gettempdir(),'factloom-roadmap-items.json'))); by={i['id']:i for i in items}
+items=json.load(open(os.path.join(tempfile.gettempdir(),'kronomind-roadmap-items.json'))); by={i['id']:i for i in items}
 epics={}
 for p in sorted(glob.glob(R+'epics/EPIC-*.md')):
     t=open(p).read(); m=re.match(r'# (EPIC-\d\d): (.*)',t); ph=re.search(r'\| Phases? \| (.*?) \|',t)
@@ -23,7 +23,7 @@ PH={'0':('Foundations and design proof','The workspace checks itself, the core m
 LATER={'4':('Generic core, Postgres and HTTP API','EPIC-10'),'5':('Document management','EPIC-11'),'6':('Domain adapters','EPIC-12')}
 o=[]; w=o.append
 w("# Roadmap\n")
-w("The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).\n")
+w("The index of Kronomind's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).\n")
 done=[i for i in items if i["status"]=="Completed"]
 review=[i for i in items if i["status"]=="Under Review"]
 review_text=f" {len(review)} {'is' if len(review)==1 else 'are'} `Under Review`, waiting for the owner: {', '.join(i['id'] for i in review)}." if review else ""

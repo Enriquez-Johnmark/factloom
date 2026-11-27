@@ -16,8 +16,8 @@ export type RunDescription = {
 const AGENT_NAME = 'Claude Code';
 
 const LABELS: Readonly<Record<Configuration, string>> = {
-  without: 'Without Factloom',
-  with: 'With Factloom',
+  without: 'Without Kronomind',
+  with: 'With Kronomind',
 };
 
 /** Formats a count with thousands separators, so that large token counts read easily. */
@@ -59,18 +59,18 @@ export function describeOutcome(comparison: Comparison): string {
   if (outcome === null) return 'No task was played in both configurations, so this report shows no result.';
   const change = comparison.medians.totalTokenChange ?? 0;
   const calls = describeToolCallDifference(comparison.medians.toolCalls);
-  const checks = `${comparison.passed.with} of ${count} checks passed with Factloom and ${comparison.passed.without} of ${count} without it`;
+  const checks = `${comparison.passed.with} of ${count} checks passed with Kronomind and ${comparison.passed.without} of ${count} without it`;
   const band = Math.round(NO_CLEAR_DIFFERENCE_BAND * 100);
   switch (outcome) {
     case 'saving':
-      return `A saving. With Factloom, the median task used ${formatShareSize(change)} fewer tokens, input and output together, and ${calls}; ${checks}.`;
+      return `A saving. With Kronomind, the median task used ${formatShareSize(change)} fewer tokens, input and output together, and ${calls}; ${checks}.`;
     case 'no clear difference':
-      return `No clear difference. With Factloom, the median task's tokens, input and output together, changed by ${formatShare(change)}, which is inside the ${band}% either way that this report counts as no clear difference; it made ${calls}, and ${checks}.`;
+      return `No clear difference. With Kronomind, the median task's tokens, input and output together, changed by ${formatShare(change)}, which is inside the ${band}% either way that this report counts as no clear difference; it made ${calls}, and ${checks}.`;
     case 'cost':
       if (comparison.passed.with < comparison.passed.without) {
-        return `A cost. Fewer checks passed with Factloom: ${checks}. A cheaper answer that fails its check is not a saving, so the change in tokens, ${formatShare(change)} for the median task, does not count as one.`;
+        return `A cost. Fewer checks passed with Kronomind: ${checks}. A cheaper answer that fails its check is not a saving, so the change in tokens, ${formatShare(change)} for the median task, does not count as one.`;
       }
-      return `A cost. With Factloom, the median task used ${formatShareSize(change)} more tokens, input and output together, and ${calls}; ${checks}.`;
+      return `A cost. With Kronomind, the median task used ${formatShareSize(change)} more tokens, input and output together, and ${calls}; ${checks}.`;
     default: {
       const unhandled: never = outcome;
       throw new Error(`Unhandled outcome: ${String(unhandled)}`);
@@ -102,10 +102,10 @@ function describeRuns(runs: readonly RunDescription[], sessions: readonly Played
 function totalsTable(comparison: Comparison): string[] {
   const { totals, cacheReadInputTokens, passed } = comparison;
   const count = comparison.tasks.length;
-  const row = (label: string, without: number, withFactloom: number) =>
-    `| ${label} | ${formatCount(without)} | ${formatCount(withFactloom)} | ${formatDifference(withFactloom - without)} |`;
+  const row = (label: string, without: number, withKronomind: number) =>
+    `| ${label} | ${formatCount(without)} | ${formatCount(withKronomind)} | ${formatDifference(withKronomind - without)} |`;
   return [
-    '| Figure | Without Factloom | With Factloom | Difference |',
+    '| Figure | Without Kronomind | With Kronomind | Difference |',
     '|---|---|---|---|',
     row('Input tokens', totals.without.inputTokens, totals.with.inputTokens),
     row('of which read from the cache', cacheReadInputTokens.without, cacheReadInputTokens.with),
@@ -158,13 +158,13 @@ function tasksTable(comparison: Comparison): string[] {
 }
 
 function toolsTable(comparison: Comparison): string[] {
-  const { without, with: withFactloom } = comparison.toolCallsByTool;
-  const tools = [...new Set([...Object.keys(without), ...Object.keys(withFactloom)])].sort();
+  const { without, with: withKronomind } = comparison.toolCallsByTool;
+  const tools = [...new Set([...Object.keys(without), ...Object.keys(withKronomind)])].sort();
   if (tools.length === 0) return ['No tool was called.'];
   return [
-    '| Tool | Without Factloom | With Factloom |',
+    '| Tool | Without Kronomind | With Kronomind |',
     '|---|---|---|',
-    ...tools.map((tool) => `| \`${tool}\` | ${without[tool] ?? 0} | ${withFactloom[tool] ?? 0} |`),
+    ...tools.map((tool) => `| \`${tool}\` | ${without[tool] ?? 0} | ${withKronomind[tool] ?? 0} |`),
   ];
 }
 
@@ -217,7 +217,7 @@ export function formatComparisonReport(input: {
       ? ['None since the task set was committed.']
       : input.taskSetChanges.map((change) => `- ${change.date}, ${change.taskId}: ${change.reason}`);
   return [
-    '# Token and tool-call comparison with and without Factloom',
+    '# Token and tool-call comparison with and without Kronomind',
     '',
     '| | |',
     '|---|---|',

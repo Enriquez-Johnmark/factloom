@@ -50,7 +50,7 @@ function findHistoryMismatch(
     const label = `${String(recorded.number).padStart(4, '0')}_${recorded.name}`;
     const file = files.find((candidate) => candidate.number === recorded.number);
     if (file === undefined) {
-      return `This database records the migration ${label}, which this version of Factloom does not have. It was written by a newer version, or the migration file is missing.`;
+      return `This database records the migration ${label}, which this version of Kronomind does not have. It was written by a newer version, or the migration file is missing.`;
     }
     if (file.sha256 !== recorded.sha256) {
       return `The migration ${label} was changed after it was applied to this database. A released migration is never edited: restore the file, and fix a mistake with a new migration.`;

@@ -10,7 +10,7 @@ const directories: string[] = [];
 
 /** Writes migration files to a new temporary directory. */
 function writeMigrations(files: Record<string, string>): string {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-migrations-'));
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-migrations-'));
   directories.push(directory);
   for (const [fileName, sql] of Object.entries(files)) writeFileSync(join(directory, fileName), sql);
   return directory;

@@ -23,20 +23,20 @@ export const DEFAULT_ARCHIVE_AFTER_DAYS = 180;
 const optionalText = z.preprocess((value) => (value === '' ? undefined : value), z.string().optional());
 
 const EnvironmentSchema = z.object({
-  FACTLOOM_DB: optionalText,
-  FACTLOOM_NAMESPACE: optionalText,
+  KRONOMIND_DB: optionalText,
+  KRONOMIND_NAMESPACE: optionalText,
   ANTHROPIC_API_KEY: optionalText,
-  FACTLOOM_REPO: optionalText,
-  FACTLOOM_ARCHIVE_AFTER_DAYS: z.preprocess(
+  KRONOMIND_REPO: optionalText,
+  KRONOMIND_ARCHIVE_AFTER_DAYS: z.preprocess(
     (value) => (value === '' || value === undefined ? undefined : Number(value)),
     z.number().int().positive().optional(),
   ),
 });
 
 /**
- * Reads the server's configuration from the given environment variables. `FACTLOOM_DB`
- * defaults to `~/.factloom/factloom.db`; `FACTLOOM_NAMESPACE` is required; `ANTHROPIC_API_KEY`
- * is optional; `FACTLOOM_REPO` defaults to the working directory; `FACTLOOM_ARCHIVE_AFTER_DAYS`
+ * Reads the server's configuration from the given environment variables. `KRONOMIND_DB`
+ * defaults to `~/.kronomind/kronomind.db`; `KRONOMIND_NAMESPACE` is required; `ANTHROPIC_API_KEY`
+ * is optional; `KRONOMIND_REPO` defaults to the working directory; `KRONOMIND_ARCHIVE_AFTER_DAYS`
  * defaults to 180. Pure: the caller passes the
  * environment and the two directories.
  */
@@ -46,31 +46,36 @@ export function readConfiguration(
 ): Result<ServerConfiguration> {
   const parsed = EnvironmentSchema.safeParse(environment);
   if (!parsed.success) return err('invalid_input', z.prettifyError(parsed.error));
-  const { FACTLOOM_DB, FACTLOOM_NAMESPACE, ANTHROPIC_API_KEY, FACTLOOM_REPO, FACTLOOM_ARCHIVE_AFTER_DAYS } =
-    parsed.data;
+  const {
+    KRONOMIND_DB,
+    KRONOMIND_NAMESPACE,
+    ANTHROPIC_API_KEY,
+    KRONOMIND_REPO,
+    KRONOMIND_ARCHIVE_AFTER_DAYS,
+  } = parsed.data;
 
-  if (FACTLOOM_NAMESPACE === undefined) {
+  if (KRONOMIND_NAMESPACE === undefined) {
     return err(
       'invalid_input',
-      'FACTLOOM_NAMESPACE is not set. Set it to a name for this repository, such as repo:shop-api. ' +
+      'KRONOMIND_NAMESPACE is not set. Set it to a name for this repository, such as repo:shop-api. ' +
         'There is no default: the default database is one file per user, so a shared namespace would mix the memory of every repository.',
     );
   }
-  const namespace = NamespaceSchema.safeParse(FACTLOOM_NAMESPACE);
+  const namespace = NamespaceSchema.safeParse(KRONOMIND_NAMESPACE);
   if (!namespace.success) {
     return err(
       'invalid_input',
-      `FACTLOOM_NAMESPACE is not a valid namespace. ${z.prettifyError(namespace.error)}`,
+      `KRONOMIND_NAMESPACE is not a valid namespace. ${z.prettifyError(namespace.error)}`,
     );
   }
 
-  const factloomDirectory = join(directories.homeDirectory, '.factloom');
+  const kronomindDirectory = join(directories.homeDirectory, '.kronomind');
   return ok({
-    databasePath: FACTLOOM_DB ?? join(factloomDirectory, 'factloom.db'),
+    databasePath: KRONOMIND_DB ?? join(kronomindDirectory, 'kronomind.db'),
     namespace: namespace.data,
     anthropicApiKey: ANTHROPIC_API_KEY ?? null,
-    modelCacheDirectory: join(factloomDirectory, 'models'),
-    repositoryDirectory: FACTLOOM_REPO ?? directories.workingDirectory,
-    archiveAfterDays: FACTLOOM_ARCHIVE_AFTER_DAYS ?? DEFAULT_ARCHIVE_AFTER_DAYS,
+    modelCacheDirectory: join(kronomindDirectory, 'models'),
+    repositoryDirectory: KRONOMIND_REPO ?? directories.workingDirectory,
+    archiveAfterDays: KRONOMIND_ARCHIVE_AFTER_DAYS ?? DEFAULT_ARCHIVE_AFTER_DAYS,
   });
 }

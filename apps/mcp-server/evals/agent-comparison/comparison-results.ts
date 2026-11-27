@@ -23,7 +23,7 @@ export const RESULTS_DIRECTORY = join(import.meta.dirname, 'results');
 
 const ConfigurationSchema = z.enum(['without', 'with']);
 
-/** What a run without Factloom can start from: Claude Code as shipped, or with a `CLAUDE.md` map. */
+/** What a run without Kronomind can start from: Claude Code as shipped, or with a `CLAUDE.md` map. */
 export const BASELINES = ['as-shipped', 'claude-md'] as const;
 export type Baseline = (typeof BASELINES)[number];
 
@@ -33,7 +33,7 @@ const RunEntrySchema = z.strictObject({
   /** The task set played. A log written before FL-081 names none, and played the default. */
   taskSet: z.enum(TASK_SET_NAMES).default(DEFAULT_TASK_SET_NAME),
   /**
-   * What the run without Factloom started from: Claude Code as shipped, or with the task set's
+   * What the run without Kronomind started from: Claude Code as shipped, or with the task set's
    * hand-written `CLAUDE.md` map (FL-082). A log written before FL-082 names none: as shipped.
    */
   baseline: z.enum(BASELINES).default('as-shipped'),
@@ -197,7 +197,7 @@ export function writeReport(resultsDirectory: string): string {
     checks,
     taskCount: taskSet.tasks.length,
     taskSetDescription: logs.some((log) => log.run.baseline === 'claude-md')
-      ? `${taskSet.description}, the run without Factloom starting from a hand-written CLAUDE.md map`
+      ? `${taskSet.description}, the run without Kronomind starting from a hand-written CLAUDE.md map`
       : taskSet.description,
     taskSetChanges: taskSet.changes,
   });

@@ -16,8 +16,8 @@ import {
   DEFAULT_LLM_MODELS,
 } from './create-anthropic-llm-client.ts';
 import { buildServerDeps } from './build-server-deps.ts';
-import type { Logger } from './create-factloom-server.ts';
-import { FACTLOOM_TOOLS } from './factloom-tools.ts';
+import type { Logger } from './create-kronomind-server.ts';
+import { KRONOMIND_TOOLS } from './kronomind-tools.ts';
 import { createFileSourceAnchorer } from './anchor-file-source.ts';
 import { createGitRepositoryReader } from './create-git-repository-reader.ts';
 import { createLocalEmbedder } from './create-local-embedder.ts';
@@ -26,10 +26,10 @@ import { readCommand } from './read-command.ts';
 import { readConfiguration } from './read-configuration.ts';
 import { runPersonCommand } from './run-person-command.ts';
 import { readStandardInput, runRecallHook } from './run-recall-hook.ts';
-import { serveFactloom } from './serve-factloom.ts';
+import { serveKronomind } from './serve-kronomind.ts';
 
 const log: Logger = (message) => {
-  process.stderr.write(`factloom: ${message}\n`);
+  process.stderr.write(`kronomind: ${message}\n`);
 };
 
 /** Says why the server cannot start, and stops it. */
@@ -125,7 +125,7 @@ if (command.kind !== 'serve') {
 // The use cases receive the conflict judge (FL-042) and the feedback responder (FL-060). A file
 // source is anchored at the HEAD of the repository maintenance reads (FL-082).
 const repository = createGitRepositoryReader(repositoryDirectory);
-serveFactloom(
+serveKronomind(
   buildServerDeps({
     store: opened.value,
     embedder,
@@ -137,5 +137,5 @@ serveFactloom(
     newId: () => randomUUID(),
     log,
   }),
-  FACTLOOM_TOOLS,
+  KRONOMIND_TOOLS,
 );

@@ -108,7 +108,7 @@ describe('the git repository reader', () => {
   });
 
   it('refuses with invalid_input to read HEAD of a directory that is not a repository', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'factloom-not-a-repo-'));
+    const directory = mkdtempSync(join(tmpdir(), 'kronomind-not-a-repo-'));
     cleanups.push(() => rmSync(directory, { recursive: true, force: true }));
 
     const head = await createGitRepositoryReader(directory).readHead();

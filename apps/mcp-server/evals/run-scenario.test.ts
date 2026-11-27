@@ -143,7 +143,7 @@ expect:
   });
 
   it('fails with the file and the predicate when a scenario names a predicate the domain does not have', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'factloom-scenarios-'));
+    const directory = mkdtempSync(join(tmpdir(), 'kronomind-scenarios-'));
     try {
       writeFileSync(
         join(directory, 'unknown-predicate.yaml'),

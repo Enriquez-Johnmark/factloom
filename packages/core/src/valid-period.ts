@@ -18,7 +18,7 @@ export function periodsOverlap(first: ValidPeriod, second: ValidPeriod): boolean
 }
 
 /**
- * The time predicate: whether Factloom believed the fact at the known-at date, and the fact
+ * The time predicate: whether Kronomind believed the fact at the known-at date, and the fact
  * was true in the world at the as-of date. Every read that filters by time applies exactly this.
  */
 export function matchesTimeFilter(fact: Fact, time: TimeFilter): boolean {

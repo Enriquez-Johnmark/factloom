@@ -49,5 +49,5 @@ export function toTimestamp(date: Date): Timestamp {
 export function parseDateInput(text: string): Result<Timestamp> {
   const candidate = CALENDAR_DATE_FORM.test(text) ? `${text}T00:00:00.000Z` : text;
   if (isTimestamp(candidate)) return ok(candidate);
-  return err('invalid_input', `"${text}" is not a date Factloom accepts. Give ${ACCEPTED_FORMS}.`);
+  return err('invalid_input', `"${text}" is not a date Kronomind accepts. Give ${ACCEPTED_FORMS}.`);
 }

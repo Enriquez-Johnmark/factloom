@@ -2,7 +2,7 @@
 import { err, type MemoryStore } from '@kronomind/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { FACTLOOM_TOOLS } from './factloom-tools.ts';
+import { KRONOMIND_TOOLS } from './kronomind-tools.ts';
 import { connectInProcess, TEST_NAMESPACE, UNREACHABLE_LLM } from './testing/connect-in-process.ts';
 import { createToolSession } from './testing/tool-session.ts';
 
@@ -53,7 +53,7 @@ describe('usage recorded by the recall tool', () => {
       recordFactUsage: () => Promise.resolve(err('storage_failed', 'The disk is full.')),
     };
     const client = await connectInProcess({
-      tools: FACTLOOM_TOOLS,
+      tools: KRONOMIND_TOOLS,
       store: failing,
       newId: () => 'unused',
       now: '2026-03-11',

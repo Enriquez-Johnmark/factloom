@@ -2,12 +2,12 @@ import { createInMemoryStore } from '@kronomind/core';
 import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { FACTLOOM_TOOLS } from './factloom-tools.ts';
+import { KRONOMIND_TOOLS } from './kronomind-tools.ts';
 import { connectInProcess, UNREACHABLE_LLM } from './testing/connect-in-process.ts';
 
 async function listTools() {
   const client = await connectInProcess({
-    tools: FACTLOOM_TOOLS,
+    tools: KRONOMIND_TOOLS,
     store: createInMemoryStore(),
     newId: () => 'id',
     now: '2026-03-10',

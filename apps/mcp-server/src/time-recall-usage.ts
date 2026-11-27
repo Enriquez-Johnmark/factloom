@@ -33,9 +33,9 @@ async function timeRecalls(databasePath: string, home: string, usage: 'on' | 'of
     env: {
       PATH: process.env.PATH ?? '',
       HOME: home,
-      FACTLOOM_DB: databasePath,
-      FACTLOOM_NAMESPACE: NAMESPACE,
-      FACTLOOM_TIMING_USAGE: usage,
+      KRONOMIND_DB: databasePath,
+      KRONOMIND_NAMESPACE: NAMESPACE,
+      KRONOMIND_TIMING_USAGE: usage,
     },
     stdio: ['pipe', 'pipe', 'inherit'],
   });
@@ -71,9 +71,9 @@ async function timeRecalls(databasePath: string, home: string, usage: 'on' | 'of
   return { usage, total, median: percentile(durations, 50), p95: percentile(durations, 95) };
 }
 
-const directory = mkdtempSync(join(tmpdir(), 'factloom-usage-timing-'));
+const directory = mkdtempSync(join(tmpdir(), 'kronomind-usage-timing-'));
 try {
-  const databasePath = join(directory, 'factloom.db');
+  const databasePath = join(directory, 'kronomind.db');
   const embedder = createFakeEmbedder();
   const opened = openSqliteMemoryStore({
     path: databasePath,

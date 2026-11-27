@@ -19,8 +19,8 @@ export function closeLater(close: () => void): void {
 
 /** Opens a store on a new temporary file, with a second connection for reading its rows. */
 export function openOnFile(): { store: MemoryStore; rows: Database.Database; path: string } {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-store-'));
-  const path = join(directory, 'factloom.db');
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-store-'));
+  const path = join(directory, 'kronomind.db');
   const opened = openSqliteMemoryStore({ path, ...FIXTURE_MODEL });
   if (!opened.ok) throw new Error(opened.error.message);
   const store = opened.value;

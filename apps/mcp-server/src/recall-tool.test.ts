@@ -17,7 +17,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/server';
 import fc from 'fast-check';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { createFactloomServer } from './create-factloom-server.ts';
+import { createKronomindServer } from './create-kronomind-server.ts';
 import { registerRecallTool } from './recall-tool.ts';
 
 const NAMESPACE = 'repo:shop-api';
@@ -120,7 +120,7 @@ afterEach(async () => {
 /** A client connected in process to a server with the recall tool, on the given memory and clock. */
 async function connect(store: MemoryStore, newId: () => string, now = NOW): Promise<Client> {
   const deps = createTestDeps({ now, store, newId });
-  const server = createFactloomServer(
+  const server = createKronomindServer(
     {
       store,
       embedder: deps.embedder,

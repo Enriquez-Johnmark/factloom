@@ -3,12 +3,12 @@
 //
 //   pnpm run compare:agent                                  prints the usage, does nothing else
 //   pnpm run compare:agent --dry-run                        prepares every task, starts no agent
-//   pnpm run compare:agent --run --configuration without    plays the ten tasks without Factloom
-//   pnpm run compare:agent --run --configuration with       plays them with Factloom registered
+//   pnpm run compare:agent --run --configuration without    plays the ten tasks without Kronomind
+//   pnpm run compare:agent --run --configuration with       plays them with Kronomind registered
 //   pnpm run compare:agent --report <results directory>     rebuilds report.md from the run logs
 //
 // Each task is played from a clean copy of the fixture repository, its two sessions in that
-// one copy, one after the other; with Factloom, each task gets a new database file and a new
+// one copy, one after the other; with Kronomind, each task gets a new database file and a new
 // namespace. The runner never reads, prints or stores a key or a session token: the agent signs
 // in from the person's own environment, and only the agent's stream-json output is kept.
 import { execFileSync } from 'node:child_process';
@@ -30,9 +30,9 @@ import {
 import type { Configuration } from './compare-runs.ts';
 import {
   buildClaudeArguments,
-  buildFactloomHookEnvironment,
-  buildFactloomMcpConfig,
-  buildFactloomRunSettings,
+  buildKronomindHookEnvironment,
+  buildKronomindMcpConfig,
+  buildKronomindRunSettings,
   describeClaudeArguments,
   findServerProblem,
   MCP_CONFIG_PLACEHOLDER,
@@ -41,9 +41,9 @@ import {
 import { readClaudeStream } from './read-claude-stream.ts';
 import { runTaskCheck } from './run-task-check.ts';
 import { DEFAULT_TASK_SET_NAME, findTaskSet, TASK_SET_NAMES, type TaskSet } from './task-sets.ts';
-import { SERVER_ENTRY, warmUpFactloomServer } from './warm-up-factloom-server.ts';
+import { SERVER_ENTRY, warmUpKronomindServer } from './warm-up-kronomind-server.ts';
 
-const USAGE = `Plays a task set through Claude Code, with and without Factloom, and writes the report:
+const USAGE = `Plays a task set through Claude Code, with and without Kronomind, and writes the report:
 the ${AGENT_TASKS.length} memory tasks of FL-074 by default, or with --task-set another set (${TASK_SET_NAMES.join(', ')}).
 
 Usage, from apps/mcp-server:
@@ -55,12 +55,12 @@ Usage, from apps/mcp-server:
       Plays every task of the set in one configuration: two sessions each of a signed-in Claude
       Code, which spend real tokens. Run it once per configuration, into the same results directory.
       A task that carries a first-session commit has its first session's work committed with it.
-      --baseline claude-md starts the run without Factloom from the set's hand-written CLAUDE.md map.
+      --baseline claude-md starts the run without Kronomind from the set's hand-written CLAUDE.md map.
   pnpm run compare:agent --report <results directory>
       Rebuilds report.md from the run logs in the directory. Starts no agent.
 
 Needs: the claude command on PATH, signed in; Node.js; for --configuration with, network
-access to huggingface.co the first time, to download Factloom's embedding model. --model is
+access to huggingface.co the first time, to download Kronomind's embedding model. --model is
 passed to claude as it is, such as sonnet; without it, Claude Code uses its default model, and
 the report names the model each session reported. The results go to
 evals/agent-comparison/results/<date>, with -<task set> after the date for a set other than the
@@ -99,11 +99,11 @@ function readConfigurations(value: string | undefined, isRequired: boolean): Con
   return stop(`--configuration is without or with, not ${value}.`);
 }
 
-/** The baseline of a run: as shipped, or, for a run without Factloom of a set that has one, its CLAUDE.md map. */
+/** The baseline of a run: as shipped, or, for a run without Kronomind of a set that has one, its CLAUDE.md map. */
 function readBaseline(value: string | undefined, configuration: Configuration, taskSet: TaskSet): Baseline {
   if (value === undefined || value === 'as-shipped') return 'as-shipped';
   if (value !== 'claude-md') return stop(`--baseline is as-shipped or claude-md, not ${value}.`);
-  if (configuration !== 'without') return stop('--baseline claude-md is for the run without Factloom.');
+  if (configuration !== 'without') return stop('--baseline claude-md is for the run without Kronomind.');
   if (taskSet.claudeMdBaseline === null) return stop(`The task set ${taskSet.name} has no CLAUDE.md map.`);
   return 'claude-md';
 }
@@ -132,11 +132,11 @@ function readAgentVersion(): string | null {
   }
 }
 
-/** A working tree and, with Factloom, the server configuration of one task's run. */
+/** A working tree and, with Kronomind, the server configuration of one task's run. */
 function prepareTaskRun(task: AgentTask, configuration: Configuration, runStamp: string, taskSet: TaskSet) {
   const workingDirectory = taskSet.prepareCopy();
   // Outside the working tree, so the agent does not find the database among the files.
-  const serverDirectory = mkdtempSync(join(tmpdir(), 'factloom-agent-comparison-'));
+  const serverDirectory = mkdtempSync(join(tmpdir(), 'kronomind-agent-comparison-'));
   let mcpConfigPath: string | null = null;
   let environment: Readonly<Record<string, string>> = {};
   if (configuration === 'with') {
@@ -144,12 +144,12 @@ function prepareTaskRun(task: AgentTask, configuration: Configuration, runStamp:
     const server = {
       nodePath: process.execPath,
       serverEntry: SERVER_ENTRY,
-      databasePath: join(serverDirectory, 'factloom.db'),
+      databasePath: join(serverDirectory, 'kronomind.db'),
       namespace: `eval:agent-comparison:${task.id}:${runStamp}`,
       repositoryDirectory: workingDirectory,
     };
-    writeFileSync(mcpConfigPath, buildFactloomMcpConfig(server));
-    environment = buildFactloomHookEnvironment(server);
+    writeFileSync(mcpConfigPath, buildKronomindMcpConfig(server));
+    environment = buildKronomindHookEnvironment(server);
   }
   const remove = () => {
     rmSync(workingDirectory, { recursive: true, force: true });
@@ -165,7 +165,7 @@ async function dryRun(
 ): Promise<void> {
   const version = readAgentVersion();
   say(version === null ? 'claude was not found on PATH.' : `claude --version: ${version}`);
-  say(`Factloom server entry: ${SERVER_ENTRY}${existsSync(SERVER_ENTRY) ? '' : ' (missing)'}`);
+  say(`Kronomind server entry: ${SERVER_ENTRY}${existsSync(SERVER_ENTRY) ? '' : ' (missing)'}`);
   let unexpected = 0;
   for (const configuration of configurations) {
     for (const task of tasks) {
@@ -177,10 +177,10 @@ async function dryRun(
               prompt,
               model: null,
               mcpConfigPath: prepared.mcpConfigPath,
-              factloomSettings: buildFactloomRunSettings({ runsMaintenance: taskSet.runsMaintenance }),
+              kronomindSettings: buildKronomindRunSettings({ runsMaintenance: taskSet.runsMaintenance }),
             }),
           );
-        say(`\n${task.id}, ${configuration} Factloom, in a copy at ${prepared.workingDirectory}`);
+        say(`\n${task.id}, ${configuration} Kronomind, in a copy at ${prepared.workingDirectory}`);
         say(`  session 1: claude ${args(task.firstSession).join(' ')}`);
         say(`  session 2: claude ${args(task.secondSession).join(' ')}`);
         if (prepared.mcpConfigPath !== null) {
@@ -220,7 +220,7 @@ async function playAndRecord(input: {
   readonly environment: Readonly<Record<string, string>>;
 }): Promise<{ readonly isReadable: boolean; readonly serverProblem: string | null }> {
   const { resultsDirectory, configuration, task, session } = input;
-  say(`${task.id}, ${configuration} Factloom, session ${session}: playing`);
+  say(`${task.id}, ${configuration} Kronomind, session ${session}: playing`);
   const finished = await playClaudeSession({
     args: input.args,
     workingDirectory: input.workingDirectory,
@@ -288,17 +288,17 @@ async function run(input: {
   }
   const agentVersion = readAgentVersion() ?? stop('claude was not found on PATH.');
   if (configuration === 'with') {
-    say('Starting the Factloom server once, so that its embedding model is downloaded before any session.');
-    await warmUpFactloomServer();
+    say('Starting the Kronomind server once, so that its embedding model is downloaded before any session.');
+    await warmUpKronomindServer();
   }
   const startedAt = toTimestamp(new Date());
   const runStamp = startedAt.replace(/[^0-9]/gu, '');
-  const factloomSettings = buildFactloomRunSettings({ runsMaintenance: input.taskSet.runsMaintenance });
+  const kronomindSettings = buildKronomindRunSettings({ runsMaintenance: input.taskSet.runsMaintenance });
   const exampleArgs = buildClaudeArguments({
     prompt: '',
     model: input.model,
     mcpConfigPath: configuration === 'with' ? 'path' : null,
-    factloomSettings,
+    kronomindSettings,
   });
   appendRunLogEntry(resultsDirectory, configuration, {
     kind: 'run',
@@ -330,7 +330,7 @@ async function run(input: {
             prompt,
             model: input.model,
             mcpConfigPath: prepared.mcpConfigPath,
-            factloomSettings,
+            kronomindSettings,
           }),
           workingDirectory: prepared.workingDirectory,
           environment: prepared.environment,

@@ -1,8 +1,8 @@
-// The arithmetic of the report of FL-074: per-task figures with and without Factloom, their
+// The arithmetic of the report of FL-074: per-task figures with and without Kronomind, their
 // differences, the totals, the medians, and which of the three outcomes the figures show.
 import type { SessionUsage } from './read-claude-stream.ts';
 
-/** Whether the Factloom server was registered for a run. */
+/** Whether the Kronomind server was registered for a run. */
 export type Configuration = 'without' | 'with';
 
 /** One session as it was played, with what the agent reported. */
@@ -33,7 +33,7 @@ export type TaskComparison = {
   readonly taskId: string;
   readonly without: TaskFigures;
   readonly with: TaskFigures;
-  /** With Factloom minus without, for each figure. */
+  /** With Kronomind minus without, for each figure. */
   readonly difference: Figures;
   /** The difference in input and output tokens together, as a share of the figure without. */
   readonly totalTokenChange: number | null;
@@ -92,12 +92,12 @@ export function addFigures(figures: readonly Figures[]): Figures {
   );
 }
 
-/** Subtracts the figures without Factloom from those with it. */
-export function subtractFigures(withFactloom: Figures, without: Figures): Figures {
+/** Subtracts the figures without Kronomind from those with it. */
+export function subtractFigures(withKronomind: Figures, without: Figures): Figures {
   return {
-    inputTokens: withFactloom.inputTokens - without.inputTokens,
-    outputTokens: withFactloom.outputTokens - without.outputTokens,
-    toolCalls: withFactloom.toolCalls - without.toolCalls,
+    inputTokens: withKronomind.inputTokens - without.inputTokens,
+    outputTokens: withKronomind.outputTokens - without.outputTokens,
+    toolCalls: withKronomind.toolCalls - without.toolCalls,
   };
 }
 
@@ -112,7 +112,7 @@ export function median(values: readonly number[]): number | null {
 }
 
 /**
- * Decides the outcome. Fewer checks passed with Factloom is a cost whatever the tokens show,
+ * Decides the outcome. Fewer checks passed with Kronomind is a cost whatever the tokens show,
  * because a cheaper answer that fails its check is not a saving. Otherwise a median change in
  * tokens at or below minus the band is a saving, at or above the band a cost, and anything
  * between is no clear difference.
@@ -139,12 +139,12 @@ export function compareRuns(input: {
   const incompleteTaskIds: string[] = [];
   for (const taskId of input.taskIds) {
     const without = figuresOfTask(input, taskId, 'without');
-    const withFactloom = figuresOfTask(input, taskId, 'with');
-    if (without === null || withFactloom === null) {
+    const withKronomind = figuresOfTask(input, taskId, 'with');
+    if (without === null || withKronomind === null) {
       incompleteTaskIds.push(taskId);
       continue;
     }
-    tasks.push(compareTask(taskId, without, withFactloom));
+    tasks.push(compareTask(taskId, without, withKronomind));
   }
   const completeIds = new Set(tasks.map((task) => task.taskId));
   const completeSessions = input.sessions.filter((session) => completeIds.has(session.taskId));
@@ -207,14 +207,14 @@ function figuresOfTask(
   };
 }
 
-function compareTask(taskId: string, without: TaskFigures, withFactloom: TaskFigures): TaskComparison {
+function compareTask(taskId: string, without: TaskFigures, withKronomind: TaskFigures): TaskComparison {
   const totalWithout = without.inputTokens + without.outputTokens;
-  const totalWith = withFactloom.inputTokens + withFactloom.outputTokens;
+  const totalWith = withKronomind.inputTokens + withKronomind.outputTokens;
   return {
     taskId,
     without,
-    with: withFactloom,
-    difference: subtractFigures(withFactloom, without),
+    with: withKronomind,
+    difference: subtractFigures(withKronomind, without),
     totalTokenChange: totalWithout === 0 ? null : (totalWith - totalWithout) / totalWithout,
   };
 }

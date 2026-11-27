@@ -1,7 +1,7 @@
-// Starts the Factloom server once before the runs with it, over stdio as a host does, and asks
-// one recall. The first embedding downloads the model into ~/.factloom/models, which can take
-// minutes; without this, the first session with Factloom would wait for it inside a tool call,
-// and could time out, which would count against Factloom for a reason that is not memory.
+// Starts the Kronomind server once before the runs with it, over stdio as a host does, and asks
+// one recall. The first embedding downloads the model into ~/.kronomind/models, which can take
+// minutes; without this, the first session with Kronomind would wait for it inside a tool call,
+// and could time out, which would count against Kronomind for a reason that is not memory.
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -31,14 +31,14 @@ const ResponseSchema = z
  * Starts the server on a throwaway database, initialises it, asks one recall, and stops it.
  * Resolves when the recall has been answered without an error; rejects otherwise.
  */
-export async function warmUpFactloomServer(): Promise<void> {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-warm-up-'));
+export async function warmUpKronomindServer(): Promise<void> {
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-warm-up-'));
   const child = spawn(process.execPath, [SERVER_ENTRY], {
     env: {
       PATH: process.env.PATH ?? '',
       HOME: process.env.HOME ?? '',
-      FACTLOOM_NAMESPACE: 'eval:agent-comparison:warm-up',
-      FACTLOOM_DB: join(directory, 'factloom.db'),
+      KRONOMIND_NAMESPACE: 'eval:agent-comparison:warm-up',
+      KRONOMIND_DB: join(directory, 'kronomind.db'),
       ANTHROPIC_API_KEY: '',
     },
     stdio: ['pipe', 'pipe', 'ignore'],
@@ -72,7 +72,7 @@ export async function warmUpFactloomServer(): Promise<void> {
       },
     });
     await waitFor(() => answers.has(1));
-    if (!answers.has(1)) throw new Error('The Factloom server stopped before it was initialised.');
+    if (!answers.has(1)) throw new Error('The Kronomind server stopped before it was initialised.');
     send({ jsonrpc: '2.0', method: 'notifications/initialized' });
     send({
       jsonrpc: '2.0',
@@ -82,10 +82,10 @@ export async function warmUpFactloomServer(): Promise<void> {
     });
     await waitFor(() => answers.has(2));
     const answer = answers.get(2)?.result;
-    if (answer === undefined) throw new Error('The Factloom server stopped or refused the warm-up recall.');
+    if (answer === undefined) throw new Error('The Kronomind server stopped or refused the warm-up recall.');
     if (answer.isError === true) {
       const reason = (answer.content ?? []).map((part) => part.text ?? '').join(' ');
-      throw new Error(`The Factloom server could not answer the warm-up recall: ${reason}`);
+      throw new Error(`The Kronomind server could not answer the warm-up recall: ${reason}`);
     }
   } finally {
     child.stdin.end();
@@ -105,7 +105,7 @@ function parseJson(line: string): unknown {
 async function waitUntil(holds: () => boolean): Promise<void> {
   const start = Date.now();
   while (!holds()) {
-    if (Date.now() - start > WARM_UP_TIMEOUT) throw new Error('The Factloom server did not answer in time.');
+    if (Date.now() - start > WARM_UP_TIMEOUT) throw new Error('The Kronomind server did not answer in time.');
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }

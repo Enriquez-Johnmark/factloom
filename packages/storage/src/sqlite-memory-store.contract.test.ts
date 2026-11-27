@@ -21,9 +21,9 @@ afterAll(() => {
 
 const registered = describeMemoryStoreContract('the SQLite store', async () => open(':memory:'), {
   openTwoStoresOnOneFile: async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'factloom-contract-'));
+    const directory = mkdtempSync(join(tmpdir(), 'kronomind-contract-'));
     directories.push(directory);
-    const path = join(directory, 'factloom.db');
+    const path = join(directory, 'kronomind.db');
     return [open(path), open(path)];
   },
 });

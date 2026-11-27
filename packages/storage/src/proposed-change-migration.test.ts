@@ -72,14 +72,14 @@ describe('the proposed_change migration', () => {
   });
 
   it('applies to a database the earlier migrations created, and reads its fact unchanged', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'factloom-upgrade-'));
+    const directory = mkdtempSync(join(tmpdir(), 'kronomind-upgrade-'));
     closeLater(() => rmSync(directory, { recursive: true }));
     const earlierOnly = join(directory, 'migrations');
     mkdirSync(earlierOnly);
     for (const fileName of readdirSync(MIGRATIONS).filter((name) => name.endsWith('.sql') && name < THIS)) {
       copyFileSync(join(MIGRATIONS, fileName), join(earlierOnly, fileName));
     }
-    const path = join(directory, 'factloom.db');
+    const path = join(directory, 'kronomind.db');
     const old = openConnection(path);
     expect(
       runMigrations({ db: old, directory: earlierOnly, now: toTimestamp(new Date('2026-01-01')) }).ok,

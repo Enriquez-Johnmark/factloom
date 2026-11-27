@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 function createTemporaryDirectory(): string {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-server-'));
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-server-'));
   directories.push(directory);
   return directory;
 }
@@ -31,10 +31,10 @@ function createTemporaryDirectory(): string {
 describe('the server over stdio', () => {
   it('starts over stdio on a new SQLite file', async () => {
     const directory = createTemporaryDirectory();
-    const databasePath = join(directory, 'memory', 'factloom.db');
+    const databasePath = join(directory, 'memory', 'kronomind.db');
     const server = startServerProcess(
       MAIN,
-      { FACTLOOM_DB: databasePath, FACTLOOM_NAMESPACE: 'repo:shop-api' },
+      { KRONOMIND_DB: databasePath, KRONOMIND_NAMESPACE: 'repo:shop-api' },
       directory,
     );
 
@@ -70,22 +70,26 @@ describe('the server over stdio', () => {
 
   it('exits when no namespace is configured', async () => {
     const directory = createTemporaryDirectory();
-    const { finished } = startServerProcess(MAIN, { FACTLOOM_DB: join(directory, 'factloom.db') }, directory);
+    const { finished } = startServerProcess(
+      MAIN,
+      { KRONOMIND_DB: join(directory, 'kronomind.db') },
+      directory,
+    );
 
     const { code, standardError, standardOutput } = await finished;
 
     expect(code).not.toBe(0);
-    expect(standardError).toContain('FACTLOOM_NAMESPACE');
+    expect(standardError).toContain('KRONOMIND_NAMESPACE');
     expect(standardOutput).toBe('');
   }, 30_000);
 
   it('exits when the database was built with another embedding model', async () => {
     const directory = createTemporaryDirectory();
-    const databasePath = join(directory, 'factloom.db');
+    const databasePath = join(directory, 'kronomind.db');
     await writeFactWithAnotherModel(databasePath);
     const { finished } = startServerProcess(
       MAIN,
-      { FACTLOOM_DB: databasePath, FACTLOOM_NAMESPACE: 'repo:shop-api' },
+      { KRONOMIND_DB: databasePath, KRONOMIND_NAMESPACE: 'repo:shop-api' },
       directory,
     );
 

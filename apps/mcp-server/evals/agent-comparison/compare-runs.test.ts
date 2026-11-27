@@ -64,7 +64,10 @@ const SESSIONS: readonly PlayedSession[] = [
     'a',
     'with',
     1,
-    usage({ uncached: 100, cacheCreation: 0, cacheRead: 400, output: 50 }, { mcp__factloom__record_fact: 1 }),
+    usage(
+      { uncached: 100, cacheCreation: 0, cacheRead: 400, output: 50 },
+      { mcp__kronomind__record_fact: 1 },
+    ),
   ),
   played(
     'a',
@@ -72,7 +75,7 @@ const SESSIONS: readonly PlayedSession[] = [
     2,
     usage(
       { uncached: 100, cacheCreation: 100, cacheRead: 1300, output: 50 },
-      { mcp__factloom__recall: 1, Read: 1 },
+      { mcp__kronomind__recall: 1, Read: 1 },
     ),
   ),
   // b, without: input 1500, output 400, tool calls 2.
@@ -88,7 +91,7 @@ const SESSIONS: readonly PlayedSession[] = [
     'b',
     'with',
     1,
-    usage({ uncached: 600, cacheCreation: 0, cacheRead: 0, output: 100 }, { mcp__factloom__record_fact: 1 }),
+    usage({ uncached: 600, cacheCreation: 0, cacheRead: 0, output: 100 }, { mcp__kronomind__record_fact: 1 }),
   ),
   played(
     'b',
@@ -96,7 +99,7 @@ const SESSIONS: readonly PlayedSession[] = [
     2,
     usage(
       { uncached: 1100, cacheCreation: 0, cacheRead: 0, output: 300 },
-      { Bash: 2, mcp__factloom__recall: 1 },
+      { Bash: 2, mcp__kronomind__recall: 1 },
     ),
   ),
   // c, without: input 2000, output 0, tool calls 1. With: input 1900, output 0, tool calls 1.
@@ -130,7 +133,7 @@ describe('the comparison of two runs', () => {
     expect(a?.with).toEqual({ inputTokens: 2000, outputTokens: 100, toolCalls: 3, passed: true });
   });
 
-  it('gives each task the difference with Factloom minus without', () => {
+  it('gives each task the difference with Kronomind minus without', () => {
     expect(COMPARISON.tasks.map((task) => task.difference)).toEqual([
       { inputTokens: -1000, outputTokens: -100, toolCalls: -3 },
       { inputTokens: 200, outputTokens: 0, toolCalls: 2 },
@@ -167,8 +170,8 @@ describe('the comparison of two runs', () => {
   it('counts the tool calls of each configuration by tool', () => {
     expect(COMPARISON.toolCallsByTool.without).toEqual({ Read: 6, Grep: 1, Bash: 2 });
     expect(COMPARISON.toolCallsByTool.with).toEqual({
-      mcp__factloom__record_fact: 2,
-      mcp__factloom__recall: 2,
+      mcp__kronomind__record_fact: 2,
+      mcp__kronomind__recall: 2,
       Read: 2,
       Bash: 2,
     });
@@ -244,7 +247,7 @@ describe('the outcome', () => {
     );
   });
 
-  it('is a cost when fewer checks pass with Factloom, however many tokens it saves', () => {
+  it('is a cost when fewer checks pass with Kronomind, however many tokens it saves', () => {
     expect(decideOutcome({ medianTotalTokenChange: -0.5, passedWith: 6, passedWithout: 7 })).toBe('cost');
   });
 });

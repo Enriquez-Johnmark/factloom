@@ -1,6 +1,6 @@
 import { giveFeedback } from '@kronomind/graph-rag';
 import { z } from 'zod';
-import type { RegisterTool } from './create-factloom-server.ts';
+import type { RegisterTool } from './create-kronomind-server.ts';
 import { toToolError } from './to-tool-error.ts';
 import { toToolSuccess } from './to-tool-success.ts';
 
@@ -21,7 +21,7 @@ export const registerGiveFeedbackTool: RegisterTool = (server, deps) => {
     {
       title: 'Give feedback on a fact',
       description:
-        'Records that a recalled fact was found right, wrong or out of date, with what was said. Use it when you only know that; when you know what replaced the fact or when it stopped being true, use invalidate_fact instead. follow_up says what Factloom did about it.',
+        'Records that a recalled fact was found right, wrong or out of date, with what was said. Use it when you only know that; when you know what replaced the fact or when it stopped being true, use invalidate_fact instead. follow_up says what Kronomind did about it.',
       inputSchema: z.object({
         fact_id: z.string().min(1).describe('The fact, as recall returned it.'),
         signal: z

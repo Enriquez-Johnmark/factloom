@@ -1,7 +1,7 @@
 import type { StructuredFactInput } from '@kronomind/graph-rag';
 import { changeFact } from '@kronomind/graph-rag';
 import { z } from 'zod';
-import type { RegisterTool } from './create-factloom-server.ts';
+import type { RegisterTool } from './create-kronomind-server.ts';
 import { buildFactInputShape, readFactInput } from './fact-input-schema.ts';
 import { readOptionalDate } from './read-optional-date.ts';
 import { toToolError } from './to-tool-error.ts';

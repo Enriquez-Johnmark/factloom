@@ -13,7 +13,7 @@ export const ERROR_CODES = [
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
-export type FactloomError = {
+export type KronomindError = {
   readonly code: ErrorCode;
   /** Written for the caller: what went wrong and, where possible, what to do next. */
   readonly message: string;
@@ -26,10 +26,10 @@ export type FactloomError = {
 export type Success<T> = { readonly ok: true; readonly value: T };
 
 /** A failure that carries an error. It is assignable to a `Result` of any value type. */
-export type Failure<E = FactloomError> = { readonly ok: false; readonly error: E };
+export type Failure<E = KronomindError> = { readonly ok: false; readonly error: E };
 
 /** What every fallible operation returns. Expected failures are values, not exceptions. */
-export type Result<T, E = FactloomError> = Success<T> | Failure<E>;
+export type Result<T, E = KronomindError> = Success<T> | Failure<E>;
 
 /** Builds a successful result. */
 export function ok<T>(value: T): Success<T> {
@@ -45,7 +45,7 @@ export function err(
   message: string,
   details: { readonly relatedFactIds?: readonly string[]; readonly cause?: unknown } = {},
 ): Failure {
-  const error: FactloomError = { code, message, relatedFactIds: details.relatedFactIds ?? [] };
+  const error: KronomindError = { code, message, relatedFactIds: details.relatedFactIds ?? [] };
   // An absent cause is left out, not set to undefined, so the error has the same shape either way.
   return { ok: false, error: 'cause' in details ? { ...error, cause: details.cause } : error };
 }

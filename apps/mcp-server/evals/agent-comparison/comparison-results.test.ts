@@ -17,7 +17,7 @@ import {
 
 const directories: string[] = [];
 function createResultsDirectory(): string {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-comparison-results-'));
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-comparison-results-'));
   directories.push(directory);
   return directory;
 }
@@ -130,14 +130,14 @@ describe('the results directory', () => {
     expect(() => writeReport(directory)).toThrow(/different task sets/);
   });
 
-  it('says in the report when the run without Factloom started from a CLAUDE.md map', () => {
+  it('says in the report when the run without Kronomind started from a CLAUDE.md map', () => {
     const directory = createResultsDirectory();
     logRun(directory, 'without', 500, 'memory', 'claude-md');
     logRun(directory, 'with', 250);
 
     const report = readFileSync(writeReport(directory), 'utf8');
 
-    expect(report).toContain('the run without Factloom starting from a hand-written CLAUDE.md map');
+    expect(report).toContain('the run without Kronomind starting from a hand-written CLAUDE.md map');
   });
 
   it('records the task set a run log names', () => {

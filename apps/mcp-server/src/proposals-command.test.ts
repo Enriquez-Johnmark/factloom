@@ -45,9 +45,9 @@ function openStore(path: string): MemoryStore {
 
 /** shop-api deployed to Fly.io, and a pending proposal that it moved to Kubernetes on 1 March. */
 async function createDatabase() {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-proposals-'));
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-proposals-'));
   directories.push(directory);
-  const path = join(directory, 'factloom.db');
+  const path = join(directory, 'kronomind.db');
   const store = openStore(path);
   let count = 0;
   const newId = () => {
@@ -105,8 +105,8 @@ async function run(
   args: readonly string[],
   namespace: string | null = NAMESPACE,
 ) {
-  const variables: Record<string, string> = { FACTLOOM_DB: database.path };
-  if (namespace !== null) variables.FACTLOOM_NAMESPACE = namespace;
+  const variables: Record<string, string> = { KRONOMIND_DB: database.path };
+  if (namespace !== null) variables.KRONOMIND_NAMESPACE = namespace;
   return startServerProcess(ENTRY, variables, database.directory, args).finished;
 }
 

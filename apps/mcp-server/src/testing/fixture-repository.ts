@@ -22,7 +22,7 @@ const FIXED_IDENTITY = {
  * deletes the directory.
  */
 export function createFixtureRepository() {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-fixture-repo-'));
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-fixture-repo-'));
   // Settings outside the fixture, such as signing or hooks, must not reach it.
   const environment = {
     PATH: process.env.PATH ?? '',

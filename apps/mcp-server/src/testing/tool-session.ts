@@ -1,7 +1,7 @@
 import { createInMemoryStore, type MemoryStore } from '@kronomind/core';
 import type { Client } from '@modelcontextprotocol/client';
 import { z } from 'zod';
-import { FACTLOOM_TOOLS } from '../factloom-tools.ts';
+import { KRONOMIND_TOOLS } from '../kronomind-tools.ts';
 import { connectInProcess, UNREACHABLE_LLM } from './connect-in-process.ts';
 
 const TextContentSchema = z.array(z.object({ text: z.string() }));
@@ -19,7 +19,13 @@ export function createToolSession() {
   };
   const clients: Client[] = [];
   const call = async (now: string, name: string, args: Record<string, unknown>) => {
-    const client = await connectInProcess({ tools: FACTLOOM_TOOLS, store, newId, now, llm: UNREACHABLE_LLM });
+    const client = await connectInProcess({
+      tools: KRONOMIND_TOOLS,
+      store,
+      newId,
+      now,
+      llm: UNREACHABLE_LLM,
+    });
     clients.push(client);
     return client.callTool({ name, arguments: args });
   };

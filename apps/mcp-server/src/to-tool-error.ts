@@ -1,4 +1,4 @@
-import type { FactloomError } from '@kronomind/core';
+import type { KronomindError } from '@kronomind/core';
 import type { CallToolResult } from '@modelcontextprotocol/server';
 
 /**
@@ -6,7 +6,7 @@ import type { CallToolResult } from '@modelcontextprotocol/server';
  * starts with the error code, then the message, then the related facts when there are any
  * (MCP-TOOLS.md, "Errors").
  */
-export function toToolError(error: FactloomError): CallToolResult {
+export function toToolError(error: KronomindError): CallToolResult {
   const related =
     error.relatedFactIds.length > 0 ? ` Related facts: ${error.relatedFactIds.join(', ')}.` : '';
   return { isError: true, content: [{ type: 'text', text: `${error.code}: ${error.message}${related}` }] };

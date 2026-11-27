@@ -3,7 +3,7 @@ import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { Client } from '@modelcontextprotocol/client';
 import { InMemoryTransport } from '@modelcontextprotocol/server';
 import type { FileSourceAnchorer } from '../anchor-file-source.ts';
-import { createFactloomServer, type RegisterTool } from '../create-factloom-server.ts';
+import { createKronomindServer, type RegisterTool } from '../create-kronomind-server.ts';
 
 export const TEST_NAMESPACE = 'repo:shop-api';
 
@@ -28,7 +28,7 @@ export async function connectInProcess(options: {
   readonly anchorFileSource?: FileSourceAnchorer;
 }): Promise<Client> {
   const deps = createTestDeps({ now: options.now, store: options.store, newId: options.newId });
-  const server = createFactloomServer(
+  const server = createKronomindServer(
     {
       store: options.store,
       embedder: deps.embedder,

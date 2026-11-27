@@ -22,7 +22,7 @@ afterEach(async () => {
 });
 
 async function temporaryDirectory(): Promise<string> {
-  const directory = await mkdtemp(join(tmpdir(), 'factloom-recordings-'));
+  const directory = await mkdtemp(join(tmpdir(), 'kronomind-recordings-'));
   directories.push(directory);
   return directory;
 }

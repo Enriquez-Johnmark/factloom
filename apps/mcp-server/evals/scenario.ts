@@ -41,7 +41,7 @@ const AskSchema = z.strictObject({
     predicate: TextSchema,
     /** What was true in the world on this date. Default: now, the time of the last step. */
     as_of: DateTextSchema.optional(),
-    /** What Factloom believed on this date. Default: now. */
+    /** What Kronomind believed on this date. Default: now. */
     known_at: DateTextSchema.optional(),
   }),
   /** The exact set of values expected. An empty list means nothing is returned. */

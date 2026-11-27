@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 function createTemporaryDirectory(): string {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-maintenance-'));
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-maintenance-'));
   directories.push(directory);
   return directory;
 }
@@ -29,9 +29,9 @@ describe('the maintenance command', () => {
     const started = startServerProcess(
       MAIN,
       {
-        FACTLOOM_DB: join(directory, 'factloom.db'),
-        FACTLOOM_NAMESPACE: 'repo:shop-api',
-        FACTLOOM_REPO: repository.directory,
+        KRONOMIND_DB: join(directory, 'kronomind.db'),
+        KRONOMIND_NAMESPACE: 'repo:shop-api',
+        KRONOMIND_REPO: repository.directory,
       },
       directory,
       ['maintenance'],
@@ -102,14 +102,14 @@ describe('the maintenance command', () => {
     ]);
   }, 30_000);
 
-  it('reports the jobs that read the repository as failed and exits with 1 when FACTLOOM_REPO is not a git repository', async () => {
+  it('reports the jobs that read the repository as failed and exits with 1 when KRONOMIND_REPO is not a git repository', async () => {
     const directory = createTemporaryDirectory();
     const started = startServerProcess(
       MAIN,
       {
-        FACTLOOM_DB: join(directory, 'factloom.db'),
-        FACTLOOM_NAMESPACE: 'repo:shop-api',
-        FACTLOOM_REPO: directory,
+        KRONOMIND_DB: join(directory, 'kronomind.db'),
+        KRONOMIND_NAMESPACE: 'repo:shop-api',
+        KRONOMIND_REPO: directory,
       },
       directory,
       ['maintenance'],
@@ -131,7 +131,7 @@ describe('the maintenance command', () => {
 
   it('refuses to start with no namespace, and says why on standard error', async () => {
     const directory = createTemporaryDirectory();
-    const started = startServerProcess(MAIN, { FACTLOOM_DB: join(directory, 'factloom.db') }, directory, [
+    const started = startServerProcess(MAIN, { KRONOMIND_DB: join(directory, 'kronomind.db') }, directory, [
       'maintenance',
     ]);
     started.close();
@@ -140,6 +140,6 @@ describe('the maintenance command', () => {
 
     expect(finished.code).not.toBe(0);
     expect(finished.standardOutput).toBe('');
-    expect(finished.standardError).toContain('FACTLOOM_NAMESPACE is not set');
+    expect(finished.standardError).toContain('KRONOMIND_NAMESPACE is not set');
   }, 30_000);
 });

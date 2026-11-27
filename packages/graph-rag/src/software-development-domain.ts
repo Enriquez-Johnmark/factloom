@@ -1,7 +1,7 @@
 import type { Domain, FactWithSources } from '@kronomind/core';
 
 /**
- * The software development domain: what Factloom can say about a repository. It starts with
+ * The software development domain: what Kronomind can say about a repository. It starts with
  * the few entity types and predicates the timeline scenarios use; each further one is added
  * when a scenario or a real use needs it. A predicate is specific, such as
  * `uses_test_framework` and not `uses` with a role, because two facts conflict only when

@@ -4,7 +4,7 @@
  * the 4,096 characters Claude Code keeps (MCP research, "Practical constraints").
  */
 export const SERVER_INSTRUCTIONS = [
-  "Factloom is this repository's memory: facts about its code and project, each with when it was true, when it was learned and its source.",
+  "Kronomind is this repository's memory: facts about its code and project, each with when it was true, when it was learned and its source.",
   'A prompt may come with its matching facts, or a line saying there are none; if neither, call recall at the start of a task; as_of or known_at ask about the past.',
   'Save what you are asked to remember and what lasts, such as a decision, a convention, the cause of a bug or how to build and test: record_fact for one subject, predicate and object, or remember for a text (it needs an API key).',
   'When the person says why a change is made, record the reason before you finish, such as described_as on the changed symbol.',

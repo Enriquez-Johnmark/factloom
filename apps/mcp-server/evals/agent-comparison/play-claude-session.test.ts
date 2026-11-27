@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
   buildClaudeArguments,
-  buildFactloomHookEnvironment,
-  buildFactloomRunSettings,
-  FACTLOOM_RUN_SETTINGS,
-  buildFactloomMcpConfig,
+  buildKronomindHookEnvironment,
+  buildKronomindRunSettings,
+  KRONOMIND_RUN_SETTINGS,
+  buildKronomindMcpConfig,
   describeClaudeArguments,
   findServerProblem,
 } from './play-claude-session.ts';
@@ -40,9 +40,9 @@ describe('the arguments of a session', () => {
     expect(args.slice(0, 2)).toEqual(['-p', 'Add a route.']);
     expect(args.slice(-6)).toEqual([
       '--allowedTools',
-      'Bash(node *),Bash(npm test *),Bash(npm run *),Bash(git *),mcp__factloom__*',
+      'Bash(node *),Bash(npm test *),Bash(npm run *),Bash(git *),mcp__kronomind__*',
       '--settings',
-      FACTLOOM_RUN_SETTINGS,
+      KRONOMIND_RUN_SETTINGS,
       '--mcp-config',
       '/tmp/mcp.json',
     ]);
@@ -53,19 +53,19 @@ describe('the arguments of a session', () => {
 
   it('differs between the configurations only by the server configuration and auto memory turned off', () => {
     const without = buildClaudeArguments({ prompt: 'x', model: null, mcpConfigPath: null });
-    const withFactloom = buildClaudeArguments({ prompt: 'x', model: null, mcpConfigPath: '/tmp/mcp.json' });
+    const withKronomind = buildClaudeArguments({ prompt: 'x', model: null, mcpConfigPath: '/tmp/mcp.json' });
 
-    expect(withFactloom).toEqual([
+    expect(withKronomind).toEqual([
       ...without,
       '--settings',
-      FACTLOOM_RUN_SETTINGS,
+      KRONOMIND_RUN_SETTINGS,
       '--mcp-config',
       '/tmp/mcp.json',
     ]);
     expect(without).not.toContain('--model');
   });
 
-  it('turns auto memory off and registers the recall hook in the run with Factloom', () => {
+  it('turns auto memory off and registers the recall hook in the run with Kronomind', () => {
     const settings = z
       .object({
         autoMemoryEnabled: z.literal(false),
@@ -75,28 +75,28 @@ describe('the arguments of a session', () => {
           ),
         }),
       })
-      .parse(JSON.parse(FACTLOOM_RUN_SETTINGS));
+      .parse(JSON.parse(KRONOMIND_RUN_SETTINGS));
 
     expect(settings.hooks.UserPromptSubmit[0]?.hooks[0]?.command).toBe(
-      'ANTHROPIC_API_KEY= "$FACTLOOM_COMPARISON_NODE" "$FACTLOOM_COMPARISON_SERVER_ENTRY" hook recall',
+      'ANTHROPIC_API_KEY= "$KRONOMIND_COMPARISON_NODE" "$KRONOMIND_COMPARISON_SERVER_ENTRY" hook recall',
     );
   });
 
   it('gives the hook the server, database and namespace of the run through the environment', () => {
     expect(
-      buildFactloomHookEnvironment({
+      buildKronomindHookEnvironment({
         nodePath: '/usr/bin/node',
         serverEntry: '/f/apps/mcp-server/src/main.ts',
-        databasePath: '/tmp/x/factloom.db',
+        databasePath: '/tmp/x/kronomind.db',
         namespace: 'eval:agent-comparison:utc-dates:run',
         repositoryDirectory: '/tmp/invoice-service-1',
       }),
     ).toEqual({
-      FACTLOOM_COMPARISON_NODE: '/usr/bin/node',
-      FACTLOOM_COMPARISON_SERVER_ENTRY: '/f/apps/mcp-server/src/main.ts',
-      FACTLOOM_DB: '/tmp/x/factloom.db',
-      FACTLOOM_NAMESPACE: 'eval:agent-comparison:utc-dates:run',
-      FACTLOOM_REPO: '/tmp/invoice-service-1',
+      KRONOMIND_COMPARISON_NODE: '/usr/bin/node',
+      KRONOMIND_COMPARISON_SERVER_ENTRY: '/f/apps/mcp-server/src/main.ts',
+      KRONOMIND_DB: '/tmp/x/kronomind.db',
+      KRONOMIND_NAMESPACE: 'eval:agent-comparison:utc-dates:run',
+      KRONOMIND_REPO: '/tmp/invoice-service-1',
     });
   });
 
@@ -114,19 +114,19 @@ describe('the arguments of a session', () => {
           ),
         }),
       })
-      .parse(JSON.parse(buildFactloomRunSettings({ runsMaintenance: true })));
+      .parse(JSON.parse(buildKronomindRunSettings({ runsMaintenance: true })));
 
     expect(settings.hooks.SessionStart[0]?.hooks[0]?.command).toBe(
-      'ANTHROPIC_API_KEY= "$FACTLOOM_COMPARISON_NODE" "$FACTLOOM_COMPARISON_SERVER_ENTRY" maintenance > /dev/null',
+      'ANTHROPIC_API_KEY= "$KRONOMIND_COMPARISON_NODE" "$KRONOMIND_COMPARISON_SERVER_ENTRY" maintenance > /dev/null',
     );
   });
 
   it('runs no maintenance hook unless the task set asks for it', () => {
-    expect(buildFactloomRunSettings({ runsMaintenance: false })).toBe(FACTLOOM_RUN_SETTINGS);
-    expect(FACTLOOM_RUN_SETTINGS).not.toContain('SessionStart');
+    expect(buildKronomindRunSettings({ runsMaintenance: false })).toBe(KRONOMIND_RUN_SETTINGS);
+    expect(KRONOMIND_RUN_SETTINGS).not.toContain('SessionStart');
   });
 
-  it('keeps auto memory, as shipped, in the run without Factloom', () => {
+  it('keeps auto memory, as shipped, in the run without Kronomind', () => {
     const without = buildClaudeArguments({ prompt: 'x', model: null, mcpConfigPath: null });
 
     expect(without).not.toContain('--settings');
@@ -149,12 +149,12 @@ describe('the arguments of a session', () => {
 });
 
 describe('the server configuration', () => {
-  it('registers Factloom with its own database, namespace and repository and no key of its own', () => {
+  it('registers Kronomind with its own database, namespace and repository and no key of its own', () => {
     const config: unknown = JSON.parse(
-      buildFactloomMcpConfig({
+      buildKronomindMcpConfig({
         nodePath: '/usr/bin/node',
         serverEntry: '/repo/apps/mcp-server/src/main.ts',
-        databasePath: '/tmp/run/factloom.db',
+        databasePath: '/tmp/run/kronomind.db',
         namespace: 'eval:agent-comparison:refund-rounding:1',
         repositoryDirectory: '/tmp/invoice-service-1',
       }),
@@ -162,14 +162,14 @@ describe('the server configuration', () => {
 
     expect(config).toEqual({
       mcpServers: {
-        factloom: {
+        kronomind: {
           type: 'stdio',
           command: '/usr/bin/node',
           args: ['/repo/apps/mcp-server/src/main.ts'],
           env: {
-            FACTLOOM_NAMESPACE: 'eval:agent-comparison:refund-rounding:1',
-            FACTLOOM_DB: '/tmp/run/factloom.db',
-            FACTLOOM_REPO: '/tmp/invoice-service-1',
+            KRONOMIND_NAMESPACE: 'eval:agent-comparison:refund-rounding:1',
+            KRONOMIND_DB: '/tmp/run/kronomind.db',
+            KRONOMIND_REPO: '/tmp/invoice-service-1',
             ANTHROPIC_API_KEY: '',
           },
         },
@@ -179,23 +179,23 @@ describe('the server configuration', () => {
 });
 
 describe('the servers a session reports', () => {
-  it('accepts Factloom connected in a run with it', () => {
+  it('accepts Kronomind connected in a run with it', () => {
     expect(
-      findServerProblem(usageWithServers([{ name: 'factloom', status: 'connected' }]), 'with'),
+      findServerProblem(usageWithServers([{ name: 'kronomind', status: 'connected' }]), 'with'),
     ).toBeNull();
   });
 
-  it('refuses a run with Factloom in which it is missing or did not connect', () => {
+  it('refuses a run with Kronomind in which it is missing or did not connect', () => {
     expect(findServerProblem(usageWithServers([]), 'with')).not.toBeNull();
     expect(
-      findServerProblem(usageWithServers([{ name: 'factloom', status: 'failed' }]), 'with'),
+      findServerProblem(usageWithServers([{ name: 'kronomind', status: 'failed' }]), 'with'),
     ).not.toBeNull();
   });
 
-  it('refuses a run without Factloom in which it was loaded', () => {
+  it('refuses a run without Kronomind in which it was loaded', () => {
     expect(findServerProblem(usageWithServers([]), 'without')).toBeNull();
     expect(
-      findServerProblem(usageWithServers([{ name: 'factloom', status: 'connected' }]), 'without'),
+      findServerProblem(usageWithServers([{ name: 'kronomind', status: 'connected' }]), 'without'),
     ).not.toBeNull();
   });
 });

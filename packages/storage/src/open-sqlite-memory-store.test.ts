@@ -64,7 +64,7 @@ describe('openSqliteMemoryStore', () => {
   });
 
   it('returns storage_failed when the file cannot be opened', () => {
-    const path = join(tmpdir(), 'factloom-no-such-directory', 'nested', 'factloom.db');
+    const path = join(tmpdir(), 'kronomind-no-such-directory', 'nested', 'kronomind.db');
 
     const opened = openSqliteMemoryStore({ path, ...FIXTURE_MODEL });
 
@@ -72,7 +72,7 @@ describe('openSqliteMemoryStore', () => {
   });
 
   it('names the step of opening that failed', () => {
-    const path = join(tmpdir(), 'factloom-no-such-directory', 'nested', 'factloom.db');
+    const path = join(tmpdir(), 'kronomind-no-such-directory', 'nested', 'kronomind.db');
 
     const opened = openSqliteMemoryStore({ path, ...FIXTURE_MODEL });
 

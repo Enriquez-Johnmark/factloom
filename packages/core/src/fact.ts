@@ -62,7 +62,7 @@ const FACT_RULES: readonly ((fact: {
 
 /**
  * One claim: a subject, a predicate and an object, with its valid time (when it was true)
- * and its recorded time (when Factloom believed it). A fact is never edited: the only change
+ * and its recorded time (when Kronomind believed it). A fact is never edited: the only change
  * ever made to one is its invalidation.
  */
 export const FactSchema = z
@@ -130,7 +130,7 @@ export const TimeFilterSchema = z
   .strictObject({
     /** The as-of date: what was true in the world then. */
     validAt: TimestampSchema,
-    /** The known-at date: what Factloom believed then. */
+    /** The known-at date: what Kronomind believed then. */
     knownAt: TimestampSchema,
   })
   .readonly();

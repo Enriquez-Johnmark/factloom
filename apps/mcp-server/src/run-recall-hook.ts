@@ -1,9 +1,9 @@
-// The prompt hook of FL-080: Claude Code runs `factloom hook recall` when a prompt is submitted,
+// The prompt hook of FL-080: Claude Code runs `kronomind hook recall` when a prompt is submitted,
 // with the prompt in a JSON document on standard input, and adds the `additionalContext` of
 // `hookSpecificOutput` that the command prints on exit 0 to the agent's context
 // (https://code.claude.com/docs/en/hooks.md and hooks-guide.md, read on 2026-11-26).
 // The agent then has the facts that match the task without spending turns to load and call
-// recall, which is where the comparison of FL-079 measured Factloom's cost.
+// recall, which is where the comparison of FL-079 measured Kronomind's cost.
 import {
   type Embedder,
   type MemoryStore,
@@ -15,7 +15,7 @@ import {
 } from '@kronomind/core';
 import { type RecalledFact, recall } from '@kronomind/graph-rag';
 import { z } from 'zod';
-import type { Logger } from './create-factloom-server.ts';
+import type { Logger } from './create-kronomind-server.ts';
 
 /** The most facts the hook prints: few, because they enter the context with every prompt. */
 export const RECALL_HOOK_LIMIT = 5;
@@ -28,10 +28,10 @@ const PromptHookInputSchema = z.object({ prompt: z.string() });
 
 /** What the hook says when memory holds no current fact that matches the prompt (FL-083). */
 export const NOTHING_MATCHES_LINE =
-  "Factloom, this repository's memory, holds no current facts that match this prompt; there is no need to call recall for it.";
+  "Kronomind, this repository's memory, holds no current facts that match this prompt; there is no need to call recall for it.";
 
 const HEADING =
-  "Factloom, this repository's memory, recalled these current facts for this prompt, best match first. Call recall only for what they do not cover.";
+  "Kronomind, this repository's memory, recalled these current facts for this prompt, best match first. Call recall only for what they do not cover.";
 
 /** What the latest verification of a fact must not be for the hook to hand it over. */
 const OUT_OF_DATE_OUTCOMES: readonly VerificationOutcome[] = ['contradicted', 'source_missing'];

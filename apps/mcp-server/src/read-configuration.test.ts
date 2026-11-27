@@ -10,23 +10,23 @@ const TEST_KEY = ['test', 'key'].join('-');
 describe('readConfiguration', () => {
   it('uses the default database path when none is given', () => {
     const configuration = readConfiguration(
-      { FACTLOOM_NAMESPACE: 'repo:shop-api' },
+      { KRONOMIND_NAMESPACE: 'repo:shop-api' },
       { homeDirectory: HOME, workingDirectory: WORKING },
     );
 
     expect(configuration.ok).toBe(true);
     if (!configuration.ok) return;
-    expect(configuration.value.databasePath).toBe(join(HOME, '.factloom', 'factloom.db'));
-    expect(configuration.value.modelCacheDirectory).toBe(join(HOME, '.factloom', 'models'));
+    expect(configuration.value.databasePath).toBe(join(HOME, '.kronomind', 'kronomind.db'));
+    expect(configuration.value.modelCacheDirectory).toBe(join(HOME, '.kronomind', 'models'));
   });
 
-  it('archives after the days given in FACTLOOM_ARCHIVE_AFTER_DAYS, and refuses a number that is not a whole positive one', () => {
+  it('archives after the days given in KRONOMIND_ARCHIVE_AFTER_DAYS, and refuses a number that is not a whole positive one', () => {
     const given = readConfiguration(
-      { FACTLOOM_NAMESPACE: 'repo:shop-api', FACTLOOM_ARCHIVE_AFTER_DAYS: '90' },
+      { KRONOMIND_NAMESPACE: 'repo:shop-api', KRONOMIND_ARCHIVE_AFTER_DAYS: '90' },
       { homeDirectory: HOME, workingDirectory: WORKING },
     );
     const refused = readConfiguration(
-      { FACTLOOM_NAMESPACE: 'repo:shop-api', FACTLOOM_ARCHIVE_AFTER_DAYS: 'soon' },
+      { KRONOMIND_NAMESPACE: 'repo:shop-api', KRONOMIND_ARCHIVE_AFTER_DAYS: 'soon' },
       { homeDirectory: HOME, workingDirectory: WORKING },
     );
 
@@ -34,9 +34,9 @@ describe('readConfiguration', () => {
     expect(refused.ok ? null : refused.error.code).toBe('invalid_input');
   });
 
-  it('verifies against the working directory when FACTLOOM_REPO is not set', () => {
+  it('verifies against the working directory when KRONOMIND_REPO is not set', () => {
     const configuration = readConfiguration(
-      { FACTLOOM_NAMESPACE: 'repo:shop-api', FACTLOOM_REPO: '' },
+      { KRONOMIND_NAMESPACE: 'repo:shop-api', KRONOMIND_REPO: '' },
       { homeDirectory: HOME, workingDirectory: WORKING },
     );
 
@@ -46,10 +46,10 @@ describe('readConfiguration', () => {
   it('uses the database path and namespace that are given', () => {
     const configuration = readConfiguration(
       {
-        FACTLOOM_DB: '/data/memory.db',
-        FACTLOOM_NAMESPACE: 'repo:shop-api',
+        KRONOMIND_DB: '/data/memory.db',
+        KRONOMIND_NAMESPACE: 'repo:shop-api',
         ANTHROPIC_API_KEY: TEST_KEY,
-        FACTLOOM_REPO: '/repos/shop-api',
+        KRONOMIND_REPO: '/repos/shop-api',
       },
       { homeDirectory: HOME, workingDirectory: WORKING },
     );
@@ -60,7 +60,7 @@ describe('readConfiguration', () => {
         databasePath: '/data/memory.db',
         namespace: 'repo:shop-api',
         anthropicApiKey: TEST_KEY,
-        modelCacheDirectory: join(HOME, '.factloom', 'models'),
+        modelCacheDirectory: join(HOME, '.kronomind', 'models'),
         repositoryDirectory: '/repos/shop-api',
         archiveAfterDays: 180,
       },
@@ -68,7 +68,7 @@ describe('readConfiguration', () => {
   });
 
   it('fails without a namespace and says why', () => {
-    for (const environment of [{}, { FACTLOOM_NAMESPACE: '' }]) {
+    for (const environment of [{}, { KRONOMIND_NAMESPACE: '' }]) {
       const configuration = readConfiguration(environment, {
         homeDirectory: HOME,
         workingDirectory: WORKING,
@@ -77,14 +77,14 @@ describe('readConfiguration', () => {
       expect(configuration.ok).toBe(false);
       if (configuration.ok) return;
       expect(configuration.error.code).toBe('invalid_input');
-      expect(configuration.error.message).toContain('FACTLOOM_NAMESPACE');
+      expect(configuration.error.message).toContain('KRONOMIND_NAMESPACE');
       expect(configuration.error.message).toContain('one file per user');
     }
   });
 
   it('accepts a missing API key', () => {
     const configuration = readConfiguration(
-      { FACTLOOM_NAMESPACE: 'repo:shop-api' },
+      { KRONOMIND_NAMESPACE: 'repo:shop-api' },
       { homeDirectory: HOME, workingDirectory: WORKING },
     );
 

@@ -1,6 +1,6 @@
 import { recall } from '@kronomind/graph-rag';
 import { z } from 'zod';
-import type { RegisterTool, ServerDeps } from './create-factloom-server.ts';
+import type { RegisterTool, ServerDeps } from './create-kronomind-server.ts';
 import { readOptionalDate } from './read-optional-date.ts';
 import { FactOutputSchema, toFactOutput } from './to-fact-output.ts';
 import { toToolError } from './to-tool-error.ts';
@@ -20,7 +20,7 @@ const RecallInputSchema = z.object({
   known_at: z
     .string()
     .optional()
-    .describe(`Return what Factloom believed on this date. Default: now. ${DATE_FORMS}`),
+    .describe(`Return what Kronomind believed on this date. Default: now. ${DATE_FORMS}`),
   limit: z
     .number()
     .int()
@@ -77,7 +77,7 @@ export const registerRecallTool: RegisterTool = (server, deps) => {
     {
       title: 'Recall',
       description:
-        'Finds the facts in memory that answer a question, best match first, each with its sources. With no date, every fact is current. as_of asks what was true on a date; known_at asks what Factloom believed on a date.',
+        'Finds the facts in memory that answer a question, best match first, each with its sources. With no date, every fact is current. as_of asks what was true on a date; known_at asks what Kronomind believed on a date.',
       inputSchema: RecallInputSchema,
       outputSchema: RecallOutputSchema,
       annotations: { readOnlyHint: true, openWorldHint: false },

@@ -12,7 +12,7 @@ const INIT = {
   claude_code_version: '2.1.332',
   cwd: '/tmp/invoice-service-abc',
   tools: ['Read', 'Edit', 'Bash'],
-  mcp_servers: [{ name: 'factloom', status: 'connected' }],
+  mcp_servers: [{ name: 'kronomind', status: 'connected' }],
 };
 const STEP_ONE_PART_ONE = {
   type: 'assistant',
@@ -21,7 +21,7 @@ const STEP_ONE_PART_ONE = {
     id: 'msg_1',
     content: [
       { type: 'text', text: 'Looking at the code.' },
-      { type: 'tool_use', id: 'toolu_1', name: 'mcp__factloom__recall', input: { question: 'refunds' } },
+      { type: 'tool_use', id: 'toolu_1', name: 'mcp__kronomind__recall', input: { question: 'refunds' } },
     ],
     usage: { input_tokens: 10, output_tokens: 5 },
   },
@@ -115,7 +115,7 @@ describe('reading a Claude Code session', () => {
 
     expect(read.ok).toBe(true);
     if (!read.ok) return;
-    expect(read.value.toolCalls).toEqual({ mcp__factloom__recall: 1, Read: 2, Grep: 1 });
+    expect(read.value.toolCalls).toEqual({ mcp__kronomind__recall: 1, Read: 2, Grep: 1 });
   });
 
   it('counts a tool call repeated in a later event of the same message once', () => {
@@ -125,7 +125,7 @@ describe('reading a Claude Code session', () => {
 
     expect(read.ok).toBe(true);
     if (!read.ok) return;
-    expect(read.value.toolCalls).toEqual({ mcp__factloom__recall: 1 });
+    expect(read.value.toolCalls).toEqual({ mcp__kronomind__recall: 1 });
   });
 
   it('takes the model, the version and the servers from the init event', () => {
@@ -135,7 +135,7 @@ describe('reading a Claude Code session', () => {
     if (!read.ok) return;
     expect(read.value.model).toBe('claude-test-model');
     expect(read.value.agentVersion).toBe('2.1.332');
-    expect(read.value.mcpServers).toEqual([{ name: 'factloom', status: 'connected' }]);
+    expect(read.value.mcpServers).toEqual([{ name: 'kronomind', status: 'connected' }]);
     expect(read.value.turns).toBe(4);
     expect(read.value.resultSubtype).toBe('success');
   });

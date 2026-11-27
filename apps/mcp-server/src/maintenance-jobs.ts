@@ -23,7 +23,7 @@ import {
   repairMovedAnchors,
   verifyAnchoredFacts,
 } from '@kronomind/maintenance';
-import type { ServerDeps } from './create-factloom-server.ts';
+import type { ServerDeps } from './create-kronomind-server.ts';
 
 /** Whether a text holds something the secret check of FL-022 matches. */
 function containsSecret(text: string): boolean {

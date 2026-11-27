@@ -1,6 +1,6 @@
 import { getFactHistory } from '@kronomind/graph-rag';
 import { z } from 'zod';
-import type { RegisterTool } from './create-factloom-server.ts';
+import type { RegisterTool } from './create-kronomind-server.ts';
 import { FactOutputSchema, toFactOutput } from './to-fact-output.ts';
 import { toToolError } from './to-tool-error.ts';
 import { toToolSuccess } from './to-tool-success.ts';

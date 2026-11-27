@@ -37,12 +37,12 @@ describe('the fact_confidence migration', () => {
   });
 
   it('applies to a database the first migration created, and reads its fact with the confidence at recording', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'factloom-upgrade-'));
+    const directory = mkdtempSync(join(tmpdir(), 'kronomind-upgrade-'));
     closeLater(() => rmSync(directory, { recursive: true }));
     const firstOnly = join(directory, 'migrations');
     mkdirSync(firstOnly);
     copyFileSync(join(MIGRATIONS, FIRST), join(firstOnly, FIRST));
-    const path = join(directory, 'factloom.db');
+    const path = join(directory, 'kronomind.db');
     const old = openConnection(path);
     expect(
       runMigrations({ db: old, directory: firstOnly, now: toTimestamp(new Date('2026-01-01')) }).ok,

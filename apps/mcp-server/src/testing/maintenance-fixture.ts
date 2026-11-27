@@ -31,10 +31,10 @@ export async function cleanUpFixtures(): Promise<void> {
 }
 
 export async function openStore(): Promise<MemoryStore> {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-verify-'));
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-verify-'));
   const embedder = createFakeEmbedder();
   const opened = openSqliteMemoryStore({
-    path: join(directory, 'factloom.db'),
+    path: join(directory, 'kronomind.db'),
     embeddingModel: embedder.model,
     embeddingDimensions: embedder.dimensions,
   });
@@ -48,7 +48,7 @@ export async function openStore(): Promise<MemoryStore> {
 
 /** A new, empty directory that is not a git repository, removed by `cleanUpFixtures`. */
 export function newPlainDirectory(): string {
-  const directory = mkdtempSync(join(tmpdir(), 'factloom-not-a-repo-'));
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-not-a-repo-'));
   cleanups.push(() => rmSync(directory, { recursive: true, force: true }));
   return directory;
 }

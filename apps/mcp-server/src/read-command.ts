@@ -15,7 +15,7 @@ export type Command =
   | { readonly kind: 'invalid'; readonly message: string };
 
 const USAGE =
-  'Usage: factloom maintenance | factloom hook recall | factloom purge sources <fact-id> | factloom purge source <source-id> --reason erasure_requested|secret_stored | factloom proposals list | factloom proposals approve|reject <proposal-id>';
+  'Usage: kronomind maintenance | kronomind hook recall | kronomind purge sources <fact-id> | kronomind purge source <source-id> --reason erasure_requested|secret_stored | kronomind proposals list | kronomind proposals approve|reject <proposal-id>';
 
 /**
  * Reads the command from the arguments after the script. No argument serves MCP over stdio;

@@ -67,16 +67,16 @@ if (installDirectory === undefined) {
   console.error('Usage: node check-installed-server.ts <install directory>');
   process.exit(2);
 }
-const entry = join(installDirectory, 'node_modules', '@factloom', 'mcp-server', 'dist', 'main.js');
+const entry = join(installDirectory, 'node_modules', '@kronomind', 'mcp-server', 'dist', 'main.js');
 // The server's home and database live outside the install, so the install stays as installed.
-const home = mkdtempSync(join(tmpdir(), 'factloom-installed-'));
+const home = mkdtempSync(join(tmpdir(), 'kronomind-installed-'));
 try {
   const session = await runServerRequests({
     entry,
     variables: {
       ...proxyVariables,
-      FACTLOOM_DB: join(home, 'factloom.db'),
-      FACTLOOM_NAMESPACE: 'repo:clean-install',
+      KRONOMIND_DB: join(home, 'kronomind.db'),
+      KRONOMIND_NAMESPACE: 'repo:clean-install',
     },
     home,
     requests: [

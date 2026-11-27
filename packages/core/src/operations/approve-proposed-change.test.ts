@@ -49,7 +49,7 @@ describe('approveProposedChange', () => {
       ]),
     );
     expect(approved.value.changedFactId).toBe(memory.storedFactId);
-    // Between proposal and approval, Factloom still believed PostgreSQL 14 was current.
+    // Between proposal and approval, Kronomind still believed PostgreSQL 14 was current.
     const believedBetween = await memory.facts({ validAt: day('2026-04-05'), knownAt: day('2026-04-05') });
     expect(believedBetween.map((found) => [found.fact.id, found.fact.validTo])).toEqual([
       [memory.storedFactId, null],

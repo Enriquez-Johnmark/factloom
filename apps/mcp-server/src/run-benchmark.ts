@@ -147,7 +147,7 @@ async function measureServerStart(databasePath: string, home: string, timeClock:
     const start = timeClock();
     const server = startServerProcess(
       entry,
-      { FACTLOOM_DB: databasePath, FACTLOOM_NAMESPACE: NAMESPACE },
+      { KRONOMIND_DB: databasePath, KRONOMIND_NAMESPACE: NAMESPACE },
       home,
     );
     server.send(INITIALIZE_REQUEST);
@@ -230,7 +230,7 @@ function describeMachine(): string[] {
 
 const cacheDirectory = join(import.meta.dirname, '..', '..', '..', '.cache', 'models');
 const embedder = createLocalEmbedder({ cacheDirectory, allowDownload: true });
-const directory = mkdtempSync(join(tmpdir(), 'factloom-bench-'));
+const directory = mkdtempSync(join(tmpdir(), 'kronomind-bench-'));
 const rows: BenchmarkRow[] = [];
 try {
   for (const size of [10_000, 100_000]) {

@@ -15,16 +15,16 @@ import {
   DEFAULT_LLM_MODELS,
 } from './create-anthropic-llm-client.ts';
 import { buildServerDeps } from './build-server-deps.ts';
-import type { Logger } from './create-factloom-server.ts';
-import { FACTLOOM_TOOLS } from './factloom-tools.ts';
+import type { Logger } from './create-kronomind-server.ts';
+import { KRONOMIND_TOOLS } from './kronomind-tools.ts';
 import { readCommand } from './read-command.ts';
 import { readConfiguration } from './read-configuration.ts';
 import { runPersonCommand } from './run-person-command.ts';
 import { readStandardInput, runRecallHook } from './run-recall-hook.ts';
-import { serveFactloom } from './serve-factloom.ts';
+import { serveKronomind } from './serve-kronomind.ts';
 
 const log: Logger = (message) => {
-  process.stderr.write(`factloom (fake embedder): ${message}\n`);
+  process.stderr.write(`kronomind (fake embedder): ${message}\n`);
 };
 
 const command = readCommand(process.argv.slice(2));
@@ -50,9 +50,9 @@ if (!opened.ok) {
   process.exit(1);
 }
 
-// For the usage timing of FL-055 only: with FACTLOOM_TIMING_USAGE=off, recall records no usage.
+// For the usage timing of FL-055 only: with KRONOMIND_TIMING_USAGE=off, recall records no usage.
 const store =
-  process.env.FACTLOOM_TIMING_USAGE === 'off'
+  process.env.KRONOMIND_TIMING_USAGE === 'off'
     ? { ...opened.value, recordFactUsage: () => Promise.resolve(ok(null)) }
     : opened.value;
 
@@ -96,7 +96,7 @@ const llm = createAnthropicLlmClient({
   sendMessage: createAnthropicMessageSender(),
 });
 
-serveFactloom(
+serveKronomind(
   buildServerDeps({
     store,
     embedder,
@@ -107,5 +107,5 @@ serveFactloom(
     newId: () => randomUUID(),
     log,
   }),
-  FACTLOOM_TOOLS,
+  KRONOMIND_TOOLS,
 );

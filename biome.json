@@ -46,7 +46,7 @@
                 "patterns": [
                   {
                     "group": ["@kronomind/*", "@kronomind/*/**", "**/src/**"],
-                    "message": "core is the innermost package. It must not import another @factloom package."
+                    "message": "core is the innermost package. It must not import another @kronomind package."
                   },
                   {
                     "group": [

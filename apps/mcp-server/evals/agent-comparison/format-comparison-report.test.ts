@@ -37,7 +37,7 @@ function session(
   };
 }
 
-/** One task: 1,000 input tokens and 4 tool calls without Factloom, the given figures with it. */
+/** One task: 1,000 input tokens and 4 tool calls without Kronomind, the given figures with it. */
 function oneTask(withInput: number, withCalls: number, passed: { without: boolean; with: boolean }) {
   const sessions = [
     session('without', 1, 400, { Read: 1 }),
@@ -62,7 +62,7 @@ describe('the statement of the result', () => {
     const { comparison } = oneTask(500, 1, { without: true, with: true });
 
     expect(describeOutcome(comparison)).toBe(
-      'A saving. With Factloom, the median task used 50.0% fewer tokens, input and output together, and 3 fewer tool calls; 1 of 1 checks passed with Factloom and 1 of 1 without it.',
+      'A saving. With Kronomind, the median task used 50.0% fewer tokens, input and output together, and 3 fewer tool calls; 1 of 1 checks passed with Kronomind and 1 of 1 without it.',
     );
   });
 
@@ -70,7 +70,7 @@ describe('the statement of the result', () => {
     const { comparison } = oneTask(1050, 4, { without: true, with: true });
 
     expect(describeOutcome(comparison)).toBe(
-      "No clear difference. With Factloom, the median task's tokens, input and output together, changed by +5.0%, which is inside the 10% either way that this report counts as no clear difference; it made as many tool calls, and 1 of 1 checks passed with Factloom and 1 of 1 without it.",
+      "No clear difference. With Kronomind, the median task's tokens, input and output together, changed by +5.0%, which is inside the 10% either way that this report counts as no clear difference; it made as many tool calls, and 1 of 1 checks passed with Kronomind and 1 of 1 without it.",
     );
   });
 
@@ -78,7 +78,7 @@ describe('the statement of the result', () => {
     const { comparison } = oneTask(1500, 6, { without: true, with: true });
 
     expect(describeOutcome(comparison)).toBe(
-      'A cost. With Factloom, the median task used 50.0% more tokens, input and output together, and 2 more tool calls; 1 of 1 checks passed with Factloom and 1 of 1 without it.',
+      'A cost. With Kronomind, the median task used 50.0% more tokens, input and output together, and 2 more tool calls; 1 of 1 checks passed with Kronomind and 1 of 1 without it.',
     );
   });
 
@@ -86,7 +86,7 @@ describe('the statement of the result', () => {
     const { comparison } = oneTask(500, 1, { without: true, with: false });
 
     expect(describeOutcome(comparison)).toBe(
-      'A cost. Fewer checks passed with Factloom: 0 of 1 checks passed with Factloom and 1 of 1 without it. A cheaper answer that fails its check is not a saving, so the change in tokens, -50.0% for the median task, does not count as one.',
+      'A cost. Fewer checks passed with Kronomind: 0 of 1 checks passed with Kronomind and 1 of 1 without it. A cheaper answer that fails its check is not a saving, so the change in tokens, -50.0% for the median task, does not count as one.',
     );
   });
 });
@@ -114,7 +114,7 @@ describe('the report', () => {
     expect(report).toContain('None since the task set was committed.');
   });
 
-  it('gives the totals and each task with and without Factloom', () => {
+  it('gives the totals and each task with and without Kronomind', () => {
     const { comparison, sessions, checks } = oneTask(500, 1, { without: true, with: false });
 
     const report = formatComparisonReport({

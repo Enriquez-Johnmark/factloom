@@ -71,13 +71,13 @@ const CallResultSchema = z.object({
 
 describe('the recall tool over stdio', () => {
   it('answers recall over stdio from a SQLite file', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'factloom-recall-'));
+    const directory = mkdtempSync(join(tmpdir(), 'kronomind-recall-'));
     directories.push(directory);
-    const databasePath = join(directory, 'factloom.db');
+    const databasePath = join(directory, 'kronomind.db');
     const factId = await recordOneFact(databasePath);
     const server = startServerProcess(
       ENTRY,
-      { FACTLOOM_DB: databasePath, FACTLOOM_NAMESPACE: NAMESPACE },
+      { KRONOMIND_DB: databasePath, KRONOMIND_NAMESPACE: NAMESPACE },
       directory,
     );
 
@@ -108,13 +108,13 @@ describe('the recall tool over stdio', () => {
 
 describe('the recall hook over stdio', () => {
   it('adds the facts that match a prompt to the context from a SQLite file', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'factloom-hook-'));
+    const directory = mkdtempSync(join(tmpdir(), 'kronomind-hook-'));
     directories.push(directory);
-    const databasePath = join(directory, 'factloom.db');
+    const databasePath = join(directory, 'kronomind.db');
     const factId = await recordOneFact(databasePath);
     const hook = startServerProcess(
       ENTRY,
-      { FACTLOOM_DB: databasePath, FACTLOOM_NAMESPACE: NAMESPACE },
+      { KRONOMIND_DB: databasePath, KRONOMIND_NAMESPACE: NAMESPACE },
       directory,
       ['hook', 'recall'],
     );
@@ -139,11 +139,11 @@ describe('the recall hook over stdio', () => {
 
 describe('the server instructions over stdio', () => {
   it('gives its instructions in the initialize result', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'factloom-instructions-'));
+    const directory = mkdtempSync(join(tmpdir(), 'kronomind-instructions-'));
     directories.push(directory);
     const server = startServerProcess(
       ENTRY,
-      { FACTLOOM_DB: join(directory, 'factloom.db'), FACTLOOM_NAMESPACE: NAMESPACE },
+      { KRONOMIND_DB: join(directory, 'kronomind.db'), KRONOMIND_NAMESPACE: NAMESPACE },
       directory,
     );
 
@@ -174,7 +174,7 @@ const ToolResultSchema = z.object({
 function runServerSession(directory: string, requests: readonly { method: string; params: unknown }[]) {
   return runServerRequests({
     entry: ENTRY,
-    variables: { FACTLOOM_DB: join(directory, 'factloom.db'), FACTLOOM_NAMESPACE: NAMESPACE },
+    variables: { KRONOMIND_DB: join(directory, 'kronomind.db'), KRONOMIND_NAMESPACE: NAMESPACE },
     home: directory,
     requests,
     timeout: 15_000,
@@ -198,7 +198,7 @@ const QUESTION = { question: 'Where is shop-api deployed?' };
 
 describe('the server over stdio', () => {
   it('the server keeps a recorded fact across a restart', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'factloom-smoke-'));
+    const directory = mkdtempSync(join(tmpdir(), 'kronomind-smoke-'));
     directories.push(directory);
 
     const first = await runServerSession(directory, [
@@ -269,6 +269,6 @@ describe('the server over stdio', () => {
     ]) {
       expect(line).toMatchObject({ jsonrpc: '2.0' });
     }
-    for (const name of readdirSync(directory)) expect(name).toMatch(/^factloom\.db(-wal|-shm|-journal)?$/);
+    for (const name of readdirSync(directory)) expect(name).toMatch(/^kronomind\.db(-wal|-shm|-journal)?$/);
   }, 60_000);
 });
