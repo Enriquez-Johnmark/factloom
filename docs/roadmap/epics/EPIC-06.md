@@ -77,7 +77,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-079 | A registered coding agent uses Factloom rather than only its built-in memory | 1 | FL-074, FL-038 | Completed |
 | FL-080 | Fewer turns for a coding agent that uses Factloom | 1 | FL-079 | Completed |
 | FL-082 | A self-healing codebase map for coding agents | 3 | FL-080, FL-081, FL-050, FL-054 | Under Review |
-| FL-083 | The recall hook says when memory has nothing, and the agent records a reason it is told | 1 | FL-080, FL-081 | Pending |
+| FL-083 | The recall hook says when memory has nothing, and the agent records a reason it is told | 1 | FL-080, FL-081 | Completed |
 
 ### FL-034: Server configuration and composition root
 
@@ -832,7 +832,7 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-080, FL-081 |
 | Requirements | REQ-37 |
@@ -864,10 +864,17 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 - Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
 
 **Acceptance criteria.**
-- [ ] Unit tests show the hook adding its line when no fact matches and when the only match is out of date, and adding facts, not the line, when facts match.
-- [ ] The server instructions ask for a reason the person gives to be recorded, and for `recall` only when the hook gave nothing, in at most 1,000 characters.
-- [ ] `pnpm check` exits 0.
+- [x] Unit tests show the hook adding its line when no fact matches and when the only match is out of date, and adding facts, not the line, when facts match.
+- [x] The server instructions ask for a reason the person gives to be recorded, and for `recall` only when the hook gave nothing, in at most 1,000 characters.
+- [x] `pnpm check` exits 0.
 
 **Validation.** Unit tests; the effect on tokens through FL-082's runs.
 
 **Completion evidence.** The commits and the test names.
+
+**Recorded evidence.** Done on 2026-11-27 on Linux x64 with Node.js v22.23.4, in `2af5a56` and `e4eb3cd`.
+
+- **The hook** (`src/run-recall-hook.ts`): when no current fact matches the prompt, or every match is out of date, it adds one line, "Factloom, this repository's memory, holds no current facts that match this prompt; there is no need to call recall for it.", in the same `hookSpecificOutput.additionalContext` as its facts. Tests: "says in one line that memory holds nothing for the prompt when it holds no fact, so the agent need not call recall"; "leaves out a fact whose latest verification found its file or symbol gone, and says nothing matches when it was the only one"; "adds the facts that match, and not the line that nothing does". The registration guide says so.
+- **The instructions** (`src/server-instructions.ts`), 992 characters: "A prompt may come with its matching facts, or a line saying there are none; if neither, call recall at the start of a task", and "When the person says why a change is made, record the reason before you finish, such as described_as on the changed symbol." The other sentences were tightened to fit; none was dropped.
+- **Not measured here.** Whether the two changes save tokens, and whether the agent then records the reasons, is measured through FL-082's runs, as the item's non-goals say; FL-081's results stay as they were.
+- **`pnpm check`:** 1,417 tests passed.
