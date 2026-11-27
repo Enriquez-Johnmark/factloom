@@ -27,3 +27,5 @@ It prints one line per round and then each open failure, by process and by the s
 Linux x64, Node.js v22.23.4, 2026-11-27, after FL-086: 10 rounds, no process failed to open the database. This is expected: the failure has been seen only on macOS.
 
 macOS 26.5 (Darwin 25.5.0) on the owner's MacBook Air (Apple M1), Node.js v26.13.1, 2026-11-27, after FL-086 and before FL-087's fix: 30 rounds, 12 of the 90 processes failed, in 10 rounds, each with `database is locked, while setting the journal mode to WAL`: the server 6 times, maintenance 4 and the recall hook 2. No other step and no migration failed. So the failure needs no agent, and it is the `journal_mode = WAL` statement on a new file, which reports busy at once instead of waiting for the busy timeout.
+
+The same Mac, 2026-11-27, after FL-087's fix (`f0ebdeb`), which tries `journal_mode = WAL` again while it reports busy: 30 rounds, none of the 90 processes failed to open the database.
