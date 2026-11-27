@@ -274,7 +274,7 @@ Each host session starts its own MCP server, so several processes can have the s
 | Setting | Why |
 |---|---|
 | `foreign_keys = ON` | SQLite does not enforce a `REFERENCES` clause unless this is on, and it is set per connection |
-| `journal_mode = WAL` | Readers do not block the writer, and the writer does not block readers. There is still one writer at a time |
+| `journal_mode = WAL` | Readers do not block the writer, and the writer does not block readers. There is still one writer at a time. On macOS, setting it on a new file that other processes are opening can report busy at once, without the busy timeout, so the adapter tries it again every 25 ms within the same 5,000 ms (FL-087) |
 | `busy_timeout` | A process waits for the write lock when another holds it, and does not fail at once |
 | Each commit runs as `BEGIN IMMEDIATE` | The commit takes the write lock before it reads, so the check of the single-value rule and the writes that follow cannot interleave with another process's commit |
 
