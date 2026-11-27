@@ -81,7 +81,7 @@ EPIC-08 depends on this epic: FL-041 and FL-042 are measured with the scenario d
 | FL-075 | Property-based tests of the time rules | 1 | FL-056, FL-067 | Completed |
 | FL-076 | Differential tests between the in-memory store and SQLite | 1 | FL-075, FL-068, FL-016, FL-017 | Completed |
 | FL-077 | Mutation-testing trial on core | 1 | FL-008, FL-009, FL-010, FL-011 | Completed |
-| FL-081 | Token comparison on why-did-this-change tasks | 1 | FL-074, FL-080 | Under Review |
+| FL-081 | Token comparison on why-did-this-change tasks | 1 | FL-074, FL-080 | Completed |
 
 ### FL-027: Timeline scenarios as reviewed data
 
@@ -1143,7 +1143,7 @@ The workflow runs for these commits passed on Linux and macOS arm64: https://git
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-074, FL-080 |
 | Requirements | REQ-37 |
@@ -1187,15 +1187,15 @@ The workflow runs for these commits passed on Linux and macOS arm64: https://git
 **Acceptance criteria.**
 - [x] The task set, the fixture's history and the checks are committed in a commit that precedes the commit of the first results.
 - [x] Unit tests show each check passing on one solution and failing on the fixture as it is, and the fixture's history being the same on every build.
-- [ ] The owner runs the runner once per configuration and commits the raw usage output and the generated report. The report names the agent, the model, the date and the number of tasks.
-- [ ] The root `README.md` states the measured result in one or two sentences that match the report, including when the result is no saving or a cost.
+- [x] The owner runs the runner once per configuration and commits the raw usage output and the generated report. The report names the agent, the model, the date and the number of tasks.
+- [x] The root `README.md` states the measured result in one or two sentences that match the report, including when the result is no saving or a cost.
 - [x] `pnpm check` still exits 0 and does not start the runner.
 
 **Validation.** Unit tests for the fixture's build and the checks on every check; the comparison is a manual run by the owner, because it needs a signed-in agent and spends tokens.
 
 **Completion evidence.** The commit of the task set, the commit of the raw output and report, and the sentence added to `README.md`.
 
-**Recorded evidence.** Prepared on 2026-11-26 on Linux x64 with Node.js v22.23.4. The item is `Under Review`: the two runs and the `README.md` sentence (criteria 3 and 4) are the owner's, because they need a signed-in agent and spend tokens.
+**Recorded evidence.** Prepared on 2026-11-26 on Linux x64 with Node.js v22.23.4. The two runs and the `README.md` sentence (criteria 3 and 4) are the owner's, below.
 
 - **The runner.** `a355fb4` lets a task's check come from another set's directory; `aec46bd` lets a task carry the commit of its first session; `a0b1173` adds `--task-set` (default `memory`, the set of FL-074), names the set in the run log and in the report's "Tasks" row, reads a run log written before this item as one of the memory set, and commits a task's first session with its message, `--allow-empty`, after session 1 in both configurations (functional requirement 2). `56a1d8b` adds the set to the runner, with a test that run logs of two sets are refused in one report.
 - **The task set (`be205b8`), written in a separate git worktree by a helper agent and reviewed here.** `apps/mcp-server/evals/change-history/`: a `shipping-service` fixture with a scripted history of 21 commits, the base and 20 steps dated every five days from 2026-03-02 to 2026-06-10, most of them unrelated to the tasks, with a fixed identity and dates and signing off, so the HEAD hash is the same on every build; ten tasks, seven `change reason` and three `earlier value`; a check per task and three reference answers each (`first`, `second`, and `wrong`, a session 2 that ignores the reason). The reasons are only in commit messages, which the tests check against the tree. Session-2 prompts do not name the earlier change.
@@ -1204,3 +1204,10 @@ The workflow runs for these commits passed on Linux and macOS arm64: https://git
 - **Dry run:** `pnpm run compare:agent --dry-run --task-set change-history` printed `10 tasks, 20 sessions per configuration. No agent was started.`, with every check failing on the untouched fixture.
 - **Known limits of the set, from the helper agent's review and mine.** Two tasks, `ascii-address-lines` and `label-timeout`, tempt only mildly: an agent that ignores the reason can still pass by keeping its fix local, so they measure cost more than they discriminate. `signature-threshold`'s second prompt asks to leave parcels "without asking for a signature"; passing means keeping the signature above 300 euros, which is right only because of the reason. `label-timeout`'s check expects the timeout through `transport.send`'s documented `timeoutMs`.
 - **`pnpm check`:** 132 test files, 1,347 tests passed.
+
+**The owner's runs, 2026-11-26.** On the owner's Mac, Claude Code 2.1.332 with claude-sonnet-5-5, both configurations into `results/2026-11-26-change-history/`, the run without Factloom first; committed in `5a51b69` and merged in `b9b3792`. The report's "How it was run" shows the run with Factloom with auto memory off and the recall hook, and no maintenance hook; the task set is unchanged since `be205b8`. The results were searched for key patterns, e-mail addresses and the owner's user name: none.
+
+- **The result, as the report states it: a cost.** Median per-task change in tokens +19.2%; total input tokens 2,638,518 with Factloom against 2,322,319, output 55,771 against 45,038, tool calls 173 against 126. Checks 8 of 10 with Factloom against 6 of 10 without: carrier-retry-limit and one-label-at-a-time passed only with Factloom; tracking-number-formats and signature-threshold failed in both. Per task from −24.4% (label-timeout) to +66.3% (one-label-at-a-time).
+- **What the raw output shows.** In the first sessions with Factloom the agent recorded the reason it was given in one task of ten (tracking-batch-size, two `record_fact` calls); in six others it called `recall` on the empty memory and recorded nothing, and in three it called neither. Without Factloom, no session wrote to auto memory. In the second sessions both configurations found the reasons in the git history, with `git show` or `git log` in every task; with Factloom the agent also called `recall` in eight, all but tracking-batch-size, where the hook had a fact to hand over, and label-timeout. So the run measured an agent that mostly did not record the reason, and the cost of looking up a memory that held nothing: 10 `ToolSearch` and 20 `recall` calls. Whether the two checks passed only with Factloom come from the instructions to look before changing code, or from chance, ten tasks cannot tell.
+- **Weaknesses found, for a separate work item, with the task set unchanged.** The recall hook prints nothing when no fact matches, and the server's instructions then send the agent to `recall` itself, two turns for nothing; the hook could say that memory holds nothing for the prompt. The agent did not record a reason it was told without being asked to remember it; the instructions could say so plainly.
+- **`README.md`:** the sentence under "What it is for" states this result with the three before it.
