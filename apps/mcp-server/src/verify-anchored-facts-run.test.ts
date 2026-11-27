@@ -126,6 +126,7 @@ describe('the verification job on a git repository', () => {
     expect(report.jobs).toMatchObject([
       { name: 'verify_anchored_facts', status: 'failed', error: 'invalid_input' },
       { name: 'repair_moved_anchors', status: 'failed', error: 'invalid_input' },
+      { name: 'record_codebase_map', status: 'failed', error: 'invalid_input' },
       { name: 'find_duplicate_entities', status: 'ok' },
       { name: 'archive_unused_facts', status: 'ok' },
     ]);

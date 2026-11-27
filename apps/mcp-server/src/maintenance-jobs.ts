@@ -1,10 +1,12 @@
-import type { LlmClient } from '@factloom/core';
+import { type LlmClient, ok, type Result } from '@factloom/core';
 import {
+  type CodebaseReader,
   checkForSecrets,
   describeDependencyVersion,
   findSymbolNames,
   PATH_VALUED_PREDICATES,
   readDependencyVersion,
+  recordCodebaseMap,
 } from '@factloom/graph-rag';
 import {
   archiveUnusedFacts,
@@ -13,6 +15,7 @@ import {
   createSimilarityStage,
   createStructuredValueRung,
   findDuplicateEntities,
+  type JobCounts,
   type MaintenanceJob,
   NAME_STAGE,
   type RepositoryReader,
@@ -45,6 +48,25 @@ function buildVerificationRungs(llm: LlmClient | null) {
   ];
 }
 
+/** Records the code base map (ADR 0024), its counts in the report's terms: what was skipped is undecided. */
+async function runCodebaseMap(
+  deps: Pick<ServerDeps, 'store' | 'embedder' | 'domain' | 'namespace' | 'now' | 'newId'> & {
+    readonly repository: CodebaseReader;
+  },
+): Promise<Result<JobCounts>> {
+  const counts = await recordCodebaseMap(deps, { namespace: deps.namespace });
+  if (!counts.ok) return counts;
+  const { recorded, moved, ended, failed, skipped } = counts.value;
+  return ok({
+    examined: counts.value.declarations,
+    changed: recorded + moved + ended,
+    flagged: 0,
+    failed,
+    undecided: skipped.ambiguous + skipped.secret + skipped.tooLarge + skipped.overLimit,
+    flaggedItems: [],
+  });
+}
+
 /**
  * The maintenance jobs, in the order they run, bound to the composition root's dependencies.
  * The archiving job runs last, after the jobs that repair and verify. Every change a job makes carries the trigger
@@ -53,7 +75,7 @@ function buildVerificationRungs(llm: LlmClient | null) {
  */
 export function buildMaintenanceJobs(
   deps: Pick<ServerDeps, 'store' | 'embedder' | 'domain' | 'namespace' | 'now' | 'newId'> & {
-    readonly repository: RepositoryReader;
+    readonly repository: RepositoryReader & CodebaseReader;
     /** How many days a fact must go unrecalled before it is archived. */
     readonly archiveAfterDays: number;
     /** The LLM for the last verification rung and for entity matching, or null when no key is set. */
@@ -71,6 +93,8 @@ export function buildMaintenanceJobs(
       name: 'repair_moved_anchors',
       run: () => repairMovedAnchors({ ...deps, pathPredicates: PATH_VALUED_PREDICATES }, { namespace }),
     },
+    // After the repair, so a fact continued at a renamed file is already at its path (FL-084).
+    { name: 'record_codebase_map', run: () => runCodebaseMap(deps) },
     {
       name: 'find_duplicate_entities',
       // The name stage of FL-053, then the similarity and LLM stages of FL-064, made anew for

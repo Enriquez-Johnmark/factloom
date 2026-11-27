@@ -56,7 +56,9 @@ describe('the name check on a git repository', () => {
       flagged: 1,
       flaggedItems: [{ id: factId, reason: 'contradicted' }],
     });
-    expect(await factRows(store)).toEqual(before);
+    // The map job records the function still in the file (FL-084); the checked fact is unchanged.
+    const after = await factRows(store);
+    expect(after.filter(([id]) => before.some(([earlier]) => earlier === id))).toEqual(before);
     expect(await triggersOf(store, factId)).toEqual(['maintenance']);
   });
 

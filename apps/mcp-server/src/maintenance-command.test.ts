@@ -67,6 +67,17 @@ describe('the maintenance command', () => {
         flaggedItems: [],
       },
       {
+        name: 'record_codebase_map',
+        status: 'ok',
+        error: null,
+        examined: 0,
+        changed: 0,
+        flagged: 0,
+        failed: 0,
+        undecided: 0,
+        flaggedItems: [],
+      },
+      {
         name: 'find_duplicate_entities',
         status: 'ok',
         error: null,
@@ -91,7 +102,7 @@ describe('the maintenance command', () => {
     ]);
   }, 30_000);
 
-  it('reports the verification and repair jobs as failed and exits with 1 when FACTLOOM_REPO is not a git repository', async () => {
+  it('reports the jobs that read the repository as failed and exits with 1 when FACTLOOM_REPO is not a git repository', async () => {
     const directory = createTemporaryDirectory();
     const started = startServerProcess(
       MAIN,
@@ -112,6 +123,7 @@ describe('the maintenance command', () => {
     expect(report.jobs).toMatchObject([
       { name: 'verify_anchored_facts', status: 'failed', error: 'invalid_input' },
       { name: 'repair_moved_anchors', status: 'failed', error: 'invalid_input' },
+      { name: 'record_codebase_map', status: 'failed', error: 'invalid_input' },
       { name: 'find_duplicate_entities', status: 'ok' },
       { name: 'archive_unused_facts', status: 'ok' },
     ]);
