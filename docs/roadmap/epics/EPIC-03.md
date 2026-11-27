@@ -75,7 +75,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 | FL-016 | Keyword lane on FTS5 | 1 | FL-015 | Completed |
 | FL-017 | Vector lane on a plain table, with model checking | 1 | FL-002, FL-015 | Completed |
 | FL-086 | Two processes opening a new database at once | 1 | FL-013, FL-014, FL-068 | Completed |
-| FL-087 | The lock error on first open on macOS | 1 | FL-086 | Pending |
+| FL-087 | The lock error on first open on macOS | 1 | FL-086 | Completed |
 
 ### FL-012: Storage contract suite: fixture, time, reads, commit and refusals
 
@@ -1009,7 +1009,7 @@ $ vitest run
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 1 |
 | Depends on | FL-086 |
 | Requirements | REQ-11 |
@@ -1045,12 +1045,38 @@ SQLite's documentation lists cases in which a WAL database returns `SQLITE_BUSY`
 - `spikes/` holds throwaway scripts; the spike is not part of `pnpm check`.
 
 **Acceptance criteria.**
-- [ ] A test shows that a failed open names its step.
-- [ ] The spike, run by the owner on the Mac before the fix, shows the failure and its step.
-- [ ] A unit test covers the fix of that step.
-- [ ] The spike, run by the owner on the Mac after the fix, shows no failure in as many rounds.
-- [ ] `pnpm check` exits 0 on Linux and on macOS arm64.
+- [x] A test shows that a failed open names its step.
+- [x] The spike, run by the owner on the Mac before the fix, shows the failure and its step.
+- [x] A unit test covers the fix of that step.
+- [x] The spike, run by the owner on the Mac after the fix, shows no failure in as many rounds.
+- [x] `pnpm check` exits 0 on Linux and on macOS arm64.
 
 **Validation.** The spike on the owner's Mac, before and after; adapter or unit tests in `storage`.
 
 **Completion evidence.** The commits, the spike's output before and after, and the passing `pnpm check`. Q-86 is closed.
+
+**Recorded evidence.** Completed on 2026-11-27, in `74efd1f` (`feat(storage): name the step of opening that failed`), `6b8f4ef` (the spike), `f0ebdeb` (`fix(storage): retry setting the journal mode while the database is busy`) and `6674b36` (the spike's result on macOS), with `SCHEMA.md` and Q-86 in their own commits. The code is `packages/storage/src/open-connection.ts` and `retry-while-busy.ts`.
+
+- **The step, named.** A failed open ends with the step, for example `database is locked, while setting the journal mode to WAL`. Test: "names the step of opening that failed", with a path whose directory does not exist.
+- **The spike before the fix,** on the owner's MacBook Air (Apple M1, Darwin 25.5.0, Node.js v26.13.1): 30 rounds, 12 of 90 processes failed in 10 rounds, all with `database is locked, while setting the journal mode to WAL`: the server 6 times, maintenance 4, the recall hook 2. No other step failed, and no migration. On Linux, 10 rounds had no failure.
+- **The fix.** `journal_mode = WAL` is tried again every 25 ms while it throws SQLite's busy error, up to 200 attempts, the same 5,000 ms as the busy timeout. Any other error is thrown at once. Three unit tests in `retry-while-busy.test.ts`: it returns once the step stops reporting busy, it throws another error at once, and it throws the busy error when no attempt is left. With the retry removed by hand, the first and the third failed; it was restored.
+- **The spike after the fix,** on the same Mac: 30 rounds, none of the 90 processes failed.
+- **What differs from the work item:** the spike is the test that failed before the fix, on the platform that fails; the unit tests cover the retry with an error of SQLite's form, because no way was found to make the statement report busy on Linux.
+
+Not run: FL-084's comparison a third time, and a first session in a new repository with Claude Code after the fix.
+
+The workflow run on Linux and macOS arm64, with Node.js 22 and 26: https://github.com/Enriquez-Johnmark/factloom/actions/runs/46006535654.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4. The lint step prints the same informational note as in FL-008:
+
+```text
+$ biome format .
+Checked 841 files. No fixes applied.
+$ biome lint .
+Checked 841 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  137 passed (137)
+      Tests  1442 passed (1442)
+```
