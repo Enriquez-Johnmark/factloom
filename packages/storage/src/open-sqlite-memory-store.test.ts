@@ -71,6 +71,16 @@ describe('openSqliteMemoryStore', () => {
     expect(!opened.ok && opened.error.code).toBe('storage_failed');
   });
 
+  it('names the step of opening that failed', () => {
+    const path = join(tmpdir(), 'factloom-no-such-directory', 'nested', 'factloom.db');
+
+    const opened = openSqliteMemoryStore({ path, ...FIXTURE_MODEL });
+
+    // The step is part of the message so that a report from another machine says where opening
+    // stopped (FL-087); the code alone cannot.
+    expect(opened.ok ? null : opened.error.message).toContain('while opening the file');
+  });
+
   it('returns storage_failed after the store is closed', async () => {
     const { store } = openOnFile();
     await store.close();
