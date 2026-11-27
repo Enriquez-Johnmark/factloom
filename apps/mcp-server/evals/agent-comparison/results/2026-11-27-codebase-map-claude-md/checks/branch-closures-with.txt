@@ -1,0 +1,448 @@
+TAP version 13
+# Subtest: finds the items whose title or author holds every word of the query
+ok 1 - finds the items whose title or author holds every word of the query
+  ---
+  duration_ms: 1.272042
+  type: 'test'
+  ...
+# Subtest: sorts the results by title
+ok 2 - sorts the results by title
+  ---
+  duration_ms: 17.045542
+  type: 'test'
+  ...
+# Subtest: finds nothing for an empty query
+ok 3 - finds nothing for an empty query
+  ---
+  duration_ms: 0.199875
+  type: 'test'
+  ...
+# Subtest: accepts a barcode with the right check digit only
+ok 4 - accepts a barcode with the right check digit only
+  ---
+  duration_ms: 0.439083
+  type: 'test'
+  ...
+# Subtest: removes spaces and dashes from a scanned barcode
+ok 5 - removes spaces and dashes from a scanned barcode
+  ---
+  duration_ms: 0.276416
+  type: 'test'
+  ...
+# Subtest: lends an item and gives the loan its due date
+ok 6 - lends an item and gives the loan its due date
+  ---
+  duration_ms: 5.183292
+  type: 'test'
+  ...
+# Subtest: never gives a loan a due date on a holiday of the branch the item belongs to
+ok 7 - never gives a loan a due date on a holiday of the branch the item belongs to
+  ---
+  duration_ms: 0.361167
+  type: 'test'
+  ...
+# Subtest: reads a barcode with spaces and dashes in it
+ok 8 - reads a barcode with spaces and dashes in it
+  ---
+  duration_ms: 0.236834
+  type: 'test'
+  ...
+# Subtest: refuses an item that is already on loan
+ok 9 - refuses an item that is already on loan
+  ---
+  duration_ms: 0.994666
+  type: 'test'
+  ...
+# Subtest: refuses an item that is held for another member
+ok 10 - refuses an item that is held for another member
+  ---
+  duration_ms: 0.308959
+  type: 'test'
+  ...
+# Subtest: lends a held item to the member who holds it, and marks the hold collected
+ok 11 - lends a held item to the member who holds it, and marks the hold collected
+  ---
+  duration_ms: 0.290125
+  type: 'test'
+  ...
+# Subtest: refuses an item that is withdrawn
+ok 12 - refuses an item that is withdrawn
+  ---
+  duration_ms: 0.2325
+  type: 'test'
+  ...
+# Subtest: adds days across the end of a month and a year
+ok 13 - adds days across the end of a month and a year
+  ---
+  duration_ms: 3.06625
+  type: 'test'
+  ...
+# Subtest: counts the days between two dates
+ok 14 - counts the days between two dates
+  ---
+  duration_ms: 0.096209
+  type: 'test'
+  ...
+# Subtest: gives the day of the week, Sunday being 0
+ok 15 - gives the day of the week, Sunday being 0
+  ---
+  duration_ms: 0.071166
+  type: 'test'
+  ...
+# Subtest: a branch is closed on its closed weekdays
+ok 16 - a branch is closed on its closed weekdays
+  ---
+  duration_ms: 0.100667
+  type: 'test'
+  ...
+# Subtest: the next open day of a closed day is the first day the branch opens again
+ok 17 - the next open day of a closed day is the first day the branch opens again
+  ---
+  duration_ms: 0.081375
+  type: 'test'
+  ...
+# Subtest: a branch is closed on its holidays, and only on its own
+ok 18 - a branch is closed on its holidays, and only on its own
+  ---
+  duration_ms: 0.062209
+  type: 'test'
+  ...
+# Subtest: the next open day skips holidays, alone or in a row with closed weekdays
+ok 19 - the next open day skips holidays, alone or in a row with closed weekdays
+  ---
+  duration_ms: 0.066208
+  type: 'test'
+  ...
+# Subtest: a branch is closed throughout a closure, both ends included
+ok 20 - a branch is closed throughout a closure, both ends included
+  ---
+  duration_ms: 0.093583
+  type: 'test'
+  ...
+# Subtest: a book is due three weeks after it is lent
+ok 21 - a book is due three weeks after it is lent
+  ---
+  duration_ms: 2.475333
+  type: 'test'
+  ...
+# Subtest: a due date that falls on a closed day moves to the next open day
+ok 22 - a due date that falls on a closed day moves to the next open day
+  ---
+  duration_ms: 0.095917
+  type: 'test'
+  ...
+# Subtest: a laptop is due the next day
+ok 23 - a laptop is due the next day
+  ---
+  duration_ms: 0.070166
+  type: 'test'
+  ...
+# Subtest: a due date that falls on a holiday of the branch moves to its next open day
+ok 24 - a due date that falls on a holiday of the branch moves to its next open day
+  ---
+  duration_ms: 0.060708
+  type: 'test'
+  ...
+# Subtest: a due date skips a holiday followed by closed weekdays
+ok 25 - a due date skips a holiday followed by closed weekdays
+  ---
+  duration_ms: 0.074166
+  type: 'test'
+  ...
+# Subtest: a holiday of another branch does not move the due date
+ok 26 - a holiday of another branch does not move the due date
+  ---
+  duration_ms: 0.051333
+  type: 'test'
+  ...
+# Subtest: a due date within a closure of the branch moves to the first open day after it
+ok 27 - a due date within a closure of the branch moves to the first open day after it
+  ---
+  duration_ms: 0.096333
+  type: 'test'
+  ...
+# Subtest: a member in good standing may borrow
+ok 28 - a member in good standing may borrow
+  ---
+  duration_ms: 0.876125
+  type: 'test'
+  ...
+# Subtest: a member whose card has expired may not borrow
+ok 29 - a member whose card has expired may not borrow
+  ---
+  duration_ms: 0.1025
+  type: 'test'
+  ...
+# Subtest: a member who owes ten dollars or more may not borrow
+ok 30 - a member who owes ten dollars or more may not borrow
+  ---
+  duration_ms: 0.117042
+  type: 'test'
+  ...
+# Subtest: a junior member may have at most ten items on loan
+ok 31 - a junior member may have at most ten items on loan
+  ---
+  duration_ms: 0.118375
+  type: 'test'
+  ...
+# Subtest: a renewed card lasts three years for an adult and one year for a junior
+ok 32 - a renewed card lasts three years for an adult and one year for a junior
+  ---
+  duration_ms: 0.099709
+  type: 'test'
+  ...
+# Subtest: charges nothing for an item returned within the grace day
+ok 33 - charges nothing for an item returned within the grace day
+  ---
+  duration_ms: 0.47275
+  type: 'test'
+  ...
+# Subtest: charges the daily rate of the format for each day late
+ok 34 - charges the daily rate of the format for each day late
+  ---
+  duration_ms: 0.07875
+  type: 'test'
+  ...
+# Subtest: charges staff nothing
+ok 35 - charges staff nothing
+  ---
+  duration_ms: 0.059834
+  type: 'test'
+  ...
+# Subtest: a member owes the sum of their unpaid fees
+ok 36 - a member owes the sum of their unpaid fees
+  ---
+  duration_ms: 0.255
+  type: 'test'
+  ...
+# Subtest: waives a fee only for a known reason
+ok 37 - waives a fee only for a known reason
+  ---
+  duration_ms: 0.24525
+  type: 'test'
+  ...
+# Subtest: places a hold at the end of the queue
+ok 38 - places a hold at the end of the queue
+  ---
+  duration_ms: 9.262917
+  type: 'test'
+  ...
+# Subtest: refuses a second hold of the same member on an item
+ok 39 - refuses a second hold of the same member on an item
+  ---
+  duration_ms: 0.135
+  type: 'test'
+  ...
+# Subtest: readies the hold placed first
+ok 40 - readies the hold placed first
+  ---
+  duration_ms: 0.119417
+  type: 'test'
+  ...
+# Subtest: a ready hold can be collected for a week, until the branch next opens
+ok 41 - a ready hold can be collected for a week, until the branch next opens
+  ---
+  duration_ms: 0.733208
+  type: 'test'
+  ...
+# Subtest: the last day to collect a hold never falls within a closure of its pickup branch
+ok 42 - the last day to collect a hold never falls within a closure of its pickup branch
+  ---
+  duration_ms: 0.129125
+  type: 'test'
+  ...
+# Subtest: expires the ready holds that nobody collected in time
+ok 43 - expires the ready holds that nobody collected in time
+  ---
+  duration_ms: 0.156375
+  type: 'test'
+  ...
+# Subtest: a notice by email goes to the email address, with a subject
+ok 44 - a notice by email goes to the email address, with a subject
+  ---
+  duration_ms: 0.600084
+  type: 'test'
+  ...
+# Subtest: a notice by text message goes to the phone number, greets by the preferred name and has no subject
+ok 45 - a notice by text message goes to the phone number, greets by the preferred name and has no subject
+  ---
+  duration_ms: 0.091625
+  type: 'test'
+  ...
+# Subtest: the morning run reminds members of loans due within two days, and of overdue loans
+ok 46 - the morning run reminds members of loans due within two days, and of overdue loans
+  ---
+  duration_ms: 5.982208
+  type: 'test'
+  ...
+# Subtest: renews a loan from today for a new loan period
+ok 47 - renews a loan from today for a new loan period
+  ---
+  duration_ms: 5.023042
+  type: 'test'
+  ...
+# Subtest: refuses a renewal once a book has been renewed twice
+ok 48 - refuses a renewal once a book has been renewed twice
+  ---
+  duration_ms: 0.410958
+  type: 'test'
+  ...
+# Subtest: renews a DVD at most once
+ok 49 - renews a DVD at most once
+  ---
+  duration_ms: 0.114375
+  type: 'test'
+  ...
+# Subtest: never renews a loan to a holiday of the branch the item belongs to
+ok 50 - never renews a loan to a holiday of the branch the item belongs to
+  ---
+  duration_ms: 0.094625
+  type: 'test'
+  ...
+# Subtest: refuses to renew an overdue loan
+ok 51 - refuses to renew an overdue loan
+  ---
+  duration_ms: 0.092
+  type: 'test'
+  ...
+# Subtest: lists the overdue loans, the longest overdue first
+ok 52 - lists the overdue loans, the longest overdue first
+  ---
+  duration_ms: 10.527333
+  type: 'test'
+  ...
+# Subtest: counts the items on loan of each branch
+ok 53 - counts the items on loan of each branch
+  ---
+  duration_ms: 0.175666
+  type: 'test'
+  ...
+# Subtest: exports the loans for the county as CSV
+ok 54 - exports the loans for the county as CSV
+  ---
+  duration_ms: 0.13425
+  type: 'test'
+  ...
+# Subtest: closes the loan of a returned item
+ok 55 - closes the loan of a returned item
+  ---
+  duration_ms: 0.96575
+  type: 'test'
+  ...
+# Subtest: charges the late fee of a late return to the member
+ok 56 - charges the late fee of a late return to the member
+  ---
+  duration_ms: 0.418042
+  type: 'test'
+  ...
+# Subtest: makes the next hold ready, and gives its notice
+ok 57 - makes the next hold ready, and gives its notice
+  ---
+  duration_ms: 1.002042
+  type: 'test'
+  ...
+# Subtest: refuses an item that is not on loan
+ok 58 - refuses an item that is not on loan
+  ---
+  duration_ms: 0.103375
+  type: 'test'
+  ...
+# Subtest: test/sample-library.js
+ok 12 - test/sample-library.js
+  ---
+  duration_ms: 62.011208
+  type: 'test'
+  ...
+# Subtest: POST /checkouts lends an item
+ok 60 - POST /checkouts lends an item
+  ---
+  duration_ms: 2.121667
+  type: 'test'
+  ...
+# Subtest: POST /checkouts refuses a barcode with a wrong check digit
+ok 61 - POST /checkouts refuses a barcode with a wrong check digit
+  ---
+  duration_ms: 0.156459
+  type: 'test'
+  ...
+# Subtest: POST /loans/:id/renew answers a refusal with its reason as the error code
+ok 62 - POST /loans/:id/renew answers a refusal with its reason as the error code
+  ---
+  duration_ms: 0.165709
+  type: 'test'
+  ...
+# Subtest: GET /members/:id/summary gives the loans and the balance of a member
+ok 63 - GET /members/:id/summary gives the loans and the balance of a member
+  ---
+  duration_ms: 0.169917
+  type: 'test'
+  ...
+# Subtest: GET /catalog searches the catalog
+ok 64 - GET /catalog searches the catalog
+  ---
+  duration_ms: 0.807958
+  type: 'test'
+  ...
+# Subtest: an unknown route answers 404
+ok 65 - an unknown route answers 404
+  ---
+  duration_ms: 0.098875
+  type: 'test'
+  ...
+# Subtest: reads the card number and the barcode of a checkout request
+ok 66 - reads the card number and the barcode of a checkout request
+  ---
+  duration_ms: 0.726334
+  type: 'test'
+  ...
+# Subtest: lends the item and replies with its due date
+ok 67 - lends the item and replies with its due date
+  ---
+  duration_ms: 1.119333
+  type: 'test'
+  ...
+# Subtest: refuses a card nobody holds
+ok 68 - refuses a card nobody holds
+  ---
+  duration_ms: 0.094291
+  type: 'test'
+  ...
+# Subtest: refuses a message that is not a checkout request
+ok 69 - refuses a message that is not a checkout request
+  ---
+  duration_ms: 0.210541
+  type: 'test'
+  ...
+# Subtest: a branch is closed on every day of a closure, both ends included
+ok 70 - a branch is closed on every day of a closure, both ends included
+  ---
+  duration_ms: 0.978416
+  type: 'test'
+  ...
+# Subtest: the next open day of a day within a closure is the day after it ends
+ok 71 - the next open day of a day within a closure is the day after it ends
+  ---
+  duration_ms: 0.193875
+  type: 'test'
+  ...
+# Subtest: a loan that would fall due within a closure falls due after it
+ok 72 - a loan that would fall due within a closure falls due after it
+  ---
+  duration_ms: 0.081334
+  type: 'test'
+  ...
+# Subtest: a branch without closures keeps its due dates
+ok 73 - a branch without closures keeps its due dates
+  ---
+  duration_ms: 0.055334
+  type: 'test'
+  ...
+1..73
+# tests 73
+# suites 0
+# pass 73
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 207.99925
