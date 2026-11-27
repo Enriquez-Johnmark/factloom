@@ -89,6 +89,23 @@ describe('findDuplicateEntities', () => {
     ).toEqual(['maintenance']);
   });
 
+  it('does not compare entities of a type whose names are exact, such as the symbols of code', async () => {
+    const store = createInMemoryStore();
+    await createEntities(store, [
+      { id: 'e-earlier', name: 'formatDate', type: 'symbol', day: '2026-01-10' },
+      { id: 'e-later', name: 'format_date', type: 'symbol', day: '2026-02-01' },
+    ]);
+    const deps = { ...createTestDeps({ now: '2026-03-01', store }), embedder: FAILING_EMBEDDER };
+
+    const result = await findDuplicateEntities(
+      { ...deps, stages: [NAME_STAGE], exactEntityTypes: ['symbol'] },
+      { namespace: NAMESPACE },
+    );
+
+    expect(result.ok && result.value).toMatchObject({ examined: 0, changed: 0 });
+    expect(await merges(store)).toEqual([]);
+  });
+
   it('does not compare two entities with equal names and different types', async () => {
     const store = createInMemoryStore();
     await createEntities(store, [

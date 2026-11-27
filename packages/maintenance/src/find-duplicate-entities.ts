@@ -43,6 +43,11 @@ export const NAME_STAGE: DuplicateStage = {
 
 export type FindDuplicateEntitiesDeps = Pick<OperationDeps, 'store' | 'domain' | 'now' | 'newId'> & {
   readonly stages: readonly DuplicateStage[];
+  /**
+   * Entity types whose names are exact identifiers, such as the symbols of code (FL-084): two
+   * of them with different names are never the same, so they are not compared. None by default.
+   */
+  readonly exactEntityTypes?: readonly string[];
 };
 
 async function readAllEntities(
@@ -126,8 +131,10 @@ export async function findDuplicateEntities(
   input: { readonly namespace: Namespace },
 ): Promise<Result<JobCounts>> {
   const { namespace } = input;
-  const entities = await readAllEntities(deps, namespace);
-  if (!entities.ok) return entities;
+  const read = await readAllEntities(deps, namespace);
+  if (!read.ok) return read;
+  const exactTypes = deps.exactEntityTypes ?? [];
+  const entities = ok(read.value.filter((entity) => !exactTypes.includes(entity.type)));
   const merges = await deps.store.listEntityMerges({ namespace });
   if (!merges.ok) return merges;
 
