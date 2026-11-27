@@ -75,6 +75,7 @@ Memory persists in one SQLite file. `@factloom/storage` implements `MemoryStore`
 | FL-016 | Keyword lane on FTS5 | 1 | FL-015 | Completed |
 | FL-017 | Vector lane on a plain table, with model checking | 1 | FL-002, FL-015 | Completed |
 | FL-086 | Two processes opening a new database at once | 1 | FL-013, FL-014, FL-068 | Completed |
+| FL-087 | The lock error on first open on macOS | 1 | FL-086 | Pending |
 
 ### FL-012: Storage contract suite: fixture, time, reads, commit and refusals
 
@@ -1003,3 +1004,53 @@ $ vitest run
  Test Files  136 passed (136)
       Tests  1438 passed (1438)
 ```
+
+### FL-087: The lock error on first open on macOS
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 1 |
+| Depends on | FL-086 |
+| Requirements | REQ-11 |
+| Components | `packages/storage`, `spikes/` |
+
+**Objective.** Stop a new database from refusing to open with `database is locked` when the server and the maintenance command open it at once on macOS.
+
+**Background.** FL-086 fixed the race in the migration runner. In the owner's second run of FL-084's comparison, after FL-086, the maintenance hook still failed in five of ten first sessions on the Mac, each with `storage_failed: The database … could not be opened. database is locked`, and in no second session ([EPIC-06](EPIC-06.md), FL-084; Q-86 in [`OPEN-QUESTIONS.md`](../../research/OPEN-QUESTIONS.md)). The message comes from `openConnection`, before any migration, and does not say which of its steps failed. On Linux it was never seen after FL-086, and two probes in which another process held the write lock, or held the file in exclusive locking mode, both waited for the lock and then opened.
+
+SQLite's documentation lists cases in which a WAL database returns `SQLITE_BUSY` although writers do not block readers: while the last connection that is closing cleans up the WAL and shared-memory files, while a new connection runs recovery after a crash, and while another connection holds the file in exclusive locking mode. It says that "applications should be prepared for that happenstance" (https://www.sqlite.org/wal.html, section 9, read on 2026-11-27). Which case applies here is not known.
+
+**Outcome.** The first session in a new repository records the map before the agent starts, on macOS as on Linux.
+
+**Scope.**
+- The error of `openConnection` names the step that failed.
+- A spike in `spikes/first-open-lock/` that the owner runs on the Mac: it starts the server and the maintenance command at once on a new database, round after round, and counts the maintenance runs that fail to open it, by step. It uses the app as built, with no LLM key and no agent.
+- The fix of the step the spike shows, with a unit test.
+
+**Non-goals.**
+- A lock held longer than the busy timeout of 5,000 ms.
+- Any change to the migrations: FL-086.
+
+**Functional requirements.**
+1. When opening fails, the message names the step: opening the file, a connection setting, or loading the vector extension.
+2. A process that meets `SQLITE_BUSY` while it opens a database, in one of the cases SQLite documents, opens it once the other process is done, within the busy timeout.
+
+**Technical requirements.**
+1. The spike starts the processes as Claude Code does: the server over stdio, kept open, and `maintenance` at the same moment, with the same variables as the comparison's runner.
+2. The fix is chosen from what the spike shows, and the work item's evidence says which step it was.
+
+**Constraints.**
+- [`SCHEMA.md`](../../architecture/SCHEMA.md), "Connection settings", and the busy timeout of FL-014.
+- `spikes/` holds throwaway scripts; the spike is not part of `pnpm check`.
+
+**Acceptance criteria.**
+- [ ] A test shows that a failed open names its step.
+- [ ] The spike, run by the owner on the Mac before the fix, shows the failure and its step.
+- [ ] A unit test covers the fix of that step.
+- [ ] The spike, run by the owner on the Mac after the fix, shows no failure in as many rounds.
+- [ ] `pnpm check` exits 0 on Linux and on macOS arm64.
+
+**Validation.** The spike on the owner's Mac, before and after; adapter or unit tests in `storage`.
+
+**Completion evidence.** The commits, the spike's output before and after, and the passing `pnpm check`. Q-86 is closed.
