@@ -30,3 +30,5 @@ export {
 } from './software-development-domain.ts';
 export type { SourceInput } from './source-input.ts';
 export type { StructuredFactInput } from './structured-fact-input.ts';
+export type { Declaration } from './read-declarations.ts';
+export { isMappedSourcePath, readDeclarations } from './read-declarations.ts';
