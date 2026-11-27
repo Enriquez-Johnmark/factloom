@@ -1,6 +1,6 @@
 # Testing strategy
 
-How Factloom is tested, and how its claims about time and correctness are measured. Conventions for writing individual tests are in [`.claude/rules/testing.md`](../../.claude/rules/testing.md); this document is the plan.
+How Kronomind is tested, and how its claims about time and correctness are measured. Conventions for writing individual tests are in [`.claude/rules/testing.md`](../../.claude/rules/testing.md); this document is the plan.
 
 Terms in bold are defined in [`GLOSSARY.md`](../../GLOSSARY.md). The reasoning behind the evaluation approach is in the [evaluation research](../research/technical/evaluation.md).
 
@@ -65,7 +65,7 @@ Two projects studied in the research did not start on a fresh install because a 
 
 ## Eval set
 
-Unit and contract tests show the code does what it says. The eval set shows that memory ends up *right* after a realistic sequence of events. No public benchmark tests as-of and known-at questions or supersession links, so Factloom has its own.
+Unit and contract tests show the code does what it says. The eval set shows that memory ends up *right* after a realistic sequence of events. No public benchmark tests as-of and known-at questions or supersession links, so Kronomind has its own.
 
 ### Layer A: time semantics, phase 0 and 1
 

@@ -1,6 +1,6 @@
 # Requirements
 
-The consolidated list of what Factloom must do, with the epics and work items that deliver each requirement. Terms are used as defined in [`GLOSSARY.md`](../../GLOSSARY.md).
+The consolidated list of what Kronomind must do, with the epics and work items that deliver each requirement. Terms are used as defined in [`GLOSSARY.md`](../../GLOSSARY.md).
 
 **Status of everything on this page: nothing is implemented yet.** Every work item named here is `Pending`. A requirement counts as met only when its work items are `Completed` with the evidence described in the [roadmap guide](../roadmap/README.md).
 
@@ -27,15 +27,15 @@ The consolidated list of what Factloom must do, with the epics and work items th
 | REQ-07 | Every fact points to at least one source | prompt s.4.1 | Yes | EPIC-02, EPIC-03 | FL-006, FL-007, FL-008, FL-012, FL-014 |
 | REQ-08 | Every change is in the audit log: what changed, when, why and what triggered it | prompt s.4.1 | Yes | EPIC-02, EPIC-03 | FL-006, FL-007, FL-008, FL-009, FL-010, FL-012, FL-013, FL-014, FL-015, FL-025 |
 | REQ-09 | A fact's history can be read back with its sources | A3 | Yes | EPIC-02, EPIC-03, EPIC-05, EPIC-06 | FL-007, FL-012, FL-015 (the `getSource` read); FL-032, FL-036 |
-| REQ-10 | Claude Code and Codex use Factloom through an MCP server whose tools are described and annotated | prompt s.2, s.3 | Yes | EPIC-06 | FL-034, FL-058, FL-035, FL-036, FL-038, FL-059 |
+| REQ-10 | Claude Code and Codex use Kronomind through an MCP server whose tools are described and annotated | prompt s.2, s.3 | Yes | EPIC-06 | FL-034, FL-058, FL-035, FL-036, FL-038, FL-059 |
 | REQ-11 | The server runs from one SQLite file with no other service, and memory persists across restarts | prompt s.3, A4 | Yes | EPIC-03, EPIC-06 | FL-003, FL-013, FL-014, FL-068, FL-017, FL-034, FL-037, FL-086, FL-087 |
 | REQ-12 | A clean install is started in CI, and the MCP and LLM SDK versions are pinned | A4 | Yes | EPIC-01, EPIC-06 | FL-001, FL-003, FL-019, FL-034, FL-037 |
 | REQ-13 | A structured fact can be recorded with no LLM call | competitive analysis | Yes | EPIC-04, EPIC-06 | FL-020, FL-024, FL-035 |
 | REQ-14 | A restated fact is stored once and gains the new source | competitive analysis | Yes | EPIC-02, EPIC-04 | FL-008, FL-020, FL-023, FL-024 |
 | REQ-15 | The single-value rule holds at all times: no two live facts for one subject and single-valued predicate overlap in valid time | architecture review | Yes | EPIC-02, EPIC-03 | FL-007, FL-011, FL-067, FL-068, FL-015, FL-044, FL-052, FL-063 |
 | REQ-35 | Performance budgets are measured by a benchmark and enforced: `recall` answers within 150 ms at the 95th percentile on a namespace of 10,000 facts and within 500 ms on 100,000; `record_fact` takes at most 50 ms excluding embedding; the server starts within 2 seconds once the embedding model is downloaded. The numbers are targets until the first benchmark run confirms or revises them | owner request, 2026-11-14 | Yes | EPIC-03, EPIC-05, EPIC-06, EPIC-07 | FL-066 |
-| REQ-36 | Factloom works with a coding agent however that agent is paid for: a Claude Code or Codex subscription, or an API key. Every tool except `remember` works with no API key of Factloom's own: the agent, which is already a language model, extracts the facts itself and records them with `record_fact`. `remember` is the one tool that needs a key, for Factloom's own extraction call. The registration guide covers all four set-ups | owner request, 2026-11-14 | Yes | EPIC-04, EPIC-06 | FL-024, FL-035, FL-037, FL-038 |
-| REQ-37 | The effect of Factloom on a coding agent's token use and tool calls is measured on a fixed set of tasks, with and without Factloom, and published whatever it shows. A reduction is the goal; it stays a goal until it is measured | owner request, 2026-11-14 | Yes | EPIC-06, EPIC-07 | FL-074, FL-079, FL-080, FL-081, FL-082, FL-083, FL-084 |
+| REQ-36 | Kronomind works with a coding agent however that agent is paid for: a Claude Code or Codex subscription, or an API key. Every tool except `remember` works with no API key of Kronomind's own: the agent, which is already a language model, extracts the facts itself and records them with `record_fact`. `remember` is the one tool that needs a key, for Kronomind's own extraction call. The registration guide covers all four set-ups | owner request, 2026-11-14 | Yes | EPIC-04, EPIC-06 | FL-024, FL-035, FL-037, FL-038 |
+| REQ-37 | The effect of Kronomind on a coding agent's token use and tool calls is measured on a fixed set of tasks, with and without Kronomind, and published whatever it shows. A reduction is the goal; it stays a goal until it is measured | owner request, 2026-11-14 | Yes | EPIC-06, EPIC-07 | FL-074, FL-079, FL-080, FL-081, FL-082, FL-083, FL-084 |
 | REQ-38 | The tests are shown to be able to find defects, not only to pass: the rules of memory are checked against generated sequences of changes, the two stores are compared with each other on the same sequences, and a mutation-testing trial looks for tests that cannot detect a defect | owner request, 2026-11-15 | Yes | EPIC-07 | FL-075, FL-076, FL-077 |
 
 ### Product 2 (phases 2 and 3)
@@ -79,7 +79,7 @@ Notes on the mapping:
 - REQ-12 names FL-019 and FL-034 because those are the work items that add the LLM SDK and the MCP SDK as dependencies. FL-001 holds the one test that every dependency version is exact. FL-003 is the clean install.
 - REQ-09 names FL-007, FL-012 and FL-015 for `MemoryStore.getSource`, the read with which fact history shows the explanation of each change, in the in-memory store, the contract suite and the SQLite adapter.
 - REQ-17 is delivered in three parts: automatic correction for an `automatic` domain (FL-042), stored proposals with approve and reject (FL-043), and `remember` under `human_approval` with a command a person runs to list, approve and reject (FL-070). The command is not an MCP tool, so an agent cannot approve its own proposal.
-- REQ-20 and REQ-21 say "on a schedule". Here that means the maintenance run is a command that the host's scheduler or a session-start hook starts (FL-048). Factloom runs no daemon and no timer of its own.
+- REQ-20 and REQ-21 say "on a schedule". Here that means the maintenance run is a command that the host's scheduler or a session-start hook starts (FL-048). Kronomind runs no daemon and no timer of its own.
 - REQ-30 names FL-023 and FL-069 because the extraction cases run through the `remember` use case, and FL-069 is their run in replay with the recordings.
 - REQ-16 names FL-011 because candidate selection without an LLM is a phase 1 operation in EPIC-02 that phase 2 builds on. EPIC-08 owns the requirement.
 - REQ-35 is listed with product 1 because it is a phase 1 requirement. EPIC-07 holds the benchmark (FL-066); EPIC-03, EPIC-05 and EPIC-06 hold the code that must meet the budgets.

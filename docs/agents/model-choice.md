@@ -1,6 +1,6 @@
 # Which model does the work
 
-Factloom is built with AI assistance, with two kinds of model: an everyday model that follows the written plan, and a stronger, more expensive model for the moments below. The owner chooses the model for each session. This file says when the stronger one is worth it. It names no product, because model names change faster than this advice.
+Kronomind is built with AI assistance, with two kinds of model: an everyday model that follows the written plan, and a stronger, more expensive model for the moments below. The owner chooses the model for each session. This file says when the stronger one is worth it. It names no product, because model names change faster than this advice.
 
 ## The everyday model is enough when
 

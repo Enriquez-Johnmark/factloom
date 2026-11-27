@@ -1,13 +1,13 @@
-# Factloom
+# Kronomind
 
-Factloom is a memory layer for AI systems. It stores knowledge extracted from text as entities and facts, records when each fact was true and when the system learned it, and keeps that knowledge correct and tidy over time.
+Kronomind is a memory layer for AI systems. It stores knowledge extracted from text as entities and facts, records when each fact was true and when the system learned it, and keeps that knowledge correct and tidy over time.
 
 ## Language
 
 ### Knowledge
 
 **Memory**:
-The whole body of knowledge Factloom holds: entities, facts, sources, and the record of how they changed.
+The whole body of knowledge Kronomind holds: entities, facts, sources, and the record of how they changed.
 _Avoid_: knowledge base, store (as a noun for the content)
 
 **Namespace**:
@@ -47,7 +47,7 @@ The part of a source that locates it in a repository at a specific version, so t
 _Avoid_: pointer, location
 
 **Confidence**:
-How strongly Factloom believes a fact, from 0 to 1.
+How strongly Kronomind believes a fact, from 0 to 1.
 _Avoid_: score (reserved for retrieval), certainty, weight
 
 **Domain**:
@@ -65,11 +65,11 @@ The period during which a fact was true in the world, from `valid_from` up to bu
 _Avoid_: effective time, event time, business time
 
 **Recorded time**:
-The period during which Factloom held a fact as its belief, from `created_at` up to but not including `invalidated_at`.
+The period during which Kronomind held a fact as its belief, from `created_at` up to but not including `invalidated_at`.
 _Avoid_: transaction time, system time, ingestion time
 
 **Live fact**:
-A fact that has not been invalidated. Factloom still holds it as a belief, whether it is about the present or the past.
+A fact that has not been invalidated. Kronomind still holds it as a belief, whether it is about the present or the past.
 _Avoid_: active fact
 
 **Current fact**:
@@ -85,13 +85,13 @@ A date supplied with a question, asking what was true in the world on that date.
 _Avoid_: point in time, historical date
 
 **Known-at date**:
-A date supplied with a question, asking what Factloom believed on that date. It is compared with recorded time.
+A date supplied with a question, asking what Kronomind believed on that date. It is compared with recorded time.
 _Avoid_: as-known-on, system date
 
 ### Change
 
 **Invalidation**:
-Factloom withdrawing a fact as a belief by setting `invalidated_at`. The fact stays on record. It is the only change ever made to a recorded fact.
+Kronomind withdrawing a fact as a belief by setting `invalidated_at`. The fact stays on record. It is the only change ever made to a recorded fact.
 _Avoid_: deletion, expiry, removal
 
 **Supersession**:
@@ -169,7 +169,7 @@ A signal from a user or agent that a recalled fact was wrong or right.
 _Avoid_: rating, vote
 
 **Entity resolution**:
-Deciding whether a newly mentioned entity is one Factloom already knows.
+Deciding whether a newly mentioned entity is one Kronomind already knows.
 _Avoid_: deduplication (reserved for the scheduled merge), entity linking
 
 **Entity merge**:

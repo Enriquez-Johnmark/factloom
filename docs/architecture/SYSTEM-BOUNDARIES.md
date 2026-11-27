@@ -6,11 +6,11 @@ Which package may import which, how that is enforced, and what each package's pu
 
 | Package | May import | Must not import |
 |---|---|---|
-| `@kronomind/core` | `zod` | Any other `@factloom` package. Any database, LLM, embedding or MCP library. A test framework, in its source files |
+| `@kronomind/core` | `zod` | Any other `@kronomind` package. Any database, LLM, embedding or MCP library. A test framework, in its source files |
 | `@kronomind/graph-rag` | `@kronomind/core`, `zod` | `@kronomind/storage`, `@kronomind/maintenance`. Any database, LLM, embedding or MCP library |
 | `@kronomind/storage` | `@kronomind/core`, `better-sqlite3`, `sqlite-vec` | `@kronomind/graph-rag`, `@kronomind/maintenance`. Any LLM, embedding or MCP library |
 | `@kronomind/maintenance` | `@kronomind/core`, `zod` | `@kronomind/storage`, `@kronomind/graph-rag`. Any database, LLM, embedding or MCP library |
-| `apps/mcp-server` | Every `@factloom` package, the MCP SDK, the Anthropic SDK, the embedding library, `zod` | Nothing is forbidden, but it holds no rules about facts |
+| `apps/mcp-server` | Every `@kronomind` package, the MCP SDK, the Anthropic SDK, the embedding library, `zod` | Nothing is forbidden, but it holds no rules about facts |
 
 ```
 apps/mcp-server ──► graph-rag ─────► core ◄── storage
@@ -44,7 +44,7 @@ Each package exports only what another package needs. Everything else stays priv
 
 | Group | Exports |
 |---|---|
-| Result | `Result`, its two halves `Success` and `Failure`, `ok`, `err`, `ERROR_CODES`, `ErrorCode`, `FactloomError` |
+| Result | `Result`, its two halves `Success` and `Failure`, `ok`, `err`, `ERROR_CODES`, `ErrorCode`, `KronomindError` |
 | Schemas and types | The Zod schemas and derived types for `Timestamp`, `Entity`, `Fact`, `FactObject`, `Source`, `Trigger`, `Operation`, `ReasonCode`, `AuditAction`, `AuditEntry`, `TimeFilter`, `Domain`, `PredicateDefinition`, `ChangeSet`, `Change`, `CommitReceipt`, `FactWithSources` |
 | Time | `toTimestamp`, `parseDateInput`, and the two pure functions every store shares: `matchesTimeFilter`, the time predicate, and `periodsOverlap`, the test behind the single-value rule |
 | Names | `normaliseEntityName`, so that every store matches entity names the same way |

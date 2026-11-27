@@ -1,12 +1,12 @@
 # Architecture
 
-What Factloom is, how it is divided, how data moves through it, and where to find things. Terms in bold are defined in [`GLOSSARY.md`](../../GLOSSARY.md).
+What Kronomind is, how it is divided, how data moves through it, and where to find things. Terms in bold are defined in [`GLOSSARY.md`](../../GLOSSARY.md).
 
 ## What it is
 
-Factloom is a memory layer for AI systems. It is two products in one repository.
+Kronomind is a memory layer for AI systems. It is two products in one repository.
 
-- **Product 1, temporal graph RAG.** Stores knowledge as entities and facts. Each fact records when it was true (**valid time**) and when Factloom believed it (**recorded time**). It recalls facts by meaning, by words and by connection, filtered by time, so it can answer "what is true now", "what was true on a date" and "what did we believe on a date".
+- **Product 1, temporal graph RAG.** Stores knowledge as entities and facts. Each fact records when it was true (**valid time**) and when Kronomind believed it (**recorded time**). It recalls facts by meaning, by words and by connection, filtered by time, so it can answer "what is true now", "what was true on a date" and "what did we believe on a date".
 - **Product 2, self-correcting and self-healing memory.** Keeps that knowledge true and tidy. It changes memory only through operations that product 1 exposes.
 
 Its first use is memory for coding agents, Claude Code and OpenAI Codex, through an MCP server. It is not a business database: it holds knowledge extracted from text, with sources and confidence.

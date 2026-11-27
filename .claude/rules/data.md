@@ -9,7 +9,7 @@ The design is in `docs/architecture/SCHEMA.md`. These are the rules to follow wh
 
 ## Facts are bi-temporal
 
-- Every fact has `valid_from` and `valid_to` (when it was true) and `created_at` and `invalidated_at` (when Factloom believed it). Never drop one from a table or a query.
+- Every fact has `valid_from` and `valid_to` (when it was true) and `created_at` and `invalidated_at` (when Kronomind believed it). Never drop one from a table or a query.
 - Both periods are half-open: the start is included and the end is not.
 - A missing `valid_from` or `valid_to` is `NULL`. Never store a sentinel date.
 - Every read that returns facts applies the whole time predicate. Do not write a query that returns facts without it. There are two exceptions: `listFacts` with `time: 'all'`, which serves fact history, and `getFact` by identifier.

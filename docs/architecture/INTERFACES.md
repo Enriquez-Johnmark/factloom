@@ -11,7 +11,7 @@ Terms in bold are defined in [`GLOSSARY.md`](../../GLOSSARY.md). The tables behi
 Every fallible operation returns a `Result`. Expected failures are values, not exceptions.
 
 ```ts
-export type Result<T, E = FactloomError> =
+export type Result<T, E = KronomindError> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: E };
 
@@ -30,7 +30,7 @@ export const ERROR_CODES = [
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
-export type FactloomError = {
+export type KronomindError = {
   readonly code: ErrorCode;
   /** Written for the caller: what went wrong and, where possible, what to do next. */
   readonly message: string;
@@ -241,7 +241,7 @@ export type AuditEntry = {
 export type TimeFilter = {
   /** The as-of date: what was true in the world then. */
   readonly validAt: Timestamp;
-  /** The known-at date: what Factloom believed then. */
+  /** The known-at date: what Kronomind believed then. */
   readonly knownAt: Timestamp;
 };
 ```
@@ -1024,5 +1024,5 @@ export type FactHistoryEntry = FactWithSources & { readonly auditEntries: readon
 - **Secrets are refused.** `remember`, `recordStructuredFacts`, `changeFact` and `giveFeedback` check their text against a fixed list of secret patterns before anything is stored or sent to the LLM, and return `invalid_input` naming the kind of secret, never the secret.
 - **`giveFeedback`** checks the comment against the secret patterns and refuses it with `invalid_input` before anything is stored. Otherwise it calls `recordFeedback` once, with reason code `feedback_given` and the comment, if any, as the content of a source observed now. With a feedback responder among its dependencies (FL-060), it then calls the responder with its own dependencies and the new feedback's identifier, and `followUp` is what the responder did; the composition root passes `actOnFeedback` from `@kronomind/maintenance`. That is a second commit: if it fails, the result is its error and the feedback stays on record. Without a responder, no fact changes and `followUp` is `none`.
 - **`changeFact`** resolves the replacement's entities, then calls `invalidateFact` for `was_wrong` or `endFact` for `no_longer_true`. It is one commit either way.
-- **`recall`** runs the vector and keyword lanes, then the graph lane: the live facts that touch the entities the first two found, ranked by how many of those entities each fact touches and then by how recently it was recorded. The three ranked lists are merged by weighted reciprocal rank fusion, a pure function tested without a database. If only `knownAt` is given, `validAt` takes the same date, so the question means "what did Factloom believe was true then".
+- **`recall`** runs the vector and keyword lanes, then the graph lane: the live facts that touch the entities the first two found, ranked by how many of those entities each fact touches and then by how recently it was recorded. The three ranked lists are merged by weighted reciprocal rank fusion, a pure function tested without a database. If only `knownAt` is given, `validAt` takes the same date, so the question means "what did Kronomind believe was true then".
 - **`getFactHistory`** follows supersession links in both directions from the given fact, and reads each audit entry's explaining source with `getSource` to fill `explanation`. For a single-valued predicate it also includes every other fact for the same subject and predicate, which is the timeline of that value. Entries are ordered by valid time, then by recorded time.

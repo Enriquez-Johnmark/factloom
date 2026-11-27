@@ -8,7 +8,7 @@ paths:
 
 ## Dependencies point inward
 
-- `core` imports no other `@factloom` package. `graph-rag` and `storage` import `core` and never each other. Apps may import any package.
+- `core` imports no other `@kronomind` package. `graph-rag` and `storage` import `core` and never each other. Apps may import any package.
 - Import another package by its name, through its `index.ts`. Never use a relative path that leaves the package, a path alias, or a deep import.
 
 ```ts

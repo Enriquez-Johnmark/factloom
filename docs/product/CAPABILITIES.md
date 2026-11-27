@@ -1,6 +1,6 @@
 # Capabilities
 
-What Factloom must be able to do, which requirements each capability satisfies, and which epic owns it. Nothing listed here is implemented yet. Terms in bold are defined in [`GLOSSARY.md`](../../GLOSSARY.md). Requirement identifiers are from [`REQUIREMENTS.md`](REQUIREMENTS.md); epics are in [`docs/roadmap/epics/`](../roadmap/epics/).
+What Kronomind must be able to do, which requirements each capability satisfies, and which epic owns it. Nothing listed here is implemented yet. Terms in bold are defined in [`GLOSSARY.md`](../../GLOSSARY.md). Requirement identifiers are from [`REQUIREMENTS.md`](REQUIREMENTS.md); epics are in [`docs/roadmap/epics/`](../roadmap/epics/).
 
 A capability is named for what a user or an agent can do, not for a package. "Phase" is the delivery phase that first demonstrates the capability on a running system; the phases are described in [`PRODUCT.md`](PRODUCT.md).
 
@@ -16,8 +16,8 @@ A capability is named for what a user or an agent can do, not for a package. "Ph
 | Keep one value per single-valued predicate | The **single-value rule** holds inside every commit, also when two processes write to one file | REQ-15 | [EPIC-03](../roadmap/epics/EPIC-03.md), with the in-memory store in [EPIC-02](../roadmap/epics/EPIC-02.md) | 1 |
 | Serve coding agents over MCP | Claude Code and Codex reach the use cases through a local stdio server with described and annotated tools, one SQLite file, one **namespace** per server, and no other service | REQ-10, REQ-11, REQ-12, REQ-25, REQ-29 | [EPIC-06](../roadmap/epics/EPIC-06.md) | 1 |
 | Answer within stated time budgets | A benchmark measures `recall`, `record_fact` and server start on namespaces of 10,000 and 100,000 facts, and fails when a budget is missed. The numbers are targets until the first benchmark run confirms or revises them | REQ-35 | [EPIC-07](../roadmap/epics/EPIC-07.md) for the benchmark; [EPIC-03](../roadmap/epics/EPIC-03.md), [EPIC-05](../roadmap/epics/EPIC-05.md) and [EPIC-06](../roadmap/epics/EPIC-06.md) for the code that must meet it | 1 |
-| Work with a subscription or an API key | Every tool except `remember` needs no API key of Factloom's own, because the agent can extract facts itself and record them with `record_fact`. `remember` needs a key for Factloom's own extraction call | REQ-36 | [EPIC-06](../roadmap/epics/EPIC-06.md), with [EPIC-04](../roadmap/epics/EPIC-04.md) for the write path with no LLM call | 1 |
-| Show what it costs and saves | A comparison on fixed tasks measures a coding agent's token use and tool calls with and without Factloom, and the result is published whatever it shows | REQ-37 | [EPIC-07](../roadmap/epics/EPIC-07.md) | 1 |
+| Work with a subscription or an API key | Every tool except `remember` needs no API key of Kronomind's own, because the agent can extract facts itself and record them with `record_fact`. `remember` needs a key for Kronomind's own extraction call | REQ-36 | [EPIC-06](../roadmap/epics/EPIC-06.md), with [EPIC-04](../roadmap/epics/EPIC-04.md) for the write path with no LLM call | 1 |
+| Show what it costs and saves | A comparison on fixed tasks measures a coding agent's token use and tool calls with and without Kronomind, and the result is published whatever it shows | REQ-37 | [EPIC-07](../roadmap/epics/EPIC-07.md) | 1 |
 | Tests that can find defects | Generated sequences of changes are checked against the rules of memory and against a second store, and a mutation-testing trial looks for tests that cannot detect a defect | REQ-38 | [EPIC-07](../roadmap/epics/EPIC-07.md) | 1 |
 
 ## Product 2: self-correcting and self-healing memory
@@ -70,7 +70,7 @@ The import rules and each package's public API are in [`SYSTEM-BOUNDARIES.md`](.
 
 | Boundary | Why a capability needs it |
 |---|---|
-| `core` imports no other `@factloom` package and no database, LLM, embedding or MCP library | A second storage adapter, LLM or embedder can be added without touching the rules about facts ([ADR 0003](../architecture/adr/0003-dependencies-point-inward-with-manual-injection.md)) |
+| `core` imports no other `@kronomind` package and no database, LLM, embedding or MCP library | A second storage adapter, LLM or embedder can be added without touching the rules about facts ([ADR 0003](../architecture/adr/0003-dependencies-point-inward-with-manual-injection.md)) |
 | `graph-rag` and `storage` never import each other | Use cases are tested with the in-memory store, and storage makes no decisions about facts |
 | `MemoryStore.commit` is the only way to write | "Every change has an audit entry" cannot be skipped by accident ([ADR 0009](../architecture/adr/0009-one-commit-writes-everything.md)) |
 | Product 2, in `packages/maintenance` from phase 2, imports `core` only | Self-correction and self-healing use the operations product 1 exposes and nothing else |

@@ -1,4 +1,4 @@
-# Factloom
+# Kronomind
 
 A memory layer for AI systems, in two products that share this repository.
 

@@ -2,7 +2,7 @@
 
 The innermost package. It owns the types and schemas, the `Result` type and error codes, the interfaces for storage, the LLM and embeddings, and the fact operations that change memory.
 
-It imports no other `@factloom` package and no database, LLM, embedding or MCP library. Everything else in the workspace depends on it.
+It imports no other `@kronomind` package and no database, LLM, embedding or MCP library. Everything else in the workspace depends on it.
 
 **Status:** scaffold only. The export in `src/index.ts` is a placeholder until the first work item, `FL-004`.
 

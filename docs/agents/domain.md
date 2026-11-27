@@ -6,7 +6,7 @@ How the engineering skills should consume this repo's domain documentation.
 
 Single context.
 
-- **`GLOSSARY.md`** at the repo root: every Factloom term, defined once.
+- **`GLOSSARY.md`** at the repo root: every Kronomind term, defined once.
 - **`docs/architecture/adr/`**: architecture decision records, indexed by `docs/architecture/DECISIONS.md`. This replaces the skills' default `docs/adr/` location.
 
 If a file does not exist yet, proceed silently. It is created when the first term or decision is recorded.

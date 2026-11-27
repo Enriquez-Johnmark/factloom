@@ -11,19 +11,19 @@ The private key is never written into the repository, a commit message or a log.
 Decode the key into a file only the current user can read:
 
 ```sh
-mkdir -p ~/.ssh && (umask 077 && printf '%s' "$GIT_SIGNING_KEY_B64" | base64 -d > ~/.ssh/factloom_signing_key)
+mkdir -p ~/.ssh && (umask 077 && printf '%s' "$GIT_SIGNING_KEY_B64" | base64 -d > ~/.ssh/kronomind_signing_key)
 ```
 
 Derive the public key from it:
 
 ```sh
-ssh-keygen -y -f ~/.ssh/factloom_signing_key > ~/.ssh/factloom_signing_key.pub
+ssh-keygen -y -f ~/.ssh/kronomind_signing_key > ~/.ssh/kronomind_signing_key.pub
 ```
 
 Configure this repository, not the global configuration:
 
 ```sh
-git config gpg.format ssh && git config gpg.ssh.program ssh-keygen && git config user.signingkey ~/.ssh/factloom_signing_key.pub && git config commit.gpgsign true
+git config gpg.format ssh && git config gpg.ssh.program ssh-keygen && git config user.signingkey ~/.ssh/kronomind_signing_key.pub && git config commit.gpgsign true
 ```
 
 ## Check

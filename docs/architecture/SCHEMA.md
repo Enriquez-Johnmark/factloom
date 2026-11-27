@@ -37,7 +37,7 @@ A change of confidence is not in this table. `fact.confidence` is the confidence
 
 A fact has at most one supersession link, set when it is invalidated. A fact retracted with no replacement cannot be linked to one later.
 
-Example: on 2026-04-02 Factloom learns that PostgreSQL was upgraded from 14 to 16 on 2026-03-15.
+Example: on 2026-04-02 Kronomind learns that PostgreSQL was upgraded from 14 to 16 on 2026-03-15.
 
 | id | value | valid_from | valid_to | created_at | invalidated_at | superseded_by |
 |---|---|---|---|---|---|---|
@@ -45,7 +45,7 @@ Example: on 2026-04-02 Factloom learns that PostgreSQL was upgraded from 14 to 1
 | `pg14-ended` | PostgreSQL 14 | 2025-06-01 | 2026-03-15 | 2026-04-02 | | |
 | `pg16` | PostgreSQL 16 | 2026-03-15 | | 2026-04-02 | | |
 
-`pg14-ended` is an **ended fact**: a live belief about the past. It has two sources: the one `pg14` came from, and the one that reported the upgrade, which is also the source of `pg16`. Asked "what is true now", Factloom returns `pg16`. Asked "what was true on 2026-02-01", it returns `pg14-ended`. Asked "what did you believe on 2026-04-01", it returns `pg14`, because the upgrade had not been recorded yet.
+`pg14-ended` is an **ended fact**: a live belief about the past. It has two sources: the one `pg14` came from, and the one that reported the upgrade, which is also the source of `pg16`. Asked "what is true now", Kronomind returns `pg16`. Asked "what was true on 2026-02-01", it returns `pg14-ended`. Asked "what did you believe on 2026-04-01", it returns `pg14`, because the upgrade had not been recorded yet.
 
 ## The time predicate
 

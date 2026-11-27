@@ -16,13 +16,13 @@ Configuration, read from environment variables by the composition root:
 
 | Variable | Meaning | Default |
 |---|---|---|
-| `FACTLOOM_DB` | Path of the SQLite file | `~/.factloom/factloom.db` |
-| `FACTLOOM_NAMESPACE` | The namespace every tool call uses | None. Required |
+| `KRONOMIND_DB` | Path of the SQLite file | `~/.kronomind/kronomind.db` |
+| `KRONOMIND_NAMESPACE` | The namespace every tool call uses | None. Required |
 | `ANTHROPIC_API_KEY` | Key for extraction. Needed only by `remember` | none |
-| `FACTLOOM_ARCHIVE_AFTER_DAYS` | How many days a fact must go unrecalled before the maintenance command archives it (FL-073). A placeholder until Q-57 is answered. The tools do not read it | `180` |
-| `FACTLOOM_REPO` | The git repository that the maintenance command verifies facts against (FL-050). The tools do not read it | The working directory |
+| `KRONOMIND_ARCHIVE_AFTER_DAYS` | How many days a fact must go unrecalled before the maintenance command archives it (FL-073). A placeholder until Q-57 is answered. The tools do not read it | `180` |
+| `KRONOMIND_REPO` | The git repository that the maintenance command verifies facts against (FL-050). The tools do not read it | The working directory |
 
-`FACTLOOM_NAMESPACE` has no default. The server refuses to start without it and says why: the default database is one file per user, so a shared default namespace would mix the memory of every repository that user works in.
+`KRONOMIND_NAMESPACE` has no default. The server refuses to start without it and says why: the default database is one file per user, so a shared default namespace would mix the memory of every repository that user works in.
 
 How each host passes its working directory to a server, and so whether the namespace could be derived from the repository, is not verified. It stays explicit until it is ([open questions](../research/OPEN-QUESTIONS.md)).
 
@@ -32,12 +32,12 @@ Each host session starts its own server process, so several processes can have t
 
 Two different things can need a key, and they are easy to confuse.
 
-- **The coding agent.** Claude Code and Codex each run on either a subscription or an API key. That is between the user and the agent's provider. Factloom is a local MCP server that the agent starts, so how the agent is paid for should make no difference to registering or calling it. This has not been run in each set-up yet; the registration guide records the result for each one ([open questions](../research/OPEN-QUESTIONS.md), Q-79).
-- **Factloom's own LLM call.** Only `remember` makes one, to extract facts from free text. It needs `ANTHROPIC_API_KEY`. A subscription cannot be used for it: Anthropic's terms do not let a third-party program route its own requests through a user's Claude plan ([open questions](../research/OPEN-QUESTIONS.md), Q-80, closed on 2026-11-16).
+- **The coding agent.** Claude Code and Codex each run on either a subscription or an API key. That is between the user and the agent's provider. Kronomind is a local MCP server that the agent starts, so how the agent is paid for should make no difference to registering or calling it. This has not been run in each set-up yet; the registration guide records the result for each one ([open questions](../research/OPEN-QUESTIONS.md), Q-79).
+- **Kronomind's own LLM call.** Only `remember` makes one, to extract facts from free text. It needs `ANTHROPIC_API_KEY`. A subscription cannot be used for it: Anthropic's terms do not let a third-party program route its own requests through a user's Claude plan ([open questions](../research/OPEN-QUESTIONS.md), Q-80, closed on 2026-11-16).
 
 So a user with a subscription and no API key can use everything except `remember`. The agent is already a language model: it reads the conversation, works out the facts, and records each one with `record_fact`, which makes no LLM call. The server's instructions tell the agent to do this, and `remember` answers `llm_failed` with the same advice when no key is set.
 
-| Tool | Needs a key of Factloom's own |
+| Tool | Needs a key of Kronomind's own |
 |---|---|
 | `recall`, `record_fact`, `invalidate_fact`, `get_fact_history`, `give_feedback` | No |
 | `remember` | Yes, `ANTHROPIC_API_KEY` |
@@ -73,7 +73,7 @@ Use case: `recall`.
 |---|---|---|---|
 | `question` | string, 1 to 2,000 characters | Yes | What to look for, in natural language |
 | `as_of` | date | No | Return what was true in the world on this date. Default: the `known_at` date if one is given, otherwise now |
-| `known_at` | date | No | Return what Factloom believed on this date. Default: now |
+| `known_at` | date | No | Return what Kronomind believed on this date. Default: now |
 | `limit` | integer, 1 to 50 | No | Most facts to return. Default: 10 |
 | `include_archived` | boolean | No | Also return archived facts for a question about now. A question with `as_of` or `known_at` always includes them. Default: false (FL-073) |
 
@@ -82,9 +82,9 @@ Output: `{ facts: RecalledFact[] }`, best match first. An **archived fact** is l
 | `as_of` | `known_at` | The question it answers |
 |---|---|---|
 | absent | absent | What is true now. Every fact returned is a **current fact** |
-| given | absent | What was true on that date, as Factloom believes today |
-| absent | given | What Factloom believed was true on that date. `as_of` takes the same date |
-| given | given | What Factloom believed on `known_at` about what was true on `as_of` |
+| given | absent | What was true on that date, as Kronomind believes today |
+| absent | given | What Kronomind believed was true on that date. `as_of` takes the same date |
+| given | given | What Kronomind believed on `known_at` about what was true on `as_of` |
 
 A fact whose text gave no date has an unknown `valid_from`. It is therefore returned for any earlier `as_of` date, however early.
 
@@ -108,7 +108,7 @@ type RecalledFact = {
 };
 ```
 
-`recorded_at` is the fact's `created_at`. `invalidated_at` and `superseded_by_fact_id` are `null` unless a past `known_at` was given: a fact that Factloom believed then may have been withdrawn since, and these two fields say so.
+`recorded_at` is the fact's `created_at`. `invalidated_at` and `superseded_by_fact_id` are `null` unless a past `known_at` was given: a fact that Kronomind believed then may have been withdrawn since, and these two fields say so.
 
 An empty list is a normal result, not an error.
 
@@ -223,7 +223,7 @@ Use case: `giveFeedback`. Phase 2 (FL-059).
 | `signal` | `"right"`, `"wrong"` or `"outdated"` | Yes | What the reporter found |
 | `comment` | string, 1 to 1,000 characters | No | What was said. Stored as the content of a source of kind `agent_note`, not in the audit log |
 
-Output: `{ feedback_id, follow_up }`, where `follow_up` is one of `confidence_raised`, `confidence_lowered`, `retracted`, `ended`, `none`, and says what Factloom did about the feedback. Since FL-060 the server acts on it by the fixed table of `actOnFeedback` in [`INTERFACES.md`](INTERFACES.md), "Feedback responder": under the correction policy `automatic`, `wrong` retracts the fact and `outdated` ends it now; `right`, and under `human_approval` `wrong` and `outdated`, move its confidence by a fixed step. A fact that is no longer live is left as it is, with `none`.
+Output: `{ feedback_id, follow_up }`, where `follow_up` is one of `confidence_raised`, `confidence_lowered`, `retracted`, `ended`, `none`, and says what Kronomind did about the feedback. Since FL-060 the server acts on it by the fixed table of `actOnFeedback` in [`INTERFACES.md`](INTERFACES.md), "Feedback responder": under the correction policy `automatic`, `wrong` retracts the fact and `outdated` ends it now; `right`, and under `human_approval` `wrong` and `outdated`, move its confidence by a fixed step. A fact that is no longer live is left as it is, with `none`.
 
 The handler calls `giveFeedback` with the configured namespace and the trigger `agent`. The feedback row changes no fact; what follows from it is a second commit, with the trigger `feedback`. Feedback is accepted for a fact that is no longer live, because a fact recalled with a past `known_at` can be one. Nothing is deleted: a retraction or an end keeps the fact on record, so the annotations say the tool is not destructive. Its description tells the agent to use `invalidate_fact` instead when it knows what replaced the fact or when it stopped being true.
 
