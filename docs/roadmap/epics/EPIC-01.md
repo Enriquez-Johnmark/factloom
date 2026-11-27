@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Status | Pending |
-| Phases | 0-1 |
+| Phases | 0-1, 3 |
 | Packages | Repository root, and every package: `packages/core`, `packages/graph-rag`, `packages/storage`, `apps/mcp-server` |
 | Requirements | REQ-12, REQ-28, REQ-29 |
 
@@ -67,6 +67,7 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 | FL-001 | Scaffold the pnpm workspace with one check command | 0 | None | Completed |
 | FL-002 | Run the check in continuous integration on Linux and macOS arm64 | 0 | FL-001 | Completed |
 | FL-003 | Install the packed server on a clean machine in CI | 1 | FL-002, FL-037 | Completed |
+| FL-085 | Rename the project to Kronomind | 3 | FL-084 | Pending |
 
 ### FL-001: Scaffold the pnpm workspace with one check command
 
@@ -543,3 +544,55 @@ Differences from the item:
 - **Five members, not four.** `@factloom/maintenance` joined the workspace in FL-040.
 - **Six tools, not five.** `give_feedback` was added in phase 2, so the check expects the six of `MCP-TOOLS.md`. FL-059 had already updated this expectation in the smoke test.
 - **The check job gained a time limit**, of 15 minutes, which it had not had, so that the clean-install job's 30 minutes is the longer.
+
+### FL-085: Rename the project to Kronomind
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 3 |
+| Depends on | FL-084 |
+| Requirements | None: a rename changes no requirement |
+| Components | Repository root and every package; the MCP server's name, commands and variables; the living documents |
+
+**Objective.** Rename the project from Factloom to Kronomind everywhere it is used, in one consistent change, and leave the records of what was done under the old name as they were written.
+
+**Background.** The owner chose a new name on 2026-11-27: "Factloom" is hard to say clearly, and its first syllable can be heard as an offensive word. Kronomind (KRO-no-mind: *krono*, time, and *mind*, memory) was checked on 2026-11-27: no npm package, GitHub repository or GitHub account of that name was found, where Truelink, Chronolink, Truetime and Timelink each had an existing package, account or product. Trademarks, domains and social handles were not checked. The item comes after FL-084, so that the results of the agent comparisons are written up under the name they were run with.
+
+**Outcome.** A repository, packages, server, commands, variables and documents named Kronomind, a guide that moves an existing set-up across, and a check that no use of the old name is left outside the records kept as they were.
+
+**Scope.**
+- Packages and imports: `@factloom/*` becomes `@kronomind/*`, with the workspace, lockfile and boundary rules.
+- Code: identifiers and messages that name the project, such as `createFactloomServer` and `FACTLOOM_TOOLS`.
+- The MCP server's name, so its tools become `mcp__kronomind__*`; the commands (`kronomind proposals`, `kronomind hook recall`, `kronomind maintenance`); the variables `FACTLOOM_NAMESPACE`, `FACTLOOM_DB`, `FACTLOOM_REPO` and `FACTLOOM_ARCHIVE_AFTER_DAYS` become `KRONOMIND_*`; the default data folder `~/.factloom` becomes `~/.kronomind`.
+- The living documents: `README.md`, `GLOSSARY.md`, `CLAUDE.md`, the rules, the architecture and product documents, the guides and the agent docs. `README.md` says once that the project was called Factloom.
+- The agent comparison runner, so that a new run registers the server under the new name.
+- The GitHub repository, renamed by the owner, the remote URL and the CI badge.
+
+**Non-goals.**
+- Rewriting records: committed results and reports, recorded evidence, accepted ADRs and released migrations stay as written (migrations are never edited: [`data.md`](../../../.claude/rules/data.md)). An ADR records the rename and what was kept.
+- Keeping the old variable names working as aliases. The owner is the one user; the guide moves the set-up across instead.
+- A trademark search, which needs a qualified person.
+
+**Functional requirements.**
+1. After the rename, a script finds no use of "factloom", in any letter case, outside a stated list of kept records, and `pnpm check` runs it.
+2. The registration guide gives the commands that move an existing set-up across: re-registering the server, the hook settings, and moving `~/.factloom` to `~/.kronomind` so the memory is kept.
+3. The server, started with the new variables, answers as `kronomind` with its six tools.
+
+**Technical requirements.**
+1. The rename is one series of commits on top of a green `main`, each passing `pnpm check`, ending with a clean install in CI.
+2. Nothing in the rename changes behaviour: the tests pass unchanged apart from the names they assert.
+
+**Constraints.**
+- Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)); the glossary's title and first sentence take the new name.
+
+**Acceptance criteria.**
+- [ ] An ADR records the new name, the reason, the names rejected and what was kept as written.
+- [ ] The script of functional requirement 1 finds no use of the old name outside the kept records, and `pnpm check` runs it.
+- [ ] `pnpm check` exits 0 and continuous integration passes on Linux and macOS.
+- [ ] On the owner's Mac, after the guide's steps, `/mcp` in Claude Code shows the server `kronomind` with six tools, and a fact recorded before the rename is recalled.
+- [ ] The GitHub repository is renamed, and the remote URL and the CI badge follow.
+
+**Validation.** The script and `pnpm check` on every commit; CI; the owner's check on the Mac.
+
+**Completion evidence.** The ADR, the commits, the script's output, the CI run and the owner's `/mcp` output.
