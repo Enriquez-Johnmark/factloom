@@ -67,7 +67,7 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 | FL-001 | Scaffold the pnpm workspace with one check command | 0 | None | Completed |
 | FL-002 | Run the check in continuous integration on Linux and macOS arm64 | 0 | FL-001 | Completed |
 | FL-003 | Install the packed server on a clean machine in CI | 1 | FL-002, FL-037 | Completed |
-| FL-085 | Rename the project to Kronomind | 3 | FL-084 | Pending |
+| FL-085 | Rename the project to Kronomind | 3 | FL-084 | Under Review |
 
 ### FL-001: Scaffold the pnpm workspace with one check command
 
@@ -549,7 +549,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 3 |
 | Depends on | FL-084 |
 | Requirements | None: a rename changes no requirement |
@@ -587,12 +587,47 @@ Differences from the item:
 - Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)); the glossary's title and first sentence take the new name.
 
 **Acceptance criteria.**
-- [ ] An ADR records the new name, the reason, the names rejected and what was kept as written.
-- [ ] The script of functional requirement 1 finds no use of the old name outside the kept records, and `pnpm check` runs it.
-- [ ] `pnpm check` exits 0 and continuous integration passes on Linux and macOS.
+- [x] An ADR records the new name, the reason, the names rejected and what was kept as written.
+- [x] The script of functional requirement 1 finds no use of the old name outside the kept records, and `pnpm check` runs it.
+- [x] `pnpm check` exits 0 and continuous integration passes on Linux and macOS.
 - [ ] On the owner's Mac, after the guide's steps, `/mcp` in Claude Code shows the server `kronomind` with six tools, and a fact recorded before the rename is recalled.
 - [ ] The GitHub repository is renamed, and the remote URL and the CI badge follow.
 
 **Validation.** The script and `pnpm check` on every commit; CI; the owner's check on the Mac.
 
 **Completion evidence.** The ADR, the commits, the script's output, the CI run and the owner's `/mcp` output.
+
+**Recorded evidence.** Under Review on 2026-11-27: the owner's check on the Mac and the renaming of the GitHub repository (criteria 4 and 5) are pending. The rename is six commits, each passing `pnpm check`:
+
+- `b32a586` `docs(adr): record the rename to Kronomind`: [ADR 0025](../../architecture/adr/0025-the-project-is-named-kronomind.md), with the reason, the names rejected and the records that keep the old name.
+- `b4a4720` `refactor: rename the package scope to @kronomind`: 198 files, the lockfile and the boundary rules of `biome.json`.
+- `b2cc892` `refactor: rename the code, server, commands and variables to Kronomind`: 82 files and six file names, such as `create-kronomind-server.ts`; the server's name, its variables and `~/.kronomind/kronomind.db`; the comparison runner, which registers the server as `kronomind`.
+- `2513728` `docs: rename the living documents to Kronomind and add the guide to move a set-up across`: 20 documents, the README's paragraph on the name with its one sentence about the old one, and [`MOVE-AFTER-RENAME.md`](../../../apps/mcp-server/MOVE-AFTER-RENAME.md), linked from the registration guide.
+- `d10651f` `test: check that no use of the old name is left outside the kept records`: `scripts/old-name.test.ts`, two tests in `pnpm check`, one for file names and one for text in any letter case. With `// factloom` added to `packages/core/src/index.ts` by hand, the second failed and named that line; it was removed.
+
+What differs from the work item as written:
+
+- **The check is a test, not a separate script,** beside `scripts/exact-versions.test.ts`, so `pnpm check` runs it with no new command.
+- **The kept records are whole folders:** the comparison results, the migrations, the ADRs, `docs/roadmap/` (the epic files and the index generated from their titles), `docs/research/` and `spikes/`, and the guide to move across. The epic files mix specification and evidence; every open item is now in phases 4 to 6, which have no work items yet, so keeping them whole leaves no living text with the old name.
+- **The recorded LLM responses did not change.** None of them holds the old name, so the keys they are found by are the same, and no recording was redone.
+- **The server instructions** are 993 characters, within the 1,000 of FL-079.
+
+The server, started from `apps/mcp-server/src/main.ts` with `KRONOMIND_NAMESPACE` and `KRONOMIND_DB` set and no key, answered `initialize` with `{"name": "kronomind", "version": "0.0.0"}` and `tools/list` with `recall`, `remember`, `record_fact`, `invalidate_fact`, `get_fact_history` and `give_feedback` (functional requirement 3).
+
+The workflow runs on Linux and macOS arm64, with Node.js 22 and 26: https://github.com/Enriquez-Johnmark/factloom/actions/runs/46026745836.
+
+Not yet run: the guide's steps on the owner's Mac, and the renaming of the repository on GitHub, after which the CI badge and the remote follow it.
+
+`pnpm check`, on Linux x64 with Node.js v22.23.4:
+
+```text
+$ biome format .
+Checked 842 files. No fixes applied.
+$ biome lint .
+Checked 842 files. No fixes applied.
+Found 1 info.
+$ tsc -p tsconfig.json
+$ vitest run
+ Test Files  138 passed (138)
+      Tests  1444 passed (1444)
+```
