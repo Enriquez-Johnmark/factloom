@@ -2,7 +2,7 @@
 
 The index of Factloom's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-27:** the first feature code exists. 83 of 84 work items are `Completed`: FL-001, FL-002, FL-003, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-024, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-035, FL-036, FL-037, FL-038, FL-039, FL-040, FL-041, FL-042, FL-043, FL-044, FL-045, FL-046, FL-047, FL-048, FL-049, FL-050, FL-051, FL-052, FL-053, FL-054, FL-055, FL-056, FL-057, FL-058, FL-059, FL-060, FL-061, FL-062, FL-063, FL-064, FL-065, FL-066, FL-067, FL-068, FL-069, FL-070, FL-071, FL-072, FL-073, FL-074, FL-075, FL-076, FL-077, FL-078, FL-079, FL-080, FL-081, FL-082, FL-083. 1 is `Under Review`, waiting for the owner: FL-084. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-27:** the first feature code exists. 83 of 85 work items are `Completed`: FL-001, FL-002, FL-003, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-024, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-035, FL-036, FL-037, FL-038, FL-039, FL-040, FL-041, FL-042, FL-043, FL-044, FL-045, FL-046, FL-047, FL-048, FL-049, FL-050, FL-051, FL-052, FL-053, FL-054, FL-055, FL-056, FL-057, FL-058, FL-059, FL-060, FL-061, FL-062, FL-063, FL-064, FL-065, FL-066, FL-067, FL-068, FL-069, FL-070, FL-071, FL-072, FL-073, FL-074, FL-075, FL-076, FL-077, FL-078, FL-079, FL-080, FL-081, FL-082, FL-083. 1 is `Under Review`, waiting for the owner: FL-084. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -13,7 +13,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | 0. Foundations and design proof | The workspace checks itself, the core model exists as types, and the "fact changed over time" scenarios exist as reviewed data. | `pnpm check` passes in continuous integration on Linux and macOS arm64 (FL-002). A forbidden import fails the check (FL-001). The storage contract suite passes against the in-memory store (FL-012, FL-067). The eleven timeline scenarios validate against their schema (FL-027). | 11 |
 | 1. Product 1 for code | Claude Code and Codex save and recall project memory through the MCP server, from one SQLite file, with as-of and known-at questions answered correctly. | The smoke test records a fact, restarts the server and recalls it (FL-037). The storage contract suite passes against SQLite (FL-014 to FL-017, FL-068). Every extraction case passes in replay: each required fact is extracted and no forbidden one is (FL-069). The owner has registered the server with both hosts on an Apple Silicon Mac (FL-038). The performance targets in REQ-35 are met within their stated tolerance (FL-066). | 43 |
 | 2. Self-correction | New information that conflicts with a stored fact is resolved, or proposed for approval, at write time. Feedback is recorded and acted on. Content can be purged. | On the timeline scenarios in replay, the staleness rate and the false invalidation rate are 0 (FL-042). After a purge, the content cannot be read through any read method or query of the database (FL-061). Under the human-approval policy a change waits as a proposal until a person approves it with a command (FL-070). | 14 |
-| 3. Self-healing | A maintenance run verifies code facts against the repository without an LLM, merges duplicate entities, repairs anchors and archives unused facts. | On fixture repositories, with an LLM client that fails if called, a changed manifest version supersedes the stored fact (FL-062), and a deleted file or a missing function name flags it (FL-050, FL-071). A merge can be undone (FL-063). An archived fact is left out of recall and can be restored (FL-065, FL-073). | 16 |
+| 3. Self-healing | A maintenance run verifies code facts against the repository without an LLM, merges duplicate entities, repairs anchors and archives unused facts. | On fixture repositories, with an LLM client that fails if called, a changed manifest version supersedes the stored fact (FL-062), and a deleted file or a missing function name flags it (FL-050, FL-071). A merge can be undone (FL-063). An archived fact is left out of recall and can be restored (FL-065, FL-073). | 17 |
 | 4. Generic core, Postgres and HTTP API | See [EPIC-10](epics/EPIC-10.md) | Defined when the phase is near | Not yet written |
 | 5. Document management | See [EPIC-11](epics/EPIC-11.md) | Defined when the phase is near | Not yet written |
 | 6. Domain adapters | See [EPIC-12](epics/EPIC-12.md) | Defined when the phase is near | Not yet written |
@@ -22,7 +22,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 
 | Epic | Name | Phases | Work items | Status |
 |---|---|---|---|---|
-| [EPIC-01](epics/EPIC-01.md) | Workspace and tooling | 0-1 | 3 | Pending |
+| [EPIC-01](epics/EPIC-01.md) | Workspace and tooling | 0-1, 3 | 4 | Pending |
 | [EPIC-02](epics/EPIC-02.md) | Core model and fact operations | 0-1 | 9 | Pending |
 | [EPIC-03](epics/EPIC-03.md) | SQLite storage | 0-1 | 8 | Pending |
 | [EPIC-04](epics/EPIC-04.md) | Remember | 0-1 | 10 | Pending |
@@ -140,6 +140,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-073](epics/EPIC-09.md#fl-073-archived-facts-left-out-of-recall-and-the-archiving-job) | Archived facts left out of recall, and the archiving job | EPIC-09 | FL-065, FL-048, FL-058 | Completed |
 | [FL-082](epics/EPIC-06.md#fl-082-a-self-healing-codebase-map-for-coding-agents) | A self-healing codebase map for coding agents | EPIC-06 | FL-080, FL-081, FL-050, FL-054 | Completed |
 | [FL-084](epics/EPIC-06.md#fl-084-the-code-base-map-recorded-without-the-agent) | The code base map recorded without the agent | EPIC-06 | FL-082, FL-083 | Under Review |
+| [FL-085](epics/EPIC-01.md#fl-085-rename-the-project-to-kronomind) | Rename the project to Kronomind | EPIC-01 | FL-084 | Pending |
 
 ## Dependencies
 
@@ -348,6 +349,9 @@ flowchart LR
 
 ```mermaid
 flowchart LR
+  subgraph EPIC01["EPIC-01 Workspace and tooling"]
+    FL085["FL-085"]
+  end
   subgraph EPIC06["EPIC-06 MCP server"]
     FL082["FL-082"]
     FL084["FL-084"]
@@ -488,6 +492,7 @@ flowchart LR
   FL054 --> FL082
   FL082 --> FL084
   FL083 --> FL084
+  FL084 --> FL085
 ```
 
 ## What can start when
@@ -518,6 +523,7 @@ Work items grouped by how many steps of prerequisites lie behind them. Every ite
 | 20 | FL-081 |
 | 21 | FL-082, FL-083 |
 | 22 | FL-084 |
+| 23 | FL-085 |
 
 The first work item is [FL-001](epics/EPIC-01.md#fl-001-scaffold-the-pnpm-workspace-with-one-check-command), the scaffold. Nothing else can start before it.
 
