@@ -60,6 +60,22 @@ describe('the git repository reader', () => {
     expect(await reader.readText(first, 'docs/missing.md')).toEqual({ ok: true, value: null });
   });
 
+  it('lists every file at a commit, in folders too, and only the files of that commit', async () => {
+    const repository = createFixtureRepository();
+    cleanups.push(repository.remove);
+    const first = repository.commit({ 'lib/labels.js': 'a\n', 'README.md': 'b\n' }, 'Add two files');
+    const second = repository.commit(
+      { 'lib/rates/table.js': 'c\n', 'README.md': null },
+      'Add one, remove one',
+    );
+    const reader = createGitRepositoryReader(repository.directory);
+
+    const [atFirst, atSecond] = await Promise.all([reader.listFiles(first), reader.listFiles(second)]);
+
+    expect(atFirst.ok && [...atFirst.value].sort()).toEqual(['README.md', 'lib/labels.js']);
+    expect(atSecond.ok && [...atSecond.value].sort()).toEqual(['lib/labels.js', 'lib/rates/table.js']);
+  });
+
   it('finds the path a file was renamed to, and none for a deleted file or one never removed', async () => {
     const repository = createFixtureRepository();
     cleanups.push(repository.remove);

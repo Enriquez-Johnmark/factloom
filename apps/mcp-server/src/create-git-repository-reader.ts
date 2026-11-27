@@ -32,14 +32,21 @@ function unreadable(directory: string, detail: string): Result<never> {
   return err('invalid_input', `The repository at ${directory} could not be read: ${detail.trim()}`);
 }
 
+/** The repository reader of maintenance, and the list of files the code base map reads (FL-084). */
+export type GitRepositoryReader = RepositoryReader & {
+  /** The paths of the files at a commit, from the repository root. */
+  readonly listFiles: (commit: string) => Promise<Result<readonly string[]>>;
+};
+
 /**
- * Reads a git repository for the verification ladder, at commits, never the working tree.
+ * Reads a git repository for the verification ladder and the code base map, at commits, never
+ * the working tree.
  * The commands are those the software development research ran (checks 4.1, 4.6 and 4.7),
  * re-read on 2026-11-17 in git-merge-base, git-cat-file, git-rev-parse and gitrevisions at
  * https://git-scm.com/docs. A directory that is not a repository fails `readHead` with
  * `invalid_input`, so the job fails before it reads anything else.
  */
-export function createGitRepositoryReader(directory: string): RepositoryReader {
+export function createGitRepositoryReader(directory: string): GitRepositoryReader {
   const git = async (args: readonly string[]): Promise<Result<GitRun>> => {
     try {
       return ok(await runGit(directory, args));
@@ -73,6 +80,15 @@ export function createGitRepositoryReader(directory: string): RepositoryReader {
     },
 
     pathExists: (commit, path) => exists(`${commit}:${path}`),
+
+    async listFiles(commit) {
+      // -r recurses into folders, --name-only prints paths alone, and -z ends each with a NUL,
+      // so no path is quoted or split (git ls-tree -h, run on 2026-11-27).
+      const run = await git(['ls-tree', '-r', '--name-only', '-z', `${commit}^{tree}`]);
+      if (!run.ok) return run;
+      if (run.value.code !== 0) return unreadable(directory, run.value.standardError);
+      return ok(run.value.standardOutput.split('\0').filter((path) => path !== ''));
+    },
 
     async readContentId(commit, path) {
       // `<rev>:<path>` names the blob or tree at the path (gitrevisions); --verify prints its
