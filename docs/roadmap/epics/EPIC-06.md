@@ -78,6 +78,7 @@ Claude Code and OpenAI Codex can remember and recall project memory through a lo
 | FL-080 | Fewer turns for a coding agent that uses Factloom | 1 | FL-079 | Completed |
 | FL-082 | A self-healing codebase map for coding agents | 3 | FL-080, FL-081, FL-050, FL-054 | Completed |
 | FL-083 | The recall hook says when memory has nothing, and the agent records a reason it is told | 1 | FL-080, FL-081 | Completed |
+| FL-084 | The code base map recorded without the agent | 3 | FL-082, FL-083 | Pending |
 
 ### FL-034: Server configuration and composition root
 
@@ -888,3 +889,58 @@ The guide carries the confirmation line; Q-01 and Q-02 had been closed on 2026-1
 - **The instructions** (`src/server-instructions.ts`), 992 characters: "A prompt may come with its matching facts, or a line saying there are none; if neither, call recall at the start of a task", and "When the person says why a change is made, record the reason before you finish, such as described_as on the changed symbol." The other sentences were tightened to fit; none was dropped.
 - **Not measured here.** Whether the two changes save tokens, and whether the agent then records the reasons, is measured through FL-082's runs, as the item's non-goals say; FL-081's results stay as they were.
 - **`pnpm check`:** 1,417 tests passed.
+
+### FL-084: The code base map recorded without the agent
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 3 |
+| Depends on | FL-082, FL-083 |
+| Requirements | REQ-37 |
+| Components | `apps/mcp-server` (a map command or hook, the registration guide), `@factloom/graph-rag` (reading declarations), the agent comparison of FL-074 |
+
+**Objective.** Fill the code base map of FL-082 without relying on the agent to record it, with no LLM call, and measure again whether the map saves tokens.
+
+**Background.** In FL-082's runs ([report](../../../apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map/report.md), evidence above), the agent recorded two facts in twenty sessions and no `defined_in` fact, so the map was never built: the premise of [ADR 0023](../../architecture/adr/0023-the-agent-records-the-codebase-map.md), that the agent records the map as it explores, did not hold. FL-081 found the same of reasons. The rest of the map's machinery is built and unit-tested and was not exercised: anchoring a fact to its file at a commit, the recall hook handing over the facts that match a prompt and leaving out those found out of date, and the repair that continues a fact at a renamed file. A hand-written `CLAUDE.md` map was the cheapest set-up of the three, most of all in the first session.
+
+**Outcome.** Map facts that reach Factloom on their own, kept true by maintenance, and a report of FL-082's comparison played again with them.
+
+**Scope.**
+- A way in, chosen at the start of the item and recorded in an ADR that replaces this part of ADR 0023, with FL-082's evidence. The candidates, both without an LLM:
+  - a seed at session start, beside maintenance: a command reads the top-level declarations of the repository's source files at `HEAD` (functions, classes, constants) with the doc comment above each, and records one `defined_in` fact per declaration, its statement naming the symbol, the path and what the comment says;
+  - capture on read: a hook after the agent's file reads records the facts of the file it read, so the map holds what the agent has looked at.
+- Reading declarations by text search, as the name check of FL-071 does, with no parser dependency (the README's "What is deliberately left out"), for the languages the fixture uses first.
+- FL-082's task set and runner, unchanged, playing the configuration with Factloom only; the two baselines of 2026-11-27 are copied in, as FL-079 and FL-080 did, if the agent's version is the same.
+
+**Non-goals.**
+- An LLM summary of each file: it would spend tokens the agent's usage does not show, as ADR 0023 says.
+- Changing FL-082's task set, its checks or its results.
+- Indexing whole files or their text: a map fact holds a declaration, its file and its comment.
+
+**Functional requirements.**
+1. Recording the map twice records nothing new: a declaration already in memory at the same path is a restatement.
+2. Every statement passes the secret check of FL-022 before it is written; a doc comment holding a secret is left out, and the count says so (ADR 0019).
+3. Files that are not source, generated or vendored (`node_modules`, build output) and files over a size limit are skipped, and one run records at most a stated number of facts.
+4. A declaration that disappears is found by the verification of FL-050 and FL-071, and a renamed file is followed by the repair of FL-082; nothing new is needed for either.
+5. The report and the `README.md` sentence are written whatever they show.
+
+**Technical requirements.**
+1. Reading declarations is a pure function with unit tests on small texts; the command or hook that records them is tested over stdio through the test entry.
+2. The time a seed takes on the fixture is measured and stated, against the session start hook's timeout.
+3. Secrets: as in FL-074, nothing prints or stores a key or a session token, and the home directory is shown as `~`.
+
+**Constraints.**
+- Findings are labelled as measured or unverified, and nothing is stated as fact without its source ([engineering principles](../../../.claude/rules/engineering-principles.md)).
+- Glossary terms are used exactly ([`GLOSSARY.md`](../../../GLOSSARY.md)).
+
+**Acceptance criteria.**
+- [ ] An ADR records the way in, with the alternatives rejected, and says what of ADR 0023 it replaces.
+- [ ] Unit tests show the declarations read from a text with their comments, a second recording restating rather than adding, a statement holding a secret left out, and the skipped files.
+- [ ] On the fixture of FL-082, the map is recorded and its time measured.
+- [ ] The owner's run with Factloom is committed beside the copied baselines, and its two reports and the `README.md` sentence match.
+- [ ] `pnpm check` exits 0 and does not start the runner.
+
+**Validation.** Unit and stdio tests; the measurement of the seed's time; the owner's run.
+
+**Completion evidence.** The ADR, the commits, the two reports and the `README.md` sentence.

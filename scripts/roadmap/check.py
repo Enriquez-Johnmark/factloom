@@ -11,7 +11,7 @@ REPO = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().pare
 OUT = Path(tempfile.gettempdir()) / "factloom-roadmap-items.json"
 EPICS = sorted((REPO / "docs/roadmap/epics").glob("EPIC-*.md"))
 REQ_FILE = REPO / "docs/product/REQUIREMENTS.md"
-LAST_ITEM, LAST_REQ = 83, 38
+LAST_ITEM, LAST_REQ = 84, 38
 TABLE_FIELDS = ["Status", "Phase", "Depends on", "Requirements", "Components"]
 BOLD_FIELDS = ["Objective", "Background", "Outcome", "Scope", "Non-goals", "Functional requirements",
                "Technical requirements", "Constraints", "Acceptance criteria", "Validation", "Completion evidence"]
