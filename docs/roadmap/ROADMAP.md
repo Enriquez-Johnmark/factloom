@@ -2,7 +2,7 @@
 
 The index of Kronomind's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-28:** the first feature code exists. 87 of 94 work items are `Completed`: FL-001, FL-002, FL-003, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-024, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-035, FL-036, FL-037, FL-038, FL-039, FL-040, FL-041, FL-042, FL-043, FL-044, FL-045, FL-046, FL-047, FL-048, FL-049, FL-050, FL-051, FL-052, FL-053, FL-054, FL-055, FL-056, FL-057, FL-058, FL-059, FL-060, FL-061, FL-062, FL-063, FL-064, FL-065, FL-066, FL-067, FL-068, FL-069, FL-070, FL-071, FL-072, FL-073, FL-074, FL-075, FL-076, FL-077, FL-078, FL-079, FL-080, FL-081, FL-082, FL-083, FL-084, FL-085, FL-086, FL-087. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-28:** the first feature code exists. 88 of 94 work items are `Completed`: FL-001, FL-002, FL-003, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-024, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-035, FL-036, FL-037, FL-038, FL-039, FL-040, FL-041, FL-042, FL-043, FL-044, FL-045, FL-046, FL-047, FL-048, FL-049, FL-050, FL-051, FL-052, FL-053, FL-054, FL-055, FL-056, FL-057, FL-058, FL-059, FL-060, FL-061, FL-062, FL-063, FL-064, FL-065, FL-066, FL-067, FL-068, FL-069, FL-070, FL-071, FL-072, FL-073, FL-074, FL-075, FL-076, FL-077, FL-078, FL-079, FL-080, FL-081, FL-082, FL-083, FL-084, FL-085, FL-086, FL-087, FL-088. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -149,7 +149,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 
 | ID | Title | Epic | Depends on | Status |
 |---|---|---|---|---|
-| [FL-088](epics/EPIC-13.md#fl-088-healthcare-rules-read-in-their-official-texts) | Healthcare rules read in their official texts | EPIC-13 | None | Pending |
+| [FL-088](epics/EPIC-13.md#fl-088-healthcare-rules-read-in-their-official-texts) | Healthcare rules read in their official texts | EPIC-13 | None | Completed |
 | [FL-089](epics/EPIC-13.md#fl-089-adr-the-healthcare-proof-comes-before-phase-4) | ADR: the healthcare proof comes before phase 4 | EPIC-13 | FL-088 | Pending |
 | [FL-090](epics/EPIC-13.md#fl-090-human-approval-on-the-structured-path) | Human approval on the structured path | EPIC-13 | FL-070 | Pending |
 | [FL-091](epics/EPIC-13.md#fl-091-healthcare-domain-as-data-and-choosing-the-domain-at-start) | Healthcare domain as data, and choosing the domain at start | EPIC-13 | FL-089 | Pending |
