@@ -7,7 +7,6 @@ import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import { createFakeEmbedder, ok, toTimestamp } from '@kronomind/core';
-import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { openSqliteMemoryStore } from '@kronomind/storage';
 import {
   createAnthropicLlmClient,
@@ -36,7 +35,7 @@ if (!configuration.ok) {
   log(configuration.error.message);
   process.exit(1);
 }
-const { databasePath, namespace, anthropicApiKey } = configuration.value;
+const { databasePath, namespace, domain, anthropicApiKey } = configuration.value;
 
 mkdirSync(dirname(databasePath), { recursive: true });
 const embedder = createFakeEmbedder();
@@ -73,7 +72,7 @@ if (command.kind !== 'serve') {
     {
       store: opened.value,
       embedder,
-      domain: softwareDevelopmentDomain,
+      domain,
       namespace,
       now: () => toTimestamp(new Date()),
       newId: () => randomUUID(),
@@ -100,7 +99,7 @@ serveKronomind(
   buildServerDeps({
     store,
     embedder,
-    domain: softwareDevelopmentDomain,
+    domain,
     llm,
     namespace,
     now: () => toTimestamp(new Date()),
