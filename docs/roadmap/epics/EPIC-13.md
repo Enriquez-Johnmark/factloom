@@ -78,7 +78,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 | FL-090 | Human approval for a reported change with a replacement | 6 | FL-070 | Completed |
 | FL-095 | Proposals that hold a retraction or an end with nothing after it | 6 | FL-090 | Completed |
 | FL-091 | Healthcare domain as data, and choosing the domain at start | 6 | FL-089 | Completed |
-| FL-092 | FHIR R4 import by fixed rules | 6 | FL-095, FL-091 | Pending |
+| FL-092 | FHIR R4 import by fixed rules | 6 | FL-095, FL-091 | Completed |
 | FL-093 | Healthcare scenarios on invented data | 6 | FL-092, FL-027 | Pending |
 | FL-094 | Healthcare demo command | 6 | FL-093 | Pending |
 
@@ -363,7 +363,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | FL-095, FL-091 |
 | Requirements | REQ-34 |
@@ -411,16 +411,34 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 - REQ-31; the boundaries of this epic.
 
 **Acceptance criteria.**
-- [ ] A test imports a MedicationStatement with `effective.end` 2026-06-30, and recall with as-of date 2026-06-30 returns it while 2026-07-01 does not.
-- [ ] A test imports a Condition with onset `2026`, stores `valid_from` 2026-01-01, and keeps `2026` in the source's content.
-- [ ] A test imports an AllergyIntolerance, then the same resource as `entered-in-error`, and finds a retraction proposal and the fact still live.
-- [ ] A test imports a Condition with `refuted` and finds it reported as not mapped, with no fact recorded.
-- [ ] A test with an LLM client that fails if called passes.
-- [ ] `pnpm check` passes.
+- [x] A test imports a MedicationStatement with `effective.end` 2026-06-30, and recall with as-of date 2026-06-30 returns it while 2026-07-01 does not.
+- [x] A test imports a Condition with onset `2026`, stores `valid_from` 2026-01-01, and keeps `2026` in the source's content.
+- [x] A test imports an AllergyIntolerance, then the same resource as `entered-in-error`, and finds a retraction proposal and the fact still live.
+- [x] A test imports a Condition with `refuted` and finds it reported as not mapped, with no fact recorded.
+- [x] A test with an LLM client that fails if called passes.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests of the mapping, a command test, and `pnpm check`.
 
 **Completion evidence.** The commits and the `pnpm check` output.
+
+**Recorded evidence.** Done on 2026-11-28 in a cloud session on Linux x64 with Node.js 22, on invented records only.
+
+- **Two inputs in `graph-rag`** (`db73bed`): `recordStructuredFacts` takes an optional `content`, kept as the source's content and checked for secrets; `changeFact` takes an optional `source`, so a report names its FHIR resource instead of being an agent's note. Existing callers are unchanged.
+- **The mapping and the import** (`30e5c07`): in `packages/adapters`, `readFhirDate` (a year, a month, a day or an instant, as its earliest moment and the first moment after it), Zod schemas for the elements read, `mapFhirResource`, and the use case `importFhirResources`. Every resource is read before anything is written. Each statement is then reconciled with the live facts of the same patient, predicate and object: recorded when new, restated when the same over the same period, ended when the record now ends a fact with no end, corrected when its period differs otherwise, retracted when entered in error. Under the healthcare domain each change is a proposal, and a fact already waiting on one reports `already_proposed`.
+- **The command** (`300f523`): `import fhir <file>`, routed with the person commands, trigger `person`, one JSON report.
+- **The tests:** 4 for dates, 11 for the import (one per acceptance criterion; a second import that only restates; a stop that becomes a proposal, repeats as `already_proposed`, and ends the fact on approval; an invalid file that writes nothing; another resource type; another domain), 2 for the command and 1 for its argument. With the inclusive end read as its start, two tests failed; with `entered-in-error` mapped to nothing, one failed. Both were restored.
+- **End to end on SQLite:** through the test entry, which uses the fake embedder, on a new file with `KRONOMIND_DOMAIN=healthcare`. A first file recorded a medication and an allergy and reported a refuted condition and a Patient resource as not mapped. A second file turned the stopped medication into a `succession` proposal and the allergy entered in error into a `retraction` proposal. `proposals approve` ended the medication with no new fact, and the retraction stayed pending.
+- **Choices the item did not fix, for the owner's review:**
+  - `abatementDateTime` is read as the moment the condition resolved: valid time ends at the start of that date. The one-day shift applies to inclusive Period ends.
+  - A `completed` or `stopped` medication with no `effectivePeriod.end`, a resolved condition with no `abatementDateTime`, and a resolved or inactive allergy are reported as not mapped, because when they ended is not given. R4 AllergyIntolerance has no end element.
+  - `unconfirmed`, `provisional` and `differential` give a confidence of 0.5; a confirmed record or none gives 0.9.
+  - The patient entity is named by its FHIR reference, such as `Patient/invented-a`, which stays stable; the reference's display words the statement.
+  - A resource that fails is reported as `failed` and the rest go on, because each is its own commit; the command then exits with 1.
+- **Differs from the item as written:** the test entry `serve-with-fake-embedder.ts` still used the software development domain; it now uses the configured one, as `main.ts` has since FL-091 (`300f523`). The no-LLM criterion holds by construction too: `OperationDeps` carries no LLM client.
+- **Not run:** the real embedding model, which is not cached in this container; the end-to-end run used the fake embedder.
+- **The documentation** (`df96f11`, `7fb55e5`, `b4f1bbe`).
+- **`pnpm check`:** 144 test files and 1,479 tests passed; `pnpm build` succeeded.
 
 ### FL-093: Healthcare scenarios on invented data
 
