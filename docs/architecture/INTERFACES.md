@@ -65,7 +65,8 @@ export type Entity = {
 
 export type FactObject =
   | { readonly kind: 'entity'; readonly entityId: EntityId }
-  | { readonly kind: 'value'; readonly value: string };
+  /** FL-099, ADR 0028: `unit` is the value's unit, such as a UCUM code; absent when it has none. */
+  | { readonly kind: 'value'; readonly value: string; readonly unit?: string };
 
 export type Fact = {
   readonly id: FactId;
