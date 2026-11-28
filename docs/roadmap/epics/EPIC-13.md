@@ -74,8 +74,8 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-088 | Healthcare rules read in their official texts | 6 | None | Completed |
-| FL-089 | ADR: the healthcare proof comes before phase 4 | 6 | FL-088 | Pending |
-| FL-090 | Human approval for a reported change with a replacement | 6 | FL-070 | Pending |
+| FL-089 | ADR: the healthcare proof comes before phase 4 | 6 | FL-088 | Under Review |
+| FL-090 | Human approval for a reported change with a replacement | 6 | FL-070 | Completed |
 | FL-095 | Proposals that hold a retraction or an end with nothing after it | 6 | FL-090 | Pending |
 | FL-091 | Healthcare domain as data, and choosing the domain at start | 6 | FL-089 | Pending |
 | FL-092 | FHIR R4 import by fixed rules | 6 | FL-095, FL-091 | Pending |
@@ -139,7 +139,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 6 |
 | Depends on | FL-088 |
 | Requirements | REQ-34 |
@@ -172,17 +172,24 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 **Acceptance criteria.**
 - [ ] ADR 0026 is accepted by the owner.
 - [x] `SYSTEM-BOUNDARIES.md` lists `packages/adapters` and what it may import.
-- [ ] `pnpm check` passes.
+- [x] `pnpm check` passes.
 
 **Validation.** `pnpm check`.
 
 **Completion evidence.** The commits, the owner's acceptance, and the `pnpm check` output.
 
+**Recorded evidence.** Prepared on 2026-11-28 in a cloud session on Linux x64. Waiting for the owner's acceptance of ADR 0026, the one open criterion.
+
+- **The ADR** (`321830e`): [ADR 0026](../../architecture/adr/0026-healthcare-proof-before-phase-4.md), status proposed, listed in `DECISIONS.md`. It rejects phase 4 first, the healthcare code inside `graph-rag`, one package per domain, and a first stage with de-identified data.
+- **The boundaries** (`c0cfba3`): `SYSTEM-BOUNDARIES.md` has a row for `@kronomind/adapters`.
+- **Differs from the item as written** (`949221a`): the check that a forbidden import from `packages/adapters` fails moved to FL-091. The package does not exist before FL-091, and the engineering principles forbid an empty placeholder package.
+- **`pnpm check`:** 138 test files and 1,444 tests passed.
+
 ### FL-090: Human approval for a reported change with a replacement
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | FL-070 |
 | Requirements | REQ-17 |
@@ -218,15 +225,23 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 - [ADR 0006](../../architecture/adr/0006-facts-change-only-by-invalidation.md), [ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md).
 
 **Acceptance criteria.**
-- [ ] A test shows that under `human_approval` a correction with a replacement is a proposal, the stored fact stays live, and approval invalidates it and links the replacement.
-- [ ] A test shows that under `human_approval` a succession with a replacement is a proposal ending at the given date, and rejection changes no fact.
-- [ ] A test shows that under `human_approval` a report with no replacement is refused with `invalid_input`, and stores neither a change nor a proposal.
-- [ ] A test shows that `invalidate_fact` under `human_approval` returns the proposal's identifier and leaves the fact current.
-- [ ] `pnpm check` passes.
+- [x] A test shows that under `human_approval` a correction with a replacement is a proposal, the stored fact stays live, and approval invalidates it and links the replacement.
+- [x] A test shows that under `human_approval` a succession with a replacement is a proposal ending at the given date, and rejection changes no fact.
+- [x] A test shows that under `human_approval` a report with no replacement is refused with `invalid_input`, and stores neither a change nor a proposal.
+- [x] A test shows that `invalidate_fact` under `human_approval` returns the proposal's identifier and leaves the fact current.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests of `changeFact`, the tool tests in `apps/mcp-server`, and `pnpm check`.
 
 **Completion evidence.** The commits and the `pnpm check` output.
+
+**Recorded evidence.** Done on 2026-11-28 in a cloud session on Linux x64 with Node.js 22.
+
+- **The code** (`c88a716`): `changeFact` returns `ChangeFactResult`, either `changed` or `proposed`. Under `human_approval` it calls `proposeChange` with `reported_wrong` and a correction, or `reported_ended` and a succession at `endedAt` or now, and refuses a report with no replacement with `invalid_input`. `invalidate_fact` returns `proposal_id`. The in-process test connection and the tool session take a domain.
+- **The tests:** three in `change-fact.test.ts` (a correction proposed and approved, a succession proposed and rejected, a report with no replacement refused) and one in `invalidate-fact-tool.test.ts`. With the policy check broken by hand, all three use-case tests failed; it was restored.
+- **Differs from the item as written:** the item was split (`bac7fe0`). Retraction proposals, and ends with nothing after them, are FL-095, because they need a migration that rebuilds `proposed_change`. `record_fact` needed no change: it already refuses a fact that conflicts with a stored one. Existing tests were edited only to read the new result: the `change` helper of `change-fact.test.ts` narrows to `changed`, two expectations there add `kind: 'changed'`, and one in `invalidate-fact-tool.test.ts` adds `proposal_id: null`.
+- **The documentation** (`c1ad49e`): `MCP-TOOLS.md` describes the new output.
+- **`pnpm check`:** 138 test files and 1,448 tests passed.
 
 ### FL-095: Proposals that hold a retraction or an end with nothing after it
 
