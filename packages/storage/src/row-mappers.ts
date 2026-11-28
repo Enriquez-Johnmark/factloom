@@ -236,7 +236,7 @@ export type ProposedChangeRow = {
   readonly stored_fact_id: string;
   readonly kind: string;
   readonly changed_at: string | null;
-  readonly new_fact: string;
+  readonly new_fact: string | null;
   readonly source_id: string;
   readonly reason_code: string;
   readonly proposed_at: string;
@@ -246,9 +246,9 @@ export type ProposedChangeRow = {
 
 /** A proposal row, with its new fact read from JSON and its kind and moment as one value. */
 export function toProposedChange(row: ProposedChangeRow): ProposedChange {
-  let newFact: unknown;
+  let newFact: unknown = null;
   try {
-    newFact = JSON.parse(row.new_fact);
+    if (row.new_fact !== null) newFact = JSON.parse(row.new_fact);
   } catch {
     throw new UnreadableRow(`A stored proposed change could not be read. new_fact: not valid JSON`);
   }

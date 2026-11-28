@@ -1422,9 +1422,38 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
 
     expect(purged.ok).toBe(true);
     const listed = await store.listPendingProposals({ namespace: NAMESPACE });
-    expect(listed.ok && listed.value.map((pending) => pending.proposal.newFact.fact)).toMatchObject([
+    expect(listed.ok && listed.value.map((pending) => pending.proposal.newFact?.fact)).toMatchObject([
       { statement: '[purged]', object: { kind: 'value', value: '[purged]' } },
     ]);
+  });
+  test('P8: a retraction and an end with nothing after it are returned as recorded, with no new fact', async () => {
+    const retraction = proposal('p-1', '2026-06-01', { supersession: { kind: 'retraction' }, newFact: null });
+    const end = proposal('p-2', '2026-06-02', {
+      supersession: { kind: 'succession', changedAt: at('2026-05-20') },
+      newFact: null,
+    });
+
+    const results = [await store.commit(proposing(retraction)), await store.commit(proposing(end))];
+    const listed = await store.listPendingProposals({ namespace: NAMESPACE });
+
+    expect(results.map((result) => result.ok)).toEqual([true, true]);
+    expect(listed.ok && listed.value.map((pending) => pending.proposal)).toEqual([retraction, end]);
+  });
+  test('P9: purging the source of a proposal with no new fact leaves the proposal as it was', async () => {
+    const retraction = proposal('p-1', '2026-06-01', { supersession: { kind: 'retraction' }, newFact: null });
+    await store.commit(proposing(retraction));
+
+    const purged = await store.commit(
+      changeSet('op-p9', '2026-06-02', [{ kind: 'purge_content', targetKind: 'source', targetId: 's-p-1' }], {
+        operation: 'purge',
+        trigger: 'person',
+        reasonCode: 'erasure_requested',
+      }),
+    );
+
+    expect(purged.ok).toBe(true);
+    const listed = await store.listPendingProposals({ namespace: NAMESPACE });
+    expect(listed.ok && listed.value.map((pending) => pending.proposal)).toEqual([retraction]);
   });
   test('P6: deciding a proposal before the time it was proposed returns invalid_input and leaves it pending', async () => {
     await store.commit(proposing(proposal('p-1', '2026-06-05')));

@@ -276,7 +276,7 @@ export function createCommit(
        WHEN json_extract(new_fact, '$.fact.object.kind') = 'value'
          THEN json_set(new_fact, '$.fact.statement', @marker, '$.fact.object.value', @marker)
        ELSE json_set(new_fact, '$.fact.statement', @marker) END
-     WHERE source_id = @id AND namespace = @namespace`,
+     WHERE source_id = @id AND namespace = @namespace AND new_fact IS NOT NULL`,
   );
   const insertProposal = db.prepare(
     `INSERT INTO proposed_change (id, namespace, stored_fact_id, kind, changed_at, new_fact, source_id,
@@ -600,7 +600,7 @@ export function createCommit(
           storedFactId: proposal.storedFactId,
           kind: proposal.supersession.kind,
           changedAt: proposal.supersession.kind === 'succession' ? proposal.supersession.changedAt : null,
-          newFact: JSON.stringify(proposal.newFact),
+          newFact: proposal.newFact === null ? null : JSON.stringify(proposal.newFact),
           sourceId: proposal.sourceId,
           reasonCode: proposal.reasonCode,
           proposedAt: proposal.proposedAt,

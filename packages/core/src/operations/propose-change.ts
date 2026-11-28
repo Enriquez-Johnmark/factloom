@@ -1,7 +1,7 @@
 import type { ChangeSet } from '../change-set.ts';
 import type { FactId } from '../fact.ts';
 import type { OperationDeps } from '../operation-deps.ts';
-import type { ProposedChange } from '../proposed-change.ts';
+import { findNewFactProblem, type ProposedChange } from '../proposed-change.ts';
 import { err, ok, type Result } from '../result.ts';
 import { buildSource } from './build-source.ts';
 import type { ChangeContext, FactDraft, NewSource } from './operation-inputs.ts';
@@ -11,14 +11,14 @@ export type ProposeChangeInput = ChangeContext & {
   /** The live fact the change would end or invalidate. */
   readonly storedFactId: FactId;
   readonly supersession: ProposedChange['supersession'];
-  /** The fact to put in its place. */
-  readonly newFact: FactDraft;
+  /** The fact to put in its place, or null for a retraction or an end with nothing after it. */
+  readonly newFact: FactDraft | null;
   /** Why: recorded now, as the source the approved change is explained by. */
   readonly source: NewSource;
 };
 
 /**
- * Phase 2 (FL-043). Stores a succession or a correction for a person to approve, in one
+ * Phase 2 (FL-043). Stores a succession, a correction or a retraction for a person to approve, in one
  * commit with its source, and changes no fact. The stored fact must be live, and a succession
  * must end it after it began, so that a proposal that could never be applied is refused now.
  */
@@ -27,6 +27,8 @@ export async function proposeChange(
   input: ProposeChangeInput,
 ): Promise<Result<{ readonly proposalId: string }>> {
   const { namespace, storedFactId, supersession } = input;
+  const problem = findNewFactProblem(input);
+  if (problem !== null) return err('invalid_input', problem);
   const found = await readLiveFact(deps, { namespace, factId: storedFactId });
   if (!found.ok) return found;
   const { validFrom } = found.value.fact;

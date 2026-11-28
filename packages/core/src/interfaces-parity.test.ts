@@ -203,7 +203,8 @@ type RefProposedChange = {
   readonly storedFactId: RefFactId;
   readonly supersession:
     | { readonly kind: 'succession'; readonly changedAt: Timestamp }
-    | { readonly kind: 'correction' };
+    | { readonly kind: 'correction' }
+    | { readonly kind: 'retraction' };
   readonly newFact: {
     readonly fact: {
       readonly subjectEntityId: RefEntityId;
@@ -219,7 +220,7 @@ type RefProposedChange = {
       readonly type: string;
       readonly name: string;
     }[];
-  };
+  } | null;
   readonly sourceId: RefSourceId;
   readonly reasonCode: RefReasonCode;
   readonly proposedAt: Timestamp;

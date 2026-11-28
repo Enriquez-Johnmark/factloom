@@ -451,6 +451,8 @@ function purgeSource(draft: State, changeSet: ChangeSet, sourceId: string): Fail
   // A proposal's new fact quotes its source, so its text goes with it (Q-85).
   draft.proposals.forEach((proposal, index) => {
     if (proposal.sourceId !== sourceId || proposal.namespace !== changeSet.namespace) return;
+    // A proposal with no new fact holds no text from its source (FL-095).
+    if (proposal.newFact === null) return;
     const { fact } = proposal.newFact;
     draft.proposals[index] = {
       ...proposal,

@@ -42,4 +42,27 @@ describe('proposeChange', () => {
     const pending = await memory.store.listPendingProposals({ namespace: NAMESPACE });
     expect(pending.ok && pending.value).toEqual([]);
   });
+
+  it('refuses a correction with no new fact, and a retraction with one, and stores neither', async () => {
+    const memory = await createProposalMemory();
+    const base = { ...proposing, storedFactId: memory.storedFactId, source: note('It was never true.') };
+
+    const correction = await proposeChange(memory.on('2026-04-02'), {
+      ...base,
+      supersession: { kind: 'correction' },
+      newFact: null,
+    });
+    const retraction = await proposeChange(memory.on('2026-04-02'), {
+      ...base,
+      supersession: { kind: 'retraction' },
+      newFact: postgres('16'),
+    });
+
+    expect([correction, retraction].map((result) => (result.ok ? null : result.error.code))).toEqual([
+      'invalid_input',
+      'invalid_input',
+    ]);
+    const pending = await memory.store.listPendingProposals({ namespace: NAMESPACE });
+    expect(pending.ok && pending.value).toEqual([]);
+  });
 });

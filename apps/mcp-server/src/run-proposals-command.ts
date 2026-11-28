@@ -18,7 +18,7 @@ type ProposalsCommand = Extract<
   { readonly kind: 'list_proposals' | 'approve_proposal' | 'reject_proposal' }
 >;
 
-/** One line per pending proposal: identifier, kind, proposal time, stored fact, and the two statements. */
+/** One line per pending proposal: identifier, kind, proposal time, stored fact, and the two statements, `none` when nothing takes its place. */
 function describeProposal(proposal: ProposedChange, storedStatement: string): string {
   return [
     proposal.id,
@@ -26,7 +26,7 @@ function describeProposal(proposal: ProposedChange, storedStatement: string): st
     proposal.proposedAt,
     proposal.storedFactId,
     storedStatement,
-    proposal.newFact.fact.statement,
+    proposal.newFact?.fact.statement ?? 'none',
   ].join('\t');
 }
 
