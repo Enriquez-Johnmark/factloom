@@ -195,7 +195,7 @@ Use case: `changeFact`, which calls the core operation `invalidateFact` or `endF
 
 The source that holds `reason` is the source of the replacement and of the ended copy, and the audit entries point to it with the reason code `reported_wrong` or `reported_ended`. The audit log itself holds no free text, so a later **purge** can remove the sentence.
 
-Output: `{ invalidated_fact_id, replacement_fact_id }`, where `replacement_fact_id` is the new fact or `null`.
+Output: `{ invalidated_fact_id, replacement_fact_id, proposal_id }`, where `replacement_fact_id` is the new fact or `null`. In a domain whose correction policy is `human_approval`, no fact changes: the report is stored as a proposal for a person to decide with the `proposals` command, `proposal_id` names it, and the other two are `null`. A report with no replacement is refused there with `invalid_input`, because a proposal cannot yet hold a retraction or an end with nothing after it (FL-090, FL-095). Elsewhere `proposal_id` is `null`.
 
 A fact's identifier changes when the fact is revised. A caller that holds the old identifier gets `already_invalidated`, with the identifier of the superseding fact.
 
