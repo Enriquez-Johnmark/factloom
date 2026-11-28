@@ -109,11 +109,29 @@ function hasObject(stored: FactWithSources, fact: StructuredFactInput): boolean 
   );
 }
 
-/** The live facts that say the same thing as a given fact, at any valid time. */
+/** Whether a stored fact says what a given fact says, over the same period, its unit included. */
+function isSameClaim(stored: FactWithSources, fact: StructuredFactInput): boolean {
+  const sameUnit =
+    fact.object.kind !== 'value' ||
+    (stored.fact.object.kind === 'value' && stored.fact.object.unit === fact.object.unit);
+  return (
+    hasObject(stored, fact) &&
+    sameUnit &&
+    stored.fact.validFrom === fact.validFrom &&
+    stored.fact.validTo === fact.validTo
+  );
+}
+
+/**
+ * The live facts that say the same thing as a given fact, at any valid time: with the same
+ * object, or, when a locator is given, recorded from that resource whatever their object
+ * (ADR 0028).
+ */
 async function findLiveFacts(
   deps: Pick<OperationDeps, 'store'>,
   namespace: Namespace,
   fact: StructuredFactInput,
+  fromLocator: string | null = null,
 ): Promise<Result<readonly FactWithSources[]>> {
   const subjects = await deps.store.findEntities({
     namespace,
@@ -133,7 +151,13 @@ async function findLiveFacts(
       limit: LIVE_FACT_LIMIT,
     });
     if (!listed.ok) return listed;
-    found.push(...listed.value.filter((stored) => hasObject(stored, fact)));
+    found.push(
+      ...listed.value.filter((stored) =>
+        fromLocator === null
+          ? hasObject(stored, fact)
+          : stored.sources.some((source) => source.locator === fromLocator),
+      ),
+    );
   }
   return ok(found);
 }
@@ -202,7 +226,12 @@ async function reconcile(
   const { namespace, trigger, statement } = input;
   const { claim, source, content } = statement;
   if (claim.kind === 'none') return ok({ ...NOTHING, outcome: 'not_mapped' });
-  const live = await findLiveFacts(deps, namespace, claim.fact);
+  const live = await findLiveFacts(
+    deps,
+    namespace,
+    claim.fact,
+    statement.matchBy === 'source' ? source.locator : null,
+  );
   if (!live.ok) return live;
   const report = { namespace, trigger, source, explanation: content, endedAt: null } as const;
 
@@ -227,15 +256,13 @@ async function reconcile(
       });
     }
   }
-  const isSamePeriod =
-    stored !== undefined && stored.fact.validFrom === fact.validFrom && stored.fact.validTo === fact.validTo;
-  if (stored === undefined || isSamePeriod) {
+  if (stored === undefined || isSameClaim(stored, fact)) {
     const recorded = await recordStructuredFacts(deps, {
       namespace,
       trigger,
       source,
       content,
-      facts: [fact],
+      facts: [...statement.alsoStates, fact],
     });
     if (!recorded.ok) return recorded;
     const outcome = recorded.value.facts.every((one) => one.outcome === 'restated') ? 'restated' : 'recorded';
@@ -254,7 +281,7 @@ async function reconcile(
 }
 
 /**
- * Imports FHIR R4 MedicationStatement, Condition and AllergyIntolerance resources into memory
+ * Imports FHIR R4 MedicationStatement, Condition, AllergyIntolerance and Observation resources into memory
  * by fixed rules, with no LLM, so that structured records never reach a model (FL-092). Every
  * resource is read first: one invalid resource refuses the import and nothing is written.
  * Then each resource is its own commit, and under the healthcare domain every change to a
@@ -281,7 +308,7 @@ export async function importFhirResources(
         notMapped: [
           {
             element: 'resourceType',
-            reason: 'Only MedicationStatement, Condition and AllergyIntolerance are mapped.',
+            reason: 'Only MedicationStatement, Condition, AllergyIntolerance and Observation are mapped.',
           },
         ],
       });

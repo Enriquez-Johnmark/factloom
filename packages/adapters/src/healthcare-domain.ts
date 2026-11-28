@@ -9,7 +9,7 @@ import type { Domain } from '@kronomind/core';
  */
 export const healthcareDomain: Domain = {
   name: 'healthcare',
-  entityTypes: ['patient', 'condition', 'medication', 'substance'],
+  entityTypes: ['patient', 'condition', 'medication', 'substance', 'measurement'],
   predicates: [
     {
       name: 'has_condition',
@@ -44,6 +44,19 @@ export const healthcareDomain: Domain = {
       description: 'A patient does not take a medication, for example the patient not_taking "metformin".',
       cardinality: 'multi',
     },
+    // ADR 0028: a measured value is a fact about the series of one test for one patient.
+    {
+      name: 'measured_as',
+      description:
+        'A measurement series had a value, with its unit, at the time the fact is valid, for example the HbA1c series of a patient measured_as "6.8" "%".',
+      cardinality: 'single',
+    },
+    {
+      name: 'measurement_of',
+      description:
+        'A measurement series belongs to a patient, for example the HbA1c series measurement_of the patient.',
+      cardinality: 'single',
+    },
   ],
   extractionInstructions:
     'The records are invented. Extract only what the text states about a patient: a condition, a medication taken, or an allergy to a substance. Do not infer a diagnosis.',
@@ -57,14 +70,16 @@ export type HealthcarePredicate =
   | 'allergic_to'
   | 'ruled_out'
   | 'not_allergic_to'
-  | 'not_taking';
+  | 'not_taking'
+  | 'measured_as'
+  | 'measurement_of';
 
 /**
  * Each predicate and the one that says the opposite (ADR 0027). Conflict detection in core does
  * not know these pairs, so the FHIR import checks them: a statement over a live opposite is a
  * correction for a clinician to decide.
  */
-export const OPPOSITE_PREDICATES: Readonly<Record<HealthcarePredicate, HealthcarePredicate>> = {
+export const OPPOSITE_PREDICATES: Readonly<Partial<Record<HealthcarePredicate, HealthcarePredicate>>> = {
   has_condition: 'ruled_out',
   ruled_out: 'has_condition',
   allergic_to: 'not_allergic_to',

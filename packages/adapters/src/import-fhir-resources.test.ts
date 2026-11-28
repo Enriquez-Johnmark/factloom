@@ -117,6 +117,19 @@ function condition(fields: Record<string, unknown>) {
   };
 }
 
+function hba1c(status: string, value: number, fields: Record<string, unknown> = {}) {
+  return {
+    resourceType: 'Observation',
+    id: 'invented-obs-1',
+    status,
+    code: { coding: [{ system: 'http://loinc.org', code: '4548-4' }], text: 'HbA1c' },
+    subject: PATIENT,
+    effectiveDateTime: '2026-03-01',
+    valueQuantity: { value, unit: '%', system: 'http://unitsofmeasure.org', code: '%' },
+    ...fields,
+  };
+}
+
 describe('importFhirResources', () => {
   it('keeps a medication true on the last day of its inclusive period, and not the day after', async () => {
     const memory = createMemory();
@@ -324,5 +337,85 @@ describe('importFhirResources', () => {
     });
 
     expect(imported.ok ? null : imported.error.code).toBe('invalid_input');
+  });
+
+  it('records a final result as a value with its unit, on its series, for the day it describes', async () => {
+    const memory = createMemory();
+
+    const [entry] = await importOn(memory, '2026-03-02', [hba1c('final', 6.8)]);
+
+    expect(entry?.outcome).toBe('recorded');
+    const facts = await allFacts(memory);
+    const result = facts.find((found) => found.fact.predicate === 'measured_as');
+    expect(result?.subject.name).toBe('Patient/invented-a LOINC 4548-4');
+    expect(result?.fact.object).toEqual({ kind: 'value', value: '6.8', unit: '%' });
+    expect([result?.fact.validFrom, result?.fact.validTo]).toEqual([at('2026-03-01'), at('2026-03-02')]);
+    expect(facts.find((found) => found.fact.predicate === 'measurement_of')?.objectEntity?.name).toBe(
+      'Patient/invented-a',
+    );
+  });
+
+  it('restates a result imported again, and records nothing twice', async () => {
+    const memory = createMemory();
+    await importOn(memory, '2026-03-02', [hba1c('final', 6.8)]);
+    const before = (await allFacts(memory)).length;
+
+    const [entry] = await importOn(memory, '2026-03-03', [hba1c('final', 6.8)]);
+
+    expect(entry?.outcome).toBe('restated');
+    expect((await allFacts(memory)).length).toBe(before);
+  });
+
+  it('holds a corrected result as a correction of the earlier value, which approval applies', async () => {
+    const memory = createMemory();
+    await importOn(memory, '2026-03-02', [hba1c('final', 6.8)]);
+
+    const [entry] = await importOn(memory, '2026-03-05', [
+      hba1c('corrected', 7.1, { meta: { versionId: '2' } }),
+    ]);
+
+    expect(entry?.outcome).toBe('proposed');
+    const pending = await memory.store.listPendingProposals({ namespace: NAMESPACE });
+    const [proposal] = pending.ok ? pending.value : [];
+    expect(proposal?.proposal.supersession.kind).toBe('correction');
+    expect(proposal?.proposal.newFact?.fact.object).toEqual({ kind: 'value', value: '7.1', unit: '%' });
+    const approved = await approveProposedChange(memory.on('2026-03-06'), {
+      namespace: NAMESPACE,
+      proposalId: entry?.proposalId ?? '',
+      trigger: 'person',
+    });
+    expect(approved.ok).toBe(true);
+    const live = (await factsAt(memory, '2026-03-01')).filter(
+      (found) => found.fact.predicate === 'measured_as',
+    );
+    expect(live.map((found) => found.fact.object)).toEqual([{ kind: 'value', value: '7.1', unit: '%' }]);
+  });
+
+  it('holds a result entered in error as a retraction', async () => {
+    const memory = createMemory();
+    await importOn(memory, '2026-03-02', [hba1c('final', 6.8)]);
+
+    const [entry] = await importOn(memory, '2026-03-05', [hba1c('entered-in-error', 6.8)]);
+
+    expect(entry?.outcome).toBe('proposed');
+    const pending = await memory.store.listPendingProposals({ namespace: NAMESPACE });
+    expect(pending.ok && pending.value.map((one) => one.proposal.supersession.kind)).toEqual(['retraction']);
+  });
+
+  it('reports an amended result, and a result with no time, as not mapped', async () => {
+    const memory = createMemory();
+
+    const entries = await importOn(memory, '2026-03-02', [
+      hba1c('amended', 6.8),
+      hba1c('final', 6.8, { id: 'invented-obs-2', effectiveDateTime: undefined }),
+    ]);
+
+    expect(
+      entries.map((entry) => [entry.outcome, entry.notMapped.map((element) => element.element)]),
+    ).toEqual([
+      ['not_mapped', ['status']],
+      ['not_mapped', ['effective[x]']],
+    ]);
+    expect(await allFacts(memory)).toEqual([]);
   });
 });

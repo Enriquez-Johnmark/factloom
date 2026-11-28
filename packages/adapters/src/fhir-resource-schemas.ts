@@ -97,11 +97,43 @@ export const AllergyIntoleranceSchema = z.looseObject({
 });
 export type AllergyIntolerance = z.infer<typeof AllergyIntoleranceSchema>;
 
-/** One of the three resource types the import maps. */
+/** R4 Quantity, the elements the import reads. */
+const QuantitySchema = z.looseObject({
+  value: z.number().optional(),
+  unit: z.string().optional(),
+  system: z.string().optional(),
+  code: z.string().optional(),
+});
+
+/** R4 Observation, the elements the import reads (FL-100, ADR 0028). */
+export const ObservationSchema = z.looseObject({
+  resourceType: z.literal('Observation'),
+  ...ResourceBaseShape,
+  status: z.enum([
+    'registered',
+    'preliminary',
+    'final',
+    'amended',
+    'corrected',
+    'cancelled',
+    'entered-in-error',
+    'unknown',
+  ]),
+  code: CodeableConceptSchema,
+  subject: ReferenceSchema,
+  effectiveDateTime: z.string().optional(),
+  effectiveInstant: z.string().optional(),
+  effectivePeriod: PeriodSchema.optional(),
+  valueQuantity: QuantitySchema.optional(),
+});
+export type Observation = z.infer<typeof ObservationSchema>;
+
+/** One of the resource types the import maps. */
 export const MappedResourceSchema = z.discriminatedUnion('resourceType', [
   MedicationStatementSchema,
   ConditionSchema,
   AllergyIntoleranceSchema,
+  ObservationSchema,
 ]);
 export type MappedResource = z.infer<typeof MappedResourceSchema>;
 
@@ -110,4 +142,5 @@ export const MAPPED_RESOURCE_TYPES: readonly string[] = [
   'MedicationStatement',
   'Condition',
   'AllergyIntolerance',
+  'Observation',
 ];

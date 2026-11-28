@@ -6,6 +6,7 @@ import type {
   Condition,
   MappedResource,
   MedicationStatement,
+  Observation,
   Reference,
 } from './fhir-resource-schemas.ts';
 import type { HealthcarePredicate } from './healthcare-domain.ts';
@@ -33,6 +34,14 @@ export type FhirStatement = {
   /** The whole resource as JSON, kept as the source's content: its own dates stay there. */
   readonly content: string;
   readonly notMapped: readonly NotMappedElement[];
+  /**
+   * How the claim's fact is found in memory: `object`, the live fact with the same subject,
+   * predicate and object; or `source`, the live fact recorded from the same resource, for a
+   * measured value whose correction changes the value itself (ADR 0028).
+   */
+  readonly matchBy: 'object' | 'source';
+  /** Facts recorded with a new claim, or restated, such as the link from a series to its patient. */
+  readonly alsoStates: readonly StructuredFactInput[];
 };
 
 /** Confidence of a fact from a confirmed record, and from one marked unconfirmed, provisional or differential. */
@@ -285,6 +294,113 @@ function mapAllergyIntolerance(resource: AllergyIntolerance, notMapped: NotMappe
   return { kind: 'states', fact };
 }
 
+const UCUM_SYSTEM = 'http://unitsofmeasure.org';
+const LOINC_SYSTEM = 'http://loinc.org';
+
+/** The test's code as people cite it, such as `LOINC 4548-4`, or its name when it has no code. */
+function readTestCode(concept: CodeableConcept): string | null {
+  const coded = concept.coding?.find((coding) => coding.code !== undefined);
+  if (coded?.code !== undefined) return coded.system === LOINC_SYSTEM ? `LOINC ${coded.code}` : coded.code;
+  return readName(concept);
+}
+
+/** ADR 0028: the UCUM code where the system is UCUM, else the unit text, or nothing. */
+function readUnit(quantity: NonNullable<Observation['valueQuantity']>): string | null {
+  if (quantity.system === UCUM_SYSTEM && quantity.code !== undefined) return quantity.code;
+  return quantity.unit ?? quantity.code ?? null;
+}
+
+/** The span a result describes: an instant or date names its own span; a period runs to the first moment after its end. */
+function readEffectiveSpan(
+  resource: Observation,
+  notMapped: NotMappedElement[],
+): { readonly validFrom: Timestamp; readonly validTo: Timestamp } | null {
+  const point = resource.effectiveInstant ?? resource.effectiveDateTime;
+  if (point !== undefined) {
+    const bounds = readFhirDate(point);
+    if (bounds === null)
+      notMapped.push({ element: 'effective[x]', reason: `"${point}" is not a FHIR date.` });
+    return bounds === null ? null : { validFrom: bounds.start, validTo: bounds.after };
+  }
+  const start = readStart(resource.effectivePeriod?.start, 'effectivePeriod.start', notMapped);
+  const end = readInclusiveEnd(resource.effectivePeriod?.end, 'effectivePeriod.end', notMapped);
+  if (start === null || end === null) {
+    notMapped.push({
+      element: 'effective[x]',
+      reason: 'A result with no exact time would conflict with every other result of its test.',
+    });
+    return null;
+  }
+  return { validFrom: start, validTo: end };
+}
+
+function mapObservation(
+  resource: Observation,
+  notMapped: NotMappedElement[],
+): { readonly claim: FhirClaim; readonly alsoStates: readonly StructuredFactInput[] } {
+  const none = { claim: { kind: 'none' }, alsoStates: [] } as const;
+  const patient = readPatient(resource.subject);
+  const test = readName(resource.code);
+  const testCode = readTestCode(resource.code);
+  if (patient === null) notMapped.push({ element: 'subject', reason: 'No patient reference.' });
+  if (test === null || testCode === null)
+    notMapped.push({ element: 'code', reason: 'No test name or code.' });
+  const quantity = resource.valueQuantity;
+  if (quantity?.value === undefined) {
+    notMapped.push({ element: 'value[x]', reason: 'Only a valueQuantity with a value is mapped.' });
+  }
+  if (
+    resource.status === 'amended' ||
+    resource.status === 'preliminary' ||
+    resource.status === 'registered' ||
+    resource.status === 'cancelled' ||
+    resource.status === 'unknown'
+  ) {
+    notMapped.push({
+      element: 'status',
+      reason:
+        resource.status === 'amended'
+          ? '"amended" covers both new information and corrections, so it is not mapped.'
+          : `"${resource.status}" is not a result that holds.`,
+    });
+    return none;
+  }
+  const span = readEffectiveSpan(resource, notMapped);
+  if (
+    patient === null ||
+    test === null ||
+    testCode === null ||
+    quantity?.value === undefined ||
+    span === null
+  )
+    return none;
+
+  const unit = readUnit(quantity);
+  const value = String(quantity.value);
+  const series = { type: 'measurement', name: `${patient.name} ${testCode}` };
+  const fact: StructuredFactInput = {
+    subject: series,
+    predicate: 'measured_as',
+    object: { kind: 'value', value, ...(unit === null ? {} : { unit }) },
+    statement: `${patient.label}: ${test} was ${value}${unit === null ? '' : ` ${unit}`}.`,
+    confidence: CONFIRMED_CONFIDENCE,
+    validFrom: span.validFrom,
+    validTo: span.validTo,
+  };
+  const link: StructuredFactInput = {
+    subject: series,
+    predicate: 'measurement_of',
+    object: { kind: 'entity', type: 'patient', name: patient.name },
+    statement: `${test} results of ${patient.label}.`,
+    confidence: CONFIRMED_CONFIDENCE,
+    validFrom: null,
+    validTo: null,
+  };
+  if (resource.status === 'entered-in-error') return { claim: { kind: 'withdraws', fact }, alsoStates: [] };
+  // "final", and "corrected", which reconciliation turns into a correction of the earlier value.
+  return { claim: { kind: 'states', fact }, alsoStates: [link] };
+}
+
 /**
  * Maps one FHIR R4 resource to what it says about memory, by fixed rules and with no LLM
  * (FL-092). Valid time starts at the earliest moment a date allows; an inclusive FHIR end
@@ -293,18 +409,37 @@ function mapAllergyIntolerance(resource: AllergyIntolerance, notMapped: NotMappe
  */
 export function mapFhirResource(resource: MappedResource): FhirStatement {
   const notMapped: NotMappedElement[] = [];
-  const claim =
-    resource.resourceType === 'MedicationStatement'
-      ? mapMedicationStatement(resource, notMapped)
-      : resource.resourceType === 'Condition'
-        ? mapCondition(resource, notMapped)
-        : mapAllergyIntolerance(resource, notMapped);
   const locator = `${resource.resourceType}/${resource.id}`;
-  return {
+  const base = {
     resource: locator,
-    claim,
     source: { kind: 'fhir_resource', locator, version: resource.meta?.versionId ?? null },
     content: JSON.stringify(resource),
     notMapped,
   };
+  switch (resource.resourceType) {
+    case 'MedicationStatement':
+      return {
+        ...base,
+        claim: mapMedicationStatement(resource, notMapped),
+        matchBy: 'object',
+        alsoStates: [],
+      };
+    case 'Condition':
+      return { ...base, claim: mapCondition(resource, notMapped), matchBy: 'object', alsoStates: [] };
+    case 'AllergyIntolerance':
+      return {
+        ...base,
+        claim: mapAllergyIntolerance(resource, notMapped),
+        matchBy: 'object',
+        alsoStates: [],
+      };
+    case 'Observation': {
+      const mapped = mapObservation(resource, notMapped);
+      return { ...base, claim: mapped.claim, matchBy: 'source', alsoStates: mapped.alsoStates };
+    }
+    default: {
+      const unhandled: never = resource;
+      throw new Error(`Unhandled resource: ${JSON.stringify(unhandled)}`);
+    }
+  }
 }
