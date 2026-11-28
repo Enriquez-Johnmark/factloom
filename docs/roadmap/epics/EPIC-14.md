@@ -67,9 +67,9 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-096 | ADR: a negated clinical fact is a specific predicate | 6 | FL-094 | Under Review |
+| FL-096 | ADR: a negated clinical fact is a specific predicate | 6 | FL-094 | Completed |
 | FL-097 | Negated facts in the healthcare domain and the FHIR import | 6 | FL-096 | Pending |
-| FL-098 | ADR: how a measured value is a fact | 6 | FL-094 | Under Review |
+| FL-098 | ADR: how a measured value is a fact | 6 | FL-094 | Completed |
 | FL-099 | A unit beside a fact's value | 6 | FL-098 | Pending |
 | FL-100 | Observation import | 6 | FL-099, FL-097 | Pending |
 
@@ -77,7 +77,7 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | FL-094 |
 | Requirements | REQ-34 |
@@ -105,14 +105,14 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 - [Engineering principles](../../../.claude/rules/engineering-principles.md): depth in the fact schema.
 
 **Acceptance criteria.**
-- [ ] ADR 0027 is accepted by the owner.
+- [x] ADR 0027 is accepted by the owner.
 - [x] `pnpm check` passes.
 
 **Validation.** `pnpm check`.
 
 **Completion evidence.** The commit and the owner's acceptance.
 
-**Recorded evidence.** Prepared on 2026-11-28 in a cloud session. ADR 0027 is written with status proposed and listed in `DECISIONS.md`. Waiting for the owner's acceptance, the one open criterion. `pnpm check` passed.
+**Recorded evidence.** Prepared on 2026-11-28 in a cloud session. ADR 0027 is written with status proposed and listed in `DECISIONS.md`. The owner accepted it in the session on 2026-11-28 (`8d9acb8`). `pnpm check` passed.
 
 ### FL-097: Negated facts in the healthcare domain and the FHIR import
 
@@ -165,7 +165,7 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | FL-094 |
 | Requirements | REQ-34 |
@@ -193,14 +193,14 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 - [ADR 0010](../../architecture/adr/0010-conflicts-are-keyed-by-subject-and-predicate.md), [`data.md`](../../../.claude/rules/data.md).
 
 **Acceptance criteria.**
-- [ ] ADR 0028 is accepted by the owner.
+- [x] ADR 0028 is accepted by the owner.
 - [x] `pnpm check` passes.
 
 **Validation.** `pnpm check`.
 
 **Completion evidence.** The commit and the owner's acceptance.
 
-**Recorded evidence.** Prepared on 2026-11-28 in a cloud session. ADR 0028 is written with status proposed and listed in `DECISIONS.md`. Waiting for the owner's acceptance, the one open criterion. `pnpm check` passed.
+**Recorded evidence.** Prepared on 2026-11-28 in a cloud session. ADR 0028 is written with status proposed and listed in `DECISIONS.md`. The owner accepted it in the session on 2026-11-28 (`8d9acb8`). `pnpm check` passed.
 
 ### FL-099: A unit beside a fact's value
 
