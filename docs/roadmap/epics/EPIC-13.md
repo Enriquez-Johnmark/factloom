@@ -73,7 +73,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-088 | Healthcare rules read in their official texts | 6 | None | Pending |
+| FL-088 | Healthcare rules read in their official texts | 6 | None | Completed |
 | FL-089 | ADR: the healthcare proof comes before phase 4 | 6 | FL-088 | Pending |
 | FL-090 | Human approval on the structured path | 6 | FL-070 | Pending |
 | FL-091 | Healthcare domain as data, and choosing the domain at start | 6 | FL-089 | Pending |
@@ -85,7 +85,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | None |
 | Requirements | REQ-34 |
@@ -118,13 +118,21 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 - [Engineering principles](../../../.claude/rules/engineering-principles.md), "Accuracy".
 
 **Acceptance criteria.**
-- [ ] `docs/research/industries/healthcare-rules.md` exists, and every finding in it has a URL, an access date and a label.
-- [ ] Q-59 and Q-63 in `OPEN-QUESTIONS.md` say which parts were read in official texts on 2026-11-28 and which remain open.
-- [ ] `pnpm check` passes.
+- [x] `docs/research/industries/healthcare-rules.md` exists, and every finding in it has a URL, an access date and a label.
+- [x] Q-59 and Q-63 in `OPEN-QUESTIONS.md` say which parts were read in official texts on 2026-11-28 and which remain open.
+- [x] `pnpm check` passes.
 
 **Validation.** `pnpm check`, which runs the format check over Markdown, and `python3 scripts/roadmap/check.py`.
 
 **Completion evidence.** The commits and the `pnpm check` output.
+
+**Recorded evidence.** Done on 2026-11-28 in a cloud session on Linux x64.
+
+- **The research** (`4e32955`): [`healthcare-rules.md`](../../research/industries/healthcare-rules.md), with 11 HIPAA findings, 9 on rules for AI in healthcare and 9 on FHIR R4, each with its URL, the access date and a label. Three agents read the sources in parallel; the session checked again the Federal Register entries 2026-23429, 2024-30983 and 2026-21943, the removal wording in 2026-21943, the AI Omnibus dates in the Official Journal text, and three FHIR R4 definitions.
+- **The open questions** (`c6b5e5f`): Q-59, Q-60 and Q-63 say what the reading answered and what is still open. None is closed: HHS guidance, the GDPR articles, 21 CFR 11.70 and Part 820 were not read.
+- **Differs from the item as written:** Q-60 was updated as well, because the Official Journal text of Regulation (EU) 2026/1744 answers its dates.
+- **Not run:** nothing in the item needs a run beyond the checks. No source was read on `hhs.gov` or `eur-lex.europa.eu`, which refused the session.
+- **`pnpm check`:** 138 test files and 1,444 tests passed; `python3 scripts/roadmap/check.py` printed `ALL CHECKS PASS`.
 
 ### FL-089: ADR: the healthcare proof comes before phase 4
 
