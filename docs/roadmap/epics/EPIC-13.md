@@ -153,7 +153,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 **Scope.**
 - ADR 0026, giving the decision, its reason and the alternatives rejected: phase 4 first, and the healthcare code inside `graph-rag`.
 - The place of the code: `packages/adapters`, the package EPIC-12 names, with the healthcare domain as its first module.
-- `SYSTEM-BOUNDARIES.md` updated for the new package: it may import `core` and `graph-rag`; storage and the app may not be imported by it.
+- `SYSTEM-BOUNDARIES.md` updated for the new package: it may import `core` and `graph-rag`, and only the app imports it. The lint rule that enforces this arrives with the package in FL-091.
 - The rule of this epic written in the ADR: invented data only until the later stages of the healthcare plan.
 
 **Non-goals.**
@@ -161,7 +161,6 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 **Functional requirements.**
 1. The ADR names the alternatives rejected and why.
-2. The boundary check of FL-001 fails when `packages/adapters` imports a storage adapter.
 
 **Technical requirements.**
 - The ADR follows the format of [ADR 0025](../../architecture/adr/0025-the-project-is-named-kronomind.md) and is listed in [`DECISIONS.md`](../../architecture/DECISIONS.md).
@@ -171,12 +170,12 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 **Acceptance criteria.**
 - [ ] ADR 0026 is accepted by the owner.
-- [ ] `SYSTEM-BOUNDARIES.md` lists `packages/adapters` and what it may import, and a forbidden import from it makes `pnpm check` fail.
+- [x] `SYSTEM-BOUNDARIES.md` lists `packages/adapters` and what it may import.
 - [ ] `pnpm check` passes.
 
-**Validation.** `pnpm check`, and a forbidden import added by hand and removed.
+**Validation.** `pnpm check`.
 
-**Completion evidence.** The commits, the owner's acceptance, and the failing then passing check output.
+**Completion evidence.** The commits, the owner's acceptance, and the `pnpm check` output.
 
 ### FL-090: Human approval on the structured path
 
@@ -268,11 +267,12 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 - [ ] A test starts the server's dependencies with the healthcare domain and finds the policy `human_approval`.
 - [ ] A test shows that an unknown domain name is refused with the list of known ones.
 - [ ] A search of `packages/core`, `packages/graph-rag` and `packages/storage` for the healthcare entity types and predicates finds none outside test data.
+- [ ] A lint rule for `packages/adapters` enforces its row in `SYSTEM-BOUNDARIES.md`: an import of `@kronomind/storage` from it, and an import of it from `graph-rag`, each make `pnpm check` fail, and are removed.
 - [ ] `pnpm check` passes.
 
-**Validation.** Unit tests and `pnpm check`.
+**Validation.** Unit tests, `pnpm check`, and the two forbidden imports added by hand and removed.
 
-**Completion evidence.** The commits, the search output and the `pnpm check` output.
+**Completion evidence.** The commits, the search output, the failing then passing check output, and the `pnpm check` output.
 
 ### FL-092: FHIR R4 import by fixed rules
 
