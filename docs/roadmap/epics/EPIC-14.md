@@ -70,7 +70,7 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 | FL-096 | ADR: a negated clinical fact is a specific predicate | 6 | FL-094 | Completed |
 | FL-097 | Negated facts in the healthcare domain and the FHIR import | 6 | FL-096 | Completed |
 | FL-098 | ADR: how a measured value is a fact | 6 | FL-094 | Completed |
-| FL-099 | A unit beside a fact's value | 6 | FL-098 | Pending |
+| FL-099 | A unit beside a fact's value | 6 | FL-098 | Completed |
 | FL-100 | Observation import | 6 | FL-099, FL-097 | Pending |
 
 ### FL-096: ADR: a negated clinical fact is a specific predicate
@@ -214,7 +214,7 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | FL-098 |
 | Requirements | REQ-34 |
@@ -248,14 +248,22 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 - [`data.md`](../../../.claude/rules/data.md), [ADR 0006](../../architecture/adr/0006-facts-change-only-by-invalidation.md).
 
 **Acceptance criteria.**
-- [ ] A contract test records and reads a value fact with a unit, in both stores.
-- [ ] A contract test shows that an update of the unit is refused.
-- [ ] A test shows that the same value in a different unit is not a restatement.
-- [ ] `pnpm check` passes.
+- [x] A contract test records and reads a value fact with a unit, in both stores.
+- [x] A contract test shows that an update of the unit is refused.
+- [x] A test shows that the same value in a different unit is not a restatement.
+- [x] `pnpm check` passes.
 
 **Validation.** The storage contract suite, unit tests, `pnpm check`.
 
 **Completion evidence.** The commits and the `pnpm check` output.
+
+**Recorded evidence.** Done on 2026-11-28 in a cloud session on Linux x64 with Node.js 22.
+
+- **The code** (`bf8b9f9`): the value form of `FactObject` has an optional `unit` (`exactOptional`, so it is absent, never `undefined`), and `StructuredFactInput` the same; planning, correction and both stores carry it. Migration `0012_add_fact_object_unit.sql` adds `fact.object_unit` with a check that a unit needs a value, and replaces `fact_changes_only_by_invalidation_or_purge` so that an invalidation keeps the unit and a purge clears it. The unit is compared wherever two objects are: restatement (`isSameObject` in `graph-rag` and in the conflict judge), the revision check and the merge check in both stores. The schema inventory classifies the column as content.
+- **The tests:** contract cases V1 (a unit read back; a fact without one has none) and V2 (a purge clears it), in both stores, raising the registered count to 100; `fact-object-unit-migration.test.ts` (no update of a unit; a unit on an entity refused; an invalidation that changes a unit and a purge that keeps one refused); a restatement test in `record-structured-facts.test.ts`. With the unit removed from `isSameObject`, the restatement test failed; with either unit clause removed from the trigger, the migration test failed. The first trigger test alone did not catch that, so the second test was written. All were restored.
+- **Differs from the item as written:** the unit is optional on the value object rather than a required `null`, so that every fact recorded before keeps its shape; `INTERFACES.md` and the parity test say so. No MCP tool shows the unit yet; the statement carries it in words.
+- **The documentation** (`c1f72bc`): `SCHEMA.md`, and `INTERFACES.md` in its own commit.
+- **`pnpm check`:** 147 test files and 1,503 tests passed.
 
 ### FL-100: Observation import
 
