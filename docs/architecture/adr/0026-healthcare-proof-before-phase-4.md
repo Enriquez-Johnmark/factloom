@@ -1,6 +1,6 @@
 # The healthcare proof comes before phase 4, on invented data, in packages/adapters
 
-Status: proposed.
+Status: accepted, by the owner on 2026-11-28.
 
 A first healthcare **domain adapter** is built in phase 6 now, before phase 4 and before the other domains of [EPIC-12](../../roadmap/epics/EPIC-12.md). It is a proof on invented FHIR R4 records only ([EPIC-13](../../roadmap/epics/EPIC-13.md)). Its code lives in a new package, `packages/adapters`, which the composition root alone imports. EPIC-12's order holds for every other domain.
 
