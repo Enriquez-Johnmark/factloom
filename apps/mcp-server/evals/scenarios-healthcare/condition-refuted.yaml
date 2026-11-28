@@ -1,0 +1,32 @@
+# INVENTED DATA. No record of a real person is used.
+name: "Condition refuted: a ruled-out condition is not mapped, and no fact or entity is invented"
+steps:
+  - at: 2026-03-10
+    import_fhir:
+      - resourceType: Condition
+        id: invented-c-3
+        verificationStatus: { coding: [{ code: refuted }] }
+        code: { text: asthma }
+        subject: { reference: Patient/invented-g, display: Invented Patient G }
+        onsetDateTime: 2026-03
+      - resourceType: Condition
+        id: invented-c-4
+        clinicalStatus: { coding: [{ code: active }] }
+        verificationStatus: { coding: [{ code: confirmed }] }
+        code: { text: seasonal allergic rhinitis }
+        subject: { reference: Patient/invented-g, display: Invented Patient G }
+        onsetDateTime: 2026-03
+expect:
+  - ask: { subject: { name: Patient/invented-g, type: patient }, predicate: has_condition }
+    returns: [seasonal allergic rhinitis]
+    must_not_return: [asthma]
+  - ask:
+      {
+        subject: { name: Patient/invented-g, type: patient },
+        predicate: has_condition,
+        as_of: 2026-03-15,
+        known_at: 2026-03-15,
+      }
+    returns: [seasonal allergic rhinitis]
+  - entities: { name: asthma }
+    count: 0

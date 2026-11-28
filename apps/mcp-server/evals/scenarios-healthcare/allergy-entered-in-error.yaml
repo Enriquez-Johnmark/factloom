@@ -1,0 +1,53 @@
+# INVENTED DATA. No record of a real person is used.
+name: "Entered in error: a penicillin allergy is retracted when a clinician approves, and stays on record"
+steps:
+  - at: 2026-01-10
+    import_fhir:
+      - resourceType: AllergyIntolerance
+        id: invented-ai-1
+        clinicalStatus: { coding: [{ code: active }] }
+        verificationStatus: { coding: [{ code: confirmed }] }
+        code: { text: penicillin }
+        patient: { reference: Patient/invented-c, display: Invented Patient C }
+        onsetDateTime: 2025-11
+  - at: 2026-02-01
+    import_fhir:
+      - resourceType: AllergyIntolerance
+        id: invented-ai-1
+        meta: { versionId: "2" }
+        verificationStatus: { coding: [{ code: entered-in-error }] }
+        code: { text: penicillin }
+        patient: { reference: Patient/invented-c, display: Invented Patient C }
+        onsetDateTime: 2025-11
+  - at: 2026-02-02
+    decide_proposal:
+      subject: { name: Patient/invented-c, type: patient }
+      predicate: allergic_to
+      value: penicillin
+      decision: approve
+expect:
+  - ask: { subject: { name: Patient/invented-c, type: patient }, predicate: allergic_to }
+    returns: []
+    must_not_return: [penicillin]
+  # What memory believed on 2026-01-20: the allergy, which decisions may have relied on.
+  - ask:
+      {
+        subject: { name: Patient/invented-c, type: patient },
+        predicate: allergic_to,
+        as_of: 2026-01-20,
+        known_at: 2026-01-20,
+      }
+    returns: [penicillin]
+  # Between the report and the approval it was still believed.
+  - ask:
+      {
+        subject: { name: Patient/invented-c, type: patient },
+        predicate: allergic_to,
+        known_at: 2026-02-01T12:00:00.000Z,
+      }
+    returns: [penicillin]
+  # Known now: it was never true, not even on 2026-01-20.
+  - ask: { subject: { name: Patient/invented-c, type: patient }, predicate: allergic_to, as_of: 2026-01-20 }
+    returns: []
+  - pending: { subject: { name: Patient/invented-c, type: patient }, predicate: allergic_to }
+    kinds: []

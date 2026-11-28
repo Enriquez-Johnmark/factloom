@@ -1,0 +1,36 @@
+# INVENTED DATA. No record of a real person is used.
+name: "Sources disagree: a pharmacy record that ends a medication waits for a clinician"
+steps:
+  - at: 2026-02-01
+    import_fhir:
+      - resourceType: MedicationStatement
+        id: invented-ms-hospital
+        status: active
+        medicationCodeableConcept: { text: lisinopril }
+        subject: { reference: Patient/invented-d, display: Invented Patient D }
+        effectivePeriod: { start: 2026-02-01 }
+        informationSource: { display: "Invented General Hospital, discharge letter" }
+  - at: 2026-04-05
+    import_fhir:
+      - resourceType: MedicationStatement
+        id: invented-ms-pharmacy
+        status: stopped
+        medicationCodeableConcept: { text: lisinopril }
+        subject: { reference: Patient/invented-d, display: Invented Patient D }
+        effectivePeriod: { start: 2026-02-01, end: 2026-03-31 }
+        informationSource: { display: Invented Community Pharmacy }
+expect:
+  # Until a clinician decides, the hospital's record stands, with its one source.
+  - ask: { subject: { name: Patient/invented-d, type: patient }, predicate: takes }
+    returns: [lisinopril]
+    sources: 1
+  - ask:
+      {
+        subject: { name: Patient/invented-d, type: patient },
+        predicate: takes,
+        as_of: 2026-03-01,
+        known_at: 2026-03-01,
+      }
+    returns: [lisinopril]
+  - pending: { subject: { name: Patient/invented-d, type: patient }, predicate: takes }
+    kinds: [succession]

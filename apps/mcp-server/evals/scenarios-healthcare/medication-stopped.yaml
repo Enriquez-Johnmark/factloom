@@ -1,0 +1,43 @@
+# INVENTED DATA. No record of a real person is used.
+name: "Medication stopped: metformin ends only when a clinician approves the stop"
+steps:
+  - at: 2026-01-10
+    import_fhir:
+      - resourceType: MedicationStatement
+        id: invented-ms-1
+        status: active
+        medicationCodeableConcept: { text: metformin }
+        subject: { reference: Patient/invented-a, display: Invented Patient A }
+        effectivePeriod: { start: 2026-01-10 }
+  - at: 2026-05-02
+    import_fhir:
+      - resourceType: MedicationStatement
+        id: invented-ms-1
+        meta: { versionId: "2" }
+        status: stopped
+        medicationCodeableConcept: { text: metformin }
+        subject: { reference: Patient/invented-a, display: Invented Patient A }
+        effectivePeriod: { start: 2026-01-10, end: 2026-05-01 }
+  - at: 2026-05-03
+    decide_proposal:
+      subject: { name: Patient/invented-a, type: patient }
+      predicate: takes
+      value: metformin
+      decision: approve
+expect:
+  - ask: { subject: { name: Patient/invented-a, type: patient }, predicate: takes }
+    returns: []
+    must_not_return: [metformin]
+  - ask: { subject: { name: Patient/invented-a, type: patient }, predicate: takes, as_of: 2026-03-15 }
+    returns: [metformin]
+  # Before the clinician approved the stop, memory still believed the patient took it.
+  - ask:
+      {
+        subject: { name: Patient/invented-a, type: patient },
+        predicate: takes,
+        as_of: 2026-05-02T12:00:00.000Z,
+        known_at: 2026-05-02T12:00:00.000Z,
+      }
+    returns: [metformin]
+  - pending: { subject: { name: Patient/invented-a, type: patient }, predicate: takes }
+    kinds: []

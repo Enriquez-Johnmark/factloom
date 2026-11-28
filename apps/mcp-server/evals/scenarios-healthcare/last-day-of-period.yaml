@@ -1,0 +1,28 @@
+# INVENTED DATA. No record of a real person is used.
+name: "Last day of a period: an inclusive FHIR end still holds on its last day"
+steps:
+  - at: 2026-07-05
+    import_fhir:
+      - resourceType: MedicationStatement
+        id: invented-ms-2
+        status: completed
+        medicationCodeableConcept: { text: amoxicillin }
+        subject: { reference: Patient/invented-b, display: Invented Patient B }
+        effectivePeriod: { start: 2026-06-20, end: 2026-06-30 }
+expect:
+  - ask: { subject: { name: Patient/invented-b, type: patient }, predicate: takes }
+    returns: []
+    must_not_return: [amoxicillin]
+  - ask: { subject: { name: Patient/invented-b, type: patient }, predicate: takes, as_of: 2026-06-30 }
+    returns: [amoxicillin]
+  - ask: { subject: { name: Patient/invented-b, type: patient }, predicate: takes, as_of: 2026-07-01 }
+    returns: []
+  # Before the import, memory knew nothing of it.
+  - ask:
+      {
+        subject: { name: Patient/invented-b, type: patient },
+        predicate: takes,
+        as_of: 2026-06-30,
+        known_at: 2026-07-04,
+      }
+    returns: []

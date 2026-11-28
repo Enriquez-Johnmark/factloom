@@ -1,0 +1,46 @@
+# INVENTED DATA. No record of a real person is used.
+name: "Condition resolved: acute bronchitis ends at its abatement once a clinician approves"
+steps:
+  - at: 2026-02-10
+    import_fhir:
+      - resourceType: Condition
+        id: invented-c-2
+        clinicalStatus: { coding: [{ code: active }] }
+        verificationStatus: { coding: [{ code: confirmed }] }
+        code: { text: acute bronchitis }
+        subject: { reference: Patient/invented-f, display: Invented Patient F }
+        onsetDateTime: 2026-02-10
+  - at: 2026-03-05
+    import_fhir:
+      - resourceType: Condition
+        id: invented-c-2
+        meta: { versionId: "2" }
+        clinicalStatus: { coding: [{ code: resolved }] }
+        verificationStatus: { coding: [{ code: confirmed }] }
+        code: { text: acute bronchitis }
+        subject: { reference: Patient/invented-f, display: Invented Patient F }
+        onsetDateTime: 2026-02-10
+        abatementDateTime: 2026-03-01
+  - at: 2026-03-06
+    decide_proposal:
+      subject: { name: Patient/invented-f, type: patient }
+      predicate: has_condition
+      value: acute bronchitis
+      decision: approve
+expect:
+  - ask: { subject: { name: Patient/invented-f, type: patient }, predicate: has_condition }
+    returns: []
+    must_not_return: [acute bronchitis]
+  - ask: { subject: { name: Patient/invented-f, type: patient }, predicate: has_condition, as_of: 2026-02-20 }
+    returns: [acute bronchitis]
+  # Abatement is when it resolved: from that day on it no longer holds.
+  - ask: { subject: { name: Patient/invented-f, type: patient }, predicate: has_condition, as_of: 2026-03-01 }
+    returns: []
+  - ask:
+      {
+        subject: { name: Patient/invented-f, type: patient },
+        predicate: has_condition,
+        as_of: 2026-03-03,
+        known_at: 2026-03-05T12:00:00.000Z,
+      }
+    returns: [acute bronchitis]

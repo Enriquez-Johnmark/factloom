@@ -1,0 +1,46 @@
+# INVENTED DATA. No record of a real person is used.
+name: "Correction rejected: a changed onset is proposed, rejected, and changes nothing"
+steps:
+  - at: 2026-01-15
+    import_fhir:
+      - resourceType: Condition
+        id: invented-c-1
+        clinicalStatus: { coding: [{ code: active }] }
+        verificationStatus: { coding: [{ code: confirmed }] }
+        code: { text: type 2 diabetes mellitus }
+        subject: { reference: Patient/invented-e, display: Invented Patient E }
+        onsetDateTime: "2025"
+  - at: 2026-03-01
+    import_fhir:
+      - resourceType: Condition
+        id: invented-c-1
+        meta: { versionId: "2" }
+        clinicalStatus: { coding: [{ code: active }] }
+        verificationStatus: { coding: [{ code: confirmed }] }
+        code: { text: type 2 diabetes mellitus }
+        subject: { reference: Patient/invented-e, display: Invented Patient E }
+        onsetDateTime: 2024-06
+  - at: 2026-03-02
+    decide_proposal:
+      subject: { name: Patient/invented-e, type: patient }
+      predicate: has_condition
+      value: type 2 diabetes mellitus
+      decision: reject
+expect:
+  - ask: { subject: { name: Patient/invented-e, type: patient }, predicate: has_condition }
+    returns: [type 2 diabetes mellitus]
+  # The rejected onset of 2024-06 did not become memory.
+  - ask: { subject: { name: Patient/invented-e, type: patient }, predicate: has_condition, as_of: 2024-12-01 }
+    returns: []
+  - ask:
+      {
+        subject: { name: Patient/invented-e, type: patient },
+        predicate: has_condition,
+        known_at: 2026-03-01T12:00:00.000Z,
+      }
+    returns: [type 2 diabetes mellitus]
+  - pending: { subject: { name: Patient/invented-e, type: patient }, predicate: has_condition }
+    kinds: []
+  - history: { subject: { name: Patient/invented-e, type: patient }, predicate: has_condition }
+    superseded: []
+    fact_rows: 1
