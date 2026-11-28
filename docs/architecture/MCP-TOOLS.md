@@ -21,7 +21,7 @@ Configuration, read from environment variables by the composition root:
 | `ANTHROPIC_API_KEY` | Key for extraction. Needed only by `remember` | none |
 | `KRONOMIND_ARCHIVE_AFTER_DAYS` | How many days a fact must go unrecalled before the maintenance command archives it (FL-073). A placeholder until Q-57 is answered. The tools do not read it | `180` |
 | `KRONOMIND_REPO` | The git repository that the maintenance command verifies facts against (FL-050). The tools do not read it | The working directory |
-| `KRONOMIND_DOMAIN` | The domain the tools and commands run under: `software_development`, or `healthcare` for the proof on invented data only (FL-091, [ADR 0026](adr/0026-healthcare-proof-before-phase-4.md)). Any other name stops the server with the list of known ones | `software_development` |
+| `KRONOMIND_DOMAIN` | The domain the tools and commands run under: `software_development`, or `healthcare` for the proof on invented data only (FL-091, [ADR 0026](adr/0026-healthcare-proof-before-phase-4.md)). Any other name stops the server with the list of known ones. The `import fhir <file>` command runs only under `healthcare` (FL-092) | `software_development` |
 
 `KRONOMIND_NAMESPACE` has no default. The server refuses to start without it and says why: the default database is one file per user, so a shared default namespace would mix the memory of every repository that user works in.
 
