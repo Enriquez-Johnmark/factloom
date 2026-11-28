@@ -16,20 +16,64 @@ It then keeps that memory correct: when new information contradicts a stored fac
 
 ## What it is for
 
-The first use is memory for coding agents, Claude Code and OpenAI Codex, through an MCP server. An agent can save a decision, a convention or a fix, and recall it in a later session.
+The first use is memory for coding agents through an MCP server: Claude Code, confirmed on macOS, and OpenAI Codex, whose set-up is written but not yet run. An agent can save a decision, a convention or a fix, and recall it in a later session, and maintenance keeps a map of where each function lives in the code.
 
-The goal is an agent that spends fewer tokens re-discovering what it already learned. It is not met: measured on ten two-session tasks with Claude Code 2.1.332 and claude-sonnet-5-5 on 2026-11-26, Kronomind has not saved tokens against Claude Code's built-in memory. With that memory left on, the agent never called Kronomind ([first report](apps/mcp-server/evals/agent-comparison/results/2026-11-26/report.md)); with it off, the agent reached Kronomind through its tools and the median task cost 17.7% more ([second report](apps/mcp-server/evals/agent-comparison/results/2026-11-26-second/report.md)); with the recall hook of the [registration guide](apps/mcp-server/README.md) added, which puts the matching facts in the context on each prompt, there was no clear difference: −0.5% for the median task, 91 tool calls against 96, and all ten checks passed both ways ([third report](apps/mcp-server/evals/agent-comparison/results/2026-11-26-third/report.md)). On ten tasks that need to know why the code changed, Kronomind cost 19.2% more tokens for the median task and passed 8 of 10 checks against 6 of 10; the agent recorded the reason it was given in only one of ten first sessions, so both configurations found the reasons in the git history ([fourth report](apps/mcp-server/evals/agent-comparison/results/2026-11-26-change-history/report.md)). On ten tasks that need finding code in a 44-file repository, Kronomind was level with Claude Code as shipped (+5.5% for the median task) and cost 15.5% more than a hand-written `CLAUDE.md` map, with every check passing in all three set-ups; the agent recorded two facts in twenty sessions and no map fact, so the self-healing map was never built ([fifth](apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map/report.md) and [sixth report](apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map-claude-md/report.md)). With the map recorded by maintenance instead, three runs of one set-up used 7.6%, 7.9% and 1.9% fewer input tokens in total than Claude Code as shipped, about 6% on average, and 4.4% and 4.7% fewer, then 1.4% more, than the `CLAUDE.md` map; the median task changed by −4.6%, −10.5% and −5.0% against as shipped, and every check passed ([seventh](apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map-seeded/report.md), [eighth](apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map-seeded-claude-md/report.md), [ninth](apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map-reseeded/report.md), [tenth](apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map-reseeded-claude-md/report.md), [eleventh](apps/mcp-server/evals/agent-comparison/results/2026-11-28-codebase-map-fixed/report.md) and [twelfth report](apps/mcp-server/evals/agent-comparison/results/2026-11-28-codebase-map-fixed-claude-md/report.md)). In the first two runs a lock error kept the map out of eight and then five of ten first sessions; the third, after FL-086 and FL-087, had it in every session and saved the least, so the spread is between runs, not from the bug. The saving against Claude Code as shipped is small, between 2% and 8%; against a hand-written map there is none. Ten tasks show a direction, not a law.
+**Does it save tokens?** A little, in one kind of task. Each comparison ran ten two-session tasks with Claude Code 2.1.332 and claude-sonnet-5-5, from 2026-11-26 to 2026-11-28, and every task had a check that runs, so a cheaper wrong answer could not count as a saving.
+
+| Tasks | Kronomind set-up | Compared with | Tokens, median task | Checks passed with Kronomind | Reports |
+|---|---|---|---|---|---|
+| Remembering facts | Added, built-in memory left on: the agent never called Kronomind | Claude Code's built-in memory | +1.8% | 10 of 10 | [1](apps/mcp-server/evals/agent-comparison/results/2026-11-26/report.md) |
+| Remembering facts | Built-in memory off, tools only | Claude Code's built-in memory | +17.7% | 9 of 10 | [2](apps/mcp-server/evals/agent-comparison/results/2026-11-26-second/report.md) |
+| Remembering facts | Built-in memory off, with the recall hook | Claude Code's built-in memory | −0.5% | 10 of 10 | [3](apps/mcp-server/evals/agent-comparison/results/2026-11-26-third/report.md) |
+| Why code changed | Recall hook | Claude Code as shipped | +19.2% | 8 of 10, against 6 | [4](apps/mcp-server/evals/agent-comparison/results/2026-11-26-change-history/report.md) |
+| Finding code in a 44-file repository | Code map left to the agent | Claude Code as shipped; a hand-written `CLAUDE.md` map | +5.5%; +15.5% | 10 of 10 | [5](apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map/report.md), [6](apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map-claude-md/report.md) |
+| Finding code in a 44-file repository | Code map recorded by maintenance, three runs | Claude Code as shipped | −4.6%, −10.5%, −5.0%; input in total −7.6%, −7.9%, −1.9% | 10 of 10 | [7](apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map-seeded/report.md), [9](apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map-reseeded/report.md), [11](apps/mcp-server/evals/agent-comparison/results/2026-11-28-codebase-map-fixed/report.md) |
+| Finding code in a 44-file repository | Code map recorded by maintenance, three runs | A hand-written `CLAUDE.md` map | +1.8%, −0.7%, +6.9%; input in total −4.4%, −4.7%, +1.4% | 10 of 10 | [8](apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map-seeded-claude-md/report.md), [10](apps/mcp-server/evals/agent-comparison/results/2026-11-27-codebase-map-reseeded-claude-md/report.md), [12](apps/mcp-server/evals/agent-comparison/results/2026-11-28-codebase-map-fixed-claude-md/report.md) |
+
+The saving against Claude Code as shipped is small, 2% to 8% of input tokens, and against a hand-written map there is none. An agent's cost is mostly the context it re-sends each turn, so a memory saves tokens only where it saves turns. The agent seldom recorded what it learned unprompted (one reason in ten first sessions, no map fact in twenty sessions), so the code map is recorded by maintenance, not left to the agent. A lock error kept the map out of some first sessions in the first two runs; it was fixed before the third (FL-086, FL-087). Ten tasks show a direction, not a law.
 
 Coding agents already ship file-based memory, and it is free. Kronomind is for what those files cannot do: a fact that has a start and an end, an answer that changes with the date you ask about, a record of why a fact changed, and a check of stored facts against the code they describe.
 
 It is not a business database. It holds knowledge extracted from text, with sources and confidence.
+
+## Getting started with Claude Code
+
+You need Node.js `^22.18.0 || >=24` and pnpm. Clone the repository and install it:
+
+```sh
+git clone https://github.com/Enriquez-Johnmark/kronomind.git && cd kronomind && pnpm install
+```
+
+In the repository whose memory this is, register the server under one namespace per repository, with the absolute path of your clone:
+
+```sh
+claude mcp add --transport stdio --scope local kronomind --env KRONOMIND_NAMESPACE=repo:shop-api -- node /absolute/path/to/kronomind/apps/mcp-server/src/main.ts
+```
+
+Then, in that repository's `.claude/settings.local.json`, turn off Claude Code's built-in memory, which the agent would otherwise use instead, and add the two hooks: the recall hook hands the agent the facts that match each prompt, and the maintenance hook checks facts against the code and records the code map when a session starts:
+
+```json
+{
+  "autoMemoryEnabled": false,
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "KRONOMIND_NAMESPACE=repo:shop-api node /absolute/path/to/kronomind/apps/mcp-server/src/main.ts hook recall" }] }
+    ],
+    "SessionStart": [
+      { "matcher": "startup", "hooks": [{ "type": "command", "command": "KRONOMIND_NAMESPACE=repo:shop-api node /absolute/path/to/kronomind/apps/mcp-server/src/main.ts maintenance > ~/.kronomind/last-maintenance.json", "timeout": 60 }] }
+    ]
+  }
+}
+```
+
+Start a session and run `/mcp`: the server is listed as `kronomind`, connected, with six tools. Memory is kept in `~/.kronomind/kronomind.db`, and its first use downloads the local embedding model into `~/.kronomind/models`. Every tool but `remember` works with no key; `remember` extracts facts from text with Claude and needs `ANTHROPIC_API_KEY`. The [registration guide](apps/mcp-server/README.md) has the details, the Codex set-up and the other commands; a set-up made under the old name is moved across with [these steps](apps/mcp-server/MOVE-AFTER-RENAME.md).
 
 ## Two products in one repository
 
 | Product | What it does |
 |---|---|
 | **Temporal graph RAG** | Stores entities and facts with two time axes. Recalls by meaning (vectors) and by words (full-text search), filtered by time. A third lane, by connection in the graph of entities, is computed but given no weight, because it did not help on the retrieval eval set ([ADR 0020](docs/architecture/adr/0020-recall-defaults-chosen-by-measurement.md)). |
-| **Self-correcting and self-healing memory** | Fixes wrong content when new information or feedback contradicts a fact. On a schedule, merges duplicate entities, verifies facts against their sources and archives unused ones. |
+| **Self-correcting and self-healing memory** | Fixes wrong content when new information or feedback contradicts a fact. At each session start or on a schedule, verifies facts against their sources, keeps a map of where each function, class and constant is defined, merges duplicate entities and archives unused ones. |
 
 ## How it is designed
 
@@ -40,7 +84,7 @@ It is not a business database. It holds knowledge extracted from text, with sour
 - **Six MCP tools:** `recall`, `remember`, `record_fact`, `invalidate_fact`, `get_fact_history`, `give_feedback`. A recall hook hands an agent the facts that match each prompt without a tool call ([registration guide](apps/mcp-server/README.md)).
 - **A small core.** Storage, the LLM and embeddings sit behind interfaces. Only a domain adapter knows about its domain.
 
-Every push runs `pnpm check`, the format check, lint, type check and more than 1,200 tests, on Linux and on macOS with Apple Silicon. The claims the design rests on were first tested with throwaway scripts in [`spikes/`](spikes/).
+Every push runs `pnpm check`, the format check, lint, type check and more than 1,400 tests, on Linux and on macOS with Apple Silicon. The claims the design rests on were first tested with throwaway scripts in [`spikes/`](spikes/).
 
 ## Performance
 
