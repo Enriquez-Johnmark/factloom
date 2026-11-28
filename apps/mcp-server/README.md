@@ -132,6 +132,13 @@ The agent's own plan and Kronomind's key are separate ([`MCP-TOOLS.md`](../../do
 | `node src/main.ts proposals list` | Lists the pending proposals, oldest first (FL-070) |
 | `node src/main.ts proposals approve <proposal-id>` | Makes the proposed change, as a person |
 | `node src/main.ts proposals reject <proposal-id>` | Rejects the proposal; no fact changes |
+| `node src/main.ts import fhir <file>` | With `KRONOMIND_DOMAIN=healthcare`: imports FHIR R4 MedicationStatement, Condition and AllergyIntolerance resources from a Bundle or a list, by fixed rules and with no LLM, and prints one JSON report (FL-092). For invented data only |
+
+## Importing FHIR records, on invented data only
+
+Kronomind is not ready for patient data. The healthcare domain exists for a proof on invented records ([ADR 0026](../../docs/architecture/adr/0026-healthcare-proof-before-phase-4.md)).
+
+`import fhir <file>` reads a FHIR R4 Bundle, or a JSON list of resources, and maps MedicationStatement, Condition and AllergyIntolerance by the rules of [EPIC-13](../../docs/roadmap/epics/EPIC-13.md), FL-092. A date given as a year or a month starts at its earliest moment; an inclusive FHIR end becomes the first moment after it. Each resource is kept whole as the source of its fact, so its own recorded and asserted dates stay with it. A resource that ends, corrects or retracts a stored fact becomes a proposal for a person, decided with the `proposals` command. One invalid resource refuses the whole file, names where it is, and changes nothing. The report gives, per resource, `recorded`, `restated`, `proposed`, `already_proposed`, `nothing_to_withdraw`, `not_mapped` or `failed`, with each element not mapped and why.
 
 ## Approving proposed changes
 
