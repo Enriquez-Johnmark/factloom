@@ -19,6 +19,7 @@ import {
 } from '@kronomind/core';
 import { type CheckedField, checkForSecrets } from './check-for-secrets.ts';
 import { type EntityMention, resolveEntities } from './resolve-entities.ts';
+import type { SourceInput } from './source-input.ts';
 import type { StructuredFactInput } from './structured-fact-input.ts';
 
 export type ChangeFactInput = {
@@ -31,6 +32,8 @@ export type ChangeFactInput = {
   readonly explanation: string;
   readonly replacement: StructuredFactInput | null;
   readonly trigger: Trigger;
+  /** Where the report came from, such as a FHIR resource (FL-092). Left out, it is an agent's note. */
+  readonly source?: SourceInput;
 };
 
 /**
@@ -60,6 +63,8 @@ function findInputProblem(domain: Domain, input: ChangeFactInput): string | null
 /** The text of the input that would be stored: the explanation and every name and value of the replacement. */
 function listCheckedFields(input: ChangeFactInput): CheckedField[] {
   const fields: CheckedField[] = [{ name: 'explanation', value: input.explanation }];
+  if (input.source?.locator != null) fields.push({ name: 'source.locator', value: input.source.locator });
+  if (input.source?.version != null) fields.push({ name: 'source.version', value: input.source.version });
   const replacement = input.replacement;
   if (replacement === null) return fields;
   fields.push(
@@ -203,9 +208,9 @@ export async function changeFact(
     draft = drafted.value;
   }
   const source: NewSource = {
-    kind: 'agent_note',
-    locator: null,
-    version: null,
+    kind: input.source?.kind ?? 'agent_note',
+    locator: input.source?.locator ?? null,
+    version: input.source?.version ?? null,
     content: input.explanation,
     observedAt: deps.now(),
   };

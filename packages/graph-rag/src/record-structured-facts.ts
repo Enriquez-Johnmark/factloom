@@ -24,6 +24,8 @@ export type RecordStructuredFactsInput = {
   readonly namespace: Namespace;
   readonly facts: readonly StructuredFactInput[];
   readonly source: SourceInput;
+  /** The text of the source, kept so that its facts can be traced and purged, such as a FHIR resource (FL-092). */
+  readonly content?: string;
   readonly trigger: Trigger;
 };
 
@@ -96,6 +98,7 @@ function listCheckedFields(input: RecordStructuredFactsInput): CheckedField[] {
   }
   if (input.source.locator !== null) fields.push({ name: 'source.locator', value: input.source.locator });
   if (input.source.version !== null) fields.push({ name: 'source.version', value: input.source.version });
+  if (input.content !== undefined) fields.push({ name: 'content', value: input.content });
   return fields;
 }
 
@@ -153,7 +156,7 @@ export async function recordStructuredFacts(
     namespace: input.namespace,
     trigger: input.trigger,
     reasonCode: drafts.length > 0 ? 'stated' : 'restated',
-    source: { ...input.source, content: null, observedAt: deps.now() },
+    source: { ...input.source, content: input.content ?? null, observedAt: deps.now() },
     drafts,
     restatedFactIds,
   });
