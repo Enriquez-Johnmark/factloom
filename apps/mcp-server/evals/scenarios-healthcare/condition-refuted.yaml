@@ -1,14 +1,15 @@
 # INVENTED DATA. No record of a real person is used.
-name: "Condition refuted: a ruled-out condition is not mapped, and no fact or entity is invented"
+name: "Condition refuted: a provisional asthma diagnosis is ruled out when a clinician approves"
 steps:
-  - at: 2026-03-10
+  - at: 2026-03-01
     import_fhir:
       - resourceType: Condition
         id: invented-c-3
-        verificationStatus: { coding: [{ code: refuted }] }
+        clinicalStatus: { coding: [{ code: active }] }
+        verificationStatus: { coding: [{ code: provisional }] }
         code: { text: asthma }
         subject: { reference: Patient/invented-g, display: Invented Patient G }
-        onsetDateTime: 2026-03
+        onsetDateTime: 2026-02
       - resourceType: Condition
         id: invented-c-4
         clinicalStatus: { coding: [{ code: active }] }
@@ -16,17 +17,38 @@ steps:
         code: { text: seasonal allergic rhinitis }
         subject: { reference: Patient/invented-g, display: Invented Patient G }
         onsetDateTime: 2026-03
+  - at: 2026-03-10
+    import_fhir:
+      - resourceType: Condition
+        id: invented-c-3
+        meta: { versionId: "2" }
+        verificationStatus: { coding: [{ code: refuted }] }
+        code: { text: asthma }
+        subject: { reference: Patient/invented-g, display: Invented Patient G }
+        recordedDate: 2026-03-10
+  - at: 2026-03-11
+    decide_proposal:
+      subject: { name: Patient/invented-g, type: patient }
+      predicate: has_condition
+      value: asthma
+      decision: approve
 expect:
   - ask: { subject: { name: Patient/invented-g, type: patient }, predicate: has_condition }
     returns: [seasonal allergic rhinitis]
     must_not_return: [asthma]
+  # ADR 0027: being ruled out is its own fact, not a missing one.
+  - ask: { subject: { name: Patient/invented-g, type: patient }, predicate: ruled_out }
+    returns: [asthma]
+  # Before the clinician approved, memory still held the provisional diagnosis.
   - ask:
       {
         subject: { name: Patient/invented-g, type: patient },
         predicate: has_condition,
-        as_of: 2026-03-15,
-        known_at: 2026-03-15,
+        as_of: 2026-03-10T12:00:00.000Z,
+        known_at: 2026-03-10T12:00:00.000Z,
       }
-    returns: [seasonal allergic rhinitis]
+    returns: [asthma, seasonal allergic rhinitis]
+  - pending: { subject: { name: Patient/invented-g, type: patient }, predicate: has_condition }
+    kinds: []
   - entities: { name: asthma }
-    count: 0
+    count: 1
