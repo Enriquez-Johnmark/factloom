@@ -79,7 +79,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 | FL-095 | Proposals that hold a retraction or an end with nothing after it | 6 | FL-090 | Completed |
 | FL-091 | Healthcare domain as data, and choosing the domain at start | 6 | FL-089 | Completed |
 | FL-092 | FHIR R4 import by fixed rules | 6 | FL-095, FL-091 | Completed |
-| FL-093 | Healthcare scenarios on invented data | 6 | FL-092, FL-027 | Pending |
+| FL-093 | Healthcare scenarios on invented data | 6 | FL-092, FL-027 | Completed |
 | FL-094 | Healthcare demo command | 6 | FL-093 | Pending |
 
 ### FL-088: Healthcare rules read in their official texts
@@ -444,7 +444,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | FL-092, FL-027 |
 | Requirements | REQ-34 |
@@ -475,13 +475,22 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 - The boundaries of this epic.
 
 **Acceptance criteria.**
-- [ ] The seven scenarios exist and validate against the schema.
-- [ ] In replay, the staleness rate and the false invalidation rate are both 0.
-- [ ] `pnpm check` passes.
+- [x] The seven scenarios exist and validate against the schema.
+- [x] In replay, the staleness rate and the false invalidation rate are both 0.
+- [x] `pnpm check` passes.
 
 **Validation.** The scenario runner in replay, run by `pnpm check`.
 
 **Completion evidence.** The commits, the scenario metrics and the `pnpm check` output.
+
+**Recorded evidence.** Done on 2026-11-28 in a cloud session on Linux x64 with Node.js 22, on invented records only.
+
+- **The format** (`eb81313`): two steps, `import_fhir` and `decide_proposal`, and one expectation, `pending`, in `scenario.ts`, the runner and the report. The import step calls `importFhirResources`; a decision finds the pending proposal on the live fact of a subject, predicate and value, and approves or rejects it with the trigger `person`.
+- **The scenarios** (`f5f6c70`): seven files in `apps/mcp-server/evals/scenarios-healthcare/`, one per case of the plan: medication stopped, last day of a period, entered in error, sources disagree, correction rejected, condition resolved, condition refuted. Each starts with `# INVENTED DATA.`, names only patients `Patient/invented-…` with displays `Invented Patient A` to `G`, and asks about now and about a past date.
+- **The test:** `healthcare-scenarios.test.ts` checks the seven cases, the marking and the dates, and runs each scenario on SQLite with an LLM client that fails if called. Report: staleness rate 0 of 7, false invalidation rate 0 of 3, historical accuracy 15 of 15, missed invalidation rate 0 of 0. With the inclusive end read as its start by hand, the last-day scenario failed; it was restored.
+- **Differs from the item as written:** no recordings are involved, because no scenario calls an LLM. The files sit in their own directory, because the test of the first domain's scenarios counts exactly eleven files in `scenarios/`.
+- **The documentation** (`324203c`): `TESTING.md`.
+- **`pnpm check`:** 145 test files and 1,490 tests passed.
 
 ### FL-094: Healthcare demo command
 
