@@ -21,7 +21,7 @@ const UNREACHABLE_LLM: LlmClient = {
   },
 };
 
-/** The seven cases of the healthcare plan, by the start of their names. */
+/** The cases of the healthcare plan, by the start of their names: seven from FL-093, one from FL-100. */
 const CASES = [
   'Medication stopped',
   'Last day of a period',
@@ -30,13 +30,14 @@ const CASES = [
   'Correction rejected',
   'Condition resolved',
   'Condition refuted',
+  'Result corrected',
 ] as const;
 
 const scenarios = loadScenarios(HEALTHCARE_SCENARIOS_DIRECTORY, healthcareDomain);
 if (!scenarios.ok) throw new Error(scenarios.error.message);
 
 describe('the healthcare scenario files', () => {
-  it('cover the seven cases, one file each', () => {
+  it('cover every case, one file each', () => {
     const names = scenarios.value.map(({ scenario }) => scenario.name);
     expect(names).toHaveLength(CASES.length);
     for (const covered of CASES)

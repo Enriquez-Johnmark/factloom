@@ -1,0 +1,53 @@
+# INVENTED DATA. No record of a real person is used.
+name: "Result corrected: an HbA1c of 6.8 % is corrected to 7.1 % when a clinician approves, and the first value stays on record"
+steps:
+  - at: 2026-03-02
+    import_fhir:
+      - resourceType: Observation
+        id: invented-obs-1
+        status: final
+        code: { coding: [{ system: "http://loinc.org", code: 4548-4 }], text: HbA1c }
+        subject: { reference: Patient/invented-h, display: Invented Patient H }
+        effectiveDateTime: 2026-03-01
+        valueQuantity: { value: 6.8, unit: "%", system: "http://unitsofmeasure.org", code: "%" }
+  - at: 2026-03-05
+    import_fhir:
+      - resourceType: Observation
+        id: invented-obs-1
+        meta: { versionId: "2" }
+        status: corrected
+        code: { coding: [{ system: "http://loinc.org", code: 4548-4 }], text: HbA1c }
+        subject: { reference: Patient/invented-h, display: Invented Patient H }
+        effectiveDateTime: 2026-03-01
+        valueQuantity: { value: 7.1, unit: "%", system: "http://unitsofmeasure.org", code: "%" }
+  - at: 2026-03-06
+    decide_proposal:
+      subject: { name: Patient/invented-h LOINC 4548-4, type: measurement }
+      predicate: measured_as
+      value: "6.8"
+      decision: approve
+expect:
+  # ADR 0028: a result holds for the day it describes, so nothing is measured now.
+  - ask: { subject: { name: Patient/invented-h LOINC 4548-4, type: measurement }, predicate: measured_as }
+    returns: []
+    must_not_return: ["6.8"]
+  - ask:
+      {
+        subject: { name: Patient/invented-h LOINC 4548-4, type: measurement },
+        predicate: measured_as,
+        as_of: 2026-03-01,
+      }
+    returns: ["7.1"]
+  # Before the correction was approved, memory believed the first value.
+  - ask:
+      {
+        subject: { name: Patient/invented-h LOINC 4548-4, type: measurement },
+        predicate: measured_as,
+        as_of: 2026-03-01,
+        known_at: 2026-03-05T12:00:00.000Z,
+      }
+    returns: ["6.8"]
+  - history: { subject: { name: Patient/invented-h LOINC 4548-4, type: measurement }, predicate: measured_as }
+    superseded: [{ from: "6.8", kind: correction }]
+  - pending: { subject: { name: Patient/invented-h LOINC 4548-4, type: measurement }, predicate: measured_as }
+    kinds: []
