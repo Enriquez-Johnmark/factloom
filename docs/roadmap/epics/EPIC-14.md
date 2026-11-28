@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phases | 6 |
 | Packages | `packages/adapters`, `@kronomind/core`, `@kronomind/storage`, `@kronomind/graph-rag`, `apps/mcp-server` |
 | Requirements | REQ-34 |
@@ -71,7 +71,7 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 | FL-097 | Negated facts in the healthcare domain and the FHIR import | 6 | FL-096 | Completed |
 | FL-098 | ADR: how a measured value is a fact | 6 | FL-094 | Completed |
 | FL-099 | A unit beside a fact's value | 6 | FL-098 | Completed |
-| FL-100 | Observation import | 6 | FL-099, FL-097 | Pending |
+| FL-100 | Observation import | 6 | FL-099, FL-097 | Completed |
 
 ### FL-096: ADR: a negated clinical fact is a specific predicate
 
@@ -269,7 +269,7 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | FL-099, FL-097 |
 | Requirements | REQ-34 |
@@ -302,11 +302,20 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 - REQ-31, the boundaries of this epic.
 
 **Acceptance criteria.**
-- [ ] A test imports a final Observation and finds the value, the unit and the valid time.
-- [ ] A test imports a corrected version and finds a correction proposal.
-- [ ] The healthcare scenarios include a corrected result, and pass in replay with both rates at 0.
-- [ ] `pnpm check` passes.
+- [x] A test imports a final Observation and finds the value, the unit and the valid time.
+- [x] A test imports a corrected version and finds a correction proposal.
+- [x] The healthcare scenarios include a corrected result, and pass in replay with both rates at 0.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests, the healthcare scenarios, `pnpm check`.
 
 **Completion evidence.** The commits, the scenario metrics and the `pnpm check` output.
+
+**Recorded evidence.** Done on 2026-11-28 in a cloud session on Linux x64 with Node.js 22, on invented records only.
+
+- **The code** (`442b2f3`): an Observation schema covering the elements read; the healthcare domain gains the entity type `measurement` and the single-valued predicates `measured_as` and `measurement_of`. A `final` or `corrected` Observation with a `valueQuantity` becomes a `measured_as` fact on the series named by the patient's reference and the test's code (`LOINC <code>` for LOINC), with the value as written by JSON, the UCUM code as unit where the system is UCUM and the unit text otherwise, valid for the span `effective[x]` names; a `measurement_of` fact links the series to the patient and is restated on each import. A statement now says how it is matched: by object, as before, or by source for Observation, so that a later version with another value is a correction of the earlier one, not a second result. `entered-in-error` is a retraction; `amended`, `preliminary`, `registered`, `cancelled`, `unknown`, a value other than a quantity, and a result with no exact time are reported as not mapped.
+- **The tests:** five in `import-fhir-resources.test.ts` (a final result with value, unit, day and link; a re-import restated; a corrected result proposed and approved; a result entered in error; an amended result and one with no time not mapped). With Observation matched by object by hand, the correction test and the scenario failed; it was restored.
+- **The scenario** (`ab67a37`): `result-corrected.yaml`, an HbA1c of 6.8 % corrected to 7.1 % on approval, with the first value believed before it. Over the eight healthcare scenarios: staleness rate 0 of 9, false invalidation rate 0 of 4, missed invalidation rate 0 of 1, historical accuracy 17 of 17.
+- **Differs from the item as written:** the scenarios test now lists eight cases. A decimal is read from JSON as a number, so trailing zeros such as `6.80` are not kept in the value; the source keeps the resource as given.
+- **The documentation** (`3feecf8`): the app's guide and the package's README.
+- **`pnpm check`:** 147 test files and 1,509 tests passed.
