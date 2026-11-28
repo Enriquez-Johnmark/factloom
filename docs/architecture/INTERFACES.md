@@ -118,7 +118,7 @@ export type EntityMerge = {
 };
 
 /**
- * Phase 2 (FL-043). A succession or a correction held for a person to decide. It holds the
+ * Phase 2 (FL-043). A succession, a correction or, from FL-095, a retraction held for a person to decide. It holds the
  * input of the operation it would run, not a built change set (ADR 0009), and changes no fact
  * until it is approved.
  */
@@ -129,9 +129,13 @@ export type ProposedChange = {
   readonly storedFactId: FactId;
   readonly supersession:
     | { readonly kind: 'succession'; readonly changedAt: Timestamp }
-    | { readonly kind: 'correction' };
-  /** The fact to put in its place, with the entities it introduces. */
-  readonly newFact: FactDraft;
+    | { readonly kind: 'correction' }
+    | { readonly kind: 'retraction' };
+  /**
+   * The fact to put in its place, with the entities it introduces: always for a correction, never
+   * for a retraction, and null for a succession that ends the fact with nothing after it (FL-095).
+   */
+  readonly newFact: FactDraft | null;
   /** The source that explains it, recorded when the proposal is stored. */
   readonly sourceId: SourceId;
   /** The reason code the change is recorded with when it is approved. */
@@ -850,13 +854,13 @@ export declare function undoEntityMerge(
 /** Phase 2 (FL-043). Which proposal to decide, and who decides. Only a person may. */
 export type DecideProposalInput = { readonly namespace: Namespace; readonly proposalId: string; readonly trigger: Trigger };
 
-/** Phase 2 (FL-043). Stores a succession or a correction for a person to approve. Changes no fact. */
+/** Phase 2 (FL-043). Stores a succession, a correction or a retraction for a person to approve. Changes no fact. */
 export declare function proposeChange(
   deps: OperationDeps,
   input: ChangeContext & {
     readonly storedFactId: FactId;
     readonly supersession: ProposedChange['supersession'];
-    readonly newFact: FactDraft;
+    readonly newFact: FactDraft | null;
     readonly source: NewSource;
   },
 ): Promise<Result<{ readonly proposalId: string }>>;
@@ -874,7 +878,7 @@ export declare function rejectProposedChange(
 ): Promise<Result<{ readonly proposalId: string }>>;
 ```
 
-- **A proposal holds the operation's input, not its change set (FL-043).** `proposeChange` reads the stored fact, which must be live, refuses a succession that would end it before it began, and commits the source and one `record_proposal` change under the operation `proposal`, with the caller's trigger and reason code. `approveProposedChange` requires the trigger `person`, reads the pending proposal, refuses one whose source was purged with `invalid_input`, and builds the change set of `endFact` or `invalidateFact` from its stored input at that moment, with the source recorded with the proposal, which is not recorded again; it adds one `decide_proposal` change and commits both together, under the operation `succession` or `correction` and the proposal's reason code. The facts it writes are therefore recorded at the time of approval, and a known-at question between proposal and approval returns the stored fact unchanged. `rejectProposedChange` requires the trigger `person` and commits one `decide_proposal` change under the operation `proposal`, reason code `requested`. Errors: `invalid_input` for another trigger, `not_found` for a proposal never made in the namespace, `already_exists` for one already decided (told apart by the proposal's audit entries), `already_invalidated` and `conflict` at approval, which leave the proposal pending, `storage_failed`. Who may decide is not checked before the regulated domains ([ADR 0011](adr/0011-namespace-on-every-row.md)).
+- **A proposal holds the operation's input, not its change set (FL-043).** `proposeChange` reads the stored fact, which must be live, refuses a succession that would end it before it began, and commits the source and one `record_proposal` change under the operation `proposal`, with the caller's trigger and reason code. `approveProposedChange` requires the trigger `person`, reads the pending proposal, refuses one whose source was purged with `invalid_input`, and builds the change set of `endFact` or `invalidateFact` from its stored input at that moment (a retraction is `invalidateFact` with no replacement, and a succession with no new fact is `endFact` with no successor, FL-095), with the source recorded with the proposal, which is not recorded again; it adds one `decide_proposal` change and commits both together, under the operation `succession` or `correction` and the proposal's reason code. The facts it writes are therefore recorded at the time of approval, and a known-at question between proposal and approval returns the stored fact unchanged. `rejectProposedChange` requires the trigger `person` and commits one `decide_proposal` change under the operation `proposal`, reason code `requested`. Errors: `invalid_input` for another trigger, `not_found` for a proposal never made in the namespace, `already_exists` for one already decided (told apart by the proposal's audit entries), `already_invalidated` and `conflict` at approval, which leave the proposal pending, `storage_failed`. Who may decide is not checked before the regulated domains ([ADR 0011](adr/0011-namespace-on-every-row.md)).
 
 - **Verification is recorded, not applied.** `recordVerification` (FL-049) commits one `record_verification` change under the operation `verification`, which appends a row to the `fact_verification` table: fact, outcome, method, time. Its audit entry, action `fact.verified`, targets the fact, with `detail` `{ verificationId }`; the outcome and the method are in the row, not in the entry. The reason code for a scheduled check is `verification_due`.
 - **A moved anchor is repaired by restatement (FL-054).** When git shows that an anchored file was renamed, the maintenance job attaches a source at the new path with `recordFacts`, with no drafts and the fact in `restatedFactIds`. That commits one `record_source` and one `attach_source` change under the operation `remember`, as any restatement does, with trigger `maintenance` and the reason code `anchor_moved`. No fact row is written and the fact keeps its identifier. The job then records a verification with the same reason code. What follows from a `contradicted` outcome, an invalidation or a lower confidence, is a separate call, so the audit log shows both the finding and the action. Errors: `invalid_input`, `not_found`, `already_invalidated`, `storage_failed`.
