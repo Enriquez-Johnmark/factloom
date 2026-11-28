@@ -169,16 +169,63 @@ describe('importFhirResources', () => {
     ]);
   });
 
-  it('reports a refuted condition as not mapped and records no fact', async () => {
+  it('records a refuted condition as ruled out, its own fact, from the day it was recorded', async () => {
     const memory = createMemory();
 
     const [entry] = await importOn(memory, '2026-03-01', [
-      condition({ verificationStatus: { coding: [{ code: 'refuted' }] }, onsetDateTime: '2026-02-01' }),
+      condition({ verificationStatus: { coding: [{ code: 'refuted' }] }, recordedDate: '2026-02-20' }),
     ]);
 
-    expect(entry?.outcome).toBe('not_mapped');
-    expect(entry?.notMapped.map((element) => element.element)).toEqual(['verificationStatus']);
-    expect(await allFacts(memory)).toEqual([]);
+    expect(entry?.outcome).toBe('recorded');
+    const [stored] = await allFacts(memory);
+    expect([stored?.fact.predicate, stored?.fact.statement, stored?.fact.validFrom]).toEqual([
+      'ruled_out',
+      'Invented Patient A: type 2 diabetes mellitus ruled out.',
+      at('2026-02-20'),
+    ]);
+  });
+
+  it('holds a refuted record over a provisional one as a correction, whose replacement is the ruled-out fact', async () => {
+    const memory = createMemory();
+    await importOn(memory, '2026-02-01', [
+      condition({ verificationStatus: { coding: [{ code: 'provisional' }] }, onsetDateTime: '2026-01' }),
+    ]);
+
+    const [entry] = await importOn(memory, '2026-03-01', [
+      condition({ verificationStatus: { coding: [{ code: 'refuted' }] }, recordedDate: '2026-03-01' }),
+    ]);
+
+    expect(entry?.outcome).toBe('proposed');
+    const pending = await memory.store.listPendingProposals({ namespace: NAMESPACE });
+    const [proposal] = pending.ok ? pending.value : [];
+    expect([proposal?.proposal.supersession.kind, proposal?.storedFact.fact.predicate]).toEqual([
+      'correction',
+      'has_condition',
+    ]);
+    expect(proposal?.proposal.newFact?.fact.predicate).toBe('ruled_out');
+    const approved = await approveProposedChange(memory.on('2026-03-02'), {
+      namespace: NAMESPACE,
+      proposalId: entry?.proposalId ?? '',
+      trigger: 'person',
+    });
+    expect(approved.ok).toBe(true);
+    const live = (await allFacts(memory)).filter((found) => found.fact.invalidatedAt === null);
+    expect(live.map((found) => found.fact.predicate)).toEqual(['ruled_out']);
+  });
+
+  it('records a medication not taken as its own fact over the period it gives', async () => {
+    const memory = createMemory();
+
+    await importOn(memory, '2026-03-01', [
+      metformin('not-taken', { start: '2026-02-01', end: '2026-02-28' }),
+    ]);
+
+    const [stored] = await allFacts(memory);
+    expect([stored?.fact.predicate, stored?.fact.statement, stored?.fact.validTo]).toEqual([
+      'not_taking',
+      'Invented Patient A does not take metformin.',
+      at('2026-03-01'),
+    ]);
   });
 
   it('makes no LLM call', async () => {

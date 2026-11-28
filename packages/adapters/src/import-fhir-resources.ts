@@ -12,7 +12,7 @@ import {
 import { changeFact, recordStructuredFacts, type StructuredFactInput } from '@kronomind/graph-rag';
 import { z } from 'zod';
 import { MAPPED_RESOURCE_TYPES, type MappedResource, MappedResourceSchema } from './fhir-resource-schemas.ts';
-import { healthcareDomain } from './healthcare-domain.ts';
+import { healthcareDomain, OPPOSITE_PREDICATES } from './healthcare-domain.ts';
 import { type FhirStatement, mapFhirResource, type NotMappedElement } from './map-fhir-resource.ts';
 
 export type ImportFhirResourcesInput = {
@@ -138,6 +138,21 @@ async function findLiveFacts(
   return ok(found);
 }
 
+/** A live fact that says the opposite of a given fact, by the pairs of the healthcare domain, or null. */
+async function findLiveOpposite(
+  deps: Pick<OperationDeps, 'store'>,
+  namespace: Namespace,
+  fact: StructuredFactInput,
+): Promise<Result<FactWithSources | null>> {
+  const opposite = Object.entries(OPPOSITE_PREDICATES).find(
+    ([predicate]) => predicate === fact.predicate,
+  )?.[1];
+  if (opposite === undefined) return ok(null);
+  const found = await findLiveFacts(deps, namespace, { ...fact, predicate: opposite });
+  if (!found.ok) return found;
+  return ok(found.value[0] ?? null);
+}
+
 /** Whether a stored fact is already waiting on a person: a second proposal would only repeat it. */
 async function isAlreadyProposed(
   deps: Pick<OperationDeps, 'store'>,
@@ -199,6 +214,19 @@ async function reconcile(
 
   const { fact } = claim;
   const stored = live.value[0];
+  if (stored === undefined) {
+    // ADR 0027: a live fact that says the opposite was wrong, or the world changed; a clinician decides.
+    const opposite = await findLiveOpposite(deps, namespace, fact);
+    if (!opposite.ok) return opposite;
+    if (opposite.value !== null) {
+      return reportChange(deps, {
+        ...report,
+        factId: opposite.value.fact.id,
+        because: 'was_wrong',
+        replacement: fact,
+      });
+    }
+  }
   const isSamePeriod =
     stored !== undefined && stored.fact.validFrom === fact.validFrom && stored.fact.validTo === fact.validTo;
   if (stored === undefined || isSamePeriod) {

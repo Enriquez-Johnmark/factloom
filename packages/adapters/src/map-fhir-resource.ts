@@ -8,6 +8,7 @@ import type {
   MedicationStatement,
   Reference,
 } from './fhir-resource-schemas.ts';
+import type { HealthcarePredicate } from './healthcare-domain.ts';
 import { readFhirDate } from './read-fhir-date.ts';
 
 /** An element of a resource the import did not turn into memory, and why. */
@@ -105,9 +106,9 @@ function noteInexactOnset(resource: Condition | AllergyIntolerance, notMapped: N
 /** A fact about a patient and a named thing, with the period it held. */
 function factAbout(parts: {
   readonly patient: { readonly name: string; readonly label: string };
-  readonly predicate: 'takes' | 'has_condition' | 'allergic_to';
+  readonly predicate: HealthcarePredicate;
   readonly object: { readonly type: 'medication' | 'condition' | 'substance'; readonly name: string };
-  readonly wording: string;
+  readonly statement: string;
   readonly confidence: number;
   readonly validFrom: Timestamp | null;
   readonly validTo: Timestamp | null;
@@ -116,7 +117,7 @@ function factAbout(parts: {
     subject: { type: 'patient', name: parts.patient.name },
     predicate: parts.predicate,
     object: { kind: 'entity', type: parts.object.type, name: parts.object.name },
-    statement: `${parts.patient.label} ${parts.wording} ${parts.object.name}.`,
+    statement: parts.statement,
     confidence: parts.confidence,
     validFrom: parts.validFrom,
     validTo: parts.validTo,
@@ -135,7 +136,7 @@ function mapMedicationStatement(resource: MedicationStatement, notMapped: NotMap
     patient,
     predicate: 'takes',
     object: { type: 'medication', name: medication },
-    wording: 'takes',
+    statement: `${patient.label} takes ${medication}.`,
     confidence: CONFIRMED_CONFIDENCE,
     validFrom: readStart(
       resource.effectivePeriod?.start ?? resource.effectiveDateTime,
@@ -157,10 +158,18 @@ function mapMedicationStatement(resource: MedicationStatement, notMapped: NotMap
       return { kind: 'none' };
     case 'entered-in-error':
       return { kind: 'withdraws', fact };
+    case 'not-taken':
+      return {
+        kind: 'states',
+        fact: {
+          ...fact,
+          predicate: 'not_taking',
+          statement: `${patient.label} does not take ${medication}.`,
+        },
+      };
     case 'intended':
     case 'on-hold':
     case 'unknown':
-    case 'not-taken':
       notMapped.push({
         element: 'status',
         reason: `"${resource.status}" says nothing that holds over a period.`,
@@ -177,16 +186,11 @@ function mapMedicationStatement(resource: MedicationStatement, notMapped: NotMap
 function mapVerification(
   verification: string | null,
   fact: StructuredFactInput,
-  notMapped: NotMappedElement[],
+  negated: StructuredFactInput,
 ): FhirClaim | null {
   if (verification === 'entered-in-error') return { kind: 'withdraws', fact };
-  if (verification === 'refuted') {
-    notMapped.push({
-      element: 'verificationStatus',
-      reason: '"refuted" records that it was ruled out; negated facts are not mapped yet.',
-    });
-    return { kind: 'none' };
-  }
+  // ADR 0027: "refuted" is a clinical statement that it was ruled out, recorded as its own fact.
+  if (verification === 'refuted') return { kind: 'states', fact: negated };
   return null;
 }
 
@@ -208,13 +212,23 @@ function mapCondition(resource: Condition, notMapped: NotMappedElement[]): FhirC
     patient,
     predicate: 'has_condition',
     object: { type: 'condition', name: condition },
-    wording: 'has the condition',
+    statement: `${patient.label} has the condition ${condition}.`,
     confidence: readConfidence(verification),
     validFrom: readStart(resource.onsetPeriod?.start ?? resource.onsetDateTime, 'onset[x]', notMapped),
     // Abatement is the moment it resolved: from then on, it no longer holds.
     validTo: readStart(resource.abatementDateTime, 'abatementDateTime', notMapped),
   });
-  const verified = mapVerification(verification, fact, notMapped);
+  const ruledOut = factAbout({
+    patient,
+    predicate: 'ruled_out',
+    object: { type: 'condition', name: condition },
+    statement: `${patient.label}: ${condition} ruled out.`,
+    confidence: CONFIRMED_CONFIDENCE,
+    // ADR 0027: R4 gives no period of the ruling-out; it holds from when it was recorded, if given.
+    validFrom: readStart(resource.recordedDate, 'recordedDate', notMapped),
+    validTo: null,
+  });
+  const verified = mapVerification(verification, fact, ruledOut);
   if (verified !== null) return verified;
 
   const clinical = readCode(resource.clinicalStatus);
@@ -242,13 +256,22 @@ function mapAllergyIntolerance(resource: AllergyIntolerance, notMapped: NotMappe
     patient,
     predicate: 'allergic_to',
     object: { type: 'substance', name: substance },
-    wording: 'is allergic to',
+    statement: `${patient.label} is allergic to ${substance}.`,
     confidence: readConfidence(verification),
     // R4: onset is when the allergy was identified, the earliest moment it is known to hold.
     validFrom: readStart(resource.onsetPeriod?.start ?? resource.onsetDateTime, 'onset[x]', notMapped),
     validTo: null,
   });
-  const verified = mapVerification(verification, fact, notMapped);
+  const notAllergic = factAbout({
+    patient,
+    predicate: 'not_allergic_to',
+    object: { type: 'substance', name: substance },
+    statement: `${patient.label} is not allergic to ${substance}.`,
+    confidence: CONFIRMED_CONFIDENCE,
+    validFrom: readStart(resource.recordedDate, 'recordedDate', notMapped),
+    validTo: null,
+  });
+  const verified = mapVerification(verification, fact, notAllergic);
   if (verified !== null) return verified;
 
   const clinical = readCode(resource.clinicalStatus);
