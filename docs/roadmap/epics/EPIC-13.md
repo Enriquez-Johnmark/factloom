@@ -67,7 +67,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 | Decision | What is known |
 |---|---|
-| Whether stage 2 of the healthcare plan becomes work items in this epic or a new one | Open: FL-094 is done; the owner decides. The scenarios and the import showed four needs: negated facts (`refuted`, `not-taken`), values with units (Observation, doses), the source system's own dates as a field, and an end date for an allergy |
+| Whether stage 2 of the healthcare plan becomes work items in this epic or a new one | Decided on 2026-11-28: a new epic, [EPIC-14](EPIC-14.md). The scenarios and the import showed four needs: negated facts (`refuted`, `not-taken`), values with units (Observation, doses), the source system's own dates as a field, and an end date for an allergy |
 
 ## Work items
 

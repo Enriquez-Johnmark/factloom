@@ -2,7 +2,7 @@
 
 The index of Kronomind's delivery plan: its phases, epics and work items, their dependencies and their status. Details of each work item are in its epic file. How to read and maintain this index is in [`README.md`](README.md); the requirements it traces to are in [`docs/product/REQUIREMENTS.md`](../product/REQUIREMENTS.md).
 
-**Status on 2026-11-28:** the first feature code exists. 95 of 95 work items are `Completed`: FL-001, FL-002, FL-003, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-024, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-035, FL-036, FL-037, FL-038, FL-039, FL-040, FL-041, FL-042, FL-043, FL-044, FL-045, FL-046, FL-047, FL-048, FL-049, FL-050, FL-051, FL-052, FL-053, FL-054, FL-055, FL-056, FL-057, FL-058, FL-059, FL-060, FL-061, FL-062, FL-063, FL-064, FL-065, FL-066, FL-067, FL-068, FL-069, FL-070, FL-071, FL-072, FL-073, FL-074, FL-075, FL-076, FL-077, FL-078, FL-079, FL-080, FL-081, FL-082, FL-083, FL-084, FL-085, FL-086, FL-087, FL-088, FL-089, FL-090, FL-091, FL-092, FL-093, FL-094, FL-095. The rest are `Pending`. There are no dates in this plan.
+**Status on 2026-11-28:** the first feature code exists. 95 of 100 work items are `Completed`: FL-001, FL-002, FL-003, FL-004, FL-005, FL-006, FL-007, FL-008, FL-009, FL-010, FL-011, FL-012, FL-013, FL-014, FL-015, FL-016, FL-017, FL-018, FL-019, FL-020, FL-021, FL-022, FL-023, FL-024, FL-025, FL-026, FL-027, FL-028, FL-029, FL-030, FL-031, FL-032, FL-033, FL-034, FL-035, FL-036, FL-037, FL-038, FL-039, FL-040, FL-041, FL-042, FL-043, FL-044, FL-045, FL-046, FL-047, FL-048, FL-049, FL-050, FL-051, FL-052, FL-053, FL-054, FL-055, FL-056, FL-057, FL-058, FL-059, FL-060, FL-061, FL-062, FL-063, FL-064, FL-065, FL-066, FL-067, FL-068, FL-069, FL-070, FL-071, FL-072, FL-073, FL-074, FL-075, FL-076, FL-077, FL-078, FL-079, FL-080, FL-081, FL-082, FL-083, FL-084, FL-085, FL-086, FL-087, FL-088, FL-089, FL-090, FL-091, FL-092, FL-093, FL-094, FL-095. The rest are `Pending`. There are no dates in this plan.
 
 ## Delivery phases
 
@@ -16,7 +16,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | 3. Self-healing | A maintenance run verifies code facts against the repository without an LLM, merges duplicate entities, repairs anchors and archives unused facts. | On fixture repositories, with an LLM client that fails if called, a changed manifest version supersedes the stored fact (FL-062), and a deleted file or a missing function name flags it (FL-050, FL-071). A merge can be undone (FL-063). An archived fact is left out of recall and can be restored (FL-065, FL-073). | 17 |
 | 4. Generic core, Postgres and HTTP API | See [EPIC-10](epics/EPIC-10.md) | Defined when the phase is near | Not yet written |
 | 5. Document management | See [EPIC-11](epics/EPIC-11.md) | Defined when the phase is near | Not yet written |
-| 6. Domain adapters | See [EPIC-12](epics/EPIC-12.md) | Defined when the phase is near | 8 |
+| 6. Domain adapters | See [EPIC-12](epics/EPIC-12.md) | Defined when the phase is near | 13 |
 
 ## Epics
 
@@ -35,6 +35,7 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [EPIC-11](epics/EPIC-11.md) | Document management | 5 | Written when the phase is near | Pending |
 | [EPIC-12](epics/EPIC-12.md) | Domain adapters | 6 | Written when the phase is near | Pending |
 | [EPIC-13](epics/EPIC-13.md) | Healthcare proof on invented data | 6 | 8 | Pending |
+| [EPIC-14](epics/EPIC-14.md) | Clinical facts on invented data | 6 | 5 | Pending |
 
 ## Work items
 
@@ -157,6 +158,11 @@ A phase is a capability that can be demonstrated on a real system, not a list of
 | [FL-093](epics/EPIC-13.md#fl-093-healthcare-scenarios-on-invented-data) | Healthcare scenarios on invented data | EPIC-13 | FL-092, FL-027 | Completed |
 | [FL-094](epics/EPIC-13.md#fl-094-healthcare-demo-command) | Healthcare demo command | EPIC-13 | FL-093 | Completed |
 | [FL-095](epics/EPIC-13.md#fl-095-proposals-that-hold-a-retraction-or-an-end-with-nothing-after-it) | Proposals that hold a retraction or an end with nothing after it | EPIC-13 | FL-090 | Completed |
+| [FL-096](epics/EPIC-14.md#fl-096-adr-a-negated-clinical-fact-is-a-specific-predicate) | ADR: a negated clinical fact is a specific predicate | EPIC-14 | FL-094 | Pending |
+| [FL-097](epics/EPIC-14.md#fl-097-negated-facts-in-the-healthcare-domain-and-the-fhir-import) | Negated facts in the healthcare domain and the FHIR import | EPIC-14 | FL-096 | Pending |
+| [FL-098](epics/EPIC-14.md#fl-098-adr-how-a-measured-value-is-a-fact) | ADR: how a measured value is a fact | EPIC-14 | FL-094 | Pending |
+| [FL-099](epics/EPIC-14.md#fl-099-a-unit-beside-a-facts-value) | A unit beside a fact's value | EPIC-14 | FL-098 | Pending |
+| [FL-100](epics/EPIC-14.md#fl-100-observation-import) | Observation import | EPIC-14 | FL-099, FL-097 | Pending |
 
 ## Dependencies
 
@@ -531,6 +537,13 @@ flowchart LR
     FL094["FL-094"]
     FL095["FL-095"]
   end
+  subgraph EPIC14["EPIC-14 Clinical facts on invented data"]
+    FL096["FL-096"]
+    FL097["FL-097"]
+    FL098["FL-098"]
+    FL099["FL-099"]
+    FL100["FL-100"]
+  end
   subgraph EARLIER["Earlier phases"]
     FL027["FL-027"]
     FL070["FL-070"]
@@ -544,6 +557,12 @@ flowchart LR
   FL027 --> FL093
   FL093 --> FL094
   FL090 --> FL095
+  FL094 --> FL096
+  FL096 --> FL097
+  FL094 --> FL098
+  FL098 --> FL099
+  FL099 --> FL100
+  FL097 --> FL100
 ```
 
 ## What can start when
@@ -573,8 +592,9 @@ Work items grouped by how many steps of prerequisites lie behind them. Every ite
 | 19 | FL-051, FL-080, FL-092 |
 | 20 | FL-081, FL-093 |
 | 21 | FL-082, FL-083, FL-094 |
-| 22 | FL-084 |
-| 23 | FL-085 |
+| 22 | FL-084, FL-096, FL-098 |
+| 23 | FL-085, FL-097, FL-099 |
+| 24 | FL-100 |
 
 The first work item is [FL-001](epics/EPIC-01.md#fl-001-scaffold-the-pnpm-workspace-with-one-check-command), the scaffold. Nothing else can start before it.
 

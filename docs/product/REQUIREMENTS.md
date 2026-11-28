@@ -70,7 +70,7 @@ The consolidated list of what Kronomind must do, with the epics and work items t
 | REQ-31 | The core is generic: only a domain adapter knows its domain | prompt s.2 | Yes | EPIC-04 (phase 1), EPIC-10 (phase 4) | FL-006, FL-018, FL-021; none yet for phase 4 |
 | REQ-32 | A Postgres adapter with pgvector passes the storage contract suite, and an HTTP API exposes the use cases | prompt s.3 | Yes, in phase 4 | EPIC-10 | None yet |
 | REQ-33 | Document management: a document adapter, a Python worker that turns PDF files and scans (OCR) into text to be remembered, a human approval flow, and keeping organisations' memory apart (multi-tenancy), built on namespaces | prompt s.3 | Yes, in phase 5 | EPIC-11 | None yet |
-| REQ-34 | Domain adapters for seven further domains; regulated ones need human-approved correction, per-fact access control and private deployment | prompt appendix A | Yes, in phase 6 | EPIC-12, EPIC-13 | FL-088, FL-089, FL-091, FL-092, FL-093, FL-094 |
+| REQ-34 | Domain adapters for seven further domains; regulated ones need human-approved correction, per-fact access control and private deployment | prompt appendix A | Yes, in phase 6 | EPIC-12, EPIC-13, EPIC-14 | FL-088, FL-089, FL-091, FL-092, FL-093, FL-094, FL-096, FL-097, FL-098, FL-099, FL-100 |
 
 Notes on the mapping:
 
