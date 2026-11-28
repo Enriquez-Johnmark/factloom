@@ -46,7 +46,11 @@ export async function planFacts(
     }
     const object: FactObject =
       fact.object.kind === 'value'
-        ? { kind: 'value', value: fact.object.value }
+        ? {
+            kind: 'value',
+            value: fact.object.value,
+            ...(fact.object.unit === undefined ? {} : { unit: fact.object.unit }),
+          }
         : { kind: 'entity', entityId: objectEntityId ?? '' };
     const usedNewEntities = [subjectEntityId, objectEntityId]
       .map((id) => (id === undefined ? undefined : newEntities.get(id)))

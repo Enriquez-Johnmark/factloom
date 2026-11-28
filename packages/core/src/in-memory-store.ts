@@ -171,7 +171,7 @@ function sameObject(first: Fact, second: Fact): boolean {
     return first.object.entityId === second.object.entityId;
   }
   if (first.object.kind === 'value' && second.object.kind === 'value') {
-    return first.object.value === second.object.value;
+    return first.object.value === second.object.value && first.object.unit === second.object.unit;
   }
   return false;
 }

@@ -108,6 +108,7 @@ type ObjectRow = {
   readonly predicate: string;
   readonly object_entity_id: string | null;
   readonly object_value: string | null;
+  readonly object_unit: string | null;
 };
 
 /**
@@ -128,9 +129,9 @@ export function createCommit(
   );
   const insertFact = db.prepare(
     `INSERT INTO fact (id, namespace, subject_entity_id, predicate, object_entity_id, object_value,
-                       statement, confidence, valid_from, valid_to, created_at)
+                       object_unit, statement, confidence, valid_from, valid_to, created_at)
      VALUES (@id, @namespace, @subjectEntityId, @predicate, @objectEntityId, @objectValue,
-             @statement, @confidence, @validFrom, @validTo, @createdAt)`,
+             @objectUnit, @statement, @confidence, @validFrom, @validTo, @createdAt)`,
   );
   const insertFactSource = db.prepare('INSERT INTO fact_source (fact_id, source_id) VALUES (?, ?)');
   const insertEmbedding = db.prepare(
@@ -187,7 +188,7 @@ export function createCommit(
      ORDER BY o.id`,
   );
   const selectObject = db.prepare<[string, string], ObjectRow>(
-    `SELECT subject_entity_id, predicate, object_entity_id, object_value
+    `SELECT subject_entity_id, predicate, object_entity_id, object_value, object_unit
      FROM fact WHERE id = ? AND namespace = ?`,
   );
   const insertConfidence = db.prepare(
@@ -227,7 +228,8 @@ export function createCommit(
   // keyword entry is removed by its trigger, with the old text.
   const purgeFact = db.prepare(
     `UPDATE fact SET statement = @marker,
-       object_value = CASE WHEN object_value IS NULL THEN NULL ELSE @marker END, purged_at = @purgedAt
+       object_value = CASE WHEN object_value IS NULL THEN NULL ELSE @marker END, object_unit = NULL,
+       purged_at = @purgedAt
      WHERE id = @id AND namespace = @namespace AND purged_at IS NULL`,
   );
   const removeVector = db.prepare('DELETE FROM fact_embedding WHERE fact_id = ?');
@@ -259,7 +261,8 @@ export function createCommit(
        AND a.predicate IN (SELECT value FROM json_each(@predicates))
        AND a.subject_entity_id IN (${sameEntityIds('@fromEntityId')})
        AND b.subject_entity_id IN (${sameEntityIds('@intoEntityId')})
-       AND NOT (a.object_entity_id IS b.object_entity_id AND a.object_value IS b.object_value)
+       AND NOT (a.object_entity_id IS b.object_entity_id AND a.object_value IS b.object_value
+                AND a.object_unit IS b.object_unit)
        AND (a.valid_from IS NULL OR b.valid_to IS NULL OR a.valid_from < b.valid_to)
        AND (b.valid_from IS NULL OR a.valid_to IS NULL OR b.valid_from < a.valid_to)`,
   );
@@ -318,7 +321,8 @@ export function createCommit(
         stored.subject_entity_id === recorded.subjectEntityId &&
         stored.predicate === recorded.predicate &&
         stored.object_entity_id === (recorded.object.kind === 'entity' ? recorded.object.entityId : null) &&
-        stored.object_value === (recorded.object.kind === 'value' ? recorded.object.value : null)
+        stored.object_value === (recorded.object.kind === 'value' ? recorded.object.value : null) &&
+        stored.object_unit === (recorded.object.kind === 'value' ? (recorded.object.unit ?? null) : null)
       ) {
         return change.factId;
       }
@@ -396,6 +400,7 @@ export function createCommit(
           predicate: fact.predicate,
           objectEntityId: fact.object.kind === 'entity' ? fact.object.entityId : null,
           objectValue: fact.object.kind === 'value' ? fact.object.value : null,
+          objectUnit: fact.object.kind === 'value' ? (fact.object.unit ?? null) : null,
           statement: fact.statement,
           confidence: fact.confidence,
           validFrom: fact.validFrom,

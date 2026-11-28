@@ -27,7 +27,9 @@ export type JudgeConflictsDeps = { readonly llm: LlmClient };
 function isSameObject(first: FactObject, second: FactObject): boolean {
   if (first.kind === 'entity' && second.kind === 'entity') return first.entityId === second.entityId;
   if (first.kind === 'value' && second.kind === 'value') {
-    return normaliseEntityName(first.value) === normaliseEntityName(second.value);
+    return (
+      normaliseEntityName(first.value) === normaliseEntityName(second.value) && first.unit === second.unit
+    );
   }
   return false;
 }

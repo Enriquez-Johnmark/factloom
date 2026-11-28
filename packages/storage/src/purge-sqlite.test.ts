@@ -22,6 +22,7 @@ const STATEMENT = `The deploy key is ${MARKER}`;
 const CONTENT_COLUMNS = [
   'fact.statement',
   'fact.object_value',
+  'fact.object_unit',
   'source.content',
   'source.content_hash',
   'source.locator',

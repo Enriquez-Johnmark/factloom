@@ -32,7 +32,14 @@ export type Entity = z.infer<typeof EntitySchema>;
 /** What a fact relates its subject to: another entity, or a literal value. Never both, never neither. */
 export const FactObjectSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('entity'), entityId: EntityIdSchema }).readonly(),
-  z.strictObject({ kind: z.literal('value'), value: z.string() }).readonly(),
+  z
+    .strictObject({
+      kind: z.literal('value'),
+      value: z.string(),
+      /** FL-099, ADR 0028: the value's unit, such as a UCUM code; absent when the value has none. */
+      unit: z.string().min(1).exactOptional(),
+    })
+    .readonly(),
 ]);
 export type FactObject = z.infer<typeof FactObjectSchema>;
 

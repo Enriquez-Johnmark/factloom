@@ -22,10 +22,11 @@ export type Comparison =
   | { readonly kind: 'restates'; readonly factId: FactId }
   | { readonly kind: 'new' };
 
-/** Two objects are the same when they are the same entity, or values that are equal strings. */
+/** Two objects are the same when they are the same entity, or values that are equal strings with the same unit. */
 export function isSameObject(first: FactObject, second: FactObject): boolean {
   if (first.kind === 'entity' && second.kind === 'entity') return first.entityId === second.entityId;
-  if (first.kind === 'value' && second.kind === 'value') return first.value === second.value;
+  if (first.kind === 'value' && second.kind === 'value')
+    return first.value === second.value && first.unit === second.unit;
   return false;
 }
 

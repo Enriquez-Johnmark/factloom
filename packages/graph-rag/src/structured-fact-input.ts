@@ -6,7 +6,7 @@ export type StructuredFactInput = {
   readonly predicate: string;
   readonly object:
     | { readonly kind: 'entity'; readonly type: string; readonly name: string }
-    | { readonly kind: 'value'; readonly value: string };
+    | { readonly kind: 'value'; readonly value: string; readonly unit?: string };
   readonly statement: string;
   readonly confidence: number;
   readonly validFrom: Timestamp | null;

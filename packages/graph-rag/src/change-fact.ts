@@ -108,7 +108,10 @@ async function draftReplacement(
 
 /** The stored object of a replacement: its resolved entity, or its literal value. */
 function objectOf(replacement: StructuredFactInput, objectEntityId: EntityId | undefined): FactObject | null {
-  if (replacement.object.kind === 'value') return { kind: 'value', value: replacement.object.value };
+  if (replacement.object.kind === 'value') {
+    const { value, unit } = replacement.object;
+    return { kind: 'value', value, ...(unit === undefined ? {} : { unit }) };
+  }
   return objectEntityId === undefined ? null : { kind: 'entity', entityId: objectEntityId };
 }
 

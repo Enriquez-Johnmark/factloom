@@ -54,7 +54,7 @@ const ARCHIVE_FILTER = `(@excludeArchived = 0 OR ${NOT_ARCHIVED})`;
 /** The columns of a fact row, with the confidence that the read's time asks for. */
 function factColumns(confidence: string): string {
   return `f.id, f.namespace, f.subject_entity_id, f.predicate, f.object_entity_id, f.object_value,
-  f.statement, ${confidence} AS confidence, f.valid_from, f.valid_to, f.created_at, f.invalidated_at,
+  f.object_unit, f.statement, ${confidence} AS confidence, f.valid_from, f.valid_to, f.created_at, f.invalidated_at,
   f.superseded_by_fact_id, f.purged_at`;
 }
 

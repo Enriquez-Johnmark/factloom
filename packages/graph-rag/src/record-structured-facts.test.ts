@@ -268,4 +268,18 @@ describe('recordStructuredFacts', () => {
     });
     expect(entries.ok && entries.value.map((entry) => entry.reasonCode)).toEqual(['restated']);
   });
+
+  it('restates a value given again with the same unit, and treats it in another unit as a different value', async () => {
+    const memory = createMemory();
+    const inUnit = (unit: string) => postgres('16', { object: { kind: 'value', value: '16', unit } });
+    await memory.record('2026-01-10', [inUnit('major-version')]);
+
+    const same = await memory.record('2026-01-11', [inUnit('major-version')]);
+    const other = await memory.record('2026-01-12', [inUnit('minor-version')]);
+
+    expect(same.ok && same.value.facts.map((fact) => fact.outcome)).toEqual(['restated']);
+    // The predicate holds one value at a time, so a different value conflicts instead of restating.
+    expect(other.ok ? null : other.error.code).toBe('conflict');
+    expect(await countFacts(memory.store)).toBe(1);
+  });
 });

@@ -50,7 +50,7 @@ type RefEntity = {
 
 type RefFactObject =
   | { readonly kind: 'entity'; readonly entityId: RefEntityId }
-  | { readonly kind: 'value'; readonly value: string };
+  | { readonly kind: 'value'; readonly value: string; readonly unit?: string };
 
 type RefFact = {
   readonly id: RefFactId;

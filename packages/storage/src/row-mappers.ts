@@ -97,6 +97,7 @@ export type FactRow = {
   readonly predicate: string;
   readonly object_entity_id: string | null;
   readonly object_value: string | null;
+  readonly object_unit: string | null;
   readonly statement: string;
   readonly confidence: number;
   readonly valid_from: string | null;
@@ -115,7 +116,11 @@ export function toFact(row: FactRow): Fact {
     predicate: row.predicate,
     object:
       row.object_entity_id === null
-        ? { kind: 'value', value: row.object_value }
+        ? {
+            kind: 'value',
+            value: row.object_value,
+            ...(row.object_unit === null ? {} : { unit: row.object_unit }),
+          }
         : { kind: 'entity', entityId: row.object_entity_id },
     statement: row.statement,
     confidence: row.confidence,

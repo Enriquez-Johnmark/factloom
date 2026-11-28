@@ -53,6 +53,7 @@ describe('openSqliteMemoryStore', () => {
       { number: 9, name: 'add_proposed_change' },
       { number: 10, name: 'purge_proposed_change' },
       { number: 11, name: 'proposed_retraction' },
+      { number: 12, name: 'add_fact_object_unit' },
     ]);
   });
 

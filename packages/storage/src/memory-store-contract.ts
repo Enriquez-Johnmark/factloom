@@ -1455,6 +1455,42 @@ function registerTimeReadsCommitAndRefusals(createStore: () => Promise<MemorySto
     const listed = await store.listPendingProposals({ namespace: NAMESPACE });
     expect(listed.ok && listed.value.map((pending) => pending.proposal)).toEqual([retraction]);
   });
+  // --- A unit beside a value (FL-099, ADR 0028) ---
+  const measured = fact('hba1c-1', 'measured_as', '6.8', {
+    object: { kind: 'value', value: '6.8', unit: '%' },
+    statement: 'The example measurement was 6.8 %',
+  });
+  const recordMeasured = () =>
+    store.commit(
+      changeSet('op-v', '2026-06-01', [
+        { kind: 'record_source', source: source('s-v', '2026-06-01', 'A result of 6.8 %.') },
+        recordFact(measured, { sourceIds: ['s-v'], singleValued: false }),
+      ]),
+    );
+
+  test('V1: a value fact recorded with a unit is read back with it, and one without has no unit', async () => {
+    expect((await recordMeasured()).ok).toBe(true);
+
+    const found = await store.getFact({ namespace: NAMESPACE, factId: 'hba1c-1' });
+    const plain = await store.getFact({ namespace: NAMESPACE, factId: 'pg14' });
+    expect(found.ok && found.value?.fact.object).toEqual({ kind: 'value', value: '6.8', unit: '%' });
+    expect(plain.ok && plain.value?.fact.object).toEqual({ kind: 'value', value: 'PostgreSQL 14' });
+  });
+  test('V2: purging a value fact clears its unit with its value', async () => {
+    await recordMeasured();
+
+    const purged = await store.commit(
+      changeSet('op-v2', '2026-06-02', [{ kind: 'purge_content', targetKind: 'fact', targetId: 'hba1c-1' }], {
+        operation: 'purge',
+        trigger: 'person',
+        reasonCode: 'erasure_requested',
+      }),
+    );
+
+    expect(purged.ok).toBe(true);
+    const found = await store.getFact({ namespace: NAMESPACE, factId: 'hba1c-1' });
+    expect(found.ok && found.value?.fact.object).toEqual({ kind: 'value', value: '[purged]' });
+  });
   test('P6: deciding a proposal before the time it was proposed returns invalid_input and leaves it pending', async () => {
     await store.commit(proposing(proposal('p-1', '2026-06-05')));
 
