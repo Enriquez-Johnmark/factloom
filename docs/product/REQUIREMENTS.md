@@ -43,7 +43,7 @@ The consolidated list of what Kronomind must do, with the epics and work items t
 | ID | Requirement | Source | Mandatory | Epics | Work items |
 |---|---|---|---|---|---|
 | REQ-16 | New information that conflicts with a stored fact is detected at write time, with candidates chosen without an LLM and bounded in number, and the old fact is ended or invalidated and linked | prompt s.2, s.3 | Yes | EPIC-08 | FL-011, FL-041, FL-042 |
-| REQ-17 | Correction policy is set per domain: automatic, or proposed for human approval | prompt s.4.1 | Yes | EPIC-08 | FL-042, FL-043, FL-070 |
+| REQ-17 | Correction policy is set per domain: automatic, or proposed for human approval | prompt s.4.1 | Yes | EPIC-08, EPIC-13 | FL-042, FL-043, FL-070, FL-090 |
 | REQ-18 | Feedback on a recalled fact is recorded and acted on as a correction signal | prompt s.3 | Yes | EPIC-08 | FL-045, FL-046, FL-059, FL-060 |
 | REQ-19 | Content can be purged for erasure or a stored secret, leaving a record; writes containing a recognisable secret are refused | checkpoint 1 decision, grilling Q7 | Yes | EPIC-04, EPIC-08 | FL-022, FL-023, FL-024, FL-025 (phase 1); FL-047, FL-061, FL-072 (phase 2) |
 | REQ-20 | Duplicate entities are merged on a schedule, and a merge can be undone | prompt s.2 | Yes | EPIC-09 | FL-048, FL-052, FL-063, FL-053, FL-064 |
@@ -70,7 +70,7 @@ The consolidated list of what Kronomind must do, with the epics and work items t
 | REQ-31 | The core is generic: only a domain adapter knows its domain | prompt s.2 | Yes | EPIC-04 (phase 1), EPIC-10 (phase 4) | FL-006, FL-018, FL-021; none yet for phase 4 |
 | REQ-32 | A Postgres adapter with pgvector passes the storage contract suite, and an HTTP API exposes the use cases | prompt s.3 | Yes, in phase 4 | EPIC-10 | None yet |
 | REQ-33 | Document management: a document adapter, a Python worker that turns PDF files and scans (OCR) into text to be remembered, a human approval flow, and keeping organisations' memory apart (multi-tenancy), built on namespaces | prompt s.3 | Yes, in phase 5 | EPIC-11 | None yet |
-| REQ-34 | Domain adapters for seven further domains; regulated ones need human-approved correction, per-fact access control and private deployment | prompt appendix A | Yes, in phase 6 | EPIC-12 | None yet |
+| REQ-34 | Domain adapters for seven further domains; regulated ones need human-approved correction, per-fact access control and private deployment | prompt appendix A | Yes, in phase 6 | EPIC-12, EPIC-13 | FL-088, FL-089, FL-091, FL-092, FL-093, FL-094 |
 
 Notes on the mapping:
 
