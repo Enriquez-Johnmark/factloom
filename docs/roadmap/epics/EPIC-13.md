@@ -74,7 +74,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-088 | Healthcare rules read in their official texts | 6 | None | Completed |
-| FL-089 | ADR: the healthcare proof comes before phase 4 | 6 | FL-088 | Under Review |
+| FL-089 | ADR: the healthcare proof comes before phase 4 | 6 | FL-088 | Completed |
 | FL-090 | Human approval for a reported change with a replacement | 6 | FL-070 | Completed |
 | FL-095 | Proposals that hold a retraction or an end with nothing after it | 6 | FL-090 | Pending |
 | FL-091 | Healthcare domain as data, and choosing the domain at start | 6 | FL-089 | Pending |
@@ -139,7 +139,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | FL-088 |
 | Requirements | REQ-34 |
@@ -170,7 +170,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 - [`architecture.md`](../../../.claude/rules/architecture.md).
 
 **Acceptance criteria.**
-- [ ] ADR 0026 is accepted by the owner.
+- [x] ADR 0026 is accepted by the owner.
 - [x] `SYSTEM-BOUNDARIES.md` lists `packages/adapters` and what it may import.
 - [x] `pnpm check` passes.
 
@@ -178,7 +178,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 **Completion evidence.** The commits, the owner's acceptance, and the `pnpm check` output.
 
-**Recorded evidence.** Prepared on 2026-11-28 in a cloud session on Linux x64. Waiting for the owner's acceptance of ADR 0026, the one open criterion.
+**Recorded evidence.** Prepared on 2026-11-28 in a cloud session on Linux x64. The owner accepted ADR 0026 in the session on 2026-11-28 (`82ac5b7`).
 
 - **The ADR** (`321830e`): [ADR 0026](../../architecture/adr/0026-healthcare-proof-before-phase-4.md), status proposed, listed in `DECISIONS.md`. It rejects phase 4 first, the healthcare code inside `graph-rag`, one package per domain, and a first stage with de-identified data.
 - **The boundaries** (`c0cfba3`): `SYSTEM-BOUNDARIES.md` has a row for `@kronomind/adapters`.
