@@ -19,7 +19,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 - The healthcare rules and standards read in their official texts on 2026-11-28, written into the repository (FL-088).
 - An ADR that brings this proof forward from the end of phase 6 and places the code (FL-089).
-- The **correction policy** `human_approval` honoured on the structured path: `record_fact`, `invalidate_fact` and the use cases under them store a proposal instead of changing a stored fact (FL-090).
+- The **correction policy** `human_approval` honoured by `invalidate_fact`: a reported change is stored as a proposal instead of changing a stored fact (FL-090), and a proposal can hold a retraction (FL-095).
 - A healthcare domain as data, and the domain chosen when the server or a command starts (FL-091).
 - A FHIR R4 import by fixed rules, with no LLM, for MedicationStatement, Condition and AllergyIntolerance (FL-092).
 - An invented-data scenario set for healthcare (FL-093) and a demo command (FL-094).
@@ -53,7 +53,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 - [`healthcare-rules.md`](../../research/industries/healthcare-rules.md), and rows Q-59 and Q-63 updated.
 - One ADR, and the updated [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md).
 - `packages/adapters` with the healthcare domain and the FHIR mapping.
-- A migration that lets a proposal hold a retraction.
+- A migration that lets a proposal hold a retraction (FL-095).
 - An import command, a demo command, and the healthcare scenario files.
 
 ## Success criteria
@@ -75,9 +75,10 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 |---|---|---|---|---|
 | FL-088 | Healthcare rules read in their official texts | 6 | None | Completed |
 | FL-089 | ADR: the healthcare proof comes before phase 4 | 6 | FL-088 | Pending |
-| FL-090 | Human approval on the structured path | 6 | FL-070 | Pending |
+| FL-090 | Human approval for a reported change with a replacement | 6 | FL-070 | Pending |
+| FL-095 | Proposals that hold a retraction or an end with nothing after it | 6 | FL-090 | Pending |
 | FL-091 | Healthcare domain as data, and choosing the domain at start | 6 | FL-089 | Pending |
-| FL-092 | FHIR R4 import by fixed rules | 6 | FL-090, FL-091 | Pending |
+| FL-092 | FHIR R4 import by fixed rules | 6 | FL-095, FL-091 | Pending |
 | FL-093 | Healthcare scenarios on invented data | 6 | FL-092, FL-027 | Pending |
 | FL-094 | Healthcare demo command | 6 | FL-093 | Pending |
 
@@ -177,7 +178,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 **Completion evidence.** The commits, the owner's acceptance, and the `pnpm check` output.
 
-### FL-090: Human approval on the structured path
+### FL-090: Human approval for a reported change with a replacement
 
 | | |
 |---|---|
@@ -185,44 +186,93 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 | Phase | 6 |
 | Depends on | FL-070 |
 | Requirements | REQ-17 |
-| Components | `@kronomind/graph-rag`, `@kronomind/storage`, `apps/mcp-server` |
+| Components | `@kronomind/graph-rag`, `apps/mcp-server` |
 
-**Objective.** Under the correction policy `human_approval`, make every change to a stored fact wait for a person, also when it comes from `record_fact`, `invalidate_fact` or an import.
+**Objective.** Under the correction policy `human_approval`, make a reported correction or succession wait for a person, also when it comes from `invalidate_fact`.
 
-**Background.** FL-070 holds the successions and corrections that `remember` finds as proposals (`packages/graph-rag/src/remember.ts`). The structured path does not read the correction policy: `change-fact.ts` and `record-structured-facts.ts` end or invalidate a stored fact at once. A FHIR import records structured facts, so under `human_approval` it would change patient facts with no approval. A proposal holds a `succession` or a `correction` ([`SCHEMA.md`](../../architecture/SCHEMA.md), `proposed_change`); FHIR `entered-in-error` needs a **retraction**, which no proposal can hold today.
+**Background.** FL-070 holds the successions and corrections that `remember` finds as proposals (`packages/graph-rag/src/remember.ts`). `changeFact`, the use case under `invalidate_fact`, did not read the correction policy: it ended or invalidated a stored fact at once. `recordStructuredFacts`, under `record_fact`, never changes a stored fact: a fact that conflicts with one fails the call with `conflict`. A proposal holds the fact that takes the stored one's place ([`SCHEMA.md`](../../architecture/SCHEMA.md), `proposed_change`), so a report with no replacement cannot be held yet; FL-095 adds that.
 
-**Outcome.** In a `human_approval` domain, no tool, use case or command ends or invalidates a fact until a person approves with the `proposals` command.
+**Outcome.** In a `human_approval` domain, `invalidate_fact` changes no fact: a report with a replacement becomes a proposal that a person decides with the `proposals` command, and a report without one is refused.
 
 **Scope.**
-- The structured use cases read the domain's correction policy and, under `human_approval`, store a proposal for each succession, correction or retraction instead of committing it.
-- A migration that adds the kind `retraction` to `proposed_change`, in both the schema and the approval code.
-- The `record_fact` and `invalidate_fact` tools report a stored proposal with its identifier, as `remember` does.
+- `changeFact` reads the domain's correction policy. Under `human_approval`, a report that a fact was wrong, with a replacement, is stored as a correction proposal; a report that it is no longer true, with a replacement, as a succession proposal ending at `endedAt` or now.
+- Under `human_approval`, a report with no replacement is refused with `invalid_input`.
+- `changeFact` returns either the change made or the proposal stored, as a tagged union.
+- `invalidate_fact` returns `proposal_id`, and [`MCP-TOOLS.md`](../../architecture/MCP-TOOLS.md) says so.
 
 **Non-goals.**
+- A proposal for a retraction or an end with nothing after it: FL-095.
 - "A human decision is not overridden by a later automatic one". [EPIC-11](EPIC-11.md) owns it.
-- Approval of a new fact that changes no stored fact. It is recorded at once, as under FL-070.
+- A change to `record_fact`, which already changes no stored fact.
 
 **Functional requirements.**
-1. Under `human_approval`, a call that would end, correct or retract a stored fact stores one proposal and changes no fact.
-2. Approving a retraction proposal invalidates the fact with nothing to replace it, with the trigger `person`.
-3. Under `automatic`, behaviour is unchanged; every existing test passes without being edited.
-4. `proposals list` shows retraction proposals with the kind `retraction`.
+1. Under `human_approval`, a report with a replacement stores one proposal and changes no fact.
+2. Under `human_approval`, a report with no replacement changes nothing and stores nothing, and fails with `invalid_input`.
+3. Under `automatic`, behaviour is unchanged.
+4. Approving the proposal makes the change, with the trigger `person`, as for a proposal from `remember`.
 
 **Technical requirements.**
-- The migration is a new numbered file; no released migration is edited.
-- The signatures follow [`INTERFACES.md`](../../architecture/INTERFACES.md), which is updated in its own commit if a signature changes.
+- The proposal goes through `proposeChange` in `core`; nothing else writes.
 
 **Constraints.**
-- [ADR 0006](../../architecture/adr/0006-facts-change-only-by-invalidation.md), [ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md), [`data.md`](../../../.claude/rules/data.md).
+- [ADR 0006](../../architecture/adr/0006-facts-change-only-by-invalidation.md), [ADR 0009](../../architecture/adr/0009-one-commit-writes-everything.md).
 
 **Acceptance criteria.**
-- [ ] A test shows that under `human_approval`, `invalidate_fact` with a replacement stores a correction proposal, and the stored fact stays live until it is approved.
-- [ ] A test shows that under `human_approval`, `invalidate_fact` with no replacement stores a retraction proposal, and approval invalidates the fact.
-- [ ] A test shows that under `human_approval`, a structured succession is a proposal, and rejection changes no fact.
-- [ ] The storage contract suite passes against both stores after the migration.
+- [ ] A test shows that under `human_approval` a correction with a replacement is a proposal, the stored fact stays live, and approval invalidates it and links the replacement.
+- [ ] A test shows that under `human_approval` a succession with a replacement is a proposal ending at the given date, and rejection changes no fact.
+- [ ] A test shows that under `human_approval` a report with no replacement is refused with `invalid_input`, and stores neither a change nor a proposal.
+- [ ] A test shows that `invalidate_fact` under `human_approval` returns the proposal's identifier and leaves the fact current.
 - [ ] `pnpm check` passes.
 
-**Validation.** Unit tests of the use cases, the storage contract suite, and the tool tests in `apps/mcp-server`.
+**Validation.** Unit tests of `changeFact`, the tool tests in `apps/mcp-server`, and `pnpm check`.
+
+**Completion evidence.** The commits and the `pnpm check` output.
+
+### FL-095: Proposals that hold a retraction or an end with nothing after it
+
+| | |
+|---|---|
+| Status | Pending |
+| Phase | 6 |
+| Depends on | FL-090 |
+| Requirements | REQ-17 |
+| Components | `@kronomind/core`, `@kronomind/storage`, `@kronomind/graph-rag`, `apps/mcp-server` |
+
+**Objective.** Let a person approve a **retraction**, and an end with no successor, so that under `human_approval` every kind of change to a stored fact can be held.
+
+**Background.** Split from FL-090. `proposed_change.kind` allows `succession` and `correction`, and `new_fact` is `NOT NULL` (migration `0009_add_proposed_change.sql`). FHIR `entered-in-error` needs a retraction, and a medication that stops needs an end with nothing after it ([`healthcare-rules.md`](../../research/industries/healthcare-rules.md), F5, F7). Until this item, FL-090 refuses both under `human_approval`.
+
+**Outcome.** `changeFact` under `human_approval` stores a proposal for every report, with or without a replacement.
+
+**Scope.**
+- `ProposedChange` gains the kind `retraction`, and its new fact becomes absent for a retraction and for a succession with no successor.
+- A new migration that rebuilds `proposed_change` with the wider `kind` check and a nullable `new_fact`, keeping its rows, its index and the rules of its triggers, including the purge rule of migration 10.
+- The same in the in-memory store.
+- Approval of a retraction invalidates the fact with nothing to replace it; approval of an end with no successor ends it.
+- `changeFact` stops refusing a report with no replacement, and `proposals list` shows the kind `retraction`.
+
+**Non-goals.**
+- Any other change to proposals.
+
+**Functional requirements.**
+1. A retraction proposal changes no fact until a person approves it.
+2. Purging a proposal's source still reaches its new fact, where it has one.
+3. A database made before the migration keeps every proposal, and each reads the same afterwards.
+
+**Technical requirements.**
+- A new numbered migration; no released migration is edited ([`data.md`](../../../.claude/rules/data.md)). It notes what the Postgres version does differently.
+- The storage contract suite gains the new cases and passes against both stores.
+
+**Constraints.**
+- [ADR 0006](../../architecture/adr/0006-facts-change-only-by-invalidation.md), [ADR 0012](../../architecture/adr/0012-purge-is-the-one-exception.md).
+
+**Acceptance criteria.**
+- [ ] A contract test stores a retraction proposal, approves it, and finds the fact invalidated with no replacement, in both stores.
+- [ ] A migration test opens a database with a pending proposal at migration 10, migrates it, and reads the same proposal.
+- [ ] A test shows that under `human_approval` `invalidate_fact` with no replacement returns a proposal identifier.
+- [ ] `pnpm check` passes.
+
+**Validation.** The storage contract suite, the migration test, the tool tests and `pnpm check`.
 
 **Completion evidence.** The commits and the `pnpm check` output.
 
@@ -280,7 +330,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 |---|---|
 | Status | Pending |
 | Phase | 6 |
-| Depends on | FL-090, FL-091 |
+| Depends on | FL-095, FL-091 |
 | Requirements | REQ-34 |
 | Components | `packages/adapters`, `apps/mcp-server` |
 
@@ -314,7 +364,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 **Functional requirements.**
 1. No LLM client is called; a test runs the import with a client that fails if called.
 2. Importing the same file twice records no second fact: the second run is a **restatement**.
-3. A resource that changes a stored fact under `human_approval` produces a proposal, through FL-090.
+3. A resource that changes a stored fact under `human_approval` produces a proposal, through FL-090 and FL-095.
 4. The report lists, per resource, the facts recorded, the proposals stored and each element not mapped, with the reason.
 5. An invalid resource is refused with its path in the file and changes nothing.
 
