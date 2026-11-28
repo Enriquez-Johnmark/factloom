@@ -7,10 +7,10 @@ Which package may import which, how that is enforced, and what each package's pu
 | Package | May import | Must not import |
 |---|---|---|
 | `@kronomind/core` | `zod` | Any other `@kronomind` package. Any database, LLM, embedding or MCP library. A test framework, in its source files |
-| `@kronomind/graph-rag` | `@kronomind/core`, `zod` | `@kronomind/storage`, `@kronomind/maintenance`. Any database, LLM, embedding or MCP library |
-| `@kronomind/storage` | `@kronomind/core`, `better-sqlite3`, `sqlite-vec` | `@kronomind/graph-rag`, `@kronomind/maintenance`. Any LLM, embedding or MCP library |
-| `@kronomind/maintenance` | `@kronomind/core`, `zod` | `@kronomind/storage`, `@kronomind/graph-rag`. Any database, LLM, embedding or MCP library |
-| `@kronomind/adapters` | `@kronomind/core`, `@kronomind/graph-rag`, `zod` | `@kronomind/storage`, `@kronomind/maintenance`. Any database, LLM, embedding or MCP library. No other package imports it but `apps/mcp-server` ([ADR 0026](adr/0026-healthcare-proof-before-phase-4.md)); the package and its lint rule arrive in FL-091 |
+| `@kronomind/graph-rag` | `@kronomind/core`, `zod` | `@kronomind/storage`, `@kronomind/maintenance`, `@kronomind/adapters`. Any database, LLM, embedding or MCP library |
+| `@kronomind/storage` | `@kronomind/core`, `better-sqlite3`, `sqlite-vec` | `@kronomind/graph-rag`, `@kronomind/maintenance`, `@kronomind/adapters`. Any LLM, embedding or MCP library |
+| `@kronomind/maintenance` | `@kronomind/core`, `zod` | `@kronomind/storage`, `@kronomind/graph-rag`, `@kronomind/adapters`. Any database, LLM, embedding or MCP library |
+| `@kronomind/adapters` | `@kronomind/core`, `@kronomind/graph-rag`, `zod` | `@kronomind/storage`, `@kronomind/maintenance`. Any database, LLM, embedding or MCP library. No other package imports it but `apps/mcp-server` ([ADR 0026](adr/0026-healthcare-proof-before-phase-4.md)) |
 | `apps/mcp-server` | Every `@kronomind` package, the MCP SDK, the Anthropic SDK, the embedding library, `zod` | Nothing is forbidden, but it holds no rules about facts |
 
 ```
@@ -20,7 +20,7 @@ apps/mcp-server ──► graph-rag ─────► core ◄── storage
      └───────────────────────────────────────────┘
 ```
 
-`adapters` holds the domain adapters, one module per domain, from the healthcare proof on ([ADR 0026](adr/0026-healthcare-proof-before-phase-4.md)). It is not drawn above until the package exists.
+`adapters` holds the domain adapters, one module per domain, from the healthcare proof on ([ADR 0026](adr/0026-healthcare-proof-before-phase-4.md)). It sits beside `maintenance` in the drawing: the app imports it, and it imports `core`.
 
 `maintenance` is product 2. It changes memory only through the fact operations in `core`, so it cannot import the storage adapter at all.
 
@@ -37,7 +37,7 @@ Three mechanisms, so that a forbidden import fails without anyone remembering th
 2. **Lint.** Planned: a lint rule per package forbids importing the packages and libraries in the "must not import" column, and forbids deep imports into another package. This catches the case where someone adds a dependency to `package.json` to make an import work.
 3. **One public entry.** Each `package.json` exports only its `index.ts`. No package has a second entry.
 
-The lint rules were run in the scaffold on 2026-11-14, in the no-build workspace: a forbidden import in each of the three packages, a forbidden import with its dependency declared, a deep import by package name and a deep import by relative path each failed the check, and each was then removed. The recorded output is in work item [FL-001](../roadmap/epics/EPIC-01.md). The rules for `maintenance` were run the same way on 2026-11-16: an import of `@kronomind/storage`, of `@kronomind/graph-rag`, of `better-sqlite3` and a deep import from inside it, and an import of it from `graph-rag` and from `storage`, each failed the check. The recorded output is in work item [FL-040](../roadmap/epics/EPIC-08.md).
+The lint rules were run in the scaffold on 2026-11-14, in the no-build workspace: a forbidden import in each of the three packages, a forbidden import with its dependency declared, a deep import by package name and a deep import by relative path each failed the check, and each was then removed. The recorded output is in work item [FL-001](../roadmap/epics/EPIC-01.md). The rules for `maintenance` were run the same way on 2026-11-16: an import of `@kronomind/storage`, of `@kronomind/graph-rag`, of `better-sqlite3` and a deep import from inside it, and an import of it from `graph-rag` and from `storage`, each failed the check. The recorded output is in work item [FL-040](../roadmap/epics/EPIC-08.md). The rules for `adapters` were run the same way on 2026-11-28: an import of `@kronomind/storage` from it, and an import of it from `graph-rag`, each failed the check (FL-091, [EPIC-13](../roadmap/epics/EPIC-13.md)).
 
 ## Public API of each package
 
@@ -71,6 +71,12 @@ The test helpers are ordinary exports of the one `index.ts`. They import no test
 | Retrieval eval | `recallWithSettings`, with `RecallSettings` and `DEFAULT_RECALL_SETTINGS`: recall with explicit lane weights, lane list length and fusion constant, for the eval in `apps/mcp-server/evals/` (FL-033) |
 
 Rank fusion and entity resolution are internal.
+
+### `@kronomind/adapters`
+
+| Group | Exports |
+|---|---|
+| Domains | `healthcareDomain`, for a proof on invented data only (FL-091) |
 
 ### `@kronomind/storage`
 
