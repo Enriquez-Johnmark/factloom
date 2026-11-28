@@ -3,9 +3,9 @@
 // person should read goes to standard error. With the argument `purge` or `proposals`, it runs
 // a command a person runs instead, which is not an MCP server (FL-072, FL-070).
 import { randomUUID } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname } from 'node:path';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { toTimestamp } from '@kronomind/core';
 import { runMaintenance } from '@kronomind/maintenance';
 import { openSqliteMemoryStore } from '@kronomind/storage';
@@ -23,6 +23,7 @@ import { createLocalEmbedder } from './create-local-embedder.ts';
 import { buildMaintenanceJobs } from './maintenance-jobs.ts';
 import { readCommand } from './read-command.ts';
 import { readConfiguration } from './read-configuration.ts';
+import { runHealthcareDemo } from './run-healthcare-demo.ts';
 import { runPersonCommand } from './run-person-command.ts';
 import { readStandardInput, runRecallHook } from './run-recall-hook.ts';
 import { serveKronomind } from './serve-kronomind.ts';
@@ -38,6 +39,13 @@ function stop(message: string): never {
 }
 
 const command = readCommand(process.argv.slice(2));
+// The demo reads no configuration and opens no database but its own, in a directory it removes.
+if (command.kind === 'demo_healthcare') {
+  const directory = mkdtempSync(join(tmpdir(), 'kronomind-demo-'));
+  const exitCode = await runHealthcareDemo({ directory, write: (line) => process.stdout.write(`${line}\n`) });
+  rmSync(directory, { recursive: true, force: true });
+  process.exit(exitCode);
+}
 const configuration = readConfiguration(process.env, {
   homeDirectory: homedir(),
   workingDirectory: process.cwd(),

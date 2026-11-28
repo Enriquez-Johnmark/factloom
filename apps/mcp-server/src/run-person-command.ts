@@ -6,7 +6,10 @@ import { type PurgeCommandDeps, runPurgeCommand } from './run-purge-command.ts';
 /** A command a person runs, which is not an MCP server: purge (FL-072), proposals (FL-070) or the FHIR import (FL-092). */
 export type PersonCommand = Exclude<
   Command,
-  { readonly kind: 'serve' } | { readonly kind: 'maintenance' } | { readonly kind: 'recall_hook' }
+  | { readonly kind: 'serve' }
+  | { readonly kind: 'maintenance' }
+  | { readonly kind: 'recall_hook' }
+  | { readonly kind: 'demo_healthcare' }
 >;
 
 /** Runs a command a person runs and returns its exit code. The one place a command argument is routed. */

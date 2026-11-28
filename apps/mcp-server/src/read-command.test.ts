@@ -9,4 +9,8 @@ describe('readCommand', () => {
     });
     expect(readCommand(['import', 'fhir']).kind).toBe('invalid');
   });
+
+  it('reads demo healthcare as the demo', () => {
+    expect(readCommand(['demo', 'healthcare'])).toEqual({ kind: 'demo_healthcare' });
+  });
 });

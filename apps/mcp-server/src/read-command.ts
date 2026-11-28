@@ -13,10 +13,11 @@ export type Command =
   | { readonly kind: 'approve_proposal'; readonly proposalId: string }
   | { readonly kind: 'reject_proposal'; readonly proposalId: string }
   | { readonly kind: 'import_fhir'; readonly path: string }
+  | { readonly kind: 'demo_healthcare' }
   | { readonly kind: 'invalid'; readonly message: string };
 
 const USAGE =
-  'Usage: kronomind maintenance | kronomind hook recall | kronomind purge sources <fact-id> | kronomind purge source <source-id> --reason erasure_requested|secret_stored | kronomind proposals list | kronomind proposals approve|reject <proposal-id> | kronomind import fhir <file>';
+  'Usage: kronomind maintenance | kronomind hook recall | kronomind purge sources <fact-id> | kronomind purge source <source-id> --reason erasure_requested|secret_stored | kronomind proposals list | kronomind proposals approve|reject <proposal-id> | kronomind import fhir <file> | kronomind demo healthcare';
 
 /**
  * Reads the command from the arguments after the script. No argument serves MCP over stdio;
@@ -25,7 +26,8 @@ const USAGE =
  * with the prompt on standard input (FL-080). Purge is a command a person runs, never an
  * MCP tool. `proposals` lists pending proposals, or approves or rejects one (FL-070): a person
  * decides them, so it is never an MCP tool either. `import fhir` imports FHIR R4 resources from a
- * file under the healthcare domain (FL-092).
+ * file under the healthcare domain (FL-092). `demo healthcare` runs the demo on invented records
+ * in a database of its own (FL-094).
  */
 export function readCommand(args: readonly string[]): Command {
   if (args.length === 0) return { kind: 'serve' };
@@ -33,6 +35,11 @@ export function readCommand(args: readonly string[]): Command {
   if (command === 'maintenance' && args.length === 1) return { kind: 'maintenance' };
   if (command === 'hook' && form === 'recall' && args.length === 2) return { kind: 'recall_hook' };
   if (command === 'proposals') return readProposalsCommand(form, id, args.length);
+  if (command === 'demo') {
+    return form === 'healthcare' && args.length === 2
+      ? { kind: 'demo_healthcare' }
+      : { kind: 'invalid', message: USAGE };
+  }
   if (command === 'import') {
     return form === 'fhir' && id !== undefined && args.length === 3
       ? { kind: 'import_fhir', path: id }
