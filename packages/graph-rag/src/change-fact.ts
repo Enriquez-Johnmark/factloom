@@ -12,6 +12,7 @@ import {
   type NewSource,
   type OperationDeps,
   ok,
+  proposeChange,
   type Result,
   type Timestamp,
   type Trigger,
@@ -106,6 +107,50 @@ function objectOf(replacement: StructuredFactInput, objectEntityId: EntityId | u
   return objectEntityId === undefined ? null : { kind: 'entity', entityId: objectEntityId };
 }
 
+/**
+ * What a report did. Under the correction policy `automatic` the stored fact is changed at
+ * once. Under `human_approval` it is untouched and a proposal waits for a person (FL-090).
+ */
+export type ChangeFactResult =
+  | {
+      readonly kind: 'changed';
+      readonly invalidatedFactId: FactId;
+      readonly replacement: FactWithSources | null;
+    }
+  | { readonly kind: 'proposed'; readonly storedFactId: FactId; readonly proposalId: string };
+
+/**
+ * Stores the report as a proposal and changes no fact. A proposal holds the fact that takes
+ * the stored one's place, so a report with no replacement is refused until a proposal can
+ * hold a retraction or an end with nothing after it (FL-095).
+ */
+async function proposeReportedChange(
+  deps: OperationDeps,
+  input: ChangeFactInput & { readonly source: NewSource; readonly draft: FactDraft | null },
+): Promise<Result<ChangeFactResult>> {
+  const { namespace, factId, trigger, source, draft } = input;
+  if (draft === null) {
+    return err(
+      'invalid_input',
+      `The ${deps.domain.name} domain holds every change for a person's approval, and a change with nothing to take the fact's place cannot be held yet. Give the replacement.`,
+    );
+  }
+  const proposed = await proposeChange(deps, {
+    namespace,
+    trigger,
+    reasonCode: input.because === 'was_wrong' ? 'reported_wrong' : 'reported_ended',
+    storedFactId: factId,
+    supersession:
+      input.because === 'was_wrong'
+        ? { kind: 'correction' }
+        : { kind: 'succession', changedAt: input.endedAt ?? deps.now() },
+    newFact: draft,
+    source,
+  });
+  if (!proposed.ok) return proposed;
+  return ok({ kind: 'proposed', storedFactId: factId, proposalId: proposed.value.proposalId });
+}
+
 /** Calls the one fact operation the report needs, and returns the identifier of the replacement, if any. */
 async function applyChange(
   deps: OperationDeps,
@@ -140,11 +185,13 @@ async function applyChange(
  * corrected when a replacement is given and retracted when not. A fact that is no longer true
  * ends at `endedAt`, or now, and a replacement succeeds it from then. The explanation is kept
  * as the content of a source, never in the audit log. Refuses text that contains a secret.
+ * Under the correction policy `human_approval` nothing changes: the report is stored as a
+ * proposal for a person to approve.
  */
 export async function changeFact(
   deps: OperationDeps,
   input: ChangeFactInput,
-): Promise<Result<{ readonly invalidatedFactId: FactId; readonly replacement: FactWithSources | null }>> {
+): Promise<Result<ChangeFactResult>> {
   const problem = findInputProblem(deps.domain, input);
   if (problem !== null) return err('invalid_input', problem);
   const secrets = checkForSecrets(listCheckedFields(input));
@@ -167,10 +214,14 @@ export async function changeFact(
     observedAt: deps.now(),
   };
 
+  if (deps.domain.correctionPolicy === 'human_approval') {
+    return proposeReportedChange(deps, { ...input, source, draft });
+  }
   const applied = await applyChange(deps, { ...input, source, draft });
   if (!applied.ok) return applied;
-  if (applied.value === null) return ok({ invalidatedFactId: input.factId, replacement: null });
+  if (applied.value === null)
+    return ok({ kind: 'changed', invalidatedFactId: input.factId, replacement: null });
   const replacement = await deps.store.getFact({ namespace: input.namespace, factId: applied.value });
   if (!replacement.ok) return replacement;
-  return ok({ invalidatedFactId: input.factId, replacement: replacement.value });
+  return ok({ kind: 'changed', invalidatedFactId: input.factId, replacement: replacement.value });
 }

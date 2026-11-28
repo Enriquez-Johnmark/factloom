@@ -8,8 +8,9 @@ import { toToolError } from './to-tool-error.ts';
 import { toToolSuccess } from './to-tool-success.ts';
 
 const InvalidateFactOutputSchema = z.object({
-  invalidated_fact_id: z.string(),
+  invalidated_fact_id: z.string().nullable(),
   replacement_fact_id: z.string().nullable(),
+  proposal_id: z.string().nullable(),
 });
 
 /**
@@ -22,7 +23,7 @@ export const registerInvalidateFactTool: RegisterTool = (server, deps) => {
     {
       title: 'Invalidate a fact',
       description:
-        'Reports that a stored fact was wrong (was_wrong) or has stopped being true (no_longer_true), with an optional replacement. The fact stays on record: recall stops returning it as current, and get_fact_history shows it with the reason. A revised fact gets a new identifier.',
+        'Reports that a stored fact was wrong (was_wrong) or has stopped being true (no_longer_true), with an optional replacement. The fact stays on record: recall stops returning it as current, and get_fact_history shows it with the reason. A revised fact gets a new identifier. In a domain that holds changes for approval, nothing changes yet: the change is stored as a proposal for a person, and proposal_id names it.',
       inputSchema: z.object({
         fact_id: z.string().min(1).describe('The fact, as recall returned it.'),
         because: z
@@ -75,9 +76,17 @@ export const registerInvalidateFactTool: RegisterTool = (server, deps) => {
         trigger: 'agent',
       });
       if (!changed.ok) return toToolError(changed.error);
+      if (changed.value.kind === 'proposed') {
+        return toToolSuccess({
+          invalidated_fact_id: null,
+          replacement_fact_id: null,
+          proposal_id: changed.value.proposalId,
+        });
+      }
       return toToolSuccess({
         invalidated_fact_id: changed.value.invalidatedFactId,
         replacement_fact_id: changed.value.replacement?.fact.id ?? null,
+        proposal_id: null,
       });
     },
   );

@@ -1,4 +1,4 @@
-import { createInMemoryStore, type MemoryStore } from '@kronomind/core';
+import { createInMemoryStore, type Domain, type MemoryStore } from '@kronomind/core';
 import type { Client } from '@modelcontextprotocol/client';
 import { z } from 'zod';
 import { KRONOMIND_TOOLS } from '../kronomind-tools.ts';
@@ -10,7 +10,7 @@ const TextContentSchema = z.array(z.object({ text: z.string() }));
  * One memory, reached through the six tools by a client connected anew for each call, on
  * the day the call names. The LLM fails the test if it is called. `close` closes every client.
  */
-export function createToolSession() {
+export function createToolSession(options: { readonly domain?: Domain } = {}) {
   const store: MemoryStore = createInMemoryStore();
   let count = 0;
   const newId = () => {
@@ -25,6 +25,7 @@ export function createToolSession() {
       newId,
       now,
       llm: UNREACHABLE_LLM,
+      ...(options.domain === undefined ? {} : { domain: options.domain }),
     });
     clients.push(client);
     return client.callTool({ name, arguments: args });

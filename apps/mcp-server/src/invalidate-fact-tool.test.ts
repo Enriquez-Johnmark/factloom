@@ -1,12 +1,19 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { TEST_NAMESPACE } from './testing/connect-in-process.ts';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { createToolSession } from './testing/tool-session.ts';
 
 const RecordedSchema = z.object({ fact: z.object({ fact_id: z.string() }) });
 const InvalidatedSchema = z.object({
   invalidated_fact_id: z.string(),
   replacement_fact_id: z.string().nullable(),
+  proposal_id: z.null(),
+});
+const ProposedSchema = z.object({
+  invalidated_fact_id: z.null(),
+  replacement_fact_id: z.null(),
+  proposal_id: z.string(),
 });
 const RecallSchema = z.object({
   facts: z.array(
@@ -80,7 +87,7 @@ describe('the invalidate_fact tool', () => {
       reason: 'Never true.',
     });
 
-    expect(result).toEqual({ invalidated_fact_id: wrong, replacement_fact_id: null });
+    expect(result).toEqual({ invalidated_fact_id: wrong, replacement_fact_id: null, proposal_id: null });
     expect((await readFact(wrong)).invalidatedAt).not.toBeNull();
   });
 
@@ -196,5 +203,29 @@ describe('the invalidate_fact tool', () => {
     expect(
       before.facts.map((fact) => [fact.fact_id, fact.invalidated_at, fact.superseded_by_fact_id]),
     ).toEqual([[wrong, '2026-03-12T00:00:00.000Z', replacement_fact_id]]);
+  });
+});
+
+describe('the invalidate_fact tool in a domain that holds changes for approval', () => {
+  it('stores a proposal, returns its identifier, and leaves the fact current', async () => {
+    await session.close();
+    session = createToolSession({
+      domain: { ...softwareDevelopmentDomain, correctionPolicy: 'human_approval' },
+    });
+    const wrong = await recordFlyIo();
+
+    const result = ProposedSchema.parse(
+      await session.succeed('2026-03-12', 'invalidate_fact', {
+        fact_id: wrong,
+        because: 'was_wrong',
+        reason: 'The deploy config names Render.',
+        replacement: deploysTo('Render'),
+      }),
+    );
+
+    expect((await readFact(wrong)).invalidatedAt).toBeNull();
+    const pending = await session.store.listPendingProposals({ namespace: TEST_NAMESPACE });
+    if (!pending.ok) throw new Error(pending.error.message);
+    expect(pending.value.map((entry) => entry.proposal.id)).toEqual([result.proposal_id]);
   });
 });

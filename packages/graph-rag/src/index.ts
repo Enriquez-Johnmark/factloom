@@ -6,7 +6,7 @@ import { corePackageName } from '@kronomind/core';
  */
 export const graphRagBuiltOn: readonly string[] = [corePackageName];
 
-export type { ChangeFactInput } from './change-fact.ts';
+export type { ChangeFactInput, ChangeFactResult } from './change-fact.ts';
 export { changeFact } from './change-fact.ts';
 export type { ExplainedAuditEntry, FactHistoryEntry, GetFactHistoryInput } from './get-fact-history.ts';
 export type { GiveFeedbackDeps, GiveFeedbackInput } from './give-feedback.ts';

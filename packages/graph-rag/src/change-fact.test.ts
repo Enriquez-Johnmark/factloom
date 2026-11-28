@@ -1,4 +1,5 @@
 import {
+  approveProposedChange,
   type AuditEntry,
   createTestDeps,
   type FactDraft,
@@ -8,6 +9,7 @@ import {
   type OperationDeps,
   parseDateInput,
   recordFacts,
+  rejectProposedChange,
   type Timestamp,
 } from '@kronomind/core';
 import { describe, expect, it } from 'vitest';
@@ -110,6 +112,7 @@ function report(factId: FactId, overrides: Partial<ChangeFactInput> = {}): Chang
 async function change(memory: ReturnType<typeof createMemory>, input: ChangeFactInput) {
   const changed = await changeFact(memory.on(NOW), input);
   if (!changed.ok) throw new Error(changed.error.message);
+  if (changed.value.kind !== 'changed') throw new Error('The report was proposed, not applied.');
   return changed.value;
 }
 
@@ -221,7 +224,7 @@ describe('changeFact', () => {
 
     const changed = await change(memory, report(lodash));
 
-    expect(changed).toEqual({ invalidatedFactId: lodash, replacement: null });
+    expect(changed).toEqual({ kind: 'changed', invalidatedFactId: lodash, replacement: null });
     const retracted = await readFact(memory.store, lodash);
     expect(retracted.fact.invalidatedAt).toBe(at(NOW));
     expect(retracted.fact.supersededByFactId).toBeNull();
@@ -288,7 +291,7 @@ describe('changeFact', () => {
       report(moment, { because: 'no_longer_true', endedAt: at('2026-03-15') }),
     );
 
-    expect(changed).toEqual({ invalidatedFactId: moment, replacement: null });
+    expect(changed).toEqual({ kind: 'changed', invalidatedFactId: moment, replacement: null });
     const live = (await listAllFacts(memory.store)).filter(({ fact }) => fact.invalidatedAt === null);
     expect(live.map(({ fact }) => [fact.object, fact.validTo])).toEqual([
       [{ kind: 'value', value: 'moment' }, at('2026-03-15')],
@@ -512,5 +515,101 @@ describe('changeFact', () => {
     if (changed.ok) return;
     expect(changed.error.code).toBe('invalid_input');
     expect(changed.error.message).toContain('replacement.statement');
+  });
+});
+
+describe('changeFact under the correction policy human_approval', () => {
+  /** The same memory, read through a domain that holds every change for a person. */
+  function underApproval(memory: ReturnType<typeof createMemory>, date: string): OperationDeps {
+    const deps = memory.on(date);
+    return { ...deps, domain: { ...deps.domain, correctionPolicy: 'human_approval' } };
+  }
+
+  async function listPending(store: MemoryStore) {
+    const pending = await store.listPendingProposals({ namespace: NAMESPACE });
+    if (!pending.ok) throw new Error(pending.error.message);
+    return pending.value.map((entry) => entry.proposal);
+  }
+
+  it('stores a correction as a proposal and leaves the wrong fact live until a person approves it', async () => {
+    const memory = createMemory();
+    const [jest] = await recordAll(memory, [draft('depends_on', 'jest')]);
+    if (jest === undefined) throw new Error('No fact recorded.');
+
+    const changed = await changeFact(
+      underApproval(memory, NOW),
+      report(jest, { replacement: structured('depends_on', 'vitest') }),
+    );
+
+    if (!changed.ok) throw new Error(changed.error.message);
+    if (changed.value.kind !== 'proposed') throw new Error('The report was applied, not proposed.');
+    expect((await readFact(memory.store, jest)).fact.invalidatedAt).toBeNull();
+    const [proposal] = await listPending(memory.store);
+    expect(proposal?.id).toBe(changed.value.proposalId);
+    expect(proposal?.supersession).toEqual({ kind: 'correction' });
+    expect(proposal?.reasonCode).toBe('reported_wrong');
+
+    const approved = await approveProposedChange(memory.on('2026-04-02'), {
+      namespace: NAMESPACE,
+      proposalId: changed.value.proposalId,
+      trigger: 'person',
+    });
+    if (!approved.ok) throw new Error(approved.error.message);
+    const wrong = await readFact(memory.store, jest);
+    expect(wrong.fact.invalidatedAt).toBe(at('2026-04-02'));
+    expect(wrong.fact.supersededByFactId).toBe(approved.value.newFactId);
+  });
+
+  it('stores an end with a successor as a succession proposal, and rejecting it changes no fact', async () => {
+    const memory = createMemory();
+    const [postgres15] = await recordAll(memory, [
+      draft('uses_database_version', '15', { from: '2026-01-01' }),
+    ]);
+    if (postgres15 === undefined) throw new Error('No fact recorded.');
+    const factsBefore = await listAllFacts(memory.store);
+
+    const changed = await changeFact(
+      underApproval(memory, NOW),
+      report(postgres15, {
+        because: 'no_longer_true',
+        endedAt: at('2026-03-01'),
+        replacement: structured('uses_database_version', '16'),
+      }),
+    );
+
+    if (!changed.ok) throw new Error(changed.error.message);
+    if (changed.value.kind !== 'proposed') throw new Error('The report was applied, not proposed.');
+    const [proposal] = await listPending(memory.store);
+    expect(proposal?.supersession).toEqual({ kind: 'succession', changedAt: at('2026-03-01') });
+    expect(proposal?.reasonCode).toBe('reported_ended');
+
+    const rejected = await rejectProposedChange(memory.on('2026-04-02'), {
+      namespace: NAMESPACE,
+      proposalId: changed.value.proposalId,
+      trigger: 'person',
+    });
+    if (!rejected.ok) throw new Error(rejected.error.message);
+    expect(await listAllFacts(memory.store)).toEqual(factsBefore);
+    expect(await listPending(memory.store)).toEqual([]);
+  });
+
+  it('refuses a report with no replacement, and stores neither a change nor a proposal', async () => {
+    const memory = createMemory();
+    const [lodash] = await recordAll(memory, [draft('depends_on', 'lodash')]);
+    if (lodash === undefined) throw new Error('No fact recorded.');
+
+    const wrong = await changeFact(underApproval(memory, NOW), report(lodash));
+    const ended = await changeFact(
+      underApproval(memory, NOW),
+      report(lodash, { because: 'no_longer_true', endedAt: at('2026-03-01') }),
+    );
+
+    for (const refused of [wrong, ended]) {
+      if (refused.ok) throw new Error('The report without a replacement was accepted.');
+      expect(refused.error.code).toBe('invalid_input');
+    }
+    const stored = await readFact(memory.store, lodash);
+    expect([stored.fact.invalidatedAt, stored.fact.validTo]).toEqual([null, null]);
+    expect(await listPending(memory.store)).toEqual([]);
   });
 });
