@@ -50,6 +50,8 @@ grep -n -i factloom ~/.claude/settings.json ~/.claude.json .claude/settings.json
 
 In each line it prints, `FACTLOOM_` becomes `KRONOMIND_`, `mcp__factloom__` becomes `mcp__kronomind__`, and `~/.factloom` becomes `~/.kronomind`. The hooks of the [registration guide](README.md) show the new form.
 
+Claude Code may keep its configuration in another folder than `~/.claude`. The `File modified:` line that `claude mcp remove` prints in step 3 names the file it changed; if that file is, for example, `~/.claude-personal/.claude.json`, search `~/.claude-personal/settings.json` and `~/.claude-personal/.claude.json` instead. On the owner's Mac on 2026-11-28, the maintenance hook was found only there.
+
 ## 5. If the clone moved
 
 GitHub forwards the old address of the repository. To use the new one:
