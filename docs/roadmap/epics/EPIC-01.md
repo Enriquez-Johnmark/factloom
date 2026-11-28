@@ -67,7 +67,7 @@ The repository becomes a pnpm workspace that checks itself. One command runs the
 | FL-001 | Scaffold the pnpm workspace with one check command | 0 | None | Completed |
 | FL-002 | Run the check in continuous integration on Linux and macOS arm64 | 0 | FL-001 | Completed |
 | FL-003 | Install the packed server on a clean machine in CI | 1 | FL-002, FL-037 | Completed |
-| FL-085 | Rename the project to Kronomind | 3 | FL-084 | Under Review |
+| FL-085 | Rename the project to Kronomind | 3 | FL-084 | Completed |
 
 ### FL-001: Scaffold the pnpm workspace with one check command
 
@@ -549,7 +549,7 @@ Differences from the item:
 
 | | |
 |---|---|
-| Status | Under Review |
+| Status | Completed |
 | Phase | 3 |
 | Depends on | FL-084 |
 | Requirements | None: a rename changes no requirement |
@@ -590,14 +590,14 @@ Differences from the item:
 - [x] An ADR records the new name, the reason, the names rejected and what was kept as written.
 - [x] The script of functional requirement 1 finds no use of the old name outside the kept records, and `pnpm check` runs it.
 - [x] `pnpm check` exits 0 and continuous integration passes on Linux and macOS.
-- [ ] On the owner's Mac, after the guide's steps, `/mcp` in Claude Code shows the server `kronomind` with six tools, and a fact recorded before the rename is recalled.
-- [ ] The GitHub repository is renamed, and the remote URL and the CI badge follow.
+- [x] On the owner's Mac, after the guide's steps, `/mcp` in Claude Code shows the server `kronomind` with six tools, and a fact recorded before the rename is recalled.
+- [x] The GitHub repository is renamed, and the remote URL and the CI badge follow.
 
 **Validation.** The script and `pnpm check` on every commit; CI; the owner's check on the Mac.
 
 **Completion evidence.** The ADR, the commits, the script's output, the CI run and the owner's `/mcp` output.
 
-**Recorded evidence.** Under Review on 2026-11-27: the owner's check on the Mac and the renaming of the GitHub repository (criteria 4 and 5) are pending. The rename is six commits, each passing `pnpm check`:
+**Recorded evidence.** Completed on 2026-11-28. The rename is six commits, each passing `pnpm check`:
 
 - `b32a586` `docs(adr): record the rename to Kronomind`: [ADR 0025](../../architecture/adr/0025-the-project-is-named-kronomind.md), with the reason, the names rejected and the records that keep the old name.
 - `b4a4720` `refactor: rename the package scope to @kronomind`: 198 files, the lockfile and the boundary rules of `biome.json`.
@@ -616,7 +616,6 @@ The server, started from `apps/mcp-server/src/main.ts` with `KRONOMIND_NAMESPACE
 
 The workflow runs on Linux and macOS arm64, with Node.js 22 and 26: https://github.com/Enriquez-Johnmark/factloom/actions/runs/46026745836.
 
-Not yet run: the guide's steps on the owner's Mac, and the renaming of the repository on GitHub, after which the CI badge and the remote follow it.
 
 `pnpm check`, on Linux x64 with Node.js v22.23.4:
 
@@ -631,3 +630,11 @@ $ vitest run
  Test Files  138 passed (138)
       Tests  1444 passed (1444)
 ```
+
+**The owner's move across, 2026-11-27 and 2026-11-28,** on the MacBook Air, with the guide's steps:
+
+- `claude mcp get factloom` gave the namespace `repo:fl038-test`. `~/.factloom` was moved to `~/.kronomind`, and the database with its `-wal` and `-shm` files renamed `kronomind.db`. The old registration was removed and the server registered as `kronomind`, with the same namespace, from the clone's folder, which the owner also renamed `kronomind`; `claude mcp get kronomind` reported it connected.
+- The guide's `grep` found one use left, the maintenance hook in the owner's user settings, which the owner's Claude Code keeps in `~/.claude-personal`, not `~/.claude`; it was renamed with `sed`. The guide names `~/.claude`, so a set-up with another configuration folder has to look there instead.
+- In a new session, asked what it remembered, the agent called `recall` on the `kronomind` server and recalled two facts recorded before the rename, on 2026-11-25 and 2026-11-26, and the code base map recorded by the session start hook at `55303cc`. The `/mcp` listing itself was not copied; the calls went to the renamed server.
+- The owner renamed the repository on GitHub. This session fetched from `https://github.com/Enriquez-Johnmark/kronomind`, and the workflow runs, the CI badge's source, are listed under the new name: https://github.com/Enriquez-Johnmark/kronomind/actions/runs/46027430661.
+- `claude mcp get factloom` printed the registration's API key in full. The owner was asked to revoke it.
