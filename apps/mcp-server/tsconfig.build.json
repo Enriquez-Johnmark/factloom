@@ -21,6 +21,9 @@
     },
     {
       "path": "../../packages/maintenance/tsconfig.build.json"
+    },
+    {
+      "path": "../../packages/adapters/tsconfig.build.json"
     }
   ]
 }

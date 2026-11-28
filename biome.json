@@ -75,8 +75,14 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@kronomind/storage", "@kronomind/maintenance", "@kronomind/*/**", "**/src/**"],
-                    "message": "graph-rag must not import @kronomind/storage or @kronomind/maintenance, and imports other packages by name only. It reaches storage through the MemoryStore interface in core."
+                    "group": [
+                      "@kronomind/storage",
+                      "@kronomind/maintenance",
+                      "@kronomind/adapters",
+                      "@kronomind/*/**",
+                      "**/src/**"
+                    ],
+                    "message": "graph-rag must not import @kronomind/storage, @kronomind/maintenance or @kronomind/adapters, and imports other packages by name only. It reaches storage through the MemoryStore interface in core."
                   },
                   {
                     "group": [
@@ -105,8 +111,14 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["@kronomind/storage", "@kronomind/graph-rag", "@kronomind/*/**", "**/src/**"],
-                    "message": "maintenance must not import @kronomind/storage or @kronomind/graph-rag, and imports other packages by name only. It changes memory only through the fact operations in core."
+                    "group": [
+                      "@kronomind/storage",
+                      "@kronomind/graph-rag",
+                      "@kronomind/adapters",
+                      "@kronomind/*/**",
+                      "**/src/**"
+                    ],
+                    "message": "maintenance must not import @kronomind/storage, @kronomind/graph-rag or @kronomind/adapters, and imports other packages by name only. It changes memory only through the fact operations in core."
                   },
                   {
                     "group": [
@@ -117,6 +129,36 @@
                       "@huggingface/*"
                     ],
                     "message": "maintenance must not import a database, LLM, embedding or MCP library."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/adapters/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@kronomind/storage", "@kronomind/maintenance", "@kronomind/*/**", "**/src/**"],
+                    "message": "adapters must not import @kronomind/storage or @kronomind/maintenance, and imports other packages by name only. A domain adapter is data and mapping; only the app wires it to storage (ADR 0026)."
+                  },
+                  {
+                    "group": [
+                      "better-sqlite3",
+                      "sqlite-vec",
+                      "@modelcontextprotocol/*",
+                      "@anthropic-ai/*",
+                      "@huggingface/*"
+                    ],
+                    "message": "adapters must not import a database, LLM, embedding or MCP library."
                   }
                 ]
               }
@@ -138,10 +180,11 @@
                     "group": [
                       "@kronomind/graph-rag",
                       "@kronomind/maintenance",
+                      "@kronomind/adapters",
                       "@kronomind/*/**",
                       "**/src/**"
                     ],
-                    "message": "storage must not import @kronomind/graph-rag or @kronomind/maintenance, and imports other packages by name only."
+                    "message": "storage must not import @kronomind/graph-rag, @kronomind/maintenance or @kronomind/adapters, and imports other packages by name only."
                   },
                   {
                     "group": ["@modelcontextprotocol/*", "@anthropic-ai/*", "@huggingface/*"],

@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",
+    "@kronomind/adapters": "workspace:*",
     "@kronomind/core": "workspace:*",
     "@kronomind/graph-rag": "workspace:*",
     "@kronomind/maintenance": "workspace:*",

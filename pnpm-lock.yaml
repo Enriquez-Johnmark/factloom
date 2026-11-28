@@ -245,6 +245,12 @@ importers:
       '@anthropic-ai/sdk':
         specifier: 'catalog:'
         version: 1.8.0(zod@4.6.7)
+      '@huggingface/transformers':
+        specifier: 'catalog:'
+        version: 4.3.2(@types/node@22.19.0)
+      '@kronomind/adapters':
+        specifier: workspace:*
+        version: link:../../packages/adapters
       '@kronomind/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -257,9 +263,6 @@ importers:
       '@kronomind/storage':
         specifier: workspace:*
         version: link:../../packages/storage
-      '@huggingface/transformers':
-        specifier: 'catalog:'
-        version: 4.3.2(@types/node@22.19.0)
       '@modelcontextprotocol/server':
         specifier: 'catalog:'
         version: 2.4.0
@@ -282,6 +285,12 @@ importers:
       yaml:
         specifier: 'catalog:'
         version: 2.9.1
+
+  packages/adapters:
+    dependencies:
+      '@kronomind/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/core:
     dependencies:
