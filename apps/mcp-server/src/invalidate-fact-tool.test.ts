@@ -207,6 +207,29 @@ describe('the invalidate_fact tool', () => {
 });
 
 describe('the invalidate_fact tool in a domain that holds changes for approval', () => {
+  it('stores a retraction as a proposal when no replacement is given', async () => {
+    await session.close();
+    session = createToolSession({
+      domain: { ...softwareDevelopmentDomain, correctionPolicy: 'human_approval' },
+    });
+    const wrong = await recordFlyIo();
+
+    const result = ProposedSchema.parse(
+      await session.succeed('2026-03-12', 'invalidate_fact', {
+        fact_id: wrong,
+        because: 'was_wrong',
+        reason: 'Never deployed there.',
+      }),
+    );
+
+    expect((await readFact(wrong)).invalidatedAt).toBeNull();
+    const pending = await session.store.listPendingProposals({ namespace: TEST_NAMESPACE });
+    if (!pending.ok) throw new Error(pending.error.message);
+    expect(pending.value.map((entry) => [entry.proposal.id, entry.proposal.supersession.kind])).toEqual([
+      [result.proposal_id, 'retraction'],
+    ]);
+  });
+
   it('stores a proposal, returns its identifier, and leaves the fact current', async () => {
     await session.close();
     session = createToolSession({

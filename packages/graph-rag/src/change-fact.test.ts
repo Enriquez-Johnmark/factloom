@@ -593,23 +593,58 @@ describe('changeFact under the correction policy human_approval', () => {
     expect(await listPending(memory.store)).toEqual([]);
   });
 
-  it('refuses a report with no replacement, and stores neither a change nor a proposal', async () => {
+  it('stores a report that a fact was wrong, with no replacement, as a retraction that approval applies', async () => {
     const memory = createMemory();
     const [lodash] = await recordAll(memory, [draft('depends_on', 'lodash')]);
     if (lodash === undefined) throw new Error('No fact recorded.');
 
-    const wrong = await changeFact(underApproval(memory, NOW), report(lodash));
-    const ended = await changeFact(
+    const changed = await changeFact(underApproval(memory, NOW), report(lodash));
+
+    if (!changed.ok) throw new Error(changed.error.message);
+    if (changed.value.kind !== 'proposed') throw new Error('The report was applied, not proposed.');
+    const [proposal] = await listPending(memory.store);
+    expect([proposal?.supersession, proposal?.newFact]).toEqual([{ kind: 'retraction' }, null]);
+    expect((await readFact(memory.store, lodash)).fact.invalidatedAt).toBeNull();
+    const approved = await approveProposedChange(memory.on('2026-04-02'), {
+      namespace: NAMESPACE,
+      proposalId: changed.value.proposalId,
+      trigger: 'person',
+    });
+    expect(approved.ok && approved.value.newFactId).toBeNull();
+    const retracted = await readFact(memory.store, lodash);
+    expect([retracted.fact.invalidatedAt, retracted.fact.supersededByFactId]).toEqual([
+      at('2026-04-02'),
+      null,
+    ]);
+  });
+
+  it('stores a report that a fact stopped being true, with nothing after it, as a succession that approval ends', async () => {
+    const memory = createMemory();
+    const [lodash] = await recordAll(memory, [draft('depends_on', 'lodash', { from: '2026-01-01' })]);
+    if (lodash === undefined) throw new Error('No fact recorded.');
+
+    const changed = await changeFact(
       underApproval(memory, NOW),
       report(lodash, { because: 'no_longer_true', endedAt: at('2026-03-01') }),
     );
 
-    for (const refused of [wrong, ended]) {
-      if (refused.ok) throw new Error('The report without a replacement was accepted.');
-      expect(refused.error.code).toBe('invalid_input');
-    }
-    const stored = await readFact(memory.store, lodash);
-    expect([stored.fact.invalidatedAt, stored.fact.validTo]).toEqual([null, null]);
-    expect(await listPending(memory.store)).toEqual([]);
+    if (!changed.ok) throw new Error(changed.error.message);
+    if (changed.value.kind !== 'proposed') throw new Error('The report was applied, not proposed.');
+    const [proposal] = await listPending(memory.store);
+    expect([proposal?.supersession, proposal?.newFact]).toEqual([
+      { kind: 'succession', changedAt: at('2026-03-01') },
+      null,
+    ]);
+    const approved = await approveProposedChange(memory.on('2026-04-02'), {
+      namespace: NAMESPACE,
+      proposalId: changed.value.proposalId,
+      trigger: 'person',
+    });
+    expect(approved.ok && approved.value.newFactId).toBeNull();
+    // An end is a revision: the stored fact is superseded by a copy that ends on 2026-03-01.
+    const live = (await listAllFacts(memory.store)).filter((fact) => fact.fact.invalidatedAt === null);
+    expect(live.map((fact) => [fact.fact.statement, fact.fact.validTo])).toEqual([
+      ['The shop API depends on lodash.', at('2026-03-01')],
+    ]);
   });
 });

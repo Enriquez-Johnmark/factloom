@@ -120,30 +120,26 @@ export type ChangeFactResult =
   | { readonly kind: 'proposed'; readonly storedFactId: FactId; readonly proposalId: string };
 
 /**
- * Stores the report as a proposal and changes no fact. A proposal holds the fact that takes
- * the stored one's place, so a report with no replacement is refused until a proposal can
- * hold a retraction or an end with nothing after it (FL-095).
+ * Stores the report as a proposal and changes no fact. A fact that was wrong becomes a
+ * correction, or a retraction when nothing replaces it; a fact no longer true becomes a
+ * succession, with or without a fact after it (FL-095).
  */
 async function proposeReportedChange(
   deps: OperationDeps,
   input: ChangeFactInput & { readonly source: NewSource; readonly draft: FactDraft | null },
 ): Promise<Result<ChangeFactResult>> {
   const { namespace, factId, trigger, source, draft } = input;
-  if (draft === null) {
-    return err(
-      'invalid_input',
-      `The ${deps.domain.name} domain holds every change for a person's approval, and a change with nothing to take the fact's place cannot be held yet. Give the replacement.`,
-    );
-  }
   const proposed = await proposeChange(deps, {
     namespace,
     trigger,
     reasonCode: input.because === 'was_wrong' ? 'reported_wrong' : 'reported_ended',
     storedFactId: factId,
     supersession:
-      input.because === 'was_wrong'
-        ? { kind: 'correction' }
-        : { kind: 'succession', changedAt: input.endedAt ?? deps.now() },
+      input.because === 'no_longer_true'
+        ? { kind: 'succession', changedAt: input.endedAt ?? deps.now() }
+        : draft === null
+          ? { kind: 'retraction' }
+          : { kind: 'correction' },
     newFact: draft,
     source,
   });
