@@ -77,6 +77,7 @@ Rank fusion and entity resolution are internal.
 | Group | Exports |
 |---|---|
 | Domains | `healthcareDomain`, for a proof on invented data only (FL-091) |
+| FHIR import | `importFhirResources`, with `ImportFhirResourcesInput`, `FhirImportEntry` and `FhirImportOutcome` (FL-092) |
 
 ### `@kronomind/storage`
 
