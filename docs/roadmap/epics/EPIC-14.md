@@ -67,9 +67,9 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
-| FL-096 | ADR: a negated clinical fact is a specific predicate | 6 | FL-094 | Pending |
+| FL-096 | ADR: a negated clinical fact is a specific predicate | 6 | FL-094 | Under Review |
 | FL-097 | Negated facts in the healthcare domain and the FHIR import | 6 | FL-096 | Pending |
-| FL-098 | ADR: how a measured value is a fact | 6 | FL-094 | Pending |
+| FL-098 | ADR: how a measured value is a fact | 6 | FL-094 | Under Review |
 | FL-099 | A unit beside a fact's value | 6 | FL-098 | Pending |
 | FL-100 | Observation import | 6 | FL-099, FL-097 | Pending |
 
@@ -77,7 +77,7 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 6 |
 | Depends on | FL-094 |
 | Requirements | REQ-34 |
@@ -106,11 +106,13 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 
 **Acceptance criteria.**
 - [ ] ADR 0027 is accepted by the owner.
-- [ ] `pnpm check` passes.
+- [x] `pnpm check` passes.
 
 **Validation.** `pnpm check`.
 
 **Completion evidence.** The commit and the owner's acceptance.
+
+**Recorded evidence.** Prepared on 2026-11-28 in a cloud session. ADR 0027 is written with status proposed and listed in `DECISIONS.md`. Waiting for the owner's acceptance, the one open criterion. `pnpm check` passed.
 
 ### FL-097: Negated facts in the healthcare domain and the FHIR import
 
@@ -163,7 +165,7 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Under Review |
 | Phase | 6 |
 | Depends on | FL-094 |
 | Requirements | REQ-34 |
@@ -192,11 +194,13 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 
 **Acceptance criteria.**
 - [ ] ADR 0028 is accepted by the owner.
-- [ ] `pnpm check` passes.
+- [x] `pnpm check` passes.
 
 **Validation.** `pnpm check`.
 
 **Completion evidence.** The commit and the owner's acceptance.
+
+**Recorded evidence.** Prepared on 2026-11-28 in a cloud session. ADR 0028 is written with status proposed and listed in `DECISIONS.md`. Waiting for the owner's acceptance, the one open criterion. `pnpm check` passed.
 
 ### FL-099: A unit beside a fact's value
 
@@ -227,7 +231,7 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 1. A fact recorded with a unit is read back with it, from every read.
 2. A fact with no unit behaves as before.
 3. The same value with a different unit is a different object.
-4. Purge clears no unit, because a unit is not content; the ADR says so if it decides otherwise.
+4. Purge clears the unit with the value, as ADR 0028 decides.
 
 **Technical requirements.**
 - A new numbered migration; no released one is edited.
