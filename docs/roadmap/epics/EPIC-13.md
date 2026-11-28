@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phases | 6 |
 | Packages | `packages/adapters` (healthcare domain and FHIR mapping), `@kronomind/core`, `@kronomind/storage`, `@kronomind/graph-rag`, `apps/mcp-server` |
 | Requirements | REQ-17, REQ-34 |
@@ -67,7 +67,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 | Decision | What is known |
 |---|---|
-| Whether stage 2 of the healthcare plan becomes work items in this epic or a new one | Decided when FL-094 is done, from what the scenarios showed |
+| Whether stage 2 of the healthcare plan becomes work items in this epic or a new one | Open: FL-094 is done; the owner decides. The scenarios and the import showed four needs: negated facts (`refuted`, `not-taken`), values with units (Observation, doses), the source system's own dates as a field, and an end date for an allergy |
 
 ## Work items
 
@@ -80,7 +80,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 | FL-091 | Healthcare domain as data, and choosing the domain at start | 6 | FL-089 | Completed |
 | FL-092 | FHIR R4 import by fixed rules | 6 | FL-095, FL-091 | Completed |
 | FL-093 | Healthcare scenarios on invented data | 6 | FL-092, FL-027 | Completed |
-| FL-094 | Healthcare demo command | 6 | FL-093 | Pending |
+| FL-094 | Healthcare demo command | 6 | FL-093 | Completed |
 
 ### FL-088: Healthcare rules read in their official texts
 
@@ -496,7 +496,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | FL-093 |
 | Requirements | REQ-34 |
@@ -527,10 +527,19 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 - The boundaries of this epic.
 
 **Acceptance criteria.**
-- [ ] A test runs the command and finds the four answers and the `INVENTED DATA` lines.
-- [ ] A test shows the user's configured database file is untouched.
-- [ ] `pnpm check` passes.
+- [x] A test runs the command and finds the four answers and the `INVENTED DATA` lines.
+- [x] A test shows the user's configured database file is untouched.
+- [x] `pnpm check` passes.
 
 **Validation.** A command test and `pnpm check`.
 
 **Completion evidence.** The commits, a copy of the output, and the `pnpm check` output.
+
+**Recorded evidence.** Done on 2026-11-28 in a cloud session on Linux x64 with Node.js 22, on invented records only.
+
+- **The command** (`18ddeb1`): `demo healthcare`, routed in `main.ts` and in the test entry before the configuration is read, so it needs no namespace and opens no database but its own, in a temporary directory it removes. `runHealthcareDemo` imports three days of one invented patient's FHIR records through `importFhirResources`, lists the two proposals and approves them with the trigger `person`, answers what is true now, on 2026-03-15 and as believed on 2026-04-01, and prints the fact history of each changed fact. The clock is fixed to the story's dates, so the output is the same on every run.
+- **A copy of the output, abridged:** the imports report `recorded` three times, then `proposed` for the allergy entered in error and for the stopped metformin; "1. What waits for a clinician" lists a proposed retraction and a proposed succession; "2. What is true now (2026-05-04)?" gives type 2 diabetes mellitus only; "3. What was true on 2026-03-15, as known now?" adds metformin, until 2026-05-02 not included, from both versions of its record; "4. What did memory believe on 2026-04-01, before the error was found?" gives all three, the penicillin allergy included; the history shows the allergy invalidated by a retraction and metformin revised to end, with nothing deleted. The first and last lines begin `INVENTED DATA.`
+- **The tests:** three in `run-healthcare-demo.test.ts` (the marker lines, the four questions and the two proposals; nothing written outside the given directory; the entry point run with no namespace and `KRONOMIND_DB` set, exiting 0 without creating that file) and one for the argument.
+- **Differs from the item as written:** the records are constants in `healthcare-demo-records.ts`, telling the cases of FL-093 as one story, not read from its scenario files, because `src` does not read `evals`. The command uses the fake embedder from `core`, because the real model downloads on first use and the demo makes no network call; the demo reads memory by structure only. The demo is reached before the person commands, not through `runPersonCommand`, because it needs neither the configuration nor the configured store.
+- **The documentation** (`a70fd57`): the app's guide.
+- **`pnpm check`:** 146 test files and 1,494 tests passed; `pnpm build` succeeded.
