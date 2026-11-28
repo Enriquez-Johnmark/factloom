@@ -1,6 +1,6 @@
 # A measured value is a fact about a measurement series, with a unit beside its value
 
-Status: proposed.
+Status: accepted, by the owner on 2026-11-28.
 
 A measured value, such as one HbA1c result, is a fact whose subject is the series of that measurement for one patient: an entity of type `measurement`, named by the patient's reference and the test's code, such as `Patient/invented-a LOINC 4548-4`. Its predicate is `measured_as`, single-valued. Its object is the value, as the source writes it, with the unit in a new nullable column, `fact.object_unit`. Its valid time is the time the result describes: the span that `effective[x]` names, read as FHIR dates are read in FL-092, so a result dated to a day holds for that day and one dated to an instant for that millisecond. One further fact, `measurement_of`, links the series to the patient, so that the patient's facts reach it through the graph.
 

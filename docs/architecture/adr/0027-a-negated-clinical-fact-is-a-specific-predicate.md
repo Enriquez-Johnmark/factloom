@@ -1,6 +1,6 @@
 # A negated clinical fact is a specific predicate
 
-Status: proposed.
+Status: accepted, by the owner on 2026-11-28.
 
 A statement that something is not so is recorded as an ordinary fact with a predicate that says so. In the healthcare domain: `ruled_out` (a patient, a condition) for a Condition whose verification status is `refuted`; `not_allergic_to` (a patient, a substance) for a refuted AllergyIntolerance; and `not_taking` (a patient, a medication) for a MedicationStatement whose status is `not-taken`. Facts gain no negation flag, and `core` and the storage adapters do not change. Which predicates are opposites is a list in the healthcare adapter.
 
