@@ -30,6 +30,8 @@ The index of architecture decision records. Each record is short: what was decid
 | [0024](adr/0024-maintenance-records-the-codebase-map.md) | Maintenance records the code base map from the repository | Accepted |
 | [0025](adr/0025-the-project-is-named-kronomind.md) | The project is named Kronomind | Accepted |
 | [0026](adr/0026-healthcare-proof-before-phase-4.md) | The healthcare proof comes before phase 4, on invented data, in `packages/adapters` | Accepted |
+| [0027](adr/0027-a-negated-clinical-fact-is-a-specific-predicate.md) | A negated clinical fact is a specific predicate | Proposed |
+| [0028](adr/0028-a-measured-value-is-a-fact-about-a-measurement-series.md) | A measured value is a fact about a measurement series, with a unit beside its value | Proposed |
 
 ## How the research questions were settled
 
