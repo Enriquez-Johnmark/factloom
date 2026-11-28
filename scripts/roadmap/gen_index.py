@@ -32,14 +32,17 @@ w("## Delivery phases\n")
 w("A phase is a capability that can be demonstrated on a real system, not a list of tasks. A work item may start as soon as its own prerequisites are complete, whichever phase it is in.\n")
 w("| Phase | Capability | Shown to be complete when | Work items |\n|---|---|---|---|")
 for k,(n,c,e) in PH.items(): w(f"| {k}. {n} | {c} | {e} | {sum(1 for i in items if i['phase']==k)} |")
-for k,(n,ep) in LATER.items(): w(f"| {k}. {n} | See [{ep}]({epics[ep]['file']}) | Defined when the phase is near | Not yet written |")
+for k,(n,ep) in LATER.items():
+    c=sum(1 for i in items if i['phase']==k)
+    w(f"| {k}. {n} | See [{ep}]({epics[ep]['file']}) | Defined when the phase is near | {c if c else 'Not yet written'} |")
 w("\n## Epics\n")
 w("| Epic | Name | Phases | Work items | Status |\n|---|---|---|---|---|")
 for e,v in epics.items():
     n=sum(1 for i in items if i['epic']==e)
     w(f"| [{e}]({v['file']}) | {v['title']} | {v['phases']} | {n if n else 'Written when the phase is near'} | Pending |")
 w("\n## Work items\n")
-for k,(n,_,_) in PH.items():
+# A later phase is listed once it has work items, such as the healthcare proof brought forward into phase 6.
+for k,n in [(k,v[0]) for k,v in PH.items()]+[(k,v[0]) for k,v in LATER.items() if any(i['phase']==k for i in items)]:
     w(f"### Phase {k}: {n}\n"); w("| ID | Title | Epic | Depends on | Status |\n|---|---|---|---|---|")
     for i in items:
         if i['phase']==k: w(f"| {link(i)} | {i['title']} | {i['epic']} | {deps(i)} | {i['status']} |")
@@ -64,6 +67,8 @@ def graph(phases,title):
         for d in i['depends_on']: w(f"  {d.replace('-','')} --> {i['id'].replace('-','')}")
     w("```\n")
 graph({'0','1'},'Phases 0 and 1'); graph({'2','3'},'Phases 2 and 3')
+for k,(n,_) in LATER.items():
+    if any(i['phase']==k for i in items): graph({k},f'Phase {k}')
 w("## What can start when\n")
 w("Work items grouped by how many steps of prerequisites lie behind them. Every item in a step can proceed at the same time as the others in that step, once its own prerequisites are complete.\n")
 w("| Step | Work items |\n|---|---|")
