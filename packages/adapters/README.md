@@ -4,7 +4,7 @@ The domain adapters: one module per domain, each giving its entity types, predic
 
 It imports `@kronomind/core` and `@kronomind/graph-rag`, whose use cases the import calls. Only `apps/mcp-server` imports it.
 
-**Status:** the healthcare domain (FL-091) and the FHIR R4 import, `importFhirResources` (FL-092), for a proof on invented data only. Kronomind is not ready for patient data. The software development domain stays in `graph-rag`.
+**Status:** the healthcare domain (FL-091), with negated facts (FL-097) and measured values (FL-100), and the FHIR R4 import, `importFhirResources` (FL-092), for a proof on invented data only. Kronomind is not ready for patient data. The software development domain stays in `graph-rag`.
 
 - Boundaries: [`docs/architecture/SYSTEM-BOUNDARIES.md`](../../docs/architecture/SYSTEM-BOUNDARIES.md)
 - Work items: [`EPIC-13`](../../docs/roadmap/epics/EPIC-13.md)
