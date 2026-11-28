@@ -77,7 +77,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 | FL-089 | ADR: the healthcare proof comes before phase 4 | 6 | FL-088 | Completed |
 | FL-090 | Human approval for a reported change with a replacement | 6 | FL-070 | Completed |
 | FL-095 | Proposals that hold a retraction or an end with nothing after it | 6 | FL-090 | Pending |
-| FL-091 | Healthcare domain as data, and choosing the domain at start | 6 | FL-089 | Pending |
+| FL-091 | Healthcare domain as data, and choosing the domain at start | 6 | FL-089 | Completed |
 | FL-092 | FHIR R4 import by fixed rules | 6 | FL-095, FL-091 | Pending |
 | FL-093 | Healthcare scenarios on invented data | 6 | FL-092, FL-027 | Pending |
 | FL-094 | Healthcare demo command | 6 | FL-093 | Pending |
@@ -295,7 +295,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | FL-089 |
 | Requirements | REQ-34 |
@@ -328,16 +328,26 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 - REQ-31, [`SYSTEM-BOUNDARIES.md`](../../architecture/SYSTEM-BOUNDARIES.md).
 
 **Acceptance criteria.**
-- [ ] A test parses the healthcare domain with `DomainSchema`.
-- [ ] A test starts the server's dependencies with the healthcare domain and finds the policy `human_approval`.
-- [ ] A test shows that an unknown domain name is refused with the list of known ones.
-- [ ] A search of `packages/core`, `packages/graph-rag` and `packages/storage` for the healthcare entity types and predicates finds none outside test data.
-- [ ] A lint rule for `packages/adapters` enforces its row in `SYSTEM-BOUNDARIES.md`: an import of `@kronomind/storage` from it, and an import of it from `graph-rag`, each make `pnpm check` fail, and are removed.
-- [ ] `pnpm check` passes.
+- [x] A test parses the healthcare domain with `DomainSchema`.
+- [x] A test starts the server's dependencies with the healthcare domain and finds the policy `human_approval`.
+- [x] A test shows that an unknown domain name is refused with the list of known ones.
+- [x] A search of `packages/core`, `packages/graph-rag` and `packages/storage` for the healthcare entity types and predicates finds none outside test data.
+- [x] A lint rule for `packages/adapters` enforces its row in `SYSTEM-BOUNDARIES.md`: an import of `@kronomind/storage` from it, and an import of it from `graph-rag`, each make `pnpm check` fail, and are removed.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests, `pnpm check`, and the two forbidden imports added by hand and removed.
 
 **Completion evidence.** The commits, the search output, the failing then passing check output, and the `pnpm check` output.
+
+**Recorded evidence.** Done on 2026-11-28 in a cloud session on Linux x64 with Node.js 22.
+
+- **The package** (`8088cfd`): `packages/adapters`, `@kronomind/adapters`, exporting `healthcareDomain`, with policy `human_approval`. Its lint block forbids `@kronomind/storage`, `@kronomind/maintenance`, deep imports, and database, LLM, embedding and MCP libraries; the blocks of `graph-rag`, `storage` and `maintenance` now forbid importing it. `core` already forbids every `@kronomind` package. The server's build references it, and `pnpm build` succeeded.
+- **Choosing the domain** (`7883f0c`): `KRONOMIND_DOMAIN`, read by `readConfiguration` from `KNOWN_DOMAINS` in `apps/mcp-server`, default `software_development`. The server, the maintenance command and the person commands run under the configured domain.
+- **The forbidden imports, by hand:** `import '@kronomind/storage'` in `packages/adapters` failed with "adapters must not import @kronomind/storage or @kronomind/maintenance"; `import '@kronomind/adapters'` in `packages/graph-rag` failed with "graph-rag must not import @kronomind/storage, @kronomind/maintenance or @kronomind/adapters". Both were removed.
+- **The search:** `grep -rniE "\b(patient|has_condition|allergic_to|medication|healthcare)\b"` over the source and migrations of `core`, `graph-rag` and `storage`, test files excluded, found nothing.
+- **Differs from the item as written:** the domain starts with the entity types and predicates the scenarios of FL-093 use, as the software development domain did: entity types `patient`, `condition`, `medication` and `substance`, and the predicates `has_condition`, `takes` and `allergic_to`, all holding many values. `substance` replaces Allergy, because the allergy is the fact, and its object is the substance. Procedure, Encounter, Practitioner and Organization, and `prescribed_by` and `contraindicates`, wait for a scenario that needs them. One existing test that compares the whole configuration gained the `domain` field.
+- **The documentation** (`f34819f`, `cb153b3`): `SYSTEM-BOUNDARIES.md` and `MCP-TOOLS.md`.
+- **`pnpm check`:** 139 test files and 1,453 tests passed.
 
 ### FL-092: FHIR R4 import by fixed rules
 
