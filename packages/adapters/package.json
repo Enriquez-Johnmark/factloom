@@ -7,7 +7,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@kronomind/core": "workspace:*"
+    "@kronomind/core": "workspace:*",
+    "@kronomind/graph-rag": "workspace:*",
+    "zod": "catalog:"
   },
   "files": [
     "dist",

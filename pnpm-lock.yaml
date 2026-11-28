@@ -291,6 +291,12 @@ importers:
       '@kronomind/core':
         specifier: workspace:*
         version: link:../core
+      '@kronomind/graph-rag':
+        specifier: workspace:*
+        version: link:../graph-rag
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
 
   packages/core:
     dependencies:
