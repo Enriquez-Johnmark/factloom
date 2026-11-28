@@ -1,11 +1,14 @@
 import { join } from 'node:path';
-import { err, type Namespace, NamespaceSchema, ok, type Result } from '@kronomind/core';
+import { type Domain, err, type Namespace, NamespaceSchema, ok, type Result } from '@kronomind/core';
 import { z } from 'zod';
+import { KNOWN_DOMAINS } from './known-domains.ts';
 
 /** What the server needs to know from its environment. */
 export type ServerConfiguration = {
   readonly databasePath: string;
   readonly namespace: Namespace;
+  /** The domain the tools and commands run under. */
+  readonly domain: Domain;
   /** Null when no key is set: the server still starts, and only extraction fails. */
   readonly anthropicApiKey: string | null;
   /** Where the local embedding model is kept: `models` beside the default database. */
@@ -25,6 +28,7 @@ const optionalText = z.preprocess((value) => (value === '' ? undefined : value),
 const EnvironmentSchema = z.object({
   KRONOMIND_DB: optionalText,
   KRONOMIND_NAMESPACE: optionalText,
+  KRONOMIND_DOMAIN: optionalText,
   ANTHROPIC_API_KEY: optionalText,
   KRONOMIND_REPO: optionalText,
   KRONOMIND_ARCHIVE_AFTER_DAYS: z.preprocess(
@@ -37,7 +41,8 @@ const EnvironmentSchema = z.object({
  * Reads the server's configuration from the given environment variables. `KRONOMIND_DB`
  * defaults to `~/.kronomind/kronomind.db`; `KRONOMIND_NAMESPACE` is required; `ANTHROPIC_API_KEY`
  * is optional; `KRONOMIND_REPO` defaults to the working directory; `KRONOMIND_ARCHIVE_AFTER_DAYS`
- * defaults to 180. Pure: the caller passes the
+ * defaults to 180; `KRONOMIND_DOMAIN` names one of the known domains and defaults to software
+ * development. Pure: the caller passes the
  * environment and the two directories.
  */
 export function readConfiguration(
@@ -49,6 +54,7 @@ export function readConfiguration(
   const {
     KRONOMIND_DB,
     KRONOMIND_NAMESPACE,
+    KRONOMIND_DOMAIN,
     ANTHROPIC_API_KEY,
     KRONOMIND_REPO,
     KRONOMIND_ARCHIVE_AFTER_DAYS,
@@ -69,10 +75,23 @@ export function readConfiguration(
     );
   }
 
+  const domain =
+    KRONOMIND_DOMAIN === undefined
+      ? KNOWN_DOMAINS[0]
+      : KNOWN_DOMAINS.find((known) => known.name === KRONOMIND_DOMAIN);
+  if (domain === undefined) {
+    const names = KNOWN_DOMAINS.map((known) => known.name).join(', ');
+    return err(
+      'invalid_input',
+      `KRONOMIND_DOMAIN "${KRONOMIND_DOMAIN}" is not a known domain. Use one of: ${names}.`,
+    );
+  }
+
   const kronomindDirectory = join(directories.homeDirectory, '.kronomind');
   return ok({
     databasePath: KRONOMIND_DB ?? join(kronomindDirectory, 'kronomind.db'),
     namespace: namespace.data,
+    domain,
     anthropicApiKey: ANTHROPIC_API_KEY ?? null,
     modelCacheDirectory: join(kronomindDirectory, 'models'),
     repositoryDirectory: KRONOMIND_REPO ?? directories.workingDirectory,

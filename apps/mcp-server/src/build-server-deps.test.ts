@@ -1,4 +1,5 @@
 import { createTestDeps, recordFacts } from '@kronomind/core';
+import { healthcareDomain } from '@kronomind/adapters';
 import { giveFeedback, softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
 import { buildServerDeps, findRepositoryName } from './build-server-deps.ts';
@@ -80,5 +81,23 @@ describe('the dependencies the server builds for its use cases', () => {
     expect(findRepositoryName('repo:shop-api')).toBe('shop-api');
     expect(findRepositoryName('team:ops')).toBeNull();
     expect(findRepositoryName('repo:')).toBeNull();
+  });
+});
+
+describe('the dependencies the server builds under the healthcare domain', () => {
+  it('hold every change to a stored fact for a person to approve', () => {
+    const base = createTestDeps({ now: '2026-03-10' });
+    const deps = buildServerDeps({
+      store: base.store,
+      embedder: base.embedder,
+      domain: healthcareDomain,
+      llm: UNREACHABLE_LLM,
+      namespace: 'patients:invented',
+      now: base.now,
+      newId: base.newId,
+      log: () => {},
+    });
+
+    expect(deps.domain.correctionPolicy).toBe('human_approval');
   });
 });

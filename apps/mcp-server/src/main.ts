@@ -7,7 +7,6 @@ import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import { toTimestamp } from '@kronomind/core';
-import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { runMaintenance } from '@kronomind/maintenance';
 import { openSqliteMemoryStore } from '@kronomind/storage';
 import {
@@ -47,6 +46,7 @@ if (!configuration.ok) stop(configuration.error.message);
 const {
   databasePath,
   namespace,
+  domain,
   modelCacheDirectory,
   anthropicApiKey,
   repositoryDirectory,
@@ -82,7 +82,7 @@ if (command.kind === 'maintenance') {
     buildMaintenanceJobs({
       store: opened.value,
       embedder,
-      domain: softwareDevelopmentDomain,
+      domain,
       namespace,
       now,
       newId: () => randomUUID(),
@@ -110,7 +110,7 @@ if (command.kind !== 'serve') {
     {
       store: opened.value,
       embedder,
-      domain: softwareDevelopmentDomain,
+      domain,
       namespace,
       now: () => toTimestamp(new Date()),
       newId: () => randomUUID(),
@@ -129,7 +129,7 @@ serveKronomind(
   buildServerDeps({
     store: opened.value,
     embedder,
-    domain: softwareDevelopmentDomain,
+    domain,
     llm,
     anchorFileSource: createFileSourceAnchorer(repositoryDirectory, repository.readHead),
     namespace,

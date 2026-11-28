@@ -1,4 +1,6 @@
 import { join } from 'node:path';
+import { healthcareDomain } from '@kronomind/adapters';
+import { softwareDevelopmentDomain } from '@kronomind/graph-rag';
 import { describe, expect, it } from 'vitest';
 import { readConfiguration } from './read-configuration.ts';
 
@@ -59,12 +61,31 @@ describe('readConfiguration', () => {
       value: {
         databasePath: '/data/memory.db',
         namespace: 'repo:shop-api',
+        domain: softwareDevelopmentDomain,
         anthropicApiKey: TEST_KEY,
         modelCacheDirectory: join(HOME, '.kronomind', 'models'),
         repositoryDirectory: '/repos/shop-api',
         archiveAfterDays: 180,
       },
     });
+  });
+
+  it('runs under the domain KRONOMIND_DOMAIN names', () => {
+    const configuration = readConfiguration(
+      { KRONOMIND_NAMESPACE: 'patients:invented', KRONOMIND_DOMAIN: 'healthcare' },
+      { homeDirectory: HOME, workingDirectory: WORKING },
+    );
+
+    expect(configuration.ok && configuration.value.domain).toBe(healthcareDomain);
+  });
+
+  it('refuses a domain name it does not know', () => {
+    const configuration = readConfiguration(
+      { KRONOMIND_NAMESPACE: 'repo:shop-api', KRONOMIND_DOMAIN: 'cardiology' },
+      { homeDirectory: HOME, workingDirectory: WORKING },
+    );
+
+    expect(configuration.ok ? null : configuration.error.code).toBe('invalid_input');
   });
 
   it('fails without a namespace and says why', () => {
