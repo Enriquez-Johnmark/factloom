@@ -76,7 +76,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 | FL-088 | Healthcare rules read in their official texts | 6 | None | Completed |
 | FL-089 | ADR: the healthcare proof comes before phase 4 | 6 | FL-088 | Completed |
 | FL-090 | Human approval for a reported change with a replacement | 6 | FL-070 | Completed |
-| FL-095 | Proposals that hold a retraction or an end with nothing after it | 6 | FL-090 | Pending |
+| FL-095 | Proposals that hold a retraction or an end with nothing after it | 6 | FL-090 | Completed |
 | FL-091 | Healthcare domain as data, and choosing the domain at start | 6 | FL-089 | Completed |
 | FL-092 | FHIR R4 import by fixed rules | 6 | FL-095, FL-091 | Pending |
 | FL-093 | Healthcare scenarios on invented data | 6 | FL-092, FL-027 | Pending |
@@ -247,7 +247,7 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | FL-090 |
 | Requirements | REQ-17 |
@@ -282,14 +282,24 @@ A healthcare **domain adapter** exists for the first time and proves, on invente
 - [ADR 0006](../../architecture/adr/0006-facts-change-only-by-invalidation.md), [ADR 0012](../../architecture/adr/0012-purge-is-the-one-exception.md).
 
 **Acceptance criteria.**
-- [ ] A contract test stores a retraction proposal, approves it, and finds the fact invalidated with no replacement, in both stores.
-- [ ] A migration test opens a database with a pending proposal at migration 10, migrates it, and reads the same proposal.
-- [ ] A test shows that under `human_approval` `invalidate_fact` with no replacement returns a proposal identifier.
-- [ ] `pnpm check` passes.
+- [x] A contract test stores a retraction proposal, approves it, and finds the fact invalidated with no replacement, in both stores.
+- [x] A migration test opens a database with a pending proposal at migration 10, migrates it, and reads the same proposal.
+- [x] A test shows that under `human_approval` `invalidate_fact` with no replacement returns a proposal identifier.
+- [x] `pnpm check` passes.
 
 **Validation.** The storage contract suite, the migration test, the tool tests and `pnpm check`.
 
 **Completion evidence.** The commits and the `pnpm check` output.
+
+**Recorded evidence.** Done on 2026-11-28 in a cloud session on Linux x64 with Node.js 22.
+
+- **The type and the operation** (`06bd842`): `ProposedChange` has the kind `retraction`, and `newFact` is `FactDraft | null`: required for a correction, absent for a retraction, either for a succession. `findNewFactProblem` enforces it in `proposeChange` and in `ProposedChangeSchema`. `approveProposedChange` needed no change: a retraction runs `invalidateFact` with no replacement, and a succession with no new fact runs `endFact` with no successor.
+- **The migration** (`06bd842`): `0011_proposed_retraction.sql` rebuilds `proposed_change` with the wider `kind` check, a nullable `new_fact` and two checks tying it to the kind, copies every row, and makes the index and both triggers again; the purge rule now needs a new fact. Purge skips a proposal with no new fact, in both stores. `INTERFACES.md` and the reference types of the parity test were updated (`960b6e6`).
+- **The use case** (`284aa77`): under `human_approval`, `changeFact` with no replacement stores a retraction, or a succession with nothing after it, in place of FL-090's refusal; FL-090's refusal test was replaced by two tests that approve each kind.
+- **The tests:** contract cases P8 (a retraction and a bare end stored and read back) and P9 (a purge of such a proposal's source leaves it as it was), in both stores, which raised the registered count from 96 to 98; `proposed-retraction-migration.test.ts`, with the checks and an upgrade of a database at migration 10 holding a pending proposal; a `proposeChange` test for a correction with no new fact and a retraction with one; and a tool test. With the purge guard removed by hand, P9 failed on SQLite; with both layers of the new-fact rule removed, the `proposeChange` test failed. Both were restored.
+- **Differs from the item as written:** the first criterion's approval runs on the in-memory store, through `approveProposedChange` in `change-fact.test.ts`. On SQLite, the contract suite shows the proposal stored and read back, and already covers the commit an approval makes: a retraction and a decision.
+- **The documentation** (`a6a6f33`, `2d6c4f1`, `99b1c8e`): `SCHEMA.md`, `MCP-TOOLS.md` and the app's guide.
+- **`pnpm check`:** 140 test files and 1,462 tests passed; on `06bd842` alone, 1,460.
 
 ### FL-091: Healthcare domain as data, and choosing the domain at start
 
