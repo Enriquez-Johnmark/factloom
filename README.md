@@ -12,7 +12,7 @@ It then keeps that memory correct: when new information contradicts a stored fac
 
 **The name.** Kronomind (KRO-no-mind) joins *krono*, time, and *mind*, memory: a memory that knows when each fact was true and when it was learned, and keeps itself correct. Kronomind was called Factloom until 2026-11-27 ([ADR 0025](docs/architecture/adr/0025-the-project-is-named-kronomind.md)).
 
-> **Status: phases 0 to 3 are built.** Memory for coding agents, self-correction and self-healing work, and Kronomind runs with Claude Code as an MCP server, confirmed on an Apple Silicon Mac on 2026-11-25. 86 of the 87 work items are complete; the open one renames the project to Kronomind. Phases 4 to 6, a generic core with Postgres and an HTTP API, document management and other domains, are planned and have no work items yet. The [roadmap](docs/roadmap/ROADMAP.md) has the status of each item.
+> **Status: phases 0 to 3 are built.** Memory for coding agents, self-correction and self-healing work, and Kronomind runs with Claude Code as an MCP server, confirmed on an Apple Silicon Mac on 2026-11-25. All 87 work items are complete. Phases 4 to 6, a generic core with Postgres and an HTTP API, document management and other domains, are planned and have no work items yet. The [roadmap](docs/roadmap/ROADMAP.md) has the status of each item.
 
 ## What it is for
 
