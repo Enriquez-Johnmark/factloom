@@ -10,6 +10,7 @@ Which package may import which, how that is enforced, and what each package's pu
 | `@kronomind/graph-rag` | `@kronomind/core`, `zod` | `@kronomind/storage`, `@kronomind/maintenance`. Any database, LLM, embedding or MCP library |
 | `@kronomind/storage` | `@kronomind/core`, `better-sqlite3`, `sqlite-vec` | `@kronomind/graph-rag`, `@kronomind/maintenance`. Any LLM, embedding or MCP library |
 | `@kronomind/maintenance` | `@kronomind/core`, `zod` | `@kronomind/storage`, `@kronomind/graph-rag`. Any database, LLM, embedding or MCP library |
+| `@kronomind/adapters` | `@kronomind/core`, `@kronomind/graph-rag`, `zod` | `@kronomind/storage`, `@kronomind/maintenance`. Any database, LLM, embedding or MCP library. No other package imports it but `apps/mcp-server` ([ADR 0026](adr/0026-healthcare-proof-before-phase-4.md)); the package and its lint rule arrive in FL-091 |
 | `apps/mcp-server` | Every `@kronomind` package, the MCP SDK, the Anthropic SDK, the embedding library, `zod` | Nothing is forbidden, but it holds no rules about facts |
 
 ```
@@ -18,6 +19,8 @@ apps/mcp-server ──► graph-rag ─────► core ◄── storage
      │  └──────► maintenance ─────────┘          │
      └───────────────────────────────────────────┘
 ```
+
+`adapters` holds the domain adapters, one module per domain, from the healthcare proof on ([ADR 0026](adr/0026-healthcare-proof-before-phase-4.md)). It is not drawn above until the package exists.
 
 `maintenance` is product 2. It changes memory only through the fact operations in `core`, so it cannot import the storage adapter at all.
 
