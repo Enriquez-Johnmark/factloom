@@ -33,7 +33,29 @@ const ChangeFactStepSchema = z.strictObject({
   }),
 });
 
-const StepSchema = z.union([RememberStepSchema, ChangeFactStepSchema]);
+/** FL-093: FHIR R4 resources a person imports, under the healthcare domain. Invented records only. */
+const ImportFhirStepSchema = z.strictObject({
+  at: DateTextSchema,
+  import_fhir: z.array(z.record(z.string(), z.unknown())).min(1),
+});
+
+/** FL-093: a person decides the pending proposal on the live fact of a subject, predicate and value. */
+const DecideProposalStepSchema = z.strictObject({
+  at: DateTextSchema,
+  decide_proposal: z.strictObject({
+    subject: SubjectSchema,
+    predicate: TextSchema,
+    value: TextSchema,
+    decision: z.enum(['approve', 'reject']),
+  }),
+});
+
+const StepSchema = z.union([
+  RememberStepSchema,
+  ChangeFactStepSchema,
+  ImportFhirStepSchema,
+  DecideProposalStepSchema,
+]);
 
 const AskSchema = z.strictObject({
   ask: z.strictObject({
@@ -67,7 +89,14 @@ const EntitiesSchema = z.strictObject({
   count: z.number().int().nonnegative(),
 });
 
-const ExpectSchema = z.union([AskSchema, HistorySchema, EntitiesSchema]);
+/** FL-093: the kinds of the proposals still pending on the facts of a subject and predicate. */
+const PendingSchema = z.strictObject({
+  pending: z.strictObject({ subject: SubjectSchema, predicate: TextSchema }),
+  /** An empty list means nothing waits for a person. */
+  kinds: z.array(z.enum(['succession', 'correction', 'retraction'])),
+});
+
+const ExpectSchema = z.union([AskSchema, HistorySchema, EntitiesSchema, PendingSchema]);
 
 /** One timeline scenario: dated inputs, then what memory must hold afterwards. */
 export const ScenarioSchema = z
@@ -120,16 +149,22 @@ export function findNamesOutsideDomain(scenario: Scenario, domain: Domain): stri
   scenario.steps.forEach((step, index) => {
     if ('change_fact' in step)
       check(`step ${index + 1}`, step.change_fact.subject, step.change_fact.predicate);
+    if ('decide_proposal' in step)
+      check(`step ${index + 1}`, step.decide_proposal.subject, step.decide_proposal.predicate);
   });
   scenario.expect.forEach((entry, index) => {
     if ('ask' in entry) check(`expect ${index + 1}`, entry.ask.subject, entry.ask.predicate);
     if ('history' in entry) check(`expect ${index + 1}`, entry.history.subject, entry.history.predicate);
+    if ('pending' in entry) check(`expect ${index + 1}`, entry.pending.subject, entry.pending.predicate);
   });
   return problems;
 }
 
 /** Where the scenario files are. */
 export const SCENARIOS_DIRECTORY = join(import.meta.dirname, 'scenarios');
+
+/** Where the healthcare scenario files are (FL-093). Every record in them is invented. */
+export const HEALTHCARE_SCENARIOS_DIRECTORY = join(import.meta.dirname, 'scenarios-healthcare');
 
 /** A scenario with the name of the file it was read from. */
 export type ScenarioFile = { readonly file: string; readonly scenario: Scenario };

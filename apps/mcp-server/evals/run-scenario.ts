@@ -5,6 +5,7 @@
 
 import { join } from 'node:path';
 import {
+  approveProposedChange,
   type ConflictJudge,
   createFakeEmbedder,
   type Domain,
@@ -16,10 +17,12 @@ import {
   ok,
   parseDateInput,
   type Result,
+  rejectProposedChange,
   type TimeFilter,
   type Timestamp,
   toTimestamp,
 } from '@kronomind/core';
+import { importFhirResources } from '@kronomind/adapters';
 import { changeFact, type FactHistoryEntry, getFactHistory, remember } from '@kronomind/graph-rag';
 import { openSqliteMemoryStore } from '@kronomind/storage';
 import type { Scenario } from './scenario.ts';
@@ -40,6 +43,7 @@ const READ_LIMIT = 1000;
 type Ask = Extract<Scenario['expect'][number], { ask: unknown }>;
 type History = Extract<Scenario['expect'][number], { history: unknown }>;
 type Entities = Extract<Scenario['expect'][number], { entities: unknown }>;
+type Pending = Extract<Scenario['expect'][number], { pending: unknown }>;
 type Subject = Ask['ask']['subject'];
 type SupersededPair = History['superseded'][number];
 
@@ -74,7 +78,14 @@ export type EntitiesResult = {
   readonly passed: boolean;
 };
 
-export type ExpectationResult = AskResult | HistoryResult | EntitiesResult;
+export type PendingResult = {
+  readonly kind: 'pending';
+  readonly entry: Pending;
+  readonly found: readonly string[];
+  readonly passed: boolean;
+};
+
+export type ExpectationResult = AskResult | HistoryResult | EntitiesResult | PendingResult;
 
 export type ScenarioResult = {
   readonly name: string;
@@ -145,6 +156,37 @@ async function listFactsOf(
   });
 }
 
+type Decision = Extract<Scenario['steps'][number], { decide_proposal: unknown }>['decide_proposal'];
+
+/** A person approves or rejects the pending proposal on the live fact with the given value. */
+async function decideProposal(
+  deps: Deps & { readonly now: () => Timestamp },
+  decision: Decision,
+): Promise<{ code: string; message: string } | null> {
+  const subject = await findSubject(deps, decision.subject);
+  if (!subject.ok) return subject.error;
+  const pending = await deps.store.listPendingProposals({ namespace: NAMESPACE });
+  if (!pending.ok) return pending.error;
+  const found = pending.value.find(
+    ({ storedFact }) =>
+      storedFact.subject.id === subject.value?.id &&
+      storedFact.fact.predicate === decision.predicate &&
+      normaliseEntityName(readFactValue(storedFact)) === normaliseEntityName(decision.value),
+  );
+  if (found === undefined) {
+    return {
+      code: 'not_found',
+      message: `No pending proposal on ${decision.predicate} "${decision.value}".`,
+    };
+  }
+  const input = { namespace: NAMESPACE, proposalId: found.proposal.id, trigger: 'person' } as const;
+  const decided =
+    decision.decision === 'approve'
+      ? await approveProposedChange(deps, input)
+      : await rejectProposedChange(deps, input);
+  return decided.ok ? null : decided.error;
+}
+
 /** Applies one step with the clock at its time. Returns the failure of its use case, if any. */
 async function applyStep(
   deps: Deps,
@@ -161,6 +203,17 @@ async function applyStep(
     });
     return remembered.ok ? null : remembered.error;
   }
+  if ('import_fhir' in step) {
+    const imported = await importFhirResources(timed, {
+      namespace: NAMESPACE,
+      document: step.import_fhir,
+      trigger: 'person',
+    });
+    if (!imported.ok) return imported.error;
+    const failed = imported.value.entries.find((entry) => entry.outcome === 'failed');
+    return failed?.error ?? null;
+  }
+  if ('decide_proposal' in step) return decideProposal(timed, step.decide_proposal);
   const change = step.change_fact;
   const facts = await listFactsOf(deps, change.subject, change.predicate, { validAt: at, knownAt: at });
   if (!facts.ok) return facts.error;
@@ -274,6 +327,26 @@ async function checkHistory(deps: Deps, entry: History): Promise<Result<HistoryR
   return ok({ kind: 'history', entry, found, foundRows, passed, missed });
 }
 
+async function checkPending(deps: Deps, entry: Pending): Promise<Result<PendingResult>> {
+  const subject = await findSubject(deps, entry.pending.subject);
+  if (!subject.ok) return subject;
+  const pending = await deps.store.listPendingProposals({ namespace: NAMESPACE });
+  if (!pending.ok) return pending;
+  const found = pending.value
+    .filter(
+      ({ storedFact }) =>
+        storedFact.subject.id === subject.value?.id && storedFact.fact.predicate === entry.pending.predicate,
+    )
+    .map(({ proposal }) => proposal.supersession.kind)
+    .sort();
+  return ok({
+    kind: 'pending',
+    entry,
+    found,
+    passed: sameSet(found, entry.kinds) && found.length === entry.kinds.length,
+  });
+}
+
 async function checkEntities(deps: Deps, entry: Entities): Promise<Result<EntitiesResult>> {
   const entities = await deps.store.findEntities({
     namespace: NAMESPACE,
@@ -330,7 +403,9 @@ export async function runScenario(scenario: Scenario, options: ScenarioRunOption
           ? await checkAsk(deps, entry, now)
           : 'history' in entry
             ? await checkHistory(deps, entry)
-            : await checkEntities(deps, entry);
+            : 'pending' in entry
+              ? await checkPending(deps, entry)
+              : await checkEntities(deps, entry);
       if (!checked.ok)
         throw new Error(`A read failed while checking "${scenario.name}": ${checked.error.message}`);
       expectations.push(checked.value);

@@ -100,6 +100,8 @@ function describeEntry(entry: ExpectationResult): string {
     }
     case 'entities':
       return `entities named ${entry.entry.entities.name}: expected ${entry.entry.count}, found ${entry.found}`;
+    case 'pending':
+      return `pending ${entry.entry.pending.subject.name} ${entry.entry.pending.predicate}: expected [${entry.entry.kinds.join(', ')}], found [${entry.found.join(', ')}]`;
     default: {
       const unhandled: never = entry;
       throw new Error(`Unhandled expectation: ${JSON.stringify(unhandled)}`);
