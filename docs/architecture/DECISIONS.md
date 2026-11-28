@@ -29,6 +29,7 @@ The index of architecture decision records. Each record is short: what was decid
 | [0023](adr/0023-the-agent-records-the-codebase-map.md) | The agent records the code base map as it explores | Accepted; its way in replaced by 0024 |
 | [0024](adr/0024-maintenance-records-the-codebase-map.md) | Maintenance records the code base map from the repository | Accepted |
 | [0025](adr/0025-the-project-is-named-kronomind.md) | The project is named Kronomind | Accepted |
+| [0026](adr/0026-healthcare-proof-before-phase-4.md) | The healthcare proof comes before phase 4, on invented data, in `packages/adapters` | Proposed |
 
 ## How the research questions were settled
 
