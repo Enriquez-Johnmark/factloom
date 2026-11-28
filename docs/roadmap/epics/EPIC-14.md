@@ -68,7 +68,7 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 | ID | Title | Phase | Depends on | Status |
 |---|---|---|---|---|
 | FL-096 | ADR: a negated clinical fact is a specific predicate | 6 | FL-094 | Completed |
-| FL-097 | Negated facts in the healthcare domain and the FHIR import | 6 | FL-096 | Pending |
+| FL-097 | Negated facts in the healthcare domain and the FHIR import | 6 | FL-096 | Completed |
 | FL-098 | ADR: how a measured value is a fact | 6 | FL-094 | Completed |
 | FL-099 | A unit beside a fact's value | 6 | FL-098 | Pending |
 | FL-100 | Observation import | 6 | FL-099, FL-097 | Pending |
@@ -118,7 +118,7 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 
 | | |
 |---|---|
-| Status | Pending |
+| Status | Completed |
 | Phase | 6 |
 | Depends on | FL-096 |
 | Requirements | REQ-34 |
@@ -151,15 +151,23 @@ The second stage of the healthcare plan. The proof of [EPIC-13](EPIC-13.md) foun
 - REQ-31, the boundaries of this epic.
 
 **Acceptance criteria.**
-- [ ] A test imports a refuted Condition and finds the negated fact.
-- [ ] A test imports a provisional Condition, then the same resource refuted, and finds a correction proposal with the negated fact as replacement.
-- [ ] A test imports a MedicationStatement `not-taken` and finds the negated fact.
-- [ ] The healthcare scenarios include a ruled-out condition over a provisional one, and pass in replay with both rates at 0.
-- [ ] `pnpm check` passes.
+- [x] A test imports a refuted Condition and finds the negated fact.
+- [x] A test imports a provisional Condition, then the same resource refuted, and finds a correction proposal with the negated fact as replacement.
+- [x] A test imports a MedicationStatement `not-taken` and finds the negated fact.
+- [x] The healthcare scenarios include a ruled-out condition over a provisional one, and pass in replay with both rates at 0.
+- [x] `pnpm check` passes.
 
 **Validation.** Unit tests, the healthcare scenarios, `pnpm check`.
 
 **Completion evidence.** The commits, the scenario metrics and the `pnpm check` output.
+
+**Recorded evidence.** Done on 2026-11-28 in a cloud session on Linux x64 with Node.js 22, on invented records only.
+
+- **The code** (`d3c62df`): the healthcare domain gains `ruled_out`, `not_allergic_to` and `not_taking`, all holding many values, and `OPPOSITE_PREDICATES`, the pairs ADR 0027 names, kept in the adapter. A refuted Condition maps to `ruled_out`, a refuted AllergyIntolerance to `not_allergic_to`, both valid from `recordedDate` where given; a MedicationStatement `not-taken` maps to `not_taking` over its `effective[x]`. When no live fact says the same thing, the import looks for a live opposite and stores a correction proposal, with the new statement as replacement.
+- **The tests:** three in `import-fhir-resources.test.ts` (a refuted condition recorded as ruled out; a refuted record over a provisional one, proposed and approved, leaving only `ruled_out` live; a medication not taken), replacing the test that a refuted condition is not mapped. With the opposite check disabled by hand, the correction test, the refuted scenario and the rates over the set failed; it was restored.
+- **The scenario** (`4f6a172`): `condition-refuted.yaml` now holds a provisional asthma diagnosis that a refuted record rules out once a clinician approves, with the diagnosis still believed before the approval. The healthcare scenarios: staleness rate 0, false invalidation rate 0.
+- **Differs from the item as written:** the earlier scenario, in which a refuted condition was not mapped, was replaced, since that behaviour is what ADR 0027 changes.
+- **`pnpm check`:** 146 test files and 1,496 tests passed.
 
 ### FL-098: ADR: how a measured value is a fact
 
